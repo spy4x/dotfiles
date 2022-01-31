@@ -16,6 +16,6 @@ And it takes 15-30 min, so make sure to grab your favourite tea or coffee meanwh
 # Install oh-my-zsh (it restarts shell, so it has to be separate)
 sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
-# Main installation script
+# Main installation script (make sure you use `zsh` to run the script, otherwise you'll run into weird errors)
 zsh ./install.sh
 ```

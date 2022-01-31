@@ -12,8 +12,8 @@ echo '✅ Brew installation complete \n'
 echo '▶️  Installing Apps with Brew...'
 brew bundle
 # Configure Google Cloud CLI $PATH and autocomplete
-source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"
-source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"
+echo 'source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc"' >> ~/.zshrc
+echo 'source "$(brew --prefix)/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/completion.zsh.inc"' >> ~/.zshrc
 echo '✅ Apps installation complete \n'
 
 echo '▶️  Installing Node.js via NVM...'
@@ -29,11 +29,9 @@ echo '✅ Node.js installation complete \n'
 
 echo '▶️  Configuring custom Spy4x theme for Oh-my-zsh...'
 cd "$script_dir"
-cp -R oh-my-zsh-theme/* ~/.oh-my-zsh/custom/
-echo 'ZSH_THEME="spy4x"' >> ~/.zshrc
+cp my.zsh-theme ~/.oh-my-zsh/themes/
+echo 'ZSH_THEME="my"' >> ~/.zshrc
 echo 'source $ZSH/oh-my-zsh.sh' >> ~/.zshrc
-mkdir ~/projects && cd ~/projects
-echo 'cd ~/projects' >> ~/.zshrc # Set ~/projects as default dir to open in terminal
 source ~/.zshrc
 echo '✅ Configuration complete \n'
 
