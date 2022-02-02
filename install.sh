@@ -3,9 +3,18 @@ set -e
 
 script_dir="$PWD"
 
+# Rosetta (For Apple Silicon (M1) CPUs only)
+if [[ $(uname -p) == 'arm' ]]; then
+  sudo softwareupdate --install-rosetta
+fi
+
 echo '▶️  Installing Brew...'
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-echo 'eval "$($(brew --prefix)/bin/brew shellenv)"' >> ~/.zprofile
+if [[ $(uname -p) == 'arm' ]]; then
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+else
+  echo 'eval "$(/usr/local/bin/brew shellenv)"' >> ~/.zprofile
+fi
 eval "$($(brew --prefix)/bin/brew shellenv)"
 echo '✅ Brew installation complete \n'
 
