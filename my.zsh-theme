@@ -25,3 +25,6 @@ ZSH_THEME_GIT_PROMPT_SUFFIX="%{$reset_color%}"
 
 alias yu="yarn upgrade-interactive --latest"
 alias gst="git status -sb"
+alias tree="tree -a -L 1"
+alias nx="npx nx"
+alias firebase="npx firebase"
