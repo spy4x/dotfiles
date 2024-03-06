@@ -3,3 +3,6 @@
 
 # IDEs
 .idea/
+
+# Ignore private configurations
+ssh-config.nix
