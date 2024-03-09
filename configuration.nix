@@ -87,7 +87,6 @@ in
       killall               # Kill processes by name instead of PID
       ncdu                  # Disk space usage stats, per folder, nested
       libwebp               # Convert images into .webp format
-      speedtest-rs          # Internet speed test
       wl-clipboard          # Wayland's clipboard copy/paste cli tools
       tree
 
