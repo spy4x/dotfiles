@@ -126,6 +126,8 @@ in
   environment.interactiveShellInit = ''
     alias copy='wl-copy <'
     alias build='sudo nixos-rebuild switch'
+    alias rs='rsync -avhzru -P'
+    alias rsh='rsync -avhzru -P -e ssh'
   '';
 
   # Enable automatic login for the user.
