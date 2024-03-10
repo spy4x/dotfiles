@@ -9,7 +9,8 @@ let
 in
 {
   imports =
-    [ # Include the results of the hardware scan.
+    [
+      # Include the results of the hardware scan.
       ./hardware-configuration.nix
     ] ++ lib.optional (builtins.pathExists sshConfigPath) sshConfigPath;
 
@@ -20,6 +21,15 @@ in
 
   networking.hostName = "spy4x-pc";
   networking.networkmanager.enable = true;
+  networking = {
+    firewall = {
+      enable = true;
+      allowedTCPPorts = [
+        80 # Web server to debug apps from mobile
+        53317 # LocalSend
+      ];
+    };
+  };
 
   # Allow install "unfree" apps, like Google Chrome or WebStorm
   nixpkgs.config.allowUnfree = true;
@@ -81,31 +91,33 @@ in
     packages = with pkgs; [
       # Shell tools
       git
-      gnumake               # Source for "make" command
-      htop                  # System monitor viewer
+      gnumake # Source for "make" command
+      htop # System monitor viewer
       unzip
-      killall               # Kill processes by name instead of PID
-      ncdu                  # Disk space usage stats, per folder, nested
-      libwebp               # Convert images into .webp format
-      wl-clipboard          # Wayland's clipboard copy/paste cli tools
+      killall # Kill processes by name instead of PID
+      ncdu # Disk space usage stats, per folder, nested
+      libwebp # Convert images into .webp format
+      wl-clipboard # Wayland's clipboard copy/paste cli tools
       tree
+      nixpkgs-fmt # Formatter for .nix files. Like Prettier.
 
       # Work
       nodejs_21
       nodePackages.pnpm
-      vscode-fhs            # Wrapped variant of vscode which launches in a FHS compatible environment. Should allow for easy usage of extensions without nix-specific modifications.
+      vscode-fhs # Wrapped variant of vscode which launches in a FHS compatible environment. Should allow for easy usage of extensions without nix-specific modifications.
       jetbrains.webstorm
       upwork
       slack
-      ffmpeg                # for Roley project
+      ffmpeg # for Roley project
       awscli
 
       # Other
       google-chrome
-      bitwarden             # Password manager client
+      bitwarden # Password manager client
       vlc
-      obs-studio            # Video recorder and stream software
-      solaar                # Logitech devices GUI. Strictly use with sudo, otherwise it doesn't see devices.
+      obs-studio # Video recorder and stream software
+      solaar # Logitech devices GUI. Strictly use with sudo, otherwise it doesn't see devices.
+      localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
     ];
   };
   programs.steam.enable = true; # Install Steam for games management
