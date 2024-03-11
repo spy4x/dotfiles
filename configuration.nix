@@ -6,6 +6,8 @@
 
 let
   sshConfigPath = ./ssh-config.nix;
+  gdrivePath = "/home/spy4x/gdrive";
+  curBin = "/run/current-system/sw/bin";
 in
 {
   imports =
@@ -25,7 +27,15 @@ in
     firewall = {
       enable = true;
       allowedTCPPorts = [
-        80 # Web server to debug apps from mobile
+        # BEGIN Web server to debug apps from mobile
+        80
+        4200
+        4201
+        5173
+        5174
+        8080
+        8081
+        # END Web server to debug apps from mobile
         53317 # LocalSend
       ];
     };
@@ -118,6 +128,7 @@ in
       obs-studio # Video recorder and stream software
       solaar # Logitech devices GUI. Strictly use with sudo, otherwise it doesn't see devices.
       localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
+      rclone # Sync Google Drive with a local folder
     ];
   };
   programs.steam.enable = true; # Install Steam for games management
@@ -133,6 +144,27 @@ in
   # Enable automatic login for the user.
   services.xserver.displayManager.autoLogin.enable = true;
   services.xserver.displayManager.autoLogin.user = "spy4x";
+
+  # RClone Google Drive service
+  systemd.services.rclone-gdrive-mount = {
+    # Ensure the service starts after the network is up
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    requires = [ "network-online.target" ];
+
+    # Service configuration
+    serviceConfig = {
+      Type = "simple";
+      ExecStartPre = "${curBin}/mkdir -p ${gdrivePath}";
+      ExecStart = "${pkgs.rclone}/bin/rclone mount gdrive: ${gdrivePath}";
+      ExecStop = "${curBin}/fusermount -u ${gdrivePath}";
+      Restart = "on-failure";
+      RestartSec = "10s";
+      User = "spy4x";
+      Group = "users";
+      Environment = [ "PATH=/run/wrappers/bin/:$PATH" ]; # Required environments
+    };
+  };
 
   # Workaround for GNOME autologin: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
   systemd.services."getty@tty1".enable = false;
