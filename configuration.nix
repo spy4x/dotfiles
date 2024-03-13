@@ -156,7 +156,7 @@ in
     serviceConfig = {
       Type = "simple";
       ExecStartPre = "${curBin}/mkdir -p ${gdrivePath}";
-      ExecStart = "${pkgs.rclone}/bin/rclone mount gdrive: ${gdrivePath}";
+      ExecStart = "${pkgs.rclone}/bin/rclone mount gdrive: ${gdrivePath} --vfs-cache-mode full --vfs-cache-max-age 72h --vfs-cache-max-size 100G --vfs-read-ahead 2G";
       ExecStop = "${curBin}/fusermount -u ${gdrivePath}";
       Restart = "on-failure";
       RestartSec = "10s";
