@@ -98,57 +98,6 @@ in
   hardware.logitech.wireless.enable = true;
   hardware.logitech.wireless.enableGraphical = true;
 
-  home-manager.users.spy4x = {
-    home.stateVersion = "23.11";
-    home.username = username;
-    home.homeDirectory = "/home/${username}";
-
-    home.packages = with pkgs; [
-      # Shell tools
-      git
-      gnumake # Source for "make" command
-      htop # System monitor viewer
-      unzip
-      killall # Kill processes by name instead of PID
-      ncdu # Disk space usage stats, per folder, nested
-      libwebp # Convert images into .webp format
-      wl-clipboard # Wayland's clipboard copy/paste cli tools
-      tree
-      nixpkgs-fmt # Formatter for .nix files. Like Prettier.
-
-      # Work
-      nodejs_21
-      nodePackages.pnpm
-      vscode-fhs # Wrapped variant of vscode which launches in a FHS compatible environment. Should allow for easy usage of extensions without nix-specific modifications.
-      jetbrains.webstorm
-      upwork
-      slack
-      ffmpeg # for Roley project
-      awscli
-
-      # Other
-      google-chrome
-      bitwarden # Password manager client
-      vlc
-      obs-studio # Video recorder and stream software
-      localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
-      rclone # Sync Google Drive with a local folder
-    ];
-
-    programs.ssh.enable = true;
-    programs.ssh.extraConfig = ''
-      ${sshConfig}
-    '';
-  };
-  programs.steam.enable = true; # Install Steam for games management
-
-  # Shell aliases and other init
-  environment.interactiveShellInit = ''
-    alias copy='wl-copy <'
-    alias rs='rsync -avhzru -P'
-    alias rsh='rsync -avhzru -P -e ssh'
-  '';
-
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.spy4x = {
     isNormalUser = true;
@@ -159,7 +108,111 @@ in
       "bluetooth"
       "docker"
     ];
+    shell = pkgs.zsh;
   };
+
+  home-manager.users.spy4x = {
+    home.stateVersion = "23.11";
+    home.username = username;
+    home.homeDirectory = "/home/${username}";
+
+    home.packages = with pkgs; [
+      # Shell tools BEGIN
+      git
+      gnumake # Source for "make" command
+      htop # System monitor viewer
+      unzip
+      killall # Kill processes by name instead of PID
+      ncdu # Disk space usage stats, per folder, nested
+      libwebp # Convert images into .webp format
+      wl-clipboard # Wayland's clipboard copy/paste cli tools
+      tree
+      nixpkgs-fmt # Formatter for .nix files. Like Prettier.
+      zsh
+      zsh-powerlevel10k
+      # Shell tools END
+
+      # Work BEGIN
+      nodejs_21
+      nodePackages.pnpm
+      vscode-fhs # Wrapped variant of vscode which launches in a FHS compatible environment. Should allow for easy usage of extensions without nix-specific modifications.
+      jetbrains.webstorm
+      upwork
+      slack
+      ffmpeg # for Roley project
+      awscli
+      # Work END
+
+      # Other BEGIN
+      google-chrome
+      bitwarden # Password manager client
+      vlc
+      obs-studio # Video recorder and stream software
+      localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
+      rclone # Sync Google Drive with a local folder
+      # Other END
+    ];
+
+    programs.ssh.enable = true;
+    programs.ssh.extraConfig = ''
+      ${sshConfig}
+    '';
+  };
+  programs.steam.enable = true; # Install Steam for games management
+
+  programs.zsh = {
+    enable = true;
+    syntaxHighlighting.enable = true;
+    autosuggestions.enable = true;
+    ohMyZsh.enable = true;
+    promptInit = "source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
+  };
+
+  # Shell aliases and other init
+  environment.interactiveShellInit = ''
+    alias copy="wl-copy <"
+    alias rs="rsync -avhzru -P"
+    alias rsh="rsync -avhzru -P -e ssh"
+    alias ws="webstorm"
+    alias size="du -hd1 | sort -hr"
+    alias la='ls -la'
+    alias list="tree -L 1"
+    alias tree="tree -L 2"
+    alias up="pnpm up -i -L"
+
+    # git START
+    alias gst="git status"
+    alias ga="git add"
+    alias gd="git diff"
+    alias gb="git branch"
+    alias gco="git checkout"
+    alias gc="git commit -m"
+    alias gp="git push"
+    alias gl="git pull"
+    alias glf="git fetch --all && git stash save -m 'Before force pull' && git reset --hard"
+    alias gr="git restore --staged"
+    # git END
+
+    # docker START
+    alias dc="docker compose up -d"
+    alias dd="docker compose down"
+    alias dclean="docker system prune -af"
+    # docker END
+
+    # webp BEGIN
+    function to_webp() {
+      setopt NULL_GLOB
+      for type in jpg png; do
+        for F in *.$type; do
+          cwebp "$F" -o "`basename "$\{F%.$type}"`.webp"
+        done
+      done
+      unsetopt NULL_GLOB
+    }
+    alias webp='to_webp'
+    # webp END
+  '';
+
 
   # Enable automatic login for the user.
   services.xserver.displayManager.autoLogin.enable = true;
