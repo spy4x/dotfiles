@@ -88,6 +88,10 @@ in
     pulse.enable = true;
   };
 
+  # Logitech devices manager "Solaar". Gives necessary permissions to run it without "sudo.
+  hardware.logitech.wireless.enable = true;
+  hardware.logitech.wireless.enableGraphical = true;
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.spy4x = {
     isNormalUser = true;
@@ -126,7 +130,6 @@ in
       bitwarden # Password manager client
       vlc
       obs-studio # Video recorder and stream software
-      solaar # Logitech devices GUI. Strictly use with sudo, otherwise it doesn't see devices.
       localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
       rclone # Sync Google Drive with a local folder
     ];
