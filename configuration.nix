@@ -5,13 +5,19 @@
 { config, pkgs, lib, ... }:
 
 let
-  nixFolder = "/etc/nixos";
   username = "spy4x";
   userFullName = "Anton Shubin";
-  sshConfigPath = "${nixFolder}/private/ssh-config";
-  sshConfig = if builtins.pathExists "${sshConfigPath}" then builtins.readFile "${sshConfigPath}" else "# private ssh config file didn't exist to insert it's content here";
+
   gdrivePath = "/home/${username}/gdrive";
   curBin = "/run/current-system/sw/bin";
+  nixFolder = "/etc/nixos";
+
+  sshConfigPath = "${nixFolder}/private/ssh-config";
+  sshConfig = if builtins.pathExists "${sshConfigPath}" then builtins.readFile "${sshConfigPath}" else "# private ssh config file didn't exist to insert it's content here";
+
+  aliasesPath = "${nixFolder}/aliases.sh";
+  aliases = if builtins.pathExists "${aliasesPath}" then builtins.readFile "${aliasesPath}" else "# aliases file didn't exist to insert it's content here";
+
   home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz";
 in
 {
@@ -170,47 +176,7 @@ in
 
   # Shell aliases and other init
   environment.interactiveShellInit = ''
-    alias copy="wl-copy <"
-    alias rs="rsync -avhzru -P"
-    alias rsh="rsync -avhzru -P -e ssh"
-    alias ws="webstorm"
-    alias size="du -hd1 | sort -hr"
-    alias la='ls -la'
-    alias list="tree -L 1"
-    alias tree="tree -L 2"
-    alias up="pnpm up -i -L"
-
-    # git START
-    alias gst="git status"
-    alias ga="git add"
-    alias gd="git diff"
-    alias gb="git branch"
-    alias gco="git checkout"
-    alias gc="git commit -m"
-    alias gp="git push"
-    alias gl="git pull"
-    alias glf="git fetch --all && git stash save -m 'Before force pull' && git reset --hard"
-    alias gr="git restore --staged"
-    # git END
-
-    # docker START
-    alias dc="docker compose up -d"
-    alias dd="docker compose down"
-    alias dclean="docker system prune -af"
-    # docker END
-
-    # webp BEGIN
-    function to_webp() {
-      setopt NULL_GLOB
-      for type in jpg png; do
-        for F in *.$type; do
-          cwebp "$F" -o "`basename "$\{F%.$type}"`.webp"
-        done
-      done
-      unsetopt NULL_GLOB
-    }
-    alias webp='to_webp'
-    # webp END
+    ${aliases}
   '';
 
 

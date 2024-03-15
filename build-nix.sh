@@ -15,6 +15,7 @@ echo "Copying new configuration..."
 sudo cp ./configuration.nix "${NIXOS_CONFIG_PATH}"
 sudo mkdir -p "${NIXOS_CONFIG_PATH}/private"
 sudo cp ./private/* "${NIXOS_CONFIG_PATH}/private/"
+sudo cp ./aliases.sh "${NIXOS_CONFIG_PATH}"
 
 echo "Rebuilding NixOS configuration..."
 # Rebuild the NixOS configuration and make the changes effective
