@@ -104,25 +104,6 @@ in
     home.homeDirectory = "/home/${username}";
 
     home.packages = with pkgs; [
-      wget
-    ];
-    programs.ssh.enable = true;
-    programs.ssh.extraConfig = ''
-      ${sshConfig}
-    '';
-  };
-
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.spy4x = {
-    isNormalUser = true;
-    description = userFullName;
-    extraGroups = [
-      "networkmanager"
-      "wheel"
-      "bluetooth"
-      "docker"
-    ];
-    packages = with pkgs; [
       # Shell tools
       git
       gnumake # Source for "make" command
@@ -153,6 +134,11 @@ in
       localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
       rclone # Sync Google Drive with a local folder
     ];
+
+    programs.ssh.enable = true;
+    programs.ssh.extraConfig = ''
+      ${sshConfig}
+    '';
   };
   programs.steam.enable = true; # Install Steam for games management
 
@@ -162,6 +148,18 @@ in
     alias rs='rsync -avhzru -P'
     alias rsh='rsync -avhzru -P -e ssh'
   '';
+
+  # Define a user account. Don't forget to set a password with ‘passwd’.
+  users.users.spy4x = {
+    isNormalUser = true;
+    description = userFullName;
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      "bluetooth"
+      "docker"
+    ];
+  };
 
   # Enable automatic login for the user.
   services.xserver.displayManager.autoLogin.enable = true;
