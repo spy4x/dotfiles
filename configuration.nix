@@ -5,23 +5,29 @@
 { config, pkgs, lib, ... }:
 
 let
-  sshConfigPath = ./ssh-config.nix;
-  gdrivePath = "/home/spy4x/gdrive";
+  nixFolder = "/etc/nixos";
+  username = "spy4x";
+  userFullName = "Anton Shubin";
+  sshConfigPath = "${nixFolder}/private/ssh-config";
+  sshConfig = if builtins.pathExists "${sshConfigPath}" then builtins.readFile "${sshConfigPath}" else "# private ssh config file didn't exist to insert it's content here";
+  gdrivePath = "/home/${username}/gdrive";
   curBin = "/run/current-system/sw/bin";
+  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz";
 in
 {
   imports =
     [
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
-    ] ++ lib.optional (builtins.pathExists sshConfigPath) sshConfigPath;
+      (import "${home-manager}/nixos")
+    ];
 
   # Bootloader.
   boot.loader.grub.enable = true;
   boot.loader.grub.device = "/dev/nvme0n1";
   boot.loader.grub.useOSProber = true;
 
-  networking.hostName = "spy4x-pc";
+  networking.hostName = "${username}-pc";
   networking.networkmanager.enable = true;
   networking = {
     firewall = {
@@ -92,10 +98,24 @@ in
   hardware.logitech.wireless.enable = true;
   hardware.logitech.wireless.enableGraphical = true;
 
+  home-manager.users.spy4x = {
+    home.stateVersion = "23.11";
+    home.username = username;
+    home.homeDirectory = "/home/${username}";
+
+    home.packages = with pkgs; [
+      wget
+    ];
+    programs.ssh.enable = true;
+    programs.ssh.extraConfig = ''
+      ${sshConfig}
+    '';
+  };
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.spy4x = {
     isNormalUser = true;
-    description = "Anton Shubin";
+    description = userFullName;
     extraGroups = [
       "networkmanager"
       "wheel"
@@ -139,14 +159,13 @@ in
   # Shell aliases and other init
   environment.interactiveShellInit = ''
     alias copy='wl-copy <'
-    alias build='sudo nixos-rebuild switch'
     alias rs='rsync -avhzru -P'
     alias rsh='rsync -avhzru -P -e ssh'
   '';
 
   # Enable automatic login for the user.
   services.xserver.displayManager.autoLogin.enable = true;
-  services.xserver.displayManager.autoLogin.user = "spy4x";
+  services.xserver.displayManager.autoLogin.user = username;
 
   # RClone Google Drive service
   systemd.services.rclone-gdrive-mount = {
@@ -163,7 +182,7 @@ in
       ExecStop = "${curBin}/fusermount -u ${gdrivePath}";
       Restart = "on-failure";
       RestartSec = "10s";
-      User = "spy4x";
+      User = username;
       Group = "users";
       Environment = [ "PATH=/run/wrappers/bin/:$PATH" ]; # Required environments
     };

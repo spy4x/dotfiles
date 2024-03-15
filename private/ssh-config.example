@@ -1,0 +1,7 @@
+# Part of config, to remote machine aliases for SSH
+
+Host my-remote-machine            # alias to do "ssh my remote-machine"
+    HostName 192.192.192.192      # ip/hostname
+    User my-user                  # username
+
+# ... other hosts

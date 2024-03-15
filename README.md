@@ -2,17 +2,18 @@
 
 In this repo I store my config files.
 It helps me to install quickly all software I need for work and fun.  
-Feel free to check & alter the list of software to be installed in these files.
+Feel free to check & alter the configs as you like.
 
-I use NixOS. It stores all of it's configuration in `configuration.nix`.
-That's where you can start exploration and modification.
+I use NixOS. It stores all of its configuration in `configuration.nix`.  
+Start your exploration there.  
+If you are confused at any step - checkout docs on https://nixos.org/
 
 ## Install
 
 1. Clone this repo.
 2. Give build script permission to execute: `chmod +x ./build-nix.sh`.
-2. [Optionally] SSH Config `cp ./ssh-config.nix.example ./ssh-config.nix` and fill with your values.
-3. Apply configuration with `make`.
+3. [Optionally] Check example files in `./private` folder. If anything there you'd like to use - copy example file and remove ".example" suffix. Fill file with your content. Example: SSH Config `cp ./private/ssh-config.nix.example ./private/ssh-config.nix` and fill with your values.
+4. Apply configuration with `make`.
 
 ## Usage
 
