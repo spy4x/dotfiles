@@ -10,10 +10,6 @@ echo "Checking for sudo access..."
 # Ensure the script is being run with superuser privileges
 sudo -v
 
-echo "Backing up current configuration..."
-# Create a backup of the current configuration file with a timestamp
-sudo cp "${NIXOS_CONFIG_PATH}/configuration.nix" "${NIXOS_CONFIG_PATH}/configuration.nix-backup-$(date +%F-%H-%M-%S)"
-
 echo "Copying new configuration..."
 # Copy the local configuration.nix to the system configuration location
 sudo cp ./*.nix "${NIXOS_CONFIG_PATH}"
