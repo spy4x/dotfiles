@@ -134,6 +134,7 @@ in
       wl-clipboard # Wayland's clipboard copy/paste cli tools
       tree
       nixpkgs-fmt # Formatter for .nix files. Like Prettier.
+      envsubst # Is used in homelab deploy for building homepage
       zsh
       zsh-powerlevel10k
       # Shell tools END
