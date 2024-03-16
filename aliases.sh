@@ -26,6 +26,12 @@ alias gr="git restore --staged"
 # docker START
 alias dc="docker compose up -d"
 alias dd="docker compose down"
+function dockerStop(){
+  # Stops containers with name that contains argument $1.
+  # If argument $1 is not provided - stops all docker containers
+  docker ps --filter "name=$1" -q | xargs -r docker stop;
+  };
+alias ds="dockerStop"
 alias dclean="docker system prune -af"
 # docker END
 
