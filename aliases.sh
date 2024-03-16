@@ -8,6 +8,7 @@ alias la='ls -la'
 alias list="tree -L 1"
 alias tree="tree -L 2"
 alias up="pnpm up -i -L"
+alias open "xdg-open"
 # misc END
 
 # git START
