@@ -127,6 +127,7 @@ in
       git
       gnumake # Source for "make" command
       htop # System monitor viewer
+      zip
       unzip
       killall # Kill processes by name instead of PID
       ncdu # Disk space usage stats, per folder, nested
