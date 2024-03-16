@@ -38,9 +38,9 @@ alias dclean="docker system prune -af"
 # webp BEGIN
 function to_webp() {
   setopt NULL_GLOB
-  for type in jpg png; do
+  for type in jpg jpeg png; do
     for F in *.$type; do
-      cwebp "$F" -o "`basename "$\{F%.$type}"`.webp"
+      cwebp "$F" -o "`basename "${F%.$type}"`.webp"
     done
   done
   unsetopt NULL_GLOB
