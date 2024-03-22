@@ -147,8 +147,9 @@ in
       jetbrains.webstorm
       upwork
       slack
-      ffmpeg # for Roley project
-      awscli
+      ffmpeg # for Roley project, check if still actual after 01.01.2025
+      awscli # for Roley project, check if still actual after 01.01.2025
+      google-cloud-sdk # for TOD project, check if still actual after 01.01.2025
       # Work END
 
       # Other BEGIN
