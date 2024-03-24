@@ -166,6 +166,7 @@ in
       obs-studio # Video recorder and stream software
       localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
       rclone # Sync Google Drive with a local folder
+      bottles # Gaming time! Wine wrapper for Windows games and apps
       # Other END
     ];
 
