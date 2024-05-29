@@ -7,6 +7,7 @@
 let
   username = "spy4x";
   userFullName = "Anton Shubin";
+  deviceName = "laptop";
 
   gdrivePath = "/home/${username}/gdrive";
   curBin = "/run/current-system/sw/bin";
@@ -18,7 +19,7 @@ let
   aliasesPath = "${nixFolder}/aliases.sh";
   aliases = if builtins.pathExists "${aliasesPath}" then builtins.readFile "${aliasesPath}" else "# aliases file didn't exist to insert it's content here";
 
-  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/release-23.11.tar.gz";
+  home-manager = builtins.fetchTarball "https://github.com/nix-community/home-manager/archive/release-24.05.tar.gz";
 in
 {
   imports =
@@ -29,13 +30,12 @@ in
     ];
 
   # Bootloader.
-  boot.loader.grub.enable = true;
-  boot.loader.grub.device = "/dev/nvme0n1";
-  boot.loader.grub.useOSProber = true;
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "${username}-pc";
-  networking.networkmanager.enable = true;
   networking = {
+    hostName = "${username}-${deviceName}";
+    networkmanager.enable = true;
     firewall = {
       enable = true;
       allowedTCPPorts = [
@@ -87,7 +87,6 @@ in
   # Activate and configure Docker
   virtualisation.docker.enable = true;
   virtualisation.docker.autoPrune.enable = true;
-  # virtualisation.docker.enableNvidia = true; # experiment for Roley?
 
   # Enable sound with pipewire.
   sound.enable = true;
@@ -117,6 +116,9 @@ in
     shell = pkgs.zsh;
   };
 
+  # Install firefox.
+  programs.firefox.enable = true;
+
   home-manager.users.spy4x = {
     home.stateVersion = "23.11";
     home.username = username;
@@ -141,7 +143,7 @@ in
       # Shell tools END
 
       # Work BEGIN
-      nodejs_21
+      nodejs_22
       nodePackages.pnpm
       vscode-fhs # Wrapped variant of vscode which launches in a FHS compatible environment. Should allow for easy usage of extensions without nix-specific modifications.
       jetbrains.webstorm
@@ -220,5 +222,5 @@ in
   systemd.services."getty@tty1".enable = false;
   systemd.services."autovt@tty1".enable = false;
 
-  system.stateVersion = "23.11";
+  system.stateVersion = "24.05";
 }
