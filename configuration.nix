@@ -1,7 +1,3 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
 { config, pkgs, lib, ... }:
 
 let
@@ -120,7 +116,7 @@ in
   programs.firefox.enable = true;
 
   home-manager.users.spy4x = {
-    home.stateVersion = "23.11";
+    home.stateVersion = "24.05";
     home.username = username;
     home.homeDirectory = "/home/${username}";
 
@@ -147,13 +143,6 @@ in
       nodePackages.pnpm
       vscode-fhs # Wrapped variant of vscode which launches in a FHS compatible environment. Should allow for easy usage of extensions without nix-specific modifications.
       jetbrains.webstorm
-      # GitHub Copilot BEGIN
-      # A fix for "Failed to initiate the GitHub login process. Please try again."
-      # Execute next command, but replace the name of the Product (WebStorm2023.2 to a newer version or other product)
-      # (yes, /run/current-system/sw/bin/copilot-agent might not exist, but it's a symlink to the actual binary)
-      # ln -fs /run/current-system/sw/bin/copilot-agent ~/.local/share/JetBrains//WebStorm2023.2/github-copilot-intellij/copilot-agent/bin/copilot-agent-linux
-      github-copilot-intellij-agent
-      # GitHub Copilot END
       upwork
       slack
       ffmpeg # for Roley project, check if still actual after 01.01.2025
@@ -217,10 +206,6 @@ in
       Environment = [ "PATH=/run/wrappers/bin/:$PATH" ]; # Required environments
     };
   };
-
-  # Workaround for GNOME autologin: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
-  systemd.services."getty@tty1".enable = false;
-  systemd.services."autovt@tty1".enable = false;
 
   system.stateVersion = "24.05";
 }
