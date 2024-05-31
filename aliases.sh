@@ -48,3 +48,11 @@ function to_webp() {
 }
 alias webp='to_webp'
 # webp END
+
+# vpn START
+alias myip="curl ifconfig.me"
+alias vpn_homelab_up="sudo wg-quick up ~/vpn/homelab.conf"
+alias vpn_homelab_down="sudo wg-quick down ~/vpn/homelab.conf"
+alias vpn_us_up="sudo wg-quick up ~/vpn/tod-uptime.conf"
+alias vpn_us_down="sudo wg-quick down ~/vpn/tod-uptime.conf"
+# vpn END

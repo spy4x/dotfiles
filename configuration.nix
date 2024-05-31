@@ -158,6 +158,7 @@ in
       localsend # Share files/text/data with other devices in local network without internet. OSS alternative to AirDrop.
       rclone # Sync Google Drive with a local folder
       bottles # Gaming time! Wine wrapper for Windows games and apps
+      wireguard-tools # VPN CLI client
       # Other END
     ];
 
