@@ -3,3 +3,4 @@
 
 # Ignore private configurations
 private/ssh-config
+private/personal.nix

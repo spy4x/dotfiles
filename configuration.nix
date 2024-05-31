@@ -1,11 +1,9 @@
 { config, pkgs, lib, ... }:
 
 let
-  username = "spy4x";
-  userFullName = "Anton Shubin";
-  deviceName = "laptop";
+  personal = import ./private/personal.nix;
 
-  gdrivePath = "/home/${username}/gdrive";
+  gdrivePath = "/home/${personal.username}/gdrive";
   curBin = "/run/current-system/sw/bin";
   nixFolder = "/etc/nixos";
 
@@ -30,7 +28,7 @@ in
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking = {
-    hostName = "${username}-${deviceName}";
+    hostName = "${personal.username}-${personal.deviceName}";
     networkmanager.enable = true;
     firewall = {
       enable = true;
@@ -102,7 +100,7 @@ in
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.spy4x = {
     isNormalUser = true;
-    description = userFullName;
+    description = personal.userFullName;
     extraGroups = [
       "networkmanager"
       "wheel"
@@ -117,8 +115,8 @@ in
 
   home-manager.users.spy4x = {
     home.stateVersion = "24.05";
-    home.username = username;
-    home.homeDirectory = "/home/${username}";
+    home.username = personal.username;
+    home.homeDirectory = "/home/${personal.username}";
 
     home.packages = with pkgs; [
       # Shell tools BEGIN
@@ -143,15 +141,13 @@ in
       nodePackages.pnpm
       vscode-fhs # Wrapped variant of vscode which launches in a FHS compatible environment. Should allow for easy usage of extensions without nix-specific modifications.
       jetbrains.webstorm
-      upwork
+      upwork # requires manual download and a command execution to register .deb file
       slack
       ffmpeg # for Roley project, check if still actual after 01.01.2025
       awscli # for Roley project, check if still actual after 01.01.2025
-      google-cloud-sdk # for TOD project, check if still actual after 01.01.2025
       # Work END
 
       # Other BEGIN
-      google-chrome
       bitwarden # Password manager client
       vlc
       obs-studio # Video recorder and stream software
@@ -167,6 +163,7 @@ in
       ${sshConfig}
     '';
   };
+
   programs.steam.enable = true; # Install Steam for games management
 
   programs.zsh = {
@@ -185,9 +182,9 @@ in
 
   # Enable automatic login for the user.
   services.xserver.displayManager.autoLogin.enable = true;
-  services.xserver.displayManager.autoLogin.user = username;
+  services.xserver.displayManager.autoLogin.user = personal.username;
 
-  # RClone Google Drive service
+  # RClone Google Drive service - requires "$ rclone config" to be configured for Google Drive first
   systemd.services.rclone-gdrive-mount = {
     # Ensure the service starts after the network is up
     wantedBy = [ "multi-user.target" ];
@@ -202,7 +199,7 @@ in
       ExecStop = "${curBin}/fusermount -u ${gdrivePath}";
       Restart = "on-failure";
       RestartSec = "10s";
-      User = username;
+      User = personal.username;
       Group = "users";
       Environment = [ "PATH=/run/wrappers/bin/:$PATH" ]; # Required environments
     };
