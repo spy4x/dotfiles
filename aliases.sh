@@ -17,10 +17,10 @@ alias ga="git add"
 alias gd="git diff"
 alias gb="git branch"
 alias gco="git checkout"
-alias gc="git commit -m"
+alias gc="git commit"
 alias gp="git push"
 alias gl="git pull"
-alias glf="git fetch --all && git stash save -m 'Before force pull' && git reset --hard"
+alias glf="git fetch --all && git reset --hard"
 alias gr="git restore --staged"
 # git END
 
