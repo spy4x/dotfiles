@@ -3,6 +3,14 @@
 # Make sure that the script exits if any command returns a non-zero exit code
 set -e
 
+# Check if nixpkgs-fmt is available on the machine
+if command -v nixpkgs-fmt >/dev/null 2>&1; then
+    echo "Formatting configuration.nix..."
+    nixpkgs-fmt ./configuration.nix
+else
+  echo "nixpkgs-fmt is not available. Skipping formatting."
+fi
+
 # Define the path to the system configuration file
 NIXOS_CONFIG_PATH="/etc/nixos"
 
