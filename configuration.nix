@@ -155,6 +155,7 @@ in
       rclone # Sync Google Drive with a local folder
       bottles # Gaming time! Wine wrapper for Windows games and apps
       wireguard-tools # VPN CLI client
+      transmission-qt # Torrent client
       # Other END
     ];
 
