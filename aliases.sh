@@ -54,3 +54,4 @@ alias webp='to_webp'
 # webp END
 
 alias myip="curl ifconfig.me"
+alias upgrade="sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove -y && sudo apt clean && sudo apt --fix-broken install && sudo do-release-upgrade"
