@@ -1,71 +1,68 @@
 {
-	"$schema" : "https://aka.ms/winget-packages.schema.2.0.json",
-	"CreationDate" : "2025-04-28T02:21:34.913-00:00",
-	"Sources" : 
-	[
+	"$schema": "https://aka.ms/winget-packages.schema.2.0.json",
+	"CreationDate": "2025-04-28T02:21:34.913-00:00",
+	"Sources": [
 		{
-			"Packages" : 
-			[
+			"Packages": [
 				{
-					"PackageIdentifier" : "Bitwarden.Bitwarden"
+					"PackageIdentifier": "Bitwarden.Bitwarden"
 				},
 				{
-					"PackageIdentifier" : "CrystalDewWorld.CrystalDiskInfo"
+					"PackageIdentifier": "CrystalDewWorld.CrystalDiskInfo"
 				},
 				{
-					"PackageIdentifier" : "CrystalDewWorld.CrystalDiskMark"
+					"PackageIdentifier": "CrystalDewWorld.CrystalDiskMark"
 				},
 				{
-					"PackageIdentifier" : "dbeaver.dbeaver"
+					"PackageIdentifier": "dbeaver.dbeaver"
 				},
 				{
-					"PackageIdentifier" : "Docker.DockerDesktop"
+					"PackageIdentifier": "Docker.DockerDesktop"
 				},
 				{
-					"PackageIdentifier" : "Valve.Steam"
+					"PackageIdentifier": "Valve.Steam"
 				},
 				{
-					"PackageIdentifier" : "VideoLAN.VLC"
+					"PackageIdentifier": "VideoLAN.VLC"
 				},
 				{
-					"PackageIdentifier" : "SlackTechnologies.Slack"
+					"PackageIdentifier": "SlackTechnologies.Slack"
 				},
 				{
-					"PackageIdentifier" : "LocalSend.LocalSend"
+					"PackageIdentifier": "LocalSend.LocalSend"
 				},
 				{
-					"PackageIdentifier" : "Microsoft.VisualStudioCode.Insiders"
+					"PackageIdentifier": "Microsoft.VisualStudioCode.Insiders"
 				},
 				{
-					"PackageIdentifier" : "WireGuard.WireGuard"
+					"PackageIdentifier": "WireGuard.WireGuard"
 				},
 				{
-					"PackageIdentifier" : "Google.Chrome"
+					"PackageIdentifier": "Google.Chrome"
 				},
 				{
-					"PackageIdentifier" : "Telegram.TelegramDesktop"
+					"PackageIdentifier": "Telegram.TelegramDesktop"
 				},
 				{
-					"PackageIdentifier" : "Transmission.Transmission"
+					"PackageIdentifier": "Transmission.Transmission"
 				},
 				{
-					"PackageIdentifier" : "ArashiVisionInc.Insta360Studio"
+					"PackageIdentifier": "ArashiVisionInc.Insta360Studio"
 				},
 				{
-					"PackageIdentifier" : "Logitech.OptionsPlus"
+					"PackageIdentifier": "Logitech.OptionsPlus"
 				},
 				{
-					"PackageIdentifier" : "OBSProject.OBSStudio"
+					"PackageIdentifier": "OBSProject.OBSStudio"
 				}
 			],
-			"SourceDetails" : 
-			{
-				"Argument" : "https://cdn.winget.microsoft.com/cache",
-				"Identifier" : "Microsoft.Winget.Source_8wekyb3d8bbwe",
-				"Name" : "winget",
-				"Type" : "Microsoft.PreIndexed.Package"
+			"SourceDetails": {
+				"Argument": "https://cdn.winget.microsoft.com/cache",
+				"Identifier": "Microsoft.Winget.Source_8wekyb3d8bbwe",
+				"Name": "winget",
+				"Type": "Microsoft.PreIndexed.Package"
 			}
 		}
 	],
-	"WinGetVersion" : "1.6.10121"
+	"WinGetVersion": "1.6.10121"
 }
