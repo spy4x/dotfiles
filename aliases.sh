@@ -2,7 +2,8 @@
 alias copy="xclip -sel clip <"
 alias rs="rsync -avhzru -P"
 alias rsh="rsync -avhzru -P -e ssh"
-alias size="du -hd1 | sort -hr"
+get_size() { du -hd1 "$@" | sort -hr; }
+alias size="get_size"
 alias la='ls -la'
 alias list="tree -L 1"
 alias tree="tree -L 2"
