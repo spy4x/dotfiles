@@ -22,7 +22,7 @@ Export apps to the file (exports some Microsoft shit too, unfortunately, but can
 be manually removed from the file):
 
 ```
-winget import -i .\winget.json
+winget export -o .\winget.json
 ```
 
 ## Install stuff inside WSL2 + Ubuntu:
