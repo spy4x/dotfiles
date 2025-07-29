@@ -1,18 +1,32 @@
-# EditorConfig is awesome: https://editorconfig.org
+# EditorConfig is awesome: https://EditorConfig.org
 
-# top-most .editorconfig file
+# top-most EditorConfig file
 root = true
 
 # All files
 [*]
-indent_style = space  # Use spaces for indentation
-indent_size = 2       # Number of spaces used per indentation level
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
 
+# TypeScript, JavaScript, JSON, JSONC files
+[*.{ts,js,json,jsonc}]
+indent_style = space
+indent_size = 2
+max_line_length = 100
 
-# Override for Makefile
-[Makefile]
-indent_style = tab
+# Shell scripts
+[*.{sh,bash,zsh}]
+indent_style = space
+indent_size = 2
 
-# Markdown files (md)
+# Markdown files
 [*.md]
 trim_trailing_whitespace = false  # Markdown can use trailing whitespace for line breaks
+max_line_length = off
+
+# YAML files
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
