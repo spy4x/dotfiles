@@ -106,6 +106,32 @@ export class InstallShell {
     }
   }
 
+  private async setupDenoPath(): Promise<boolean> {
+    const denoPathConfig = `\n# Add Deno to PATH\nexport PATH="$HOME/.deno/bin:$PATH"\n`
+
+    try {
+      // Check if Deno PATH is already configured in .zshrc
+      if (await fileExists(this.zshrcPath)) {
+        const zshrcContent = await Deno.readTextFile(this.zshrcPath)
+        if (zshrcContent.includes('export PATH="$HOME/.deno/bin:$PATH"') || 
+            zshrcContent.includes("$HOME/.deno/bin") ||
+            zshrcContent.includes("~/.deno/bin")) {
+          console.log("✅ Deno PATH already configured")
+          return true
+        }
+      }
+
+      // Append the Deno PATH configuration to .zshrc
+      await Deno.writeTextFile(this.zshrcPath, denoPathConfig, { append: true })
+      console.log("✅ Deno PATH added to .zshrc")
+      return true
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error(`❌ Failed to setup Deno PATH: ${errorMessage}`)
+      return false
+    }
+  }
+
   private async setupSteps(): Promise<SetupStep[]> {
     if (!this.packageManager) {
       throw new Error("Package manager not detected")
@@ -248,6 +274,12 @@ export class InstallShell {
       console.error("❌ Failed to setup aliases integration, but continuing...")
     }
 
+    // Setup Deno PATH
+    const denoPathSuccess = await this.setupDenoPath()
+    if (!denoPathSuccess) {
+      console.error("❌ Failed to setup Deno PATH, but continuing...")
+    }
+
     // Print summary
     console.log("\n" + "=".repeat(50))
     console.log("📋 Setup Summary:")
@@ -311,6 +343,7 @@ export class InstallShell {
     console.log("   ✅ Oh My Zsh framework installed")
     console.log("   ✅ Powerlevel10k theme configured")
     console.log("   ✅ Custom aliases integrated")
+    console.log("   ✅ Deno PATH configured")
 
     const currentShell = await this.getCurrentUserShell()
     if (currentShell?.includes("zsh")) {
