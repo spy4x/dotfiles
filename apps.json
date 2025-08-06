@@ -1,89 +1,96 @@
 [
-    {
-        "name": "Bitwarden",
-        "flatpak": "com.bitwarden.desktop",
-        "winget": ["Bitwarden.Bitwarden"],
-        "homebrew": ["bitwarden"]
-    },
-    {
-        "name": "Steam",
-        "dnf": ["steam"],
-        "winget": ["Valve.Steam"],
-        "homebrew": ["steam"]
-    },
-    {
-        "name": "VLC",
-        "dnf": ["vlc"],
-        "apt": ["vlc"],
-        "winget": ["VideoLAN.VLC"],
-        "homebrew": ["vlc"]
-    },
-    {
-        "name": "LocalSend",
-        "flatpak": "org.localsend.localsend_app",
-        "winget": ["LocalSend.LocalSend"],
-        "homebrew": ["localsend"]
-    },
-    {
-        "name": "VS Code",
-        "repoUrl": "https://packages.microsoft.com/yumrepos/vscode",
-        "repoGpgKey": "https://packages.microsoft.com/keys/microsoft.asc",
-        "dnf": ["code"],
-        "apt": ["code"],
-        "winget": ["Microsoft.VisualStudioCode"],
-        "homebrew": ["visual-studio-code"]
-    },
-    {
-        "name": "WireGuard",
-        "dnf": ["wireguard-tools"],
-        "apt": ["wireguard-tools"],
-        "winget": ["WireGuard.WireGuard"],
-        "homebrew": ["wireguard-tools"]
-    },
-    {
-        "name": "Chromium",
-        "dnf": ["chromium"],
-        "apt": ["chromium-browser"],
-        "winget": ["Google.Chrome"],
-        "homebrew": ["chromium"]
-    },
-    {
-        "name": "Telegram Desktop",
-        "flatpak": "org.telegram.desktop",
-        "winget": ["Telegram.TelegramDesktop"],
-        "homebrew": ["telegram"]
-    },
-    {
-        "name": "Transmission",
-        "flatpak": "com.transmissionbt.Transmission",
-        "winget": ["Transmission.Transmission"],
-        "homebrew": ["transmission"]
-    },
-    {
-        "name": "OBS Studio",
-        "dnf": ["obs-studio"],
-        "apt": ["obs-studio"],
-        "winget": ["OBSProject.OBSStudio"],
-        "homebrew": ["obs"]
-    },
-    {
-        "name": "Docker",
-        "dnf": ["docker", "docker-compose", "docker-compose-switch"],
-        "apt": ["docker.io", "docker-compose"],
-        "winget": ["Docker.DockerDesktop"],
-        "homebrew": ["docker"],
-        "postInstallCommands": [
-            "sudo systemctl enable docker",
-            "sudo systemctl start docker",
-            "sudo usermod -aG docker $USER"
-        ],
-        "requiresReboot": true
-    },
-    {
-        "name": "Bottles",
-        "dnf": ["bottles"],
-        "apt": ["bottles"],
-        "flatpak": "com.usebottles.bottles",
-        "architectures": ["x86_64"]
-    }
+  {
+    "name": "Bitwarden",
+    "flatpak": "com.bitwarden.desktop",
+    "winget": ["Bitwarden.Bitwarden"],
+    "homebrew": ["bitwarden"]
+  },
+  {
+    "name": "Steam",
+    "flatpak": "com.valvesoftware.Steam",
+    "winget": ["Valve.Steam"],
+    "homebrew": ["steam"]
+  },
+  {
+    "name": "VLC",
+    "dnf": ["vlc"],
+    "apt": ["vlc"],
+    "winget": ["VideoLAN.VLC"],
+    "homebrew": ["vlc"]
+  },
+  {
+    "name": "LocalSend",
+    "flatpak": "org.localsend.localsend_app",
+    "winget": ["LocalSend.LocalSend"],
+    "homebrew": ["localsend"]
+  },
+  {
+    "name": "VS Code",
+    "repoUrl": "https://packages.microsoft.com/yumrepos/vscode",
+    "repoGpgKey": "https://packages.microsoft.com/keys/microsoft.asc",
+    "dnf": ["code"],
+    "apt": ["code"],
+    "winget": ["Microsoft.VisualStudioCode"],
+    "homebrew": ["visual-studio-code"]
+  },
+  {
+    "name": "WireGuard",
+    "dnf": ["wireguard-tools"],
+    "apt": ["wireguard-tools"],
+    "winget": ["WireGuard.WireGuard"],
+    "homebrew": ["wireguard-tools"]
+  },
+  {
+    "name": "Chromium",
+    "dnf": ["chromium"],
+    "apt": ["chromium-browser"],
+    "winget": ["Google.Chrome"],
+    "homebrew": ["chromium"]
+  },
+  {
+    "name": "Telegram Desktop",
+    "flatpak": "org.telegram.desktop",
+    "winget": ["Telegram.TelegramDesktop"],
+    "homebrew": ["telegram"]
+  },
+  {
+    "name": "Transmission",
+    "flatpak": "com.transmissionbt.Transmission",
+    "winget": ["Transmission.Transmission"],
+    "homebrew": ["transmission"]
+  },
+  {
+    "name": "OBS Studio",
+    "dnf": ["obs-studio"],
+    "apt": ["obs-studio"],
+    "winget": ["OBSProject.OBSStudio"],
+    "homebrew": ["obs"]
+  },
+  {
+    "name": "Docker",
+    "dnf": ["docker", "docker-compose", "docker-compose-switch"],
+    "apt": ["docker.io", "docker-compose"],
+    "winget": ["Docker.DockerDesktop"],
+    "homebrew": ["docker"],
+    "postInstallCommands": [
+      "sudo systemctl enable docker",
+      "sudo systemctl start docker",
+      "sudo usermod -aG docker $USER"
+    ],
+    "requiresReboot": true
+  },
+  {
+    "name": "Bottles",
+    "dnf": ["bottles"],
+    "apt": ["bottles"],
+    "flatpak": "com.usebottles.bottles",
+    "architectures": ["x86_64"]
+  },
+  {
+    "name": "Solaar",
+    "dnf": ["solaar"],
+    "apt": ["solaar"],
+    "flatpak": "io.github.pwr_solaar.solaar",
+    "homebrew": ["solaar"]
+  }
 ]
