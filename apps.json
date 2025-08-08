@@ -92,5 +92,12 @@
     "apt": ["solaar"],
     "flatpak": "io.github.pwr_solaar.solaar",
     "homebrew": ["solaar"]
+  },
+  {
+    "name": "Syncthing",
+    "dnf": ["syncthing"],
+    "apt": ["syncthing"],
+    "winget": ["Syncthing.Syncthing"],
+    "homebrew": ["syncthing"]
   }
 ]
