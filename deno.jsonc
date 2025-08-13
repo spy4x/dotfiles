@@ -2,7 +2,8 @@
   "tasks": {
     "install-all": "deno task install-apps && deno task install-shell",
     "install-apps": "deno run -A install-apps.ts",
-    "install-shell": "deno run -A install-shell.ts"
+    "install-shell": "deno run -A install-shell.ts",
+    "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts"
   },
   "exclude": [
     "**/.cache/*",

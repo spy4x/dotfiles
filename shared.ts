@@ -3,12 +3,119 @@
  */
 
 export type PackageManager = "zypper" | "dnf" | "apt" | "winget" | "homebrew"
+export type LogLevel = "INFO" | "WARN" | "ERROR" | "SUCCESS"
 
 export interface CommandResult {
   success: boolean
   stdout: string
   stderr: string
   code: number
+}
+
+// ===== LOGGING UTILITIES =====
+
+let logPath: string | null = null
+
+/**
+ * Initialize logging for a script
+ */
+export async function initializeLogging(scriptName: string, logDir = "./logs"): Promise<string> {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+  const logFileName = `${scriptName}_${timestamp}.log`
+  logPath = `${logDir}/${logFileName}`
+
+  try {
+    await Deno.mkdir(logDir, { recursive: true })
+  } catch (error) {
+    console.error(`⚠️ Failed to create log directory: ${error}`)
+  }
+
+  return logPath
+}
+
+/**
+ * Log a message with optional level and emoji
+ */
+export async function log(message: string, level: LogLevel = "INFO"): Promise<void> {
+  const timestamp = new Date().toISOString()
+  const logEntry = `[${timestamp}] [${level}] ${message}\n`
+
+  // Console output with colors and emojis
+  const styles = {
+    INFO: { color: "\x1b[36m", emoji: "" }, // Cyan
+    WARN: { color: "\x1b[33m", emoji: "⚠️" }, // Yellow
+    ERROR: { color: "\x1b[31m", emoji: "❌" }, // Red
+    SUCCESS: { color: "\x1b[32m", emoji: "✅" }, // Green
+    RESET: "\x1b[0m",
+  }
+
+  const style = styles[level]
+  console.log(`${style.color}${style.emoji} ${message}${styles.RESET}`)
+
+  // File logging
+  if (logPath) {
+    try {
+      await Deno.writeTextFile(logPath, logEntry, { append: true })
+    } catch (error) {
+      console.error(`⚠️ Failed to write to log file: ${error}`)
+    }
+  }
+}
+
+// ===== UTILITY FUNCTIONS =====
+
+/**
+ * Format bytes to human-readable string
+ */
+export function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"]
+  let value = bytes
+  let unitIndex = 0
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex++
+  }
+
+  return `${value.toFixed(1)}${units[unitIndex]}`
+}
+
+/**
+ * Get system memory size in bytes
+ */
+export async function getSystemMemoryBytes(): Promise<number> {
+  const result = await runShellCommand("free -b | grep '^Mem:' | awk '{print $2}'")
+  if (!result.success) {
+    throw new Error(`Failed to get system memory: ${result.stderr}`)
+  }
+
+  const memBytes = parseInt(result.stdout.trim())
+  if (isNaN(memBytes)) {
+    throw new Error("Could not parse memory size")
+  }
+
+  return memBytes
+}
+
+/**
+ * Get disk usage information for a path
+ */
+export async function getDiskUsage(
+  path: string,
+): Promise<{ total: number; used: number; available: number }> {
+  const result = await runShellCommand(
+    `df -B1 "${path}" | tail -1 | awk '{print $2 " " $3 " " $4}'`,
+  )
+  if (!result.success) {
+    throw new Error(`Failed to get disk usage for ${path}: ${result.stderr}`)
+  }
+
+  const [total, used, available] = result.stdout.trim().split(" ").map((s) => parseInt(s))
+  if (total === undefined || used === undefined || available === undefined) {
+    throw new Error("Could not parse disk usage information")
+  }
+
+  return { total, used, available }
 }
 
 /**
