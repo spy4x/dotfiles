@@ -94,10 +94,21 @@
     "homebrew": ["solaar"]
   },
   {
+    "name": "git",
+    "dnf": ["git"],
+    "apt": ["git"],
+    "winget": ["Git.Git"],
+    "homebrew": ["git"]
+  },
+  {
     "name": "Syncthing",
     "dnf": ["syncthing"],
     "apt": ["syncthing"],
     "winget": ["Syncthing.Syncthing"],
-    "homebrew": ["syncthing"]
+    "homebrew": ["syncthing"],
+    "postInstallCommands": [
+      "systemctl --user enable syncthing.service",
+      "systemctl --user start syncthing.service"
+    ]
   }
 ]
