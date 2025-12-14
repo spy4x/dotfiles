@@ -107,6 +107,15 @@ Edit `apps.json` to customize applications. Each app supports:
 | `postInstallCommands` | `string[]` | Commands to run after installation              |
 | `requiresReboot`      | `boolean`  | Whether installation requires system reboot     |
 | `architectures`       | `string[]` | Supported architectures (x86_64, aarch64, etc.) |
+| `winget`              | `string[]` | Package IDs for Winget (Windows)                |
+| `homebrew`            | `string[]` | Formula names for Homebrew (macOS)              |
+| `flatpak`             | `string`   | Flatpak application ID (Linux only)             |
+| `repoUrl`             | `string`   | Repository URL to add before installation       |
+| `repoGpgKey`          | `string`   | GPG key URL for repository verification         |
+| `preInstallCommands`  | `string[]` | Commands to run before installation             |
+| `postInstallCommands` | `string[]` | Commands to run after installation              |
+| `requiresReboot`      | `boolean`  | Whether installation requires system reboot     |
+| `architectures`       | `string[]` | Supported architectures (x86_64, aarch64, etc.) |
 
 #### Command Variables
 

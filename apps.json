@@ -7,7 +7,8 @@
   },
   {
     "name": "Steam",
-    "flatpak": "com.valvesoftware.Steam",
+    "dnf": ["steam"],
+    "apt": ["steam"],
     "winget": ["Valve.Steam"],
     "homebrew": ["steam"]
   },
@@ -17,12 +18,6 @@
     "apt": ["vlc"],
     "winget": ["VideoLAN.VLC"],
     "homebrew": ["vlc"]
-  },
-  {
-    "name": "LocalSend",
-    "flatpak": "org.localsend.localsend_app",
-    "winget": ["LocalSend.LocalSend"],
-    "homebrew": ["localsend"]
   },
   {
     "name": "VS Code",
@@ -80,20 +75,6 @@
     "requiresReboot": true
   },
   {
-    "name": "Bottles",
-    "dnf": ["bottles"],
-    "apt": ["bottles"],
-    "flatpak": "com.usebottles.bottles",
-    "architectures": ["x86_64"]
-  },
-  {
-    "name": "Solaar",
-    "dnf": ["solaar"],
-    "apt": ["solaar"],
-    "flatpak": "io.github.pwr_solaar.solaar",
-    "homebrew": ["solaar"]
-  },
-  {
     "name": "git",
     "dnf": ["git"],
     "apt": ["git"],
@@ -112,11 +93,78 @@
     ]
   },
   {
+    "name": "DataGrip",
+    "flatpak": "com.jetbrains.DataGrip"
+  },
+  {
+    "name": "Clementine Music Player",
+    "flatpak": "org.clementine_player.Clementine"
+  },
+  {
+    "name": "Kdenlive",
+    "flatpak": "org.kde.kdenlive",
+    "dnf": ["kdenlive"],
+    "apt": ["kdenlive"],
+    "winget": ["KDE.Kdenlive"],
+    "homebrew": ["kdenlive"]
+  },
+  {
     "name": "Codecs",
     "preInstallCommands": [
       "sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
     ],
     "dnf": ["@multimedia"],
     "architectures": ["x86_64"]
+  },
+  {
+    "name": "LibreOffice",
+    "dnf": ["libreoffice"],
+    "apt": ["libreoffice"],
+    "flatpak": "org.libreoffice.LibreOffice",
+    "winget": ["TheDocumentFoundation.LibreOffice"],
+    "homebrew": ["libreoffice"]
+  },
+  {
+    "name": "Thunderbird",
+    "dnf": ["thunderbird"],
+    "apt": ["thunderbird"],
+    "flatpak": "org.mozilla.Thunderbird",
+    "winget": ["Mozilla.Thunderbird"],
+    "homebrew": ["thunderbird"]
+  },
+  {
+    "name": "htop",
+    "dnf": ["htop"],
+    "apt": ["htop"],
+    "winget": ["htop.htop"],
+    "homebrew": ["htop"]
+  },
+  {
+    "name": "fzf",
+    "dnf": ["fzf"],
+    "apt": ["fzf"],
+    "winget": ["junegunn.fzf"],
+    "homebrew": ["fzf"]
+  },
+  {
+    "name": "vim",
+    "dnf": ["vim"],
+    "apt": ["vim"],
+    "winget": ["vim.vim"],
+    "homebrew": ["vim"]
+  },
+  {
+    "name": "nano",
+    "dnf": ["nano"],
+    "apt": ["nano"],
+    "winget": ["GNU.Nano"],
+    "homebrew": ["nano"]
+  },
+  {
+    "name": "Python 3",
+    "dnf": ["python3"],
+    "apt": ["python3"],
+    "winget": ["Python.Python.3.12"],
+    "homebrew": ["python3"]
   }
 ]
