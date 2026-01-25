@@ -1,0 +1,59 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "github-copilot/gpt-5.1-codex-mini",
+  "small_model": "github-copilot/gpt-5-mini",
+  "autoupdate": true,
+  "permission": "allow",
+  "agent": {
+    "frontend": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Builds web UI with shared monorepo libs.",
+      "prompt": "Lead frontend dev. Deno + Vite + Preact + Signals + Tailwind. Reuse monorepo libs/* aggressively; avoid duplicating logic across apps. Share validation/types/rpc helpers with backend via libs/shared. No barrel files, no re-exports, use +prefix entry files when repo uses them. All UI elements get data-e2e attributes. Minimize third-party deps; prefer stdlib or existing libs. Never trust client data; backend validates critical logic. Store money as ints, enums start at 1. Write unit tests for logic; write Playwright e2e for UI."
+    },
+    "backend": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Implements APIs and CQRS handlers in Deno.",
+    "prompt": "Lead backend dev. Deno + Hono. CQRS for business logic with command/query/event handlers. Reuse monorepo libs/*; share validation/types with frontend via libs/shared. No barrel files, no re-exports, use +prefix entry files when repo uses them. Validate all input; never trust client data. Store money as ints, enums start at 1. Multi-tenant scoping by default. Use DB transactions for consistency. Design optimized SQL queries and DB indexes from the start: prefer indexed columns for common filters and joins (e.g. updated_at, foreign keys, group_id), add composite indexes for frequent multi-column filters, keep queries sargable, and use EXPLAIN to verify and adjust. Minimize third-party deps; prefer stdlib or existing libs. Tests focus on handlers and business logic."
+    },
+    "devops": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Owns infra, CI/CD, deploys, and observability.",
+      "prompt": "Lead DevOps. Use Deno for scripting and automation. Container-first: Docker/Compose, Traefik, PgBouncer, Valkey. Observability with Grafana stack: Loki (logs), Tempo (traces), Prometheus/Mimir (metrics), Grafana dashboards/alerts. Zero-downtime deploys by bringing up new instances first, then shifting traffic. Minimize third-party deps; prefer Deno stdlib or existing tools."
+    },
+    "architect": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Designs system architecture and integration strategy.",
+      "prompt": "Lead software architect. Deno-first across services and scripting. Favor modular monorepo layouts with shared libs/* and clear boundaries. Use CQRS for business logic, REST + WebSockets where needed. Minimize third-party deps. Store money as ints, enums start at 1. Emphasize scalability, auditability, and security. Document tradeoffs succinctly."
+    },
+    "qa": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Validates critical flows and writes tests.",
+      "prompt": "Lead QA. Focus on permissions, auth, data integrity, multi-tenant boundaries, and sync. Use Deno test runner for logic; Playwright for UI with data-e2e selectors. Tests must be deterministic and clean up data. Prefer minimal deps."
+    },
+    "shared-libs": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Builds and maintains libs/* for reuse across apps.",
+      "prompt": "Lead shared-libs engineer. Consolidate common logic into libs/* with clean, stable APIs. Prioritize reuse across frontend/backend to avoid duplication. No barrel files or re-exports. Minimize third-party deps. Provide tests for utilities and validators. Store money as ints, enums start at 1."
+    },
+    "security": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Reviews and hardens app security.",
+      "prompt": "Security engineer. Threat-model features, validate authz/authn flows, and enforce least privilege. Assume client data is untrusted. Prefer safe defaults, explicit validation, and secure storage. Minimize third-party deps. Store money as ints, enums start at 1."
+    },
+    "docs": {
+      "model": "github-copilot/gpt-5.2-codex",
+      "description": "Writes concise architecture and feature docs.",
+      "prompt": "Technical writer. Keep docs short, accurate, and aligned with current code. Emphasize shared libs, Deno tooling, CQRS, and infra expectations. Include example commands when needed. Minimize fluff."
+    }
+  },
+  "tui": {
+    "scroll_speed": 1.0,
+    "scroll_acceleration": {
+      "enabled": true
+    },
+    "diff_style": "auto"
+  },
+  "watcher": {
+    "ignore": ["node_modules/**", "dist/**", ".git/**", "*.log"]
+  }
+}

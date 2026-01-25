@@ -15,8 +15,6 @@ curl -fsSL https://deno.land/install.sh | sh
 ### Supported Platforms
 
 - **Linux**: zypper (openSUSE), dnf (Fedora/RHEL), apt (Debian/Ubuntu)
-- **macOS**: homebrew
-- **Windows**: winget
 
 ## Scripts Overview
 
@@ -47,6 +45,34 @@ deno task install-shell
 ```bash
 deno task install-all
 ````
+
+---
+
+## 🔗 Sync Local Config
+
+Repo holds dotfiles, home uses symlinks.
+
+```bash
+# tmux
+mv ~/.tmux.conf ~/.tmux.conf.bak-$(date +%Y%m%d%H%M%S)
+ln -s ~/dev/dotfiles/.tmux.conf ~/.tmux.conf
+
+# opencode
+mv ~/.config/opencode ~/.config/opencode.bak-$(date +%Y%m%d%H%M%S)
+ln -s ~/dev/dotfiles/.config/opencode ~/.config/opencode
+
+# nvim
+mv ~/.config/nvim ~/.config/nvim.bak-$(date +%Y%m%d%H%M%S)
+ln -s ~/dev/dotfiles/.config/nvim ~/.config/nvim
+```
+
+### Tmux plugins
+
+```bash
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+```
+
+In tmux: `prefix + I` to install plugins.
 
 ---
 
@@ -183,6 +209,10 @@ After installation completes:
 
 ```
 dotfiles/
+├── .tmux.conf          # tmux config (tpm, resurrect, continuum)
+├── .config/
+│   ├── opencode/       # opencode config
+│   └── nvim/           # neovim config
 ├── install-apps.ts      # Application installer
 ├── install-shell.ts     # Shell environment setup  
 ├── shared.ts           # Common utilities
