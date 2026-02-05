@@ -216,10 +216,11 @@
   },
   {
     "name": "sops",
-    "dnf": ["sops"],
-    "apt": ["sops"],
-    "winget": ["getsops.sops"],
-    "homebrew": ["sops"]
+    "homebrew": ["sops"],
+    "winget": ["SecretsOPerationS.SOPS"],
+    "postInstallCommands": [
+      "curl -LO https://github.com/getsops/sops/releases/download/v3.9.0/sops-v3.9.0.linux.amd64 && chmod +x sops-v3.9.0.linux.amd64 && sudo mv sops-v3.9.0.linux.amd64 /usr/local/bin/sops"
+    ]
   },
   {
     "name": "gimp",
