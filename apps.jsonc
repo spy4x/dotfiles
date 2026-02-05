@@ -215,6 +215,13 @@
     "homebrew": ["age"]
   },
   {
+    "name": "sops",
+    "dnf": ["sops"],
+    "apt": ["sops"],
+    "winget": ["getsops.sops"],
+    "homebrew": ["sops"]
+  },
+  {
     "name": "gimp",
     "dnf": ["gimp"],
     "apt": ["gimp"],
