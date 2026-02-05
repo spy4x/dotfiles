@@ -5,13 +5,13 @@
     "winget": ["Bitwarden.Bitwarden"],
     "homebrew": ["bitwarden"]
   },
-  {
-    "name": "Steam",
-    "dnf": ["steam"],
-    "apt": ["steam"],
-    "winget": ["Valve.Steam"],
-    "homebrew": ["steam"]
-  },
+  // {
+  //   "name": "Steam",
+  //   "dnf": ["steam"],
+  //   "apt": ["steam"],
+  //   "winget": ["Valve.Steam"],
+  //   "homebrew": ["steam"]
+  // },
   {
     "name": "VLC",
     "dnf": ["vlc"],
@@ -34,13 +34,6 @@
     "apt": ["wireguard-tools"],
     "winget": ["WireGuard.WireGuard"],
     "homebrew": ["wireguard-tools"]
-  },
-  {
-    "name": "Chromium",
-    "dnf": ["chromium"],
-    "apt": ["chromium-browser"],
-    "winget": ["Google.Chrome"],
-    "homebrew": ["chromium"]
   },
   {
     "name": "Telegram Desktop",
@@ -93,14 +86,6 @@
     ]
   },
   {
-    "name": "DataGrip",
-    "flatpak": "com.jetbrains.DataGrip"
-  },
-  {
-    "name": "Clementine Music Player",
-    "flatpak": "org.clementine_player.Clementine"
-  },
-  {
     "name": "Kdenlive",
     "flatpak": "org.kde.kdenlive",
     "dnf": ["kdenlive"],
@@ -147,13 +132,6 @@
     "homebrew": ["fzf"]
   },
   {
-    "name": "vim",
-    "dnf": ["vim"],
-    "apt": ["vim"],
-    "winget": ["vim.vim"],
-    "homebrew": ["vim"]
-  },
-  {
     "name": "nano",
     "dnf": ["nano"],
     "apt": ["nano"],
@@ -166,5 +144,111 @@
     "apt": ["python3"],
     "winget": ["Python.Python.3.12"],
     "homebrew": ["python3"]
+  },
+  {
+    "name": "neovim",
+    "dnf": ["neovim"],
+    "apt": ["neovim"],
+    "winget": ["Neovim.Neovim"],
+    "homebrew": ["neovim"]
+  },
+  {
+    "name": "lazygit",
+    "dnf": ["lazygit"],
+    "apt": ["lazygit"],
+    "winget": ["JesseDuffield.lazygit"],
+    "homebrew": ["lazygit"]
+  },
+  {
+    "name": "tmux",
+    "dnf": ["tmux"],
+    "apt": ["tmux"],
+    "winget": ["tmux.tmux"],
+    "homebrew": ["tmux"]
+  },
+  {
+    "name": "zsh",
+    "dnf": ["zsh"],
+    "apt": ["zsh"],
+    "homebrew": ["zsh"]
+  },
+  {
+    "name": "ripgrep",
+    "dnf": ["ripgrep"],
+    "apt": ["ripgrep"],
+    "winget": ["BurntSushi.ripgrep.MSVC"],
+    "homebrew": ["ripgrep"]
+  },
+  {
+    "name": "ansible",
+    "dnf": ["ansible"],
+    "apt": ["ansible"],
+    "winget": ["Ansible.Ansible"],
+    "homebrew": ["ansible"]
+  },
+  {
+    "name": "gh",
+    "dnf": ["gh"],
+    "apt": ["gh"],
+    "winget": ["GitHub.cli"],
+    "homebrew": ["gh"]
+  },
+  {
+    "name": "bottom",
+    "dnf": ["bottom"],
+    "apt": ["bottom"],
+    "winget": ["ClementTsang.bottom"],
+    "homebrew": ["bottom"]
+  },
+  {
+    "name": "fd-find",
+    "dnf": ["fd-find"],
+    "apt": ["fd-find"],
+    "winget": ["sharkdp.fd"],
+    "homebrew": ["fd"]
+  },
+  {
+    "name": "age",
+    "dnf": ["age"],
+    "apt": ["age"],
+    "winget": ["FiloSottile.age"],
+    "homebrew": ["age"]
+  },
+  {
+    "name": "gimp",
+    "dnf": ["gimp"],
+    "apt": ["gimp"],
+    "flatpak": "org.gimp.GIMP",
+    "winget": ["GIMP.GIMP"],
+    "homebrew": ["gimp"]
+  },
+  {
+    "name": "kid3",
+    "dnf": ["kid3"],
+    "apt": ["kid3"],
+    "flatpak": "org.kde.kid3",
+    "winget": ["Kid3.Kid3"],
+    "homebrew": ["kid3"]
+  },
+  {
+    "name": "mangohud",
+    "dnf": ["mangohud"],
+    "apt": ["mangohud"]
+  },
+  {
+    "name": "nvtop",
+    "dnf": ["nvtop"],
+    "apt": ["nvtop"],
+    "homebrew": ["nvtop"]
+  },
+  {
+    "name": "fio",
+    "dnf": ["fio"],
+    "apt": ["fio"],
+    "homebrew": ["fio"]
+  },
+  {
+    "name": "Brave Browser",
+    "flatpak": "com.brave.Browser"
   }
 ]

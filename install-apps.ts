@@ -34,7 +34,51 @@ async function runAppCommand(command: string[]): Promise<void> {
 }
 
 async function main() {
-  const apps: App[] = JSON.parse(await Deno.readTextFile("apps.json"))
+  // Read and parse JSONC (strip comments and trailing commas)
+  const rawContent = await Deno.readTextFile("apps.jsonc")
+  const jsonContent = rawContent
+    .split('\n')
+    .filter(line => {
+      const trimmed = line.trim()
+      // Keep lines that don't start with //
+      return !trimmed.startsWith('//')
+    })
+    .map(line => {
+      // Remove inline comments (but not // in strings)
+      // Simple approach: only remove // if not inside quotes
+      const quoteRegex = /"[^"]*"/g
+      const parts: string[] = []
+      let lastIndex = 0
+      let match
+      
+      // Extract all quoted strings
+      while ((match = quoteRegex.exec(line)) !== null) {
+        // Add non-quoted part before this match (remove comments from it)
+        const beforeQuote = line.substring(lastIndex, match.index)
+        const commentPos = beforeQuote.indexOf('//')
+        if (commentPos !== -1) {
+          parts.push(beforeQuote.substring(0, commentPos))
+          parts.push(match[0])
+          return parts.join('') // Comment found, stop here
+        }
+        parts.push(beforeQuote + match[0])
+        lastIndex = match.index + match[0].length
+      }
+      
+      // Handle remainder
+      const remainder = line.substring(lastIndex)
+      const commentPos = remainder.indexOf('//')
+      if (commentPos !== -1) {
+        parts.push(remainder.substring(0, commentPos))
+        return parts.join('')
+      }
+      
+      return line
+    })
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, "") // Remove multi-line comments
+    .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
+  const apps: App[] = JSON.parse(jsonContent)
   let needsReboot = false
 
   const pkgManager = await detectPackageManager()

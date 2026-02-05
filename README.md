@@ -64,6 +64,14 @@ ln -s ~/dev/dotfiles/.config/opencode ~/.config/opencode
 # nvim
 mv ~/.config/nvim ~/.config/nvim.bak-$(date +%Y%m%d%H%M%S)
 ln -s ~/dev/dotfiles/.config/nvim ~/.config/nvim
+
+# zsh
+mv ~/.zshrc ~/.zshrc.bak-$(date +%Y%m%d%H%M%S)
+ln -s ~/dev/dotfiles/.zshrc ~/.zshrc
+
+# p10k
+mv ~/.p10k.zsh ~/.p10k.zsh.bak-$(date +%Y%m%d%H%M%S)
+ln -s ~/dev/dotfiles/.p10k.zsh ~/.p10k.zsh
 ```
 
 ### Tmux plugins
@@ -88,9 +96,9 @@ In tmux: `prefix + I` to install plugins.
 - **Smart Recovery**: Continues with Flatpak if native packages fail
 - **Installation Summary**: Reports successful, failed, and skipped installations
 
-### Configuration (`apps.json`)
+### Configuration (`apps.jsonc`)
 
-Edit `apps.json` to customize applications. Each app supports:
+Edit `apps.jsonc` to customize applications. Supports comments via `//`. Each app supports:
 
 - **Package Managers**: `dnf`, `apt`, `zypper`, `winget`, `homebrew` arrays
 - **Flatpak**: `flatpak` ID (Linux only, preferred for GUI apps)
@@ -210,13 +218,15 @@ After installation completes:
 ```
 dotfiles/
 ├── .tmux.conf          # tmux config (tpm, resurrect, continuum)
+├── .zshrc              # zsh config
+├── .p10k.zsh           # powerlevel10k theme config
 ├── .config/
 │   ├── opencode/       # opencode config
 │   └── nvim/           # neovim config
 ├── install-apps.ts      # Application installer
 ├── install-shell.ts     # Shell environment setup  
 ├── shared.ts           # Common utilities
-├── apps.json           # Application configurations
+├── apps.jsonc          # Application configurations (with comments)
 ├── aliases.sh          # Custom shell aliases
 ├── deno.jsonc          # Deno configuration
 └── README.md           # This file
@@ -224,7 +234,7 @@ dotfiles/
 
 ### Adding New Applications
 
-1. Edit `apps.json`
+1. Edit `apps.jsonc`
 2. Add your application with appropriate package manager entries
 3. Test with `deno task install-apps`
 

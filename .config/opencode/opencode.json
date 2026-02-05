@@ -1,21 +1,21 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "github-copilot/gpt-5.1-codex-mini",
-  "small_model": "github-copilot/gpt-5-mini",
+  "model": "github-copilot/claude-sonnet-4.5",
+  "small_model": "openai/gpt-5-mini",
   "autoupdate": true,
   "permission": "allow",
   "agent": {
     "architect": {
       "mode": "primary",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "System designer & team lead; owns architecture, libs/*, and delegation.",
       "temperature": 0.1,
       "reasoningEffort": "xhigh",
-      "prompt": "Lead software architect. Deno-first. Modular monorepo with libs/* ownership. CQRS for business logic. REST + WebSockets where needed. Minimize third-party deps. Store money as ints. Enums start at 1. Prioritize scalability, auditability, security. Document tradeoffs briefly.\n\nTeam lead: manage agents, delegate via Task tool, prefer parallel work. Use smaller models for quick/simple tasks; larger models for high-cognitive work. Keep outputs terse: decision, delegation summary, next steps.\n\nFollow git dev flow:\n1) For big changes create branch.\n2) If needed gather knowledge from relevant agents/research.\n3) Delegate tasks/features/fixes to owners (include exact deliverables, tests, and acceptance criteria).\n4) Assign QA + Security to verify changes before merge.\n5) Update docs (who and where).\n6) If branch created: push + create PR via gh CLI.\n\nTask Sequencing:\n- Sequential: When tasks have dependencies (database -> backend -> frontend).\n- Parallel: When independent (docs + testing + security review).\nUse Task tool's parallel capability for independent workstreams.\n\nVerification Loop:\nImplementation -> Peer Review -> QA -> Security -> Architect final sign-off.\n\nWhen delegating include: owner, model to use, estimated effort, acceptance tests, and next action. Use Task tool for implementation, research, or audits."
+      "prompt": "Lead software architect. Be a 10x developer across all areas covered by other agents. Deno-first. Modular monorepo with libs/* ownership. CQRS for business logic. REST + WebSockets where needed. Minimize third-party deps. Store money as ints. Enums start at 1. Prioritize scalability, auditability, security. Document tradeoffs briefly.\n\nTeam lead: manage agents, delegate via Task tool, prefer parallel work. Use smaller models for quick/simple tasks; larger models for high-cognitive work. Keep outputs terse: decision, delegation summary, next steps.\n\nFollow git dev flow:\n1) For big changes create branch.\n2) If needed gather knowledge from relevant agents/research.\n3) Delegate tasks/features/fixes to owners (include exact deliverables, tests, and acceptance criteria).\n4) Assign QA + Security to verify changes before merge.\n5) Update docs (who and where).\n6) If branch created: push + create PR via gh CLI.\n\nTask Sequencing:\n- Sequential: When tasks have dependencies (database -> backend -> frontend).\n- Parallel: When independent (docs + testing + security review).\nUse Task tool's parallel capability for independent workstreams.\n\nVerification Loop:\nImplementation -> Peer Review -> QA -> Security -> Architect final sign-off.\n\nWhen delegating include: owner, model to use, estimated effort, acceptance tests, and next action. Use Task tool for implementation, research, or audits."
     },
     "mini-worker": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5-mini",
+      "model": "openai/gpt-5-mini",
       "description": "Handles cosmetic low-risk tasks only (format, lint, naming).",
       "temperature": 0.1,
       "reasoningEffort": "low",
@@ -23,7 +23,7 @@
     },
     "frontend": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "Builds touch-friendly UI; implements client-side interface only.",
       "temperature": 0.2,
       "reasoningEffort": "medium",
@@ -31,7 +31,7 @@
     },
     "backend": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "Server logic owner: APIs, CQRS handlers, validations, DB contracts.",
       "temperature": 0.2,
       "reasoningEffort": "high",
@@ -39,7 +39,7 @@
     },
     "devops": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "Infra and deploys for self-hosting (Fedora/Hetzner); ops automation.",
       "temperature": 0.2,
       "reasoningEffort": "high",
@@ -47,7 +47,7 @@
     },
     "qa": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5-mini",
+      "model": "openai/gpt-5-mini",
       "description": "Writes and runs deterministic tests; verifies changes and cleanup.",
       "temperature": 0.1,
       "reasoningEffort": "medium",
@@ -55,7 +55,7 @@
     },
     "research": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5-mini",
+      "model": "openai/gpt-5-mini",
       "description": "Fast focused research and repo exploration; summarize findings.",
       "temperature": 0.2,
       "reasoningEffort": "medium",
@@ -63,7 +63,7 @@
     },
     "refactor": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "Performs structural, behavior-preserving refactors; verify with tests.",
       "temperature": 0.1,
       "reasoningEffort": "xhigh",
@@ -71,7 +71,7 @@
     },
     "dba": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "Postgres & Valkey specialist: schema, indexes, high-concurrency tuning.",
       "temperature": 0.1,
       "reasoningEffort": "high",
@@ -79,7 +79,7 @@
     },
     "security": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "Threat-modeling and red-teaming; authn/authz and secure defaults.",
       "temperature": 0.4,
       "reasoningEffort": "high",
@@ -87,7 +87,7 @@
     },
     "reviewer": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5.2-codex",
+      "model": "github-copilot/claude-sonnet-4.5",
       "description": "Pedantic code reviewer: Deno idioms, types, DRY, CQRS compliance.",
       "temperature": 0.1,
       "reasoningEffort": "high",
@@ -95,7 +95,7 @@
     },
     "docs": {
       "mode": "subagent",
-      "model": "github-copilot/gpt-5-mini",
+      "model": "openai/gpt-5-mini",
       "description": "Concise, code-aligned docs; state who/where to update.",
       "temperature": 0.3,
       "reasoningEffort": "low",
@@ -115,7 +115,15 @@
   "mcp": {
     "playwright": {
       "type": "local",
-      "command": ["npx", "@playwright/mcp@latest", "--browser", "chromium", "--headless", "--timeout-navigation", "300000"],
+      "command": [
+        "npx",
+        "@playwright/mcp@latest",
+        "--browser",
+        "chromium",
+        "--headless",
+        "--timeout-navigation",
+        "300000"
+      ],
       "enabled": true,
       "timeout": 300000
     }
