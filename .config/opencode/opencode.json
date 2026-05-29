@@ -109,6 +109,11 @@
     },
     "diff_style": "auto"
   },
+  "notifier": {
+    "enabled": true,
+    "sound": true,
+    "mode": "notify-send"
+  },
   "watcher": {
     "ignore": [
       "node_modules/**",
