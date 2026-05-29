@@ -1,13 +1,13 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "github-copilot/claude-sonnet-4.5",
-  "small_model": "openai/gpt-5-mini",
+  "model": "deepseek/deepseek-v4-flash",
+  "small_model": "deepseek/deepseek-v4-flash",
   "autoupdate": true,
   "permission": "allow",
   "agent": {
     "architect": {
       "mode": "primary",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "System designer & team lead; owns architecture, libs/*, and delegation.",
       "temperature": 0.1,
       "reasoningEffort": "xhigh",
@@ -15,23 +15,23 @@
     },
     "mini-worker": {
       "mode": "subagent",
-      "model": "openai/gpt-5-mini",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Handles cosmetic low-risk tasks only (format, lint, naming).",
       "temperature": 0.1,
       "reasoningEffort": "low",
-      "prompt": "Mini worker. Handle quick, low‑risk tasks only: formatting, cosmetic refactors (naming, linting), code snippets, short docs, regexes, small searches, and data-cleaning helpers. Be concise. Prefer deterministic answers. Do NOT spawn subagents, perform deep research, or fetch web. If unsure, respond 'uncertain' and ask one clarifying question. Follow security best-practices. Minimize hallucination; prefer 'I don't know' over guessing."
+      "prompt": "Mini worker. Handle quick, low\u2011risk tasks only: formatting, cosmetic refactors (naming, linting), code snippets, short docs, regexes, small searches, and data-cleaning helpers. Be concise. Prefer deterministic answers. Do NOT spawn subagents, perform deep research, or fetch web. If unsure, respond 'uncertain' and ask one clarifying question. Follow security best-practices. Minimize hallucination; prefer 'I don't know' over guessing."
     },
     "frontend": {
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Builds touch-friendly UI; implements client-side interface only.",
       "temperature": 0.2,
-      "reasoningEffort": "medium",
+      "reasoningEffort": "high",
       "prompt": "Lead frontend dev. Deno + Vite + Preact + Signals + Tailwind. Ensure UI is touch-friendly for Capacitor/mobile wrapping. Prefer Preact Signals over hooks whenever possible; only use hooks when Signals are not viable. Reuse monorepo libs/* aggressively; avoid duplicating logic across apps. Share validation/types/rpc helpers with backend via libs/shared. All UI elements get data-e2e attributes. Minimize third-party deps; prefer stdlib or existing libs. Never trust client data; backend validates critical logic. Store money as ints, enums start at 1. Write unit tests for logic; write Playwright e2e for UI. May call mini-worker and research agents via Task tool for small tasks and quick exploration."
     },
     "backend": {
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Server logic owner: APIs, CQRS handlers, validations, DB contracts.",
       "temperature": 0.2,
       "reasoningEffort": "high",
@@ -39,7 +39,7 @@
     },
     "devops": {
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Infra and deploys for self-hosting (Fedora/Hetzner); ops automation.",
       "temperature": 0.2,
       "reasoningEffort": "high",
@@ -47,31 +47,31 @@
     },
     "qa": {
       "mode": "subagent",
-      "model": "openai/gpt-5-mini",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Writes and runs deterministic tests; verifies changes and cleanup.",
       "temperature": 0.1,
-      "reasoningEffort": "medium",
+      "reasoningEffort": "high",
       "prompt": "Lead QA. Focus on permissions, auth, data integrity, multi-tenant boundaries, and sync. Use Deno test runner for logic; Playwright for UI with data-e2e selectors. Tests must be deterministic and clean up data. Prefer minimal deps."
     },
     "research": {
       "mode": "subagent",
-      "model": "openai/gpt-5-mini",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Fast focused research and repo exploration; summarize findings.",
       "temperature": 0.2,
-      "reasoningEffort": "medium",
+      "reasoningEffort": "high",
       "prompt": "Research agent. Perform fast, focused exploration: codebase searches, design comparisons, dependency checks, and light external research when authorized. Summarize findings concisely with actionable next steps. Use Task tool to escalate deeper research. Be concise and cite sources when external info is used."
     },
     "refactor": {
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Performs structural, behavior-preserving refactors; verify with tests.",
       "temperature": 0.1,
-      "reasoningEffort": "xhigh",
+      "reasoningEffort": "high",
       "prompt": "Refactoring specialist. Improve code structure, performance, and maintainability without altering external behavior. Focus on: reducing complexity, improving testability, eliminating duplication, and applying performance optimizations. Always verify behavior preservation with existing tests. Prefer incremental, safe changes."
     },
     "dba": {
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Postgres & Valkey specialist: schema, indexes, high-concurrency tuning.",
       "temperature": 0.1,
       "reasoningEffort": "high",
@@ -79,7 +79,7 @@
     },
     "security": {
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Threat-modeling and red-teaming; authn/authz and secure defaults.",
       "temperature": 0.4,
       "reasoningEffort": "high",
@@ -87,7 +87,7 @@
     },
     "reviewer": {
       "mode": "subagent",
-      "model": "github-copilot/claude-sonnet-4.5",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Pedantic code reviewer: Deno idioms, types, DRY, CQRS compliance.",
       "temperature": 0.1,
       "reasoningEffort": "high",
@@ -95,7 +95,7 @@
     },
     "docs": {
       "mode": "subagent",
-      "model": "openai/gpt-5-mini",
+      "model": "deepseek/deepseek-v4-flash",
       "description": "Concise, code-aligned docs; state who/where to update.",
       "temperature": 0.3,
       "reasoningEffort": "low",
@@ -110,7 +110,12 @@
     "diff_style": "auto"
   },
   "watcher": {
-    "ignore": ["node_modules/**", "dist/**", ".git/**", "*.log"]
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      ".git/**",
+      "*.log"
+    ]
   },
   "mcp": {
     "playwright": {
