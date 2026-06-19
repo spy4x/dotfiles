@@ -244,6 +244,23 @@
       ],
       "enabled": true,
       "timeout": 300000
+    },
+    "caldav-mcp": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "--from",
+        "git+https://github.com/madbonez/caldav-mcp",
+        "mcp-caldav",
+        "--caldav-url",
+        "https://cal.antonshubin.com/",
+        "--caldav-username",
+        "spy4x",
+        "--caldav-password",
+        "Onsdqukh1b8zvA3csjx8DZ8Qnj7K3Cfh"
+      ],
+      "enabled": true,
+      "timeout": 60000
     }
   }
 }
