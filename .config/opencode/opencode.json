@@ -248,15 +248,8 @@
     "dav-mcp": {
       "type": "local",
       "command": [
-        "npx",
-        "-y",
-        "dav-mcp"
+        "/home/spy4x/bin/dav-mcp-wrapper.sh"
       ],
-      "env": {
-        "CALDAV_SERVER_URL": "https://cal.antonshubin.com/",
-        "CALDAV_USERNAME": "spy4x",
-        "CALDAV_PASSWORD": "Onsdqukh1b8zvA3csjx8DZ8Qnj7K3Cfh"
-      },
       "enabled": true,
       "timeout": 60000
     }
