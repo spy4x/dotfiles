@@ -11,7 +11,7 @@ If a file touches git history, assume it's public forever. **Hardcoding envs in 
 Instead:
 - Use a non-git directory for secrets (e.g. `~/sync/code/opencode-db/`) — safe because it's Syncthing-only, never a git repo
 - `.env` files in non-git dirs for local secrets that need syncing between machines
-- SOPS/age-encrypted `.env.age` for committed encrypted secrets
+- **SOPS/age-encrypted `.env.age` for ANY env file committed to git** — this is mandatory, not optional. Encrypt before every commit.
 - Scripts read from env vars or source `.env` from a non-git dir
 - `.env.example` files use `YOUR_KEY_HERE` or `REPLACE_WITH_*` placeholders
 
