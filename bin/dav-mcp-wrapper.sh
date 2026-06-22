@@ -1,7 +1,17 @@
 #!/bin/sh
-export CALDAV_SERVER_URL="https://cal.antonshubin.com/"
-export CALDAV_USERNAME="spy4x"
-export CALDAV_PASSWORD="Onsdqukh1b8zvA3csjx8DZ8Qnj7K3Cfh"
+# dav-mcp-wrapper — npx dav-mcp with VTODO patch + local Radicale
+# Reads CALDAV_URL, CALDAV_USERNAME, CALDAV_PASSWORD from env.
+# Falls back to ~/.config/caldav-creds.env if vars not set.
+# NEVER hardcode credentials in this file — they end up in git.
+
+[ -z "$CALDAV_URL" ] && [ -f "$HOME/.config/caldav-creds.env" ] && . "$HOME/.config/caldav-creds.env"
+
+: "${CALDAV_URL:?Must set CALDAV_URL or create ~/.config/caldav-creds.env}"
+: "${CALDAV_USERNAME:?Must set CALDAV_USERNAME}"
+: "${CALDAV_PASSWORD:?Must set CALDAV_PASSWORD}"
+
+export CALDAV_SERVER_URL="$CALDAV_URL"
+export CALDAV_USERNAME CALDAV_PASSWORD
 
 # Cache dav-mcp via npx if not already cached
 npx -y dav-mcp --help > /dev/null 2>&1 || true

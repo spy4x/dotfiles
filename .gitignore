@@ -65,6 +65,10 @@ jspm_packages/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.caldav
+
+# CalDAV MCP credentials (exposed to git in the past — DO NOT TRACK)
+caldav-creds.env
 
 # Build outputs
 dist/
