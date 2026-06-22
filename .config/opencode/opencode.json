@@ -245,10 +245,10 @@
       "enabled": true,
       "timeout": 300000
     },
-    "dav-mcp": {
+    "caldav-mcp": {
       "type": "local",
       "command": [
-        "/home/spy4x/bin/dav-mcp-wrapper.sh"
+        "/home/spy4x/sync/code/opencode-db/caldav-mcp.sh"
       ],
       "enabled": true,
       "timeout": 60000

@@ -1,12 +1,12 @@
 #!/bin/sh
 # dav-mcp-wrapper — npx dav-mcp with VTODO patch + local Radicale
 # Reads CALDAV_URL, CALDAV_USERNAME, CALDAV_PASSWORD from env.
-# Falls back to ~/.config/caldav-creds.env if vars not set.
-# NEVER hardcode credentials in this file — they end up in git.
+# Falls back to opencode-db/.env (Syncthing'd, not a git repo).
+# NEVER hardcode credentials — this file is in git (dotfiles).
 
-[ -z "$CALDAV_URL" ] && [ -f "$HOME/.config/caldav-creds.env" ] && . "$HOME/.config/caldav-creds.env"
+[ -z "$CALDAV_URL" ] && [ -f "$HOME/sync/code/opencode-db/.env" ] && . "$HOME/sync/code/opencode-db/.env"
 
-: "${CALDAV_URL:?Must set CALDAV_URL or create ~/.config/caldav-creds.env}"
+: "${CALDAV_URL:?Set CALDAV_URL or create ~/sync/code/opencode-db/.env}"
 : "${CALDAV_USERNAME:?Must set CALDAV_USERNAME}"
 : "${CALDAV_PASSWORD:?Must set CALDAV_PASSWORD}"
 
