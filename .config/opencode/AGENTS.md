@@ -1,4 +1,5 @@
 In all interactions, plans, and commit messages, be extremely laconic and even sacrifice grammar.
+Language: respond in English or Russian only. Never use Chinese or other languages.
 Never use grep with something as wide as "**/myfile.txt" - that takes to long. Use narrower pattern instead.
 Use Angular commit convention.
 
@@ -25,3 +26,32 @@ Rotation when exposed:
 ## Fail-open principle
 
 Always guard calls to non-critical external services (monitoring, reporting, notifications, analytics) with `|| true` or equivalent. Failure of a supporting subsystem must never block or alter the outcome of the primary operation. In the rare case the primary itself must depend on the external service, document the tradeoff. This is known as **Fail-open** (or **Fail-soft**) — the system continues operating even when auxiliaries fail — as opposed to **Fail-closed** where any component failure halts the whole system.
+
+## Knowledge Base — sparingly used
+
+**Use only for non-obvious, recurring, hard-to-figure-out issues.** If the fix is in the first 3 results of a search, skip it. Project-specific knowledge goes in the project's own docs/todos, not here.
+
+```markdown
+### YYYY-MM-DD — <symptom>
+- **Stack:** <area>
+- **Root cause:** <1-2 lines>
+- **Fix:** <1-2 lines>
+- **Prevention:** <1 line>
+```
+
+<!-- Add new entries at top, newest first -->
+## Tooling conventions
+
+- **No `grep` with `**/file.txt`** — use narrow include patterns or Glob first.
+- **Deno imports:** prefer `jsr:` and `npm:` specifiers; minimize deps in libs.
+- **TypeScript:** interfaces for shapes, enums (start at 1) for constants, types for unions.
+- **No semicolons, 2-space indent, double quotes, 100 col, prose-wrap preserved** (matches homelab `deno.jsonc`).
+- **Commit:** Angular convention (`feat|fix|refactor|chore|docs(scope): subject`).
+- **Reasoning mode:** for multi-hour feature/infra work, always **max** thinking — quality lives in cross-cutting decisions.
+
+## Memory & context sources
+
+Before starting a task, check for relevant context:
+- `~/sync/code/ai-memory/` — `situation.txt` (current state), `user.txt` (preferences), `todos.txt` (cross-repo priorities)
+- Repo-local `AGENTS.md` (overrides global)
+- CalDAV MCP todos (live task list with priorities + due dates)
