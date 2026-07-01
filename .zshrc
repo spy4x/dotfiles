@@ -111,21 +111,13 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
 # Source custom aliases from dotfiles
-source "/home/spy4x/dev/dotfiles/aliases.sh"
-
-# Add Deno to PATH
-export PATH="$HOME/.deno/bin:$PATH"
+[[ -f "/home/spy4x/sync/code/dotfiles/aliases.sh" ]] && source "/home/spy4x/sync/code/dotfiles/aliases.sh"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.deno/bin:$PATH"
 
 # opencode
 export PATH=/home/spy4x/.opencode/bin:$PATH
 
-# bun completions
-[ -s "/home/spy4x/.bun/_bun" ] && source "/home/spy4x/.bun/_bun"
-
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
+. "$HOME/.local/bin/env"
