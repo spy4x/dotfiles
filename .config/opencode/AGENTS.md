@@ -112,6 +112,20 @@ cd <type>/<slug>
 
 Verify after creation: `pwd` shows new dir, `git branch --show-current` shows new branch.
 
+### After worktree creation — env setup
+
+For repos with age-encrypted envs (`.env.age` files), the worktree needs the age key + decrypted `.env` before deploy / secret-aware commands work:
+
+```bash
+# Copy age key from main repo root (gitignored, never committed)
+[ -f .age/key.txt ] || cp ../../.age/key.txt .age/key.txt
+
+# Decrypt envs for this worktree
+deno task env:decrypt
+```
+
+Repos with `post-checkout` git hooks (homelab) auto-decrypt — check repo-local `AGENTS.md` for the specific env setup flow. Skip this section if repo has no `.env.age` files.
+
 ### Branch naming (Angular)
 
 `<type>/<short-kebab-description>`. Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `ci`. Branch name with `/` creates a subdirectory matching the branch.
