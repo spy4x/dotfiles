@@ -30,4 +30,4 @@ Constraints:
 - **Boundaries**: respect layer separation (libs vs handlers vs components). Flag any cross-layer coupling as risk.
 - **Save path**: same dir as PRD (`docs/prd/<name>-design.md`) or as user specifies
 
-Output to user: file path + 3 key architectural decisions + suggested /tasks invocation.
+Output to user: file path + 3 key architectural decisions + suggested `@task-generator` invocation.
