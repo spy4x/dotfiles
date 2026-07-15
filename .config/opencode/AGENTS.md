@@ -49,6 +49,154 @@ Always guard calls to non-critical external services (monitoring, reporting, not
 - **Commit:** Angular convention (`feat|fix|refactor|chore|docs(scope): subject`).
 - **Reasoning mode:** for multi-hour feature/infra work, always **max** thinking — quality lives in cross-cutting decisions.
 
+## Git workflow (universal)
+
+Applies to every repo that uses this flow. Repo-local `AGENTS.md` can add repo-specific rules on top.
+
+### Worktree first
+
+For any code change, create branch + worktree **before** exploring or editing. Multiple AI agents may work in parallel — touching `main` directly causes conflicts.
+
+```bash
+git worktree add -b <type>/<slug> <type>/<slug> <base>
+cd <type>/<slug>
+```
+
+Verify after creation: `pwd` shows new dir, `git branch --show-current` shows new branch.
+
+### Branch naming (Angular)
+
+`<type>/<short-kebab-description>`. Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `ci`. Branch name with `/` creates a subdirectory matching the branch.
+
+### Pre-commit check
+
+Before every commit in repos that have `deno task check`: all checks MUST pass (lint + fmt + type-check + tests). Fix issues first, do not commit anyway. Trivial doc-only changes can skip.
+
+### PR discipline
+
+A PR MUST exist at all times when working a task. Never work without one.
+
+1. Create PR immediately after first commit (even if task incomplete).
+2. Prefix title with `[WIP]` until fully done.
+3. Push new commit + update PR body after every human interaction.
+4. Remove `[WIP]` only when task fully complete and ready for final review.
+5. Keep PR body accurate (current state, known issues, next steps).
+
+Issue/PR refs in PR body must be **full URLs**: `Closes [#N](https://github.com/<owner>/<repo>/issues/N)` — not bare `#N`. GH auto-renders adjacent issues but plain text is useless in docs/commits. Terminal output and commit subjects are exceptions.
+
+### Merge protocol (human-in-the-loop)
+
+After all changes done and PR created, **STOP and wait**. Never merge yourself.
+
+When user says "merge":
+- All commits relate to one feature/issue/fix → squash: `gh pr merge --squash --delete-branch`
+- Some commits fix independent things → rebase: `gh pr merge --rebase --delete-branch`
+
+Then clean up worktree: `git worktree remove <type>/<slug> && git branch -d <type>/<slug>`.
+
+## TypeScript style (universal)
+
+### Formatting (Deno defaults)
+
+- No semicolons, 2-space indent, double quotes, 100 col
+- Prose-wrap preserved (matches `deno fmt` defaults)
+- Trailing commas where legal
+
+### File naming
+
+- TypeScript files: `kebab-case.ts`
+- Main entry: `+main.ts` (Deno convention)
+- Library: `+lib.ts` (Deno convention)
+- Config: `config.json`, `compose.yml`, `deno.jsonc`
+- Tests: `*.test.ts` colocated with source
+
+### Imports
+
+```typescript
+// Relative for local modules
+import { BackupConfig } from "./+lib.ts"
+
+// JSR for stdlib
+import { getEnvVar } from "@std/dotenv"
+
+// npm for unavoidable third-party
+import { z } from "npm:zod"
+
+// Alias for shared scripts (where monorepo supports)
+import { BackupConfig } from "@scripts/backup"
+```
+
+Minimize third-party deps. Prefer stdlib or existing libs/* over new packages.
+
+### Type definitions
+
+```typescript
+// Interface for object shapes (extensible)
+export interface BackupContext {
+  serverName: string
+  backupsOutputBasePath: string
+  healthchecksUrl?: string  // optional with ?
+}
+
+// Enum for finite constants, START AT 1
+export enum BackupStatus {
+  IN_PROGRESS = 1,
+  SUCCESS = 2,
+  ERROR = 3,
+}
+
+// Type for unions/intersections, not shapes
+export type BackupConfigState = BackupConfig & {
+  fileName: string
+  status: BackupStatus
+}
+```
+
+Never start enum at 0. Money values: always `number` representing smallest unit (cents, satoshis), never float.
+
+### Function patterns
+
+```typescript
+// Named exports, clear names
+export function success(...args: unknown[]) { ... }
+
+// Async/await, not .then()
+export async function runCommand(cmd: string[]): Promise<Result> { ... }
+
+// Default exports for config objects
+const backupConfig: BackupConfig = { name: "vaultwarden", ... }
+export default backupConfig
+```
+
+### Error handling
+
+```typescript
+// Explicit throw on missing required env
+export function getEnvVar(key: string, isOptional = false): string {
+  const value = Deno.env.get(key)
+  if (!value && !isOptional) {
+    throw new Error(`Missing environment variable: ${key}`)
+  }
+  return value || ""
+}
+
+// Structured result from commands
+export async function runCommand(cmd: string[]): Promise<{
+  success: boolean
+  output: string
+  error: string
+}> { ... }
+```
+
+Fail-open (see section above) for non-critical external calls. Fail-closed only when explicitly required; document the tradeoff.
+
+### Testing
+
+- Test files: `*.test.ts`, colocated with source
+- Run all: `deno task test`. Run single: `deno test path/to/file.test.ts`
+- Deterministic — no flakes, no shared mutable state, cleanup after each test
+- Test names describe behavior: `t("rejects expired token")` not `t("test 1")`
+
 ## Memory & context sources
 
 Before starting a task, check for relevant context:
