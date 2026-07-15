@@ -3,6 +3,25 @@ Language: respond in English only.
 Never use grep with something as wide as "**/myfile.txt" - that takes to long. Use narrower pattern instead.
 Use Angular commit convention.
 
+## Layering: global + repo-local AGENTS.md
+
+This file is the **global** AGENTS.md (`~/.config/opencode/AGENTS.md`). Every repo may also have its own `AGENTS.md` at root.
+
+**Model: additive.** Both files are loaded as context. Rules compose:
+
+- **Global rules apply everywhere** unless a repo-local rule explicitly contradicts them.
+- **Repo-local rules add** repo-specific constraints on top of global (e.g., container naming convention, service catalog layout, deploy commands).
+- **On direct conflict** (same rule, different value): repo-local wins for that repo only. Global still applies to everything else.
+- **Specialization beats generalization** when both speak to the same topic — repo-local homelab rules override global generic rules for that repo.
+
+Examples:
+
+- Global says "minimize third-party deps". Homelab repo-local adds "all containers must use `hl-` prefix". Both apply.
+- Global says "money as ints". If a legacy repo-local says "money as NUMERIC", repo-local wins for that repo only.
+- Global says "Angular commit convention". A repo-local may add a custom scope taxonomy. Both apply.
+
+Agent definitions (`.config/opencode/agents/*.md`) must NOT duplicate rules from this file — they live in one place. Agents reference global rules implicitly (since this file is in their context) and add only their domain-specific guidance.
+
 ## Session bootstrap (mandatory, every session)
 
 Before doing anything else in a new project/workspace, **fully read** the files that establish project conventions and available tooling. Skipping this causes convention violations and wasted exploration later.
@@ -17,7 +36,7 @@ Required reads, in parallel where possible:
 - `pyproject.toml`, `Cargo.toml`, `go.mod`, etc. (if exists) — equivalent for that stack
 - `tsconfig.json`, `.eslintrc*`, `biome.json`, `.prettierrc*` (if exists) — lint/format config
 - `docker-compose.yml`, `compose.yaml`, `Dockerfile` (if exists) — runtime context
-- Repo-local `AGENTS.md` — overrides global (always wins over this file)
+- Repo-local `AGENTS.md` — **extends** global (see "Layering" section below)
 
 What this gives you:
 
@@ -80,7 +99,7 @@ Always guard calls to non-critical external services (monitoring, reporting, not
 
 ## Git workflow (universal)
 
-Applies to every repo that uses this flow. Repo-local `AGENTS.md` can add repo-specific rules on top.
+Applies to every repo that follows this flow. Repo-local `AGENTS.md` extends with repo-specific rules on top (see "Layering" section).
 
 ### Worktree first
 
