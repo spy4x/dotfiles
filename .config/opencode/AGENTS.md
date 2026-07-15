@@ -3,6 +3,35 @@ Language: respond in English only.
 Never use grep with something as wide as "**/myfile.txt" - that takes to long. Use narrower pattern instead.
 Use Angular commit convention.
 
+## Session bootstrap (mandatory, every session)
+
+Before doing anything else in a new project/workspace, **fully read** the files that establish project conventions and available tooling. Skipping this causes convention violations and wasted exploration later.
+
+Required reads, in parallel where possible:
+
+- `README.md` — project purpose, setup, key commands
+- All other `*.md` files at repo root — conventions, contribution rules, ADRs
+- Everything under `./docs/` — design docs, decision records, onboarding
+- `deno.json` or `deno.jsonc` — tasks, imports, lint/fmt config, compiler options
+- `package.json` (if exists) — npm scripts, deps, engines
+- `pyproject.toml`, `Cargo.toml`, `go.mod`, etc. (if exists) — equivalent for that stack
+- `tsconfig.json`, `.eslintrc*`, `biome.json`, `.prettierrc*` (if exists) — lint/format config
+- `docker-compose.yml`, `compose.yaml`, `Dockerfile` (if exists) — runtime context
+- Repo-local `AGENTS.md` — overrides global (always wins over this file)
+
+What this gives you:
+
+- Exact `deno task xxx` (or npm/pnpm/cargo) commands — don't guess, read the file
+- Allowed/disallowed patterns (deno.jsonc fmt options, lint rules)
+- Available libs/*, scripts, and shared utilities
+- Pre-commit hooks (`.husky/`, `lefthook.yml`, deno tasks named `check`/`fix`)
+- Test command and framework conventions
+- Deploy/infra command names
+
+If the project has none of these (greenfield, no README yet), say so explicitly and proceed by asking the user for conventions rather than inventing.
+
+Repeat this read at the start of every new project/worktree. Different repo = different conventions. Do not assume conventions from one repo apply to another.
+
 ## Hard rule: NEVER commit plaintext credentials — NEVER hardcode envs
 
 No passwords, tokens, API keys, secrets, private keys, or raw env values in ANY git-tracked file.
