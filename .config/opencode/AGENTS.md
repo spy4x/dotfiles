@@ -3,6 +3,54 @@ Language: respond in English only.
 Never use grep with something as wide as "**/myfile.txt" - that takes to long. Use narrower pattern instead.
 Use Angular commit convention.
 
+## Layering: global + repo-local AGENTS.md
+
+This file is the **global** AGENTS.md (`~/.config/opencode/AGENTS.md`). Every repo may also have its own `AGENTS.md` at root.
+
+**Model: additive.** Both files are loaded as context. Rules compose:
+
+- **Global rules apply everywhere** unless a repo-local rule explicitly contradicts them.
+- **Repo-local rules add** repo-specific constraints on top of global (e.g., container naming convention, service catalog layout, deploy commands).
+- **On direct conflict** (same rule, different value): repo-local wins for that repo only. Global still applies to everything else.
+- **Specialization beats generalization** when both speak to the same topic — repo-local homelab rules override global generic rules for that repo.
+
+Examples:
+
+- Global says "minimize third-party deps". Homelab repo-local adds "all containers must use `hl-` prefix". Both apply.
+- Global says "money as ints". If a legacy repo-local says "money as NUMERIC", repo-local wins for that repo only.
+- Global says "Angular commit convention". A repo-local may add a custom scope taxonomy. Both apply.
+
+Agent definitions (`.config/opencode/agents/*.md`) must NOT duplicate rules from this file — they live in one place. Agents reference global rules implicitly (since this file is in their context) and add only their domain-specific guidance.
+
+## Session bootstrap (mandatory, every session)
+
+Before doing anything else in a new project/workspace, **fully read** the files that establish project conventions and available tooling. Skipping this causes convention violations and wasted exploration later.
+
+Required reads, in parallel where possible:
+
+- `README.md` — project purpose, setup, key commands
+- All other `*.md` files at repo root — conventions, contribution rules, ADRs
+- Everything under `./docs/` — design docs, decision records, onboarding
+- `deno.json` or `deno.jsonc` — tasks, imports, lint/fmt config, compiler options
+- `package.json` (if exists) — npm scripts, deps, engines
+- `pyproject.toml`, `Cargo.toml`, `go.mod`, etc. (if exists) — equivalent for that stack
+- `tsconfig.json`, `.eslintrc*`, `biome.json`, `.prettierrc*` (if exists) — lint/format config
+- `docker-compose.yml`, `compose.yaml`, `Dockerfile` (if exists) — runtime context
+- Repo-local `AGENTS.md` — **extends** global (see "Layering" section below)
+
+What this gives you:
+
+- Exact `deno task xxx` (or npm/pnpm/cargo) commands — don't guess, read the file
+- Allowed/disallowed patterns (deno.jsonc fmt options, lint rules)
+- Available libs/*, scripts, and shared utilities
+- Pre-commit hooks (`.husky/`, `lefthook.yml`, deno tasks named `check`/`fix`)
+- Test command and framework conventions
+- Deploy/infra command names
+
+If the project has none of these (greenfield, no README yet), say so explicitly and proceed by asking the user for conventions rather than inventing.
+
+Repeat this read at the start of every new project/worktree. Different repo = different conventions. Do not assume conventions from one repo apply to another.
+
 ## Hard rule: NEVER commit plaintext credentials — NEVER hardcode envs
 
 No passwords, tokens, API keys, secrets, private keys, or raw env values in ANY git-tracked file.
@@ -48,6 +96,168 @@ Always guard calls to non-critical external services (monitoring, reporting, not
 - **No semicolons, 2-space indent, double quotes, 100 col, prose-wrap preserved** (matches homelab `deno.jsonc`).
 - **Commit:** Angular convention (`feat|fix|refactor|chore|docs(scope): subject`).
 - **Reasoning mode:** for multi-hour feature/infra work, always **max** thinking — quality lives in cross-cutting decisions.
+
+## Git workflow (universal)
+
+Applies to every repo that follows this flow. Repo-local `AGENTS.md` extends with repo-specific rules on top (see "Layering" section).
+
+### Worktree first
+
+For any code change, create branch + worktree **before** exploring or editing. Multiple AI agents may work in parallel — touching `main` directly causes conflicts.
+
+```bash
+git worktree add -b <type>/<slug> <type>/<slug> <base>
+cd <type>/<slug>
+```
+
+Verify after creation: `pwd` shows new dir, `git branch --show-current` shows new branch.
+
+### After worktree creation — env setup
+
+For repos with age-encrypted envs (`.env.age` files), the worktree needs the age key + decrypted `.env` before deploy / secret-aware commands work:
+
+```bash
+# Copy age key from main repo root (gitignored, never committed)
+[ -f .age/key.txt ] || cp ../../.age/key.txt .age/key.txt
+
+# Decrypt envs for this worktree
+deno task env:decrypt
+```
+
+Repos with `post-checkout` git hooks (homelab) auto-decrypt — check repo-local `AGENTS.md` for the specific env setup flow. Skip this section if repo has no `.env.age` files.
+
+### Branch naming (Angular)
+
+`<type>/<short-kebab-description>`. Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `ci`. Branch name with `/` creates a subdirectory matching the branch.
+
+### Pre-commit check
+
+Before every commit in repos that have `deno task check`: all checks MUST pass (lint + fmt + type-check + tests). Fix issues first, do not commit anyway. Trivial doc-only changes can skip.
+
+### PR discipline
+
+A PR MUST exist at all times when working a task. Never work without one.
+
+1. Create PR immediately after first commit (even if task incomplete).
+2. Prefix title with `[WIP]` until fully done.
+3. Push new commit + update PR body after every human interaction.
+4. Remove `[WIP]` only when task fully complete and ready for final review.
+5. Keep PR body accurate (current state, known issues, next steps).
+
+Issue/PR refs in PR body must be **full URLs**: `Closes [#N](https://github.com/<owner>/<repo>/issues/N)` — not bare `#N`. GH auto-renders adjacent issues but plain text is useless in docs/commits. Terminal output and commit subjects are exceptions.
+
+### Merge protocol (human-in-the-loop)
+
+After all changes done and PR created, **STOP and wait**. Never merge yourself.
+
+When user says "merge":
+- All commits relate to one feature/issue/fix → squash: `gh pr merge --squash --delete-branch`
+- Some commits fix independent things → rebase: `gh pr merge --rebase --delete-branch`
+
+Then clean up worktree: `git worktree remove <type>/<slug> && git branch -d <type>/<slug>`.
+
+## TypeScript style (universal)
+
+### Formatting (Deno defaults)
+
+- No semicolons, 2-space indent, double quotes, 100 col
+- Prose-wrap preserved (matches `deno fmt` defaults)
+- Trailing commas where legal
+
+### File naming
+
+- TypeScript files: `kebab-case.ts`
+- Main entry: `+main.ts` (Deno convention)
+- Library: `+lib.ts` (Deno convention)
+- Config: `config.json`, `compose.yml`, `deno.jsonc`
+- Tests: `*.test.ts` colocated with source
+
+### Imports
+
+```typescript
+// Relative for local modules
+import { BackupConfig } from "./+lib.ts"
+
+// JSR for stdlib
+import { getEnvVar } from "@std/dotenv"
+
+// npm for unavoidable third-party
+import { z } from "npm:zod"
+
+// Alias for shared scripts (where monorepo supports)
+import { BackupConfig } from "@scripts/backup"
+```
+
+Minimize third-party deps. Prefer stdlib or existing libs/* over new packages.
+
+### Type definitions
+
+```typescript
+// Interface for object shapes (extensible)
+export interface BackupContext {
+  serverName: string
+  backupsOutputBasePath: string
+  healthchecksUrl?: string  // optional with ?
+}
+
+// Enum for finite constants, START AT 1
+export enum BackupStatus {
+  IN_PROGRESS = 1,
+  SUCCESS = 2,
+  ERROR = 3,
+}
+
+// Type for unions/intersections, not shapes
+export type BackupConfigState = BackupConfig & {
+  fileName: string
+  status: BackupStatus
+}
+```
+
+Never start enum at 0. Money values: always `number` representing smallest unit (cents, satoshis), never float.
+
+### Function patterns
+
+```typescript
+// Named exports, clear names
+export function success(...args: unknown[]) { ... }
+
+// Async/await, not .then()
+export async function runCommand(cmd: string[]): Promise<Result> { ... }
+
+// Default exports for config objects
+const backupConfig: BackupConfig = { name: "vaultwarden", ... }
+export default backupConfig
+```
+
+### Error handling
+
+```typescript
+// Explicit throw on missing required env
+export function getEnvVar(key: string, isOptional = false): string {
+  const value = Deno.env.get(key)
+  if (!value && !isOptional) {
+    throw new Error(`Missing environment variable: ${key}`)
+  }
+  return value || ""
+}
+
+// Structured result from commands
+export async function runCommand(cmd: string[]): Promise<{
+  success: boolean
+  output: string
+  error: string
+}> { ... }
+```
+
+Fail-open (see section above) for non-critical external calls. Fail-closed only when explicitly required; document the tradeoff.
+
+### Testing
+
+- Test files: `*.test.ts`, colocated with source
+- Run all: `deno task test`. Run single: `deno test path/to/file.test.ts`
+- Deterministic — no flakes, no shared mutable state, cleanup after each test
+- Test names describe behavior: `t("rejects expired token")` not `t("test 1")`
 
 ## Memory & context sources
 
