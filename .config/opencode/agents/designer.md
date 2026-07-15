@@ -24,7 +24,7 @@ Design doc structure (10 sections, all required):
 Constraints:
 
 - **Stack**: Deno + Hono backend, Preact + Signals frontend, Postgres + indexed queries, CQRS separation, libs/* ownership
-- **Data integrity**: money as `BIGINT` cents (never float), enums start at 1, multi-tenant scoping on every resource
+- **Data integrity**: money as `BIGINT` cents (never float), multi-tenant scoping on every resource
 - **Deps**: minimize third-party; any new dep requires justification (size, maintenance, alternatives considered)
 - **Migration**: every schema change is additive unless marked destructive with explicit rollback plan
 - **Boundaries**: respect layer separation (libs vs handlers vs components). Flag any cross-layer coupling as risk.

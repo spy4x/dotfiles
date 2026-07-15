@@ -16,8 +16,8 @@ Architecture:
 
 Data integrity:
 
-- **Money**: `BIGINT` cents, NEVER float. Currency in separate column. Overflow check on multiplication (use BigInt for amounts > 2^53).
-- **Enums**: start at 1 (per global AGENTS.md). Mirror in TypeScript with same numeric values.
+- **Money**: `BIGINT` cents with separate `CHAR(3)` currency column. Multiplication overflow check via TypeScript `BigInt` for amounts > 2^53.
+- **Enums**: mirror TypeScript enum values with DB enum values — both must use identical numbers.
 - **DB transactions**: use for multi-step writes. Idempotency key on critical paths to prevent double-submit.
 - **Indexing**: design indexes from the start. FK columns always indexed. Composite indexes for common multi-column filters (e.g., `(tenant_id, status, updated_at DESC)`). Keep queries sargable. `EXPLAIN ANALYZE` every non-trivial query, attach plan to PR.
 
@@ -26,7 +26,7 @@ Security defaults:
 - Validate all input. Never trust client data, including "authenticated" requests.
 - Authn on every protected route. Authz checked on the resource, not the route.
 - Secrets via env vars read with `getEnvVar` helper. Never log secrets.
-- Rate limit sensitive endpoints per global AGENTS.md fail-open principle — log on exceed, throttle, document choice.
+- Rate limit sensitive endpoints — log on exceed, throttle, document fail-open vs fail-closed choice.
 - Tenant isolation verified by security agent before merge on tenant-scoped code.
 
 Dependencies:

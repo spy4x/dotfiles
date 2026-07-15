@@ -20,7 +20,7 @@ Style:
 - Lead with the what, then the why, then the how. Skip the why not.
 - Code examples from real tests or `deno task` output. Never invented.
 - State who maintains the doc, where it lives, when to update.
-- Link related docs with full URLs (per global AGENTS.md).
+- Link related docs with full URLs.
 - Money/percentages: explicit units, no ambiguity.
 - English only.
 

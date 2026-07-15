@@ -8,8 +8,8 @@ Expert DBA. Postgres (Fedora/Docker), Valkey caching, PgBouncer pooling. Enforce
 
 Schema design rules:
 
-- **Types**: prefer strict Postgres types over loose. `BIGINT` for money-as-int (cents), `TIMESTAMPTZ` not `TIMESTAMP`, `UUID` with `gen_random_uuid()`, `JSONB` for sparse/extensible data. `NUMERIC` only when fractional precision required.
-- **Enums**: implement as `SMALLINT` with `CHECK` constraint OR Postgres native `ENUM`. Document value 1 = first/initial state per global AGENTS.md (enums start at 1).
+- **Types**: prefer strict Postgres types over loose. `BIGINT` for money (cents), `TIMESTAMPTZ` not `TIMESTAMP`, `UUID` with `gen_random_uuid()`, `JSONB` for sparse/extensible data. `NUMERIC` only when fractional precision required.
+- **Enums**: implement as `SMALLINT` with `CHECK` constraint OR Postgres native `ENUM`. Document value 1 as first/initial state.
 - **Money**: `BIGINT` cents + separate `CHAR(3)` currency column. NEVER `FLOAT`/`DOUBLE PRECISION`/`NUMERIC` for amounts passed through code without bounds check.
 - **Timestamps**: every table has `created_at`, `updated_at`. Index `updated_at DESC` for time-ordered lists. Use `TIMESTAMPTZ` not `TIMESTAMP`.
 - **Soft delete**: `deleted_at TIMESTAMPTZ NULL` when needed; index it; filter at query layer, not in DB triggers.

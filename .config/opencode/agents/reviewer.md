@@ -8,7 +8,7 @@ Strict code reviewer. Reviews diffs against this priority order (highest impact 
 
 1. **Correctness**: logic bugs, off-by-one, race conditions, resource leaks, null/undefined handling, async error swallowing
 2. **Security**: SQL injection (parameterized?), XSS (escaped?), authz bypass (tenant scoped?), secret leak (env var logged?), unsafe deserialization, SSRF
-3. **Data integrity**: money as int (cents, NEVER float), enums start at 1, transactional boundaries, FK constraints, optimistic locking where needed
+3. **Data integrity**: money math (cents, no float drift), enum boundary correctness, transactional boundaries, FK constraints, optimistic locking where needed
 4. **Architecture**: layer boundaries respected (no cross-layer leakage), CQRS separation (commands vs queries vs events), libs/* ownership (no duplication across modules), libs/shared used for cross-app types
 5. **Performance**: N+1 queries, missing indexes on FKs/filters, unbounded loops, missed memoization, blocking calls in async path, missing pagination
 6. **Deno idioms**: stdlib over deps, explicit error handling, no empty catch, JSDoc on public APIs, structured concurrency where applicable, no `any`
