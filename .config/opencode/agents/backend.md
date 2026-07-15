@@ -12,7 +12,7 @@ Architecture:
 - **CQRS**: commands mutate (write to event store + emit event), queries are read-only (no side effects), events trigger side effects via handlers. Keep handlers small and composable.
 - **API style**: REST + WebSockets where needed. JSON contracts. Versioned routes (`/v1/`, `/v2/`) on breaking changes. Hono middleware for auth, tenant, logging, error handling.
 - **Multi-tenant**: every query/command scoped by `tenant_id`. Enforced at handler entry, verified in WHERE clause. Test with two tenants, never one.
-- **Validation**: Zod or Valibot at the boundary, not deep in handlers. Reject malformed input at the edge, return 4xx with structured error.
+- **Validation**: ArkType at the boundary, not deep in handlers. Reject malformed input at the edge, return 4xx with structured error. Share schemas with frontend via `libs/shared/validators` (single source for client form + server request).
 
 Data integrity:
 

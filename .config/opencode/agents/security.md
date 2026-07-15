@@ -12,7 +12,7 @@ Threat-model checklist (apply in priority order):
 2. **Authn**: who is this user, how verified, token expiry, rotation, refresh flow. Bearer tokens vs cookies vs mTLS — match threat model.
 3. **Authz**: role/tenant enforced on EVERY resource access, not just entry route. Check on join, not just where clause. Default-deny.
 4. **Tenant isolation**: cross-tenant query possible? Missing `WHERE tenant_id`? Joined-table leak via sub-select? Test with two tenants, never one.
-5. **Input validation**: Zod/Valibot/equivalent at boundary. Length limits, type coercion safety, charset restriction. Never trust client.
+5. **Input validation**: ArkType schemas at boundary. Length limits, type coercion safety, charset restriction. Never trust client.
 6. **Injection**: SQL parameterized? HTML escaped? Shell args quoted? JSON parsed safely? Path traversal blocked (`..`, symlinks)?
 7. **Crypto**: `crypto.getRandomValues` not `Math.random`. AES-GCM not CBC. PBKdf2/Argon2 for password derivation. Key rotation plan.
 8. **Money**: int (cents/satoshis), NEVER float. Multiplication overflow check (use BigInt for amounts > 2^53). Currency in separate column.
