@@ -103,36 +103,60 @@ Applies to every repo that follows this flow. Repo-local `AGENTS.md` extends wit
 
 ### Worktree first
 
-For any code change, create branch + worktree **before** exploring or editing. Multiple AI agents may work in parallel — touching `main` directly causes conflicts.
+For any code change, work in a dedicated branch + worktree **before** exploring or editing. Multiple AI agents may work in parallel — touching `main` directly causes conflicts.
+
+**Check whether you already have one before creating anything.** Some harnesses (OpenCode Web) give every session its own worktree; creating another one inside it nests a checkout inside a checkout.
 
 ```bash
-git worktree add -b <type>/<slug> <type>/<slug> <base>
-cd <type>/<slug>
+# A linked worktree has .git as a FILE. The main repo has it as a DIRECTORY.
+if [ -f .git ]; then
+  echo "Already in a worktree — work here. Do NOT create another."
+else
+  # Derive paths from the repo, so this works on any machine or layout.
+  MAIN=$(realpath "$(dirname "$(git rev-parse --git-common-dir)")")
+  WT="$(dirname "$MAIN")/worktrees/$(basename "$MAIN")/<type>/<slug>"
+  mkdir -p "$(dirname "$WT")"   # git worktree add does NOT create parent dirs
+  git worktree add -b <type>/<slug> "$WT" <base>
+  cd "$WT"
+fi
 ```
 
-Verify after creation: `pwd` shows new dir, `git branch --show-current` shows new branch.
+Verify after creation: `pwd` shows the new dir, `git branch --show-current` shows the new branch.
+
+Worktrees go in a sibling `worktrees/<repo>/` directory, **never inside the repo**. A repo at `~/projects/foo` gets worktrees in `~/projects/worktrees/foo/<type>/<slug>`.
+
+Why outside: repo tooling walks the working tree, so nested worktrees get swept into formatters, type-checkers and env scripts — they scan other branches' files, fail on them, and in the worst case rewrite another branch's secrets. Nested worktrees also show up as untracked dirs (one `git add -A` from being committed) and make branch names ambiguous with paths (`git log feat/foo` → `fatal: ambiguous argument`).
+
+`realpath` matters when a checkout is reachable through a symlink — without it the same worktree gets registered under two different paths.
 
 ### After worktree creation — env setup
 
 For repos with age-encrypted envs (`.env.age` files), the worktree needs the age key + decrypted `.env` before deploy / secret-aware commands work:
 
 ```bash
-# Copy age key from main repo root (gitignored, never committed)
-[ -f .age/key.txt ] || cp ../../.age/key.txt .age/key.txt
+# Copy age key from the main worktree (gitignored, never committed)
+MAIN=$(realpath "$(dirname "$(git rev-parse --git-common-dir)")")
+[ -f .age/key.txt ] || { mkdir -p .age && cp "$MAIN/.age/key.txt" .age/key.txt; }
 
 # Decrypt envs for this worktree
 deno task env:decrypt
 ```
 
-Repos with `post-checkout` git hooks (homelab) auto-decrypt — check repo-local `AGENTS.md` for the specific env setup flow. Skip this section if repo has no `.env.age` files.
+Resolve `$MAIN` via `--git-common-dir` rather than a relative `../../` path — the depth differs between a sibling worktree and a harness-managed one, and this form is correct from both.
+
+Repos with `post-checkout` git hooks (homelab) auto-decrypt once the key is in place — check repo-local `AGENTS.md` for the specific env setup flow. Skip this section if repo has no `.env.age` files.
 
 ### Branch naming (Angular)
 
-`<type>/<short-kebab-description>`. Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `ci`. Branch name with `/` creates a subdirectory matching the branch.
+`<type>/<short-kebab-description>`. Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `ci`. A branch name with `/` creates a matching subdirectory under `worktrees/<repo>/`. The worktree path and the branch name are independent arguments to `git worktree add`, so they need not match.
 
 ### Pre-commit check
 
 Before every commit in repos that have `deno task check`: all checks MUST pass (lint + fmt + type-check + tests). Fix issues first, do not commit anyway. Trivial doc-only changes can skip.
+
+### Git hooks
+
+If the repo ships git hooks (task like `hooks:install`, `lefthook.yml`, or `.husky/`), install them before the first commit. They typically handle pre-commit lint/format/type-check, secret encrypt/decrypt on checkout, or project-specific gates. Check `deno.jsonc`/`package.json` scripts or repo-local `AGENTS.md` for the install command. Hooks live in `.git/hooks/` (shared across worktrees), so install from the main repo once.
 
 ### PR discipline
 
@@ -143,8 +167,32 @@ A PR MUST exist at all times when working a task. Never work without one.
 3. Push new commit + update PR body after every human interaction.
 4. Remove `[WIP]` only when task fully complete and ready for final review.
 5. Keep PR body accurate (current state, known issues, next steps).
+6. **Create the PR immediately after pushing — never ask "do you want a PR?".** Just run `gh pr create --fill` (or push to trigger an existing workflow) and report the link.
 
 Issue/PR refs in PR body must be **full URLs**: `Closes [#N](https://github.com/<owner>/<repo>/issues/N)` — not bare `#N`. GH auto-renders adjacent issues but plain text is useless in docs/commits. Terminal output and commit subjects are exceptions.
+
+### Pre-push reviewer gate (secret/leak scan)
+
+After every commit and **before** `git push` (or any equivalent that exposes the
+commit to a remote, including `git push --force`, `git push --tags`, or
+mirror/sync scripts), the architect/lead MUST delegate a reviewer pass to the
+`@reviewer` agent with explicit scope:
+
+- Diff versus the base branch (`git diff <base>...HEAD`) plus any staged/unstaged
+  files.
+- Scan for hardcoded secrets, password hashes, API keys, tokens, private keys,
+  PII, IP addresses / CIDR ranges, internal hostnames, private endpoints,
+  webhook URLs, debug logs, `.env`-style material, and any other suspicious
+  leak patterns.
+- Cross-reference against the project's own conventions (e.g. `~/.config/opencode/AGENTS.md`,
+  repo-local `AGENTS.md`, and any `secrets:` / `sensitive:` declarations).
+- Block push when findings are `🔴 bug` or `🟡 risk`; require remediation +
+  re-review before push. `🔵 nit` and `❓ q` findings may push with a note in
+  the PR body.
+
+This gate is mandatory regardless of CI, pre-commit hooks, or repo-local
+allow-lists. The single source of truth for "what is safe to push" is the
+reviewer verdict, not file extension or git history.
 
 ### Merge protocol (human-in-the-loop)
 
@@ -154,7 +202,13 @@ When user says "merge":
 - All commits relate to one feature/issue/fix → squash: `gh pr merge --squash --delete-branch`
 - Some commits fix independent things → rebase: `gh pr merge --rebase --delete-branch`
 
-Then clean up worktree: `git worktree remove <type>/<slug> && git branch -d <type>/<slug>`.
+Then clean up the worktree: `git worktree remove <path> && git branch -d <type>/<slug>`. Skip this for a harness-managed worktree (OpenCode Web) — it owns that directory's lifecycle.
+
+If a worktree directory outlives its git registration, its `.git` file points at a missing gitdir; `git worktree prune` can no longer see it, so delete the directory by hand.
+
+## Infrastructure as Code
+
+Codify before manual production changes. If a change is unavoidable by hand, document the step in a README and link from `AGENTS.md`. Rule of thumb: any artifact you can put in a config file or script belongs there — no "I clicked something in the UI" knowledge that isn't recorded.
 
 ## TypeScript style (universal)
 
