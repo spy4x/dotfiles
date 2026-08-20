@@ -71,6 +71,100 @@ Rotation when exposed:
 4. Rewrite git history with `git filter-repo` OR document rotation in commit message
 5. If public repo: rotate immediately, assume compromised
 
+> The above covers **git-tracked files only**. For everything that leaves the box and lands on a public or shared surface (GitHub Issues, PR bodies, comments, Releases, webhooks, error reports, public docs, etc.), see **Hard rule: NO secrets in public/external artifacts** below.
+
+## Hard rule: NO secrets in public/external artifacts
+
+The previous rule covers **git-tracked files**. This one covers everything else that leaves the box and lands on a public, shared, or non-local surface — same leak class, different transport.
+
+Public/external artifacts and side-channels include (not exhaustive):
+
+- **Code hosting**: GitHub/GitLab/etc. Issues, PRs (title + body + comments), Reviews, Discussions, Gists, Releases / release notes, Wiki pages, commit messages pushed via API, bot-account posts, PR/Issue email notifications, RSS feeds.
+- **Container / image registries**: Docker Hub, GHCR, Quay, public ECR, any OCI registry where image labels, annotations, layers, or build args may bake in secrets. **CI artifacts / build outputs**: `actions/upload-artifact`, public S3 buckets, release tarballs, anything produced by a build step that read a secret.
+- **Webhooks + chat**: Slack, Discord, Teams, Mattermost, ntfy, generic incoming hooks, IRC, SMS gateways.
+- **Issue trackers + tickets**: Jira, Linear, YouTrack, Shortcut.
+- **Error reporting + telemetry**: Sentry events, LogRocket, Datadog logs, OpenTelemetry exports to a public collector, client-side crash reports, `console.error` / `console.log` forwarded to a third party, browser telemetry, AI code-suggestion telemetry (Copilot, Cody, Continue).
+- **Public docs / sites**: blog posts, status pages, public READMEs, changelogs published to a public registry (npm, crates.io, PyPI), generated docs sites (build-time env vars can serialize into the client bundle, manifest, source maps), public Notion pages, Helm `values.yaml` in public OCI registries, Terraform remote state in public buckets.
+- **Customer-facing comms**: support replies, public forum posts, email to public mailing lists, social posts authored by the agent (X/Twitter, Mastodon, Bluesky, LinkedIn).
+- **Public calendars**: Google Calendar "public", shared CalDAV calendars, ICS feeds exposed on a public URL.
+- **Anything pasted into a prompt** — the model provider logs user turns; subagent prompts; MCP tool inputs. Treat the provider as a public surface for secret-bearing context unless a contract proves zero-retention and no-train.
+- **Anything echoed to stdout/stderr** of a process whose logs are public (CI logs on a public repo, shared run logs, broadcast journald, cloud build logs from GHA/CircleCI/Buildkite/GitLab CI).
+- **Side channels that leak even without a "send"**:
+   - OS-level capture: macOS `cmd-shift-3/4`, Windows Snipping, OBS, Zoom silent share, MDM-mandated screen recording, vendor crash dumps, accessibility tools.
+   - Cloud-synced state: clipboard managers (1Password, Maccy, KDE Klipper), terminal emulator cloud (iTerm2, Warp, VS Code terminal cloud), `tmux-resurrect` to S3, Syncthing to a cloud VM, browser extensions (GoFullPage, Nimbus, Fireshot), browser autofill, Playwright `localStorage`/IndexedDB/cookies.
+   - Dotfiles-repo commits — this very repo. A `~/.config/<svc>/config` paste into a commit is the same leak as a public Issue.
+
+Assume any artifact that touches a non-local surface is **public forever**. GitHub lets you edit Issues, but search engines, archive.org, bots, inbound webhooks, notification emails, push notifications, RSS subscribers, and IMAP-synced inboxes have already captured the original. "Public forever" extends to model-provider logs and eval datasets unless a contract says otherwise — retention TTL ≠ redaction, and archive copies persist past TTL.
+
+This rule overrides **Fail-open principle** for secret-bearing sends: those fail-closed. A supporting subsystem that drops a notification is recoverable; a leaked secret is not.
+
+### Before sending — mandatory scrub
+
+Treat every send as a one-way door. The agent MUST, in order:
+
+1. **Redact by default.** Replace any real value (token, key, password, hostname, IP, CIDR, internal URL, webhook URL, account email, JWT, cookie, session ID, SSH fingerprint, vault/AWS SM/GCP SM/Azure KV token, OAuth refresh token, SAML assertion, Kerberos ticket, NTLM hash, WebAuthn credential, mTLS client cert, TPM-derived key, `.env`-style block, debug log, stack trace, command output that includes a secret, connection string, DSN) with a placeholder. **Canonical form**: `<REDACTED:KIND>` where `KIND` is the secret class (e.g., `API_KEY`, `WEBHOOK_URL`, `JWT`, `IPV4`). Use `***` only when length preservation matters more than readability. Never mix forms in one artifact.
+2. **Use real-looking but inert examples.** For placeholders that aid comprehension, prefer:
+   - RFC 5737 IPv4 (`192.0.2.1`, `198.51.100.1`, `203.0.113.1`) and IPv6 documentation prefix (`2001:db8::/32`).
+   - RFC 2606 reserved domains (`example.com`, `example.net`, `example.org`) and reserved TLDs (`.example`, `.test`, `.invalid`, `.localhost`).
+   - Never a real production value, never a real-looking-but-not-real hostname like `service.local` for a public artifact (it can collide with mDNS / split-horizon DNS).
+3. **If unsure, redact.** When in doubt whether a string is a secret, treat it as one. False positives cost nothing; false negatives leak.
+4. **Run a deterministic scanner before paste.** LLM self-scan misses unstructured secrets, partial keys, base64 blobs, JWTs without dots, prose-form passwords. Before pasting any tool output, file contents, stack trace, or HTTP response into a public artifact, run a secret scanner over it: `gitleaks detect --no-git`, `trufflehog filesystem <path>`, `detect-secrets scan`, or equivalent. Treat scanner-clean + reviewer-clean as the bar; LLM look-over is necessary but not sufficient.
+5. **Self-check tool outputs.** Never paste raw output from any of these into a public artifact (and prefer not to invoke them at all if the next step is a public send):
+   - File dumps: `cat .env`, `cat ~/.config/<svc>/config`, `cat ~/.aws/credentials`, `cat ~/.ssh/id_*`, `cat ~/.netrc`, `cat ~/.docker/config.json`, `docker inspect`, `journalctl`, `kubectl get secret -o yaml`, `kubectl get configmap -o yaml`.
+   - Env dumps: `env`, `printenv`, `set`, `declare -p`.
+   - Secret-manager fetches: `vault read`, `vault kv get`, `aws secretsmanager get-secret-value`, `gcloud secrets versions access`, `op read`, `op item get`, `gh auth token`, `doppler secrets download`, `infisical secrets get`.
+6. **Reviewer gate before public send.** For any artifact that lands on a public or semi-public surface (GitHub Issues, public PRs, Releases, public docs, external webhooks, customer-facing replies, registry publishes), delegate a reviewer pass to the `@reviewer` agent with explicit scope — same shape as the pre-push gate:
+   - Show the **full intended body** (title + body + every comment, or the full message / payload) — never the rendered preview alone; previews hide truncation and code-fence escapes.
+   - Pair the LLM reviewer with the deterministic scanner from step 4. LLM alone is insufficient for high-stakes sends.
+   - Scan for hardcoded secrets, password hashes, API keys, tokens, private keys, PII, IP addresses / CIDR ranges, internal hostnames, private endpoints, webhook URLs, debug logs, `.env`-style material, and any other suspicious leak patterns.
+   - Cross-reference `~/.config/opencode/AGENTS.md`, repo-local `AGENTS.md`, and any `secrets:` / `sensitive:` declarations.
+   - **Block the send** on `🔴 bug` or `🟡 risk`. `🔵 nit` / `❓ q` findings may send with a note in the rotation log only — never back into the artifact, where review notes can themselves leak.
+   - The reviewer verdict is bound to the artifact hash; any subsequent edit to the artifact requires re-review. This gate is mandatory regardless of pre-commit hooks, CI secret scanners, or repo-local allow-lists. The single source of truth for "is this safe to send" is the reviewer verdict.
+
+### Tool-specific reminders
+
+- `gh issue create` / `gh pr create` / `gh release create` — body must be scrubbed before the command runs. `--body-file` is the safer shape (see recipe below), but `--body-file` alone does **not** make a send safe: zsh with `INC_APPEND_HISTORY` + `SHARE_HISTORY` (oh-my-zsh default) and bash with `PROMPT_COMMAND='history -a'` write history per-command, so any earlier command that composed the file (`cat .env > /tmp/body`, `echo $SECRET`) still leaks. The full recipe:
+
+  ```bash
+  # Compose from a secret manager, never from the shell history.
+  BODY=$(mktemp -d)/body.md
+  chmod 700 "$(dirname "$BODY")" && chmod 600 "$BODY"
+  op read "op://<vault>/<item>/notes" > "$BODY"   # or: vault read, aws sm, gcloud sm
+  # Do NOT open in an editor; do NOT cat.
+  gh issue create --body-file "$BODY" --title "..."
+  shred -u "$BODY" && rmdir "$(dirname "$BODY")"
+  ```
+
+  The temp file still leaks via fs cache, swap, and any sibling process that read it; assume the secret is compromised the moment it lands on disk and rotate accordingly. For comments and edits: `gh issue comment`, `gh pr comment`, `gh pr review`, `gh api`.
+- `gh gist create` — public Gists cannot be deleted, only orphaned; the original is permanently indexed. **Never** create a public Gist for secret-bearing content. Private Gists are an internal surface; treat the gist URL itself as a secret.
+- Webhook URLs are secrets. Never paste a real webhook URL into a public artifact, even for a "this is what the URL looks like" example — show `<REDACTED:WEBHOOK_URL>` instead.
+- Stack traces frequently contain paths, usernames, hostnames, query strings with tokens, and connection strings — and even without secret values they leak internal layout (file paths, line numbers, framework versions) that aids reverse-engineering. Strip or replace with a synthetic trace before send.
+- CI logs on public repos are public. Don't `echo $SECRET` in a step, and don't `cat .env` in a step that runs on PRs from forks. `git commit -m "$SECRET"` puts the value in reflog, `.git/objects`, fsck cache, packed-refs, and every concurrent fetch — use heredoc-from-file or stdin, never `-m` with a secret.
+- Build outputs: `npm run build` / `go build` / `cargo build` may serialize `process.env.*` into the client bundle, manifest, or source maps. Build environment must contain no secret; secrets load at runtime via fetch, never at build time.
+- `.env.example` is documentation, not a safe-to-paste dump. It still must use placeholders — never copy values from a real `.env` into it.
+- Screenshots, terminal recordings, and copy-pasted logs from the agent's own output are public the moment they leave the box. Scrub before attaching. Attach only to allow-listed hosts (repo-local `AGENTS.md` may define one); the host's own retention policy then applies.
+- Bot PATs: prefer GitHub Apps with short-lived installation tokens over long-lived PATs; narrow the token scope to the minimum; rotate per-task; never commit the PAT to any repo, including private ones.
+
+### If a leak has already shipped
+
+Edit-after-ship is **cosmetic**, not mitigation, on any surface that has already delivered, indexed, fanned out, or replicated to a subscriber. Rotation is the only effective response on those surfaces. The protocol:
+
+1. **Rotate first, stop sends second.** Assume the old value is in attacker hands the moment the artifact existed in any delivered state. Generate new secret(s) before doing anything else; a leaked secret still in context leaks via every subsequent model-provider log.
+2. **Stop further sends** of the same artifact and any artifact in the same thread / release / batch / cascade.
+3. **Update server/service immediately** with the new secret.
+4. **Update non-git `.env`** + re-encrypt `.env.age`.
+5. **Cascade rotation.** A leaked GH token also exposes every downstream credential it can mint (OAuth refresh tokens, signed JWTs, dependent service tokens). Rotate every downstream credential potentially touched — not just the original. For webhook-fan-out (Sentry → PagerDuty → on-call SMS; GH Issue → email → IMAP → vendor; webhook → customer endpoint → customer logs), the cascade extends past your perimeter; assume the customer's logs are now compromised too and notify them.
+6. **Access-log review** for the leaked credential: query the provider's audit log, your SIEM, and the secret-manager access log. Identify every read of the leaked value since exposure; treat every consumer as compromised.
+7. **Edit the artifact (cosmetic) where the platform allows:**
+   - GitHub: edit Issue / PR / comment / release notes via web UI, `gh issue edit`, `gh pr edit`, `gh release edit`, or `gh api`. After editing, also `gh issue lock --reason "resolved"` to prevent further replies quoting the secret, force-push any branch whose commit message carried the secret, and `gh gist delete` (orphans only — public gist content stays).
+   - Webhook providers: edit/delete the message if the API supports it.
+   - Error trackers: scrub the event before retention expires.
+   For any surface that has already delivered to subscribers (GH email notifications sent, RSS polled, archive.org cached, Sentry alert paged, Slack push delivered, npm registry immutable, container registry layer pulled), edit is **theater** — the value is already out. Document this in the rotation log; do not represent the edit as a mitigation.
+8. **Notify affected parties.** Public repo, public Issue, public Release, customer-facing surface, vendor surface: notify the operator (security advisory / disclosure) and, where required by law (GDPR/CCPA), notify affected data subjects. The rotation log records what was notified and when.
+9. **Log to the rotation log.** A single append-only file at `~/sync/code/opencode-db/rotation-log.md` (gitignored, Syncthing-only) records: surface, artifact URL, secret class, time of exposure, time of rotation, downstream cascade, notification list, follow-ups. New agents read it before any task that touches a related surface.
+
+Rotation in step 1 is mandatory for any public repo / public Issue / public Release / customer-facing surface / vendor surface / indexed artifact, regardless of whether the platform allows a clean edit.
+
 ## Fail-open principle
 
 Always guard calls to non-critical external services (monitoring, reporting, notifications, analytics) with `|| true` or equivalent. Failure of a supporting subsystem must never block or alter the outcome of the primary operation. In the rare case the primary itself must depend on the external service, document the tradeoff. This is known as **Fail-open** (or **Fail-soft**) — the system continues operating even when auxiliaries fail — as opposed to **Fail-closed** where any component failure halts the whole system.
@@ -193,6 +287,8 @@ mirror/sync scripts), the architect/lead MUST delegate a reviewer pass to the
 This gate is mandatory regardless of CI, pre-commit hooks, or repo-local
 allow-lists. The single source of truth for "what is safe to push" is the
 reviewer verdict, not file extension or git history.
+
+> Push is one public surface. Issues, PR bodies, comments, releases, webhooks, and any other off-box artifact are others — see **Hard rule: NO secrets in public/external artifacts** above for the same gate applied before send. If a single task produces both a push and a public artifact, run **both** gates.
 
 ### Merge protocol (human-in-the-loop)
 
