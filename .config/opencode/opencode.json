@@ -80,7 +80,7 @@
     "caldav-mcp": {
       "type": "local",
       "command": [
-        "/home/spy4x/sync/code/opencode-db/caldav-mcp.sh"
+        "/home/spy4x/sync/code/mcps/caldav/start.sh"
       ],
       "enabled": true,
       "timeout": 60000

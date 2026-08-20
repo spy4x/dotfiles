@@ -121,3 +121,6 @@ export PATH="$HOME/.deno/bin:$PATH"
 export PATH=/home/spy4x/.opencode/bin:$PATH
 
 . "$HOME/.local/bin/env"
+
+# npm global bin
+export PATH="$HOME/.npm-global/bin:$PATH"
