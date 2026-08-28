@@ -87,3 +87,6 @@ volumes/
 # System and runtime files
 *.sock
 *.lock
+
+# Playwright MCP runtime cache (session logs, page snapshots)
+.playwright-mcp/
