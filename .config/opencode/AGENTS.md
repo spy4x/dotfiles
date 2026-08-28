@@ -14,11 +14,8 @@ This file = global (`~/.config/opencode/AGENTS.md`). Each repo may also have `AG
 
 ## Operating context (Aug 2026+)
 
-- Solo founder, microSaaS focus. Not agency/freelance. Fallback: fractional CTO (antonshubin.com) only if microSaaS stalls.
 - Cost-sensitive: hard ceiling €50-85/mo infra + $50-200/mo LLM subscription. No pay-per-token API except reserved Anthropic credits for hard problems.
-- Stack: Deno 2 + Hono + Fresh + Preact + SQLite (per-project) + Litestream → B2. Hosting: 1× Hetzner BM (auction EX-series), Docker Compose per project, shared Traefik, Cloudflare Tunnel + Tailscale for access.
-- Default LLM: MiniMax M3 ($50/mo sub). Secondary: GLM-5.3 Flash / DeepSeek V4 Flash via API if cheaper needed. Skip Claude Code Max (TOS blocks sub in third-party harnesses; 4× price not justified by intelligence delta).
-- Check `~/sync/code/ai-memory/situation.txt` for current state, runway, targets. `user.txt` for preferences and frames.
+- Stack: Deno 2 + Hono + Fresh + Preact + SQLite (per-project) + Litestream + syncthing + restic. Hosting: 1× Hetzner BM (auction EX-series), Docker Compose per project. Shared: Traefik, VictoriaMetrics monitoring (+NodeExporter, Cadvisor), Woodpecker CI, Watchtower, Syncthing, NTFY, Gatus, Authelia.
 
 ## Session bootstrap (mandatory, every session)
 
