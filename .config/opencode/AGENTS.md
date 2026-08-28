@@ -12,6 +12,14 @@ This file = global (`~/.config/opencode/AGENTS.md`). Each repo may also have `AG
 - Conflict (same rule, different value) → repo-local wins for that repo. Global still applies elsewhere.
 - `.config/opencode/agents/*.md` does NOT duplicate rules from here. Agents reference global implicitly + add only domain guidance.
 
+## Operating context (Aug 2026+)
+
+- Solo founder, microSaaS focus. Not agency/freelance. Fallback: fractional CTO (antonshubin.com) only if microSaaS stalls.
+- Cost-sensitive: hard ceiling €50-85/mo infra + $50-200/mo LLM subscription. No pay-per-token API except reserved Anthropic credits for hard problems.
+- Stack: Deno 2 + Hono + Fresh + Preact + SQLite (per-project) + Litestream → B2. Hosting: 1× Hetzner BM (auction EX-series), Docker Compose per project, shared Traefik, Cloudflare Tunnel + Tailscale for access.
+- Default LLM: MiniMax M3 ($50/mo sub). Secondary: GLM-5.3 Flash / DeepSeek V4 Flash via API if cheaper needed. Skip Claude Code Max (TOS blocks sub in third-party harnesses; 4× price not justified by intelligence delta).
+- Check `~/sync/code/ai-memory/situation.txt` for current state, runway, targets. `user.txt` for preferences and frames.
+
 ## Session bootstrap (mandatory, every session)
 
 Before anything in new project/worktree, **fully read** in parallel:
@@ -33,7 +41,7 @@ No passwords, tokens, API keys, secrets, private keys, raw env values, JWTs, ses
 ### A. In git-tracked files
 
 - Hardcoding envs in scripts = same leak. `.env.example` uses placeholders (`YOUR_KEY_HERE`).
-- `.env` lives in non-git dir (e.g. `~/sync/code/opencode-db/`, Syncthing-only).
+- `.env` lives in non-git dir (e.g. `~/.local/share/opencode/`, per-machine, NOT synced).
 - **`.env.age` for any env committed to git → SOPS/age-encrypted. Mandatory.**
 
 ### B. In public/external artifacts
@@ -101,7 +109,7 @@ Edit-after-ship = cosmetic, NOT mitigation, on surfaces that already delivered/i
 6. **Access-log review**: provider audit, SIEM, secret-manager access log. Identify every read of leaked value; treat every consumer as compromised.
 7. **Edit (cosmetic)** where allowed: `gh issue edit`, `gh pr edit`, `gh release edit`, `gh api`; `gh issue lock --reason "resolved"` to prevent reply-quoting; force-push branches whose commit message carried secret; `gh gist delete` (orphans only). On delivered surfaces (GH email sent, RSS polled, archive.org cached, Sentry paged, Slack pushed, npm immutable) edit = theater. Log it; don't represent as mitigation.
 8. **Notify** affected parties (security advisory / disclosure). GDPR/CCPA may require user notification.
-9. **Log** to `~/sync/code/opencode-db/rotation-log.md` (gitignored, Syncthing-only): surface, URL, secret class, exposure time, rotation time, cascade, notifications, follow-ups. New agents read it before any task on related surface.
+9. **Log** to `~/.local/share/opencode/rotation-log.md` (per-machine, NOT synced, NOT in git): surface, URL, secret class, exposure time, rotation time, cascade, notifications, follow-ups. New agents read it before any task on related surface.
 
 Step 1 mandatory for any public repo/Issue/Release, customer-facing surface, vendor surface, indexed artifact — regardless of edit availability.
 
