@@ -27,6 +27,7 @@ export class InstallShell {
   private readonly homeDir = Deno.env.get("HOME") ?? `/home/${Deno.env.get("USER")}`
   private readonly dotfilesDir = new URL(".", import.meta.url).pathname
   private readonly zshrcPath = `${this.homeDir}/.zshrc`
+  private readonly zshenvPath = `${this.homeDir}/.zshenv`
   private packageManager: PackageManager | null = null
 
   private async runCommand(command: string, description: string): Promise<boolean> {
@@ -107,27 +108,29 @@ export class InstallShell {
   }
 
   private async setupDenoPath(): Promise<boolean> {
-    const denoPathConfig = `\n# Add Deno to PATH\nexport PATH="$HOME/.deno/bin:$PATH"\n`
+    // Deno PATH is sourced via ~/.zshenv (not ~/.zshrc) so it works in
+    // non-interactive shells too. If .zshenv already exists (e.g. managed
+    // via dotfiles symlink), skip — let the tracked version win.
+    if (await fileExists(this.zshenvPath)) {
+      console.log("✅ ~/.zshenv already exists, skipping (dotfiles may manage it)")
+      return true
+    }
+
+    const zshenvContent = [
+      "# ~/.zshenv — sourced by every zsh invocation.",
+      "",
+      "# --- deno (official installer, idempotent) ---",
+      '[[ -f "$HOME/.deno/env" ]] && . "$HOME/.deno/env"',
+      "",
+    ].join("\n")
 
     try {
-      // Check if Deno PATH is already configured in .zshrc
-      if (await fileExists(this.zshrcPath)) {
-        const zshrcContent = await Deno.readTextFile(this.zshrcPath)
-        if (zshrcContent.includes('export PATH="$HOME/.deno/bin:$PATH"') || 
-            zshrcContent.includes("$HOME/.deno/bin") ||
-            zshrcContent.includes("~/.deno/bin")) {
-          console.log("✅ Deno PATH already configured")
-          return true
-        }
-      }
-
-      // Append the Deno PATH configuration to .zshrc
-      await Deno.writeTextFile(this.zshrcPath, denoPathConfig, { append: true })
-      console.log("✅ Deno PATH added to .zshrc")
+      await Deno.writeTextFile(this.zshenvPath, zshenvContent)
+      console.log("✅ ~/.zshenv created with Deno PATH")
       return true
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`❌ Failed to setup Deno PATH: ${errorMessage}`)
+      console.error(`❌ Failed to create ~/.zshenv: ${errorMessage}`)
       return false
     }
   }
@@ -343,7 +346,7 @@ export class InstallShell {
     console.log("   ✅ Oh My Zsh framework installed")
     console.log("   ✅ Powerlevel10k theme configured")
     console.log("   ✅ Custom aliases integrated")
-    console.log("   ✅ Deno PATH configured")
+    console.log("   ✅ Deno PATH configured in ~/.zshenv")
 
     const currentShell = await this.getCurrentUserShell()
     if (currentShell?.includes("zsh")) {
