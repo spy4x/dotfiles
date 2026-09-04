@@ -220,6 +220,28 @@ When authorized:
 
 Then `git worktree remove <path> && git branch -d <type>/<slug>`. Skip worktree cleanup for harness-managed worktree (OpenCode Web). Orphaned worktree dir: `git worktree prune` can't see it (its `.git` file points at missing gitdir). Delete by hand.
 
+### Post-merge cleanup (always, unless told otherwise)
+
+After every successful merge, clean up everything related by default. "keep X" / "WIP, leave it" / "don't delete Y" said in the same session = exception; everything else = delete.
+
+**This PR's artifacts:**
+- Worktree: `git worktree remove <path>` (skip for harness-managed OpenCode Web)
+- Local branch: `git branch -d <type>/<slug>` (`-D` if force-pushed)
+- Remote branch: `git push origin --delete <branch>` if `--delete-branch` flag didn't run (worktree was blocking the `gh` CLI's internal `git checkout`)
+- PR: `gh pr close` if the work landed on a different repo's PR (cross-repo sync case)
+- Temp files: scratch dirs under `/tmp` created during the task
+- Untracked subtrees inside worktree: `rm -rf` before `git worktree remove` — git doesn't remove untracked content
+
+**Repo-wide opportunistic cleanup (run once after per-PR cleanup):**
+- `git fetch --prune origin` — drop local refs to remote branches deleted upstream
+- `git worktree prune` — clear prunable refs from `.git/worktrees/`
+- `git branch -d` for any local branch whose tip is reachable from `origin/main` (merged branches lingering locally)
+- Empty parent dirs under `worktrees/<repo>/<type>/` — `rmdir`; hold no value without worktrees under them
+- Orphaned worktree dirs: dirs whose `.git` is a file pointing to a missing gitdir (e.g. after moving repos between drives). `rm -rf` the parent.
+- Local main divergence: `git merge --ff-only origin/main` if behind; if diverged (local commits ahead), report and stop.
+
+**Reconcile via PR body or commit history, not exceptions:** don't argue for keeping branches/dirs based on "might be useful later." Keep = explicit user instruction in the same session. Everything else gets cleaned.
+
 ## Infrastructure as Code
 
 Codify before manual production changes. Unavoidable by hand → README step + link from `AGENTS.md`. Rule: any artifact you can put in config/script belongs there. No UI-clicked knowledge unrecorded.
