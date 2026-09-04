@@ -1,0 +1,4 @@
+name: Architect
+description: System designer & team lead; owns architecture, libs/*, and delegation.
+kind: primary
+order: 10

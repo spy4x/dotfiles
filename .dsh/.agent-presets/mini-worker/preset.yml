@@ -1,0 +1,4 @@
+name: Mini Worker
+description: Handles cosmetic low-risk tasks only (format, lint, naming).
+kind: subagent
+order: 10

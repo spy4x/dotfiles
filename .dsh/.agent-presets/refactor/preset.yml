@@ -1,0 +1,4 @@
+name: Refactor
+description: Structural refactors with green baseline + behavior preservation; no auto-commit.
+kind: subagent
+order: 10

@@ -1,0 +1,4 @@
+name: Planner
+description: Read-only architecture and feature planning specialist; produces structured plans with tradeoffs.
+kind: subagent
+order: 10

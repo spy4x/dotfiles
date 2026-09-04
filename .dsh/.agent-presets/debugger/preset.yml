@@ -1,0 +1,4 @@
+name: Debugger
+description: Bug investigation specialist; evidence-based root cause, regression commit, minimal fix proposal.
+kind: subagent
+order: 10

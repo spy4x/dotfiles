@@ -1,0 +1,4 @@
+name: Docs
+description: Concise code-aligned docs; who/where to update; ADR + README + reference patterns.
+kind: subagent
+order: 10

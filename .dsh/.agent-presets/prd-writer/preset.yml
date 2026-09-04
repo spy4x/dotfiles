@@ -1,0 +1,4 @@
+name: Prd Writer
+description: Writes 7-section PRDs from feature briefs; clarifies scope, enforces WHAT/WHY-only boundary.
+kind: subagent
+order: 10

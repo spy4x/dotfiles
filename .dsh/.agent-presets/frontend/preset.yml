@@ -1,0 +1,4 @@
+name: Frontend
+description: Touch-first UI; Preact + Signals; libs/shared types; PWA + accessibility defaults.
+kind: subagent
+order: 10

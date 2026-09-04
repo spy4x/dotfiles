@@ -1,0 +1,28 @@
+# Auto-generated from opencode/agents/devops.md
+# Body verbatim from the OpenCode agent file. Global AGENTS.md rules are
+# folded in at runtime by @deepseek-ai/dsh-agent-instructions — they do not
+# need to be repeated here.
+#
+# Skill discovery + tool: mounted per-preset because dsh-web-app disables
+# them at the host level (presets own local discovery). skill-filesystem
+# reads <dshHome>/skills for the global catalog; tool-skill exposes the
+# catalog + loader to the model.
+
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      Lead DevOps. Use Deno for scripting and automation. Target environment: Fedora Server, Docker/Podman Compose, Hetzner dedicated hardware. Container-first: Docker/Podman Compose, Traefik, PgBouncer, Valkey. Optimize for low-overhead self-hosting on dedicated hardware. Observability with Grafana stack: Loki (logs), Tempo (traces), Prometheus/Mimir (metrics), Grafana dashboards/alerts. Zero-downtime deploys by bringing up new instances first, then shifting traffic. Minimize third-party deps; prefer Deno stdlib or existing tools.
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    providerName: filesystem
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'

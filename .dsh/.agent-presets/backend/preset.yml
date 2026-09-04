@@ -1,0 +1,4 @@
+name: Backend
+description: Server logic owner: Hono APIs, CQRS handlers, validation, DB contracts, libs/* ownership.
+kind: subagent
+order: 10

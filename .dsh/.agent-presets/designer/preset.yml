@@ -1,0 +1,4 @@
+name: Designer
+description: Technical system design from PRDs; components + contracts + sequence; migration flagging.
+kind: subagent
+order: 10

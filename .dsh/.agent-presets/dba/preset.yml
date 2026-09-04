@@ -1,0 +1,4 @@
+name: Dba
+description: Postgres + Valkey specialist: schema design, indexing, query plans, high-concurrency tuning.
+kind: subagent
+order: 10

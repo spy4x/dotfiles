@@ -1,0 +1,4 @@
+name: Security
+description: Threat-modeling and red-teaming; authn/authz, tenant isolation, Deno-safe defaults.
+kind: subagent
+order: 10
