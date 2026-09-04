@@ -1,0 +1,4 @@
+name: Research
+description: Fast focused research and repo exploration; summarize findings.
+kind: subagent
+order: 10

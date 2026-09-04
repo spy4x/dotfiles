@@ -1,0 +1,4 @@
+name: Reviewer
+description: Strict code reviewer; correctness, security, CQRS, Deno idioms; severity-tiered findings.
+kind: subagent
+order: 10

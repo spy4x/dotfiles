@@ -1,0 +1,4 @@
+name: Devops
+description: Infra and deploys for self-hosting (Fedora/Hetzner); ops automation.
+kind: subagent
+order: 10

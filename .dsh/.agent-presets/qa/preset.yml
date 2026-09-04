@@ -1,0 +1,4 @@
+name: Qa
+description: Deterministic test design + execution; DoD verification with evidence; UI e2e via Playwright MCP.
+kind: subagent
+order: 10

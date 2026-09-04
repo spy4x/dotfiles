@@ -1,0 +1,4 @@
+name: Task Generator
+description: Generates 3-6 outcome-based task files with verifiable DoD from PRD + design.
+kind: subagent
+order: 10

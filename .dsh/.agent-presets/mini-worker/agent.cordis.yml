@@ -1,0 +1,28 @@
+# Auto-generated from opencode/agents/mini-worker.md
+# Body verbatim from the OpenCode agent file. Global AGENTS.md rules are
+# folded in at runtime by @deepseek-ai/dsh-agent-instructions — they do not
+# need to be repeated here.
+#
+# Skill discovery + tool: mounted per-preset because dsh-web-app disables
+# them at the host level (presets own local discovery). skill-filesystem
+# reads <dshHome>/skills for the global catalog; tool-skill exposes the
+# catalog + loader to the model.
+
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      Mini worker. Handle quick, low-risk tasks only: formatting, cosmetic refactors (naming, linting), code snippets, short docs, regexes, small searches, and data-cleaning helpers. Be concise. Prefer deterministic answers. Do NOT spawn subagents, perform deep research, or fetch web. If unsure, respond 'uncertain' and ask one clarifying question. Follow security best-practices. Minimize hallucination; prefer 'I don't know' over guessing.
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    providerName: filesystem
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'

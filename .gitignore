@@ -90,3 +90,16 @@ volumes/
 
 # Playwright MCP runtime cache (session logs, page snapshots)
 .playwright-mcp/
+
+# DSH (DeepSeek Harness) runtime + caches
+# Track: AGENTS.md symlink, settings.yaml, profiles/<web>/ (4 files),
+#   .agent-presets/<name>/{preset.yml,agent.cordis.yml},
+#   skills/<name>/SKILL.md (the symlinked one too, as a symlink).
+# Skip: sessions/, storages/, .credentials.yaml, plugin node_modules,
+#   auto-regenerated snapshots.
+.dsh/sessions/
+.dsh/storages/
+.dsh/.credentials.yaml
+.dsh/.agent-presets/*/node_modules/
+.dsh/profiles/node_modules/
+.dsh/profiles/*/cordis.snapshot.yml
