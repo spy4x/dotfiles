@@ -103,3 +103,22 @@ volumes/
 .dsh/.agent-presets/*/node_modules/
 .dsh/profiles/node_modules/
 .dsh/profiles/*/cordis.snapshot.yml
+
+# OBS Studio
+# Track: profiles (basic/profiles/), scenes (basic/scenes/),
+#   plugin_config/ (obs-websocket config etc.),
+#   plugin_manager/ (which plugins are enabled).
+# Skip: runtime crash logs, profiler dumps, .bak scene backups,
+#   rtmp-services/ (auto-refetched ingest data — re-pulled by OBS
+#   on launch if missing, so no point tracking it).
+.config/obs-studio/basic/scenes/*.bak
+.config/obs-studio/basic/profiles/*/service.json
+/.config/obs-studio/plugin_config/rtmp-services/
+# PipeWire screen capture session token — rotates every launch,
+# no value for cross-machine reproducibility.
+# Note: gitignore can't match lines inside JSON, so this leaves
+# small diffs on every launch. Acceptable noise.
+.config/obs-studio/basic/scenes/**/RestoreToken
+
+# DSH session attachments (runtime, not user-edited)
+.dsh/attachments/

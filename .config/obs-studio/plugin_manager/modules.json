@@ -1,0 +1,28 @@
+[
+    {
+        "display_name": "",
+        "enabled": true,
+        "encoders": [],
+        "id": "",
+        "module_name": "obs-webkitgtk",
+        "outputs": [],
+        "services": [],
+        "sources": [
+            "webkitgtk"
+        ],
+        "version": ""
+    },
+    {
+        "display_name": "DroidCam",
+        "enabled": true,
+        "encoders": [],
+        "id": "",
+        "module_name": "droidcam-obs",
+        "outputs": [],
+        "services": [],
+        "sources": [
+            "droidcam_obs"
+        ],
+        "version": ""
+    }
+]

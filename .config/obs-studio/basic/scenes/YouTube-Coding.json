@@ -1,0 +1,634 @@
+{
+    "name": "YouTube-Coding",
+    "DesktopAudioDevice1": {
+        "prev_ver": 536936449,
+        "name": "Desktop Audio",
+        "uuid": "11111111-1111-1111-1111-111111111111",
+        "id": "pulse_output_capture",
+        "versioned_id": "pulse_output_capture",
+        "settings": {
+            "device_id": "default"
+        },
+        "mixers": 255,
+        "sync": 0,
+        "flags": 0,
+        "volume": 1.0,
+        "balance": 0.5,
+        "enabled": true,
+        "muted": false,
+        "push-to-mute": false,
+        "push-to-mute-delay": 0,
+        "push-to-talk": false,
+        "push-to-talk-delay": 0,
+        "hotkeys": {
+            "libobs.mute": [],
+            "libobs.unmute": [],
+            "libobs.push-to-mute": [],
+            "libobs.push-to-talk": []
+        },
+        "deinterlace_mode": 0,
+        "deinterlace_field_order": 0,
+        "monitoring_type": 0,
+        "private_settings": {}
+    },
+    "AuxAudioDevice1": {
+        "prev_ver": 536936449,
+        "name": "Microphone (Razer Seiren Mini)",
+        "uuid": "22222222-2222-2222-2222-222222222222",
+        "id": "pulse_input_capture",
+        "versioned_id": "pulse_input_capture",
+        "settings": {
+            "device_id": "alsa_input.usb-Razer_Inc_Razer_Seiren_Mini_UC2115L03500437-00.mono-fallback"
+        },
+        "mixers": 255,
+        "sync": 0,
+        "flags": 0,
+        "volume": 1.0,
+        "balance": 0.5,
+        "enabled": true,
+        "muted": false,
+        "push-to-mute": false,
+        "push-to-mute-delay": 0,
+        "push-to-talk": false,
+        "push-to-talk-delay": 0,
+        "hotkeys": {
+            "libobs.mute": [],
+            "libobs.unmute": [],
+            "libobs.push-to-mute": [],
+            "libobs.push-to-talk": []
+        },
+        "deinterlace_mode": 0,
+        "deinterlace_field_order": 0,
+        "monitoring_type": 0,
+        "private_settings": {},
+        "filters": [
+            {
+                "prev_ver": 536936449,
+                "name": "Noise Suppression (RNNoise)",
+                "uuid": "aaaa1111-0000-0000-0000-000000000001",
+                "id": "noise_suppress_filter",
+                "versioned_id": "noise_suppress_filter",
+                "settings": {
+                    "suppress_level": 45,
+                    "method": "rnnoise"
+                },
+                "mixers": 0,
+                "sync": 0,
+                "flags": 0,
+                "volume": 1.0,
+                "balance": 0.5,
+                "enabled": true,
+                "muted": false,
+                "push-to-mute": false,
+                "push-to-mute-delay": 0,
+                "push-to-talk": false,
+                "push-to-talk-delay": 0,
+                "hotkeys": {},
+                "deinterlace_mode": 0,
+                "deinterlace_field_order": 0,
+                "monitoring_type": 0,
+                "private_settings": {}
+            },
+            {
+                "prev_ver": 536936449,
+                "name": "Gain",
+                "uuid": "aaaa1111-0000-0000-0000-000000000004",
+                "id": "gain_filter",
+                "versioned_id": "gain_filter",
+                "settings": {
+                    "db": 12.0
+                },
+                "mixers": 0,
+                "sync": 0,
+                "flags": 0,
+                "volume": 1.0,
+                "balance": 0.5,
+                "enabled": true,
+                "muted": false,
+                "push-to-mute": false,
+                "push-to-mute-delay": 0,
+                "push-to-talk": false,
+                "push-to-talk-delay": 0,
+                "hotkeys": {},
+                "deinterlace_mode": 0,
+                "deinterlace_field_order": 0,
+                "monitoring_type": 0,
+                "private_settings": {}
+            },
+            {
+                "prev_ver": 536936449,
+                "name": "Noise Gate",
+                "uuid": "aaaa1111-0000-0000-0000-000000000002",
+                "id": "noise_gate_filter",
+                "versioned_id": "noise_gate_filter",
+                "settings": {
+                    "open_threshold": -25,
+                    "close_threshold": -30,
+                    "attack_time": 6,
+                    "hold_time": 200,
+                    "release_time": 100
+                },
+                "mixers": 0,
+                "sync": 0,
+                "flags": 0,
+                "volume": 1.0,
+                "balance": 0.5,
+                "enabled": true,
+                "muted": false,
+                "push-to-mute": false,
+                "push-to-mute-delay": 0,
+                "push-to-talk": false,
+                "push-to-talk-delay": 0,
+                "hotkeys": {},
+                "deinterlace_mode": 0,
+                "deinterlace_field_order": 0,
+                "monitoring_type": 0,
+                "private_settings": {}
+            },
+            {
+                "prev_ver": 536936449,
+                "name": "Compressor",
+                "uuid": "aaaa1111-0000-0000-0000-000000000003",
+                "id": "upward_compressor_filter",
+                "versioned_id": "upward_compressor_filter",
+                "settings": {
+                    "output_gain_db": 3,
+                    "sidechain_source": null,
+                    "ratio": 4,
+                    "threshold": -15,
+                    "attack_time": 3,
+                    "release_time": 100
+                },
+                "mixers": 0,
+                "sync": 0,
+                "flags": 0,
+                "volume": 1.0,
+                "balance": 0.5,
+                "enabled": true,
+                "muted": false,
+                "push-to-mute": false,
+                "push-to-mute-delay": 0,
+                "push-to-talk": false,
+                "push-to-talk-delay": 0,
+                "hotkeys": {},
+                "deinterlace_mode": 0,
+                "deinterlace_field_order": 0,
+                "monitoring_type": 0,
+                "private_settings": {}
+            }
+        ]
+    },
+    "sources": [
+        {
+            "prev_ver": 536936449,
+            "name": "Screen Capture (PipeWire)",
+            "uuid": "33333333-3333-3333-3333-333333333333",
+            "id": "pipewire-screen-capture-source",
+            "versioned_id": "pipewire-screen-capture-source",
+            "settings": {
+                "source_type": 1,
+                "show_cursor": true,
+                "pipewire_source_id": 0,
+                "RestoreToken": "AN6PnQNoFdscoU09D6Kojw"
+            },
+            "mixers": 0,
+            "sync": 0,
+            "flags": 0,
+            "volume": 1.0,
+            "balance": 0.5,
+            "enabled": true,
+            "muted": false,
+            "push-to-mute": false,
+            "push-to-mute-delay": 0,
+            "push-to-talk": false,
+            "push-to-talk-delay": 0,
+            "hotkeys": {},
+            "deinterlace_mode": 0,
+            "deinterlace_field_order": 0,
+            "monitoring_type": 0,
+            "private_settings": {}
+        },
+        {
+            "prev_ver": 536936449,
+            "name": "Webcam (Logitech C922)",
+            "uuid": "44444444-4444-4444-4444-444444444444",
+            "id": "v4l2_input",
+            "versioned_id": "v4l2_input",
+            "settings": {
+                "device_id": "/dev/video0",
+                "input": 0,
+                "pixelformat": 1196444237,
+                "resolution": -1,
+                "framerate": -1
+            },
+            "mixers": 0,
+            "sync": 0,
+            "flags": 0,
+            "volume": 1.0,
+            "balance": 0.5,
+            "enabled": true,
+            "muted": false,
+            "push-to-mute": false,
+            "push-to-mute-delay": 0,
+            "push-to-talk": false,
+            "push-to-talk-delay": 0,
+            "hotkeys": {},
+            "deinterlace_mode": 0,
+            "deinterlace_field_order": 0,
+            "monitoring_type": 0,
+            "private_settings": {},
+            "filters": [
+                {
+                    "prev_ver": 536936449,
+                    "name": "Image Mask/Blend (rounded)",
+                    "uuid": "cccc1111-0000-0000-0000-000000000002",
+                    "id": "mask_filter",
+                    "versioned_id": "mask_filter_v2",
+                    "settings": {
+                        "image_path": "/home/spy4x/.config/obs-studio/basic/masks/mask-2x3-vertical.png",
+                        "stretch": false,
+                        "type": "mask_alpha_filter.effect",
+                        "color": 4294967295,
+                        "opacity": 1.0
+                    },
+                    "mixers": 0,
+                    "sync": 0,
+                    "flags": 0,
+                    "volume": 1.0,
+                    "balance": 0.5,
+                    "enabled": true,
+                    "muted": false,
+                    "push-to-mute": false,
+                    "push-to-mute-delay": 0,
+                    "push-to-talk": false,
+                    "push-to-talk-delay": 0,
+                    "hotkeys": {},
+                    "deinterlace_mode": 0,
+                    "deinterlace_field_order": 0,
+                    "monitoring_type": 0,
+                    "private_settings": {}
+                },
+                {
+                    "prev_ver": 536936449,
+                    "name": "Crop (vertical portrait)",
+                    "uuid": "cccc1111-0000-0000-0000-000000000001",
+                    "id": "crop_filter",
+                    "versioned_id": "crop_filter",
+                    "settings": {
+                        "left": 600,
+                        "right": 600,
+                        "top": 0,
+                        "bottom": 0,
+                        "cx": 720,
+                        "cy": 1080,
+                        "relative": false
+                    },
+                    "mixers": 0,
+                    "sync": 0,
+                    "flags": 0,
+                    "volume": 1.0,
+                    "balance": 0.5,
+                    "enabled": true,
+                    "muted": false,
+                    "push-to-mute": false,
+                    "push-to-mute-delay": 0,
+                    "push-to-talk": false,
+                    "push-to-talk-delay": 0,
+                    "hotkeys": {},
+                    "deinterlace_mode": 0,
+                    "deinterlace_field_order": 0,
+                    "monitoring_type": 0,
+                    "private_settings": {}
+                }
+            ]
+        },
+        {
+            "prev_ver": 536936449,
+            "name": "Webcam (Logitech C922) Full",
+            "uuid": "77777777-7777-7777-7777-777777777777",
+            "id": "v4l2_input",
+            "versioned_id": "v4l2_input",
+            "settings": {
+                "device_id": "/dev/video0",
+                "input": 0,
+                "pixelformat": 1196444237,
+                "resolution": -1,
+                "framerate": -1
+            },
+            "mixers": 0,
+            "sync": 0,
+            "flags": 0,
+            "volume": 1.0,
+            "balance": 0.5,
+            "enabled": true,
+            "muted": false,
+            "push-to-mute": false,
+            "push-to-mute-delay": 0,
+            "push-to-talk": false,
+            "push-to-talk-delay": 0,
+            "hotkeys": {},
+            "deinterlace_mode": 0,
+            "deinterlace_field_order": 0,
+            "monitoring_type": 0,
+            "private_settings": {}
+        },
+        {
+            "prev_ver": 536936449,
+            "name": "CodingScene",
+            "uuid": "55555555-5555-5555-5555-555555555555",
+            "id": "scene",
+            "versioned_id": "scene",
+            "settings": {
+                "id_counter": 7,
+                "custom_size": false,
+                "items": [
+                    {
+                        "name": "Screen Capture (PipeWire)",
+                        "source_uuid": "33333333-3333-3333-3333-333333333333",
+                        "visible": true,
+                        "locked": false,
+                        "rot": 0.0,
+                        "scale_ref": {
+                            "x": 3840.0,
+                            "y": 2160.0
+                        },
+                        "align": 5,
+                        "bounds_type": 2,
+                        "bounds_align": 0,
+                        "bounds_crop": false,
+                        "crop_left": 0,
+                        "crop_top": 0,
+                        "crop_right": 0,
+                        "crop_bottom": 0,
+                        "id": 1,
+                        "group_item_backup": false,
+                        "pos": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "pos_rel": {
+                            "x": -1.7777777910232544,
+                            "y": -1.0
+                        },
+                        "scale": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "scale_rel": {
+                            "x": 1.0,
+                            "y": 1.0
+                        },
+                        "bounds": {
+                            "x": 3840.0,
+                            "y": 2160.0
+                        },
+                        "bounds_rel": {
+                            "x": 3.5555555820465088,
+                            "y": 2.0
+                        },
+                        "scale_filter": "disable",
+                        "blend_method": "default",
+                        "blend_type": "normal",
+                        "show_transition": {
+                            "duration": 300
+                        },
+                        "hide_transition": {
+                            "duration": 300
+                        },
+                        "private_settings": {}
+                    },
+                    {
+                        "name": "Webcam (Logitech C922)",
+                        "source_uuid": "44444444-4444-4444-4444-444444444444",
+                        "visible": true,
+                        "locked": false,
+                        "rot": 0.0,
+                        "scale_ref": {
+                            "x": 3840.0,
+                            "y": 2160.0
+                        },
+                        "align": 5,
+                        "bounds_type": 2,
+                        "bounds_align": 0,
+                        "bounds_crop": false,
+                        "crop_left": 0,
+                        "crop_top": 0,
+                        "crop_right": 0,
+                        "crop_bottom": 0,
+                        "id": 2,
+                        "group_item_backup": false,
+                        "pos": {
+                            "x": 3206.0,
+                            "y": 1332.0
+                        },
+                        "pos_rel": {
+                            "x": 1.190740704536438,
+                            "y": 0.23333334922790527
+                        },
+                        "scale": {
+                            "x": 2.0,
+                            "y": 2.0
+                        },
+                        "scale_rel": {
+                            "x": 2.0,
+                            "y": 2.0
+                        },
+                        "bounds": {
+                            "x": 508.0,
+                            "y": 762.0
+                        },
+                        "bounds_rel": {
+                            "x": 0.47037038207054138,
+                            "y": 0.70555555820465088
+                        },
+                        "scale_filter": "disable",
+                        "blend_method": "default",
+                        "blend_type": "normal",
+                        "show_transition": {
+                            "duration": 300
+                        },
+                        "hide_transition": {
+                            "duration": 300
+                        },
+                        "private_settings": {}
+                    }
+                ]
+            },
+            "mixers": 0,
+            "sync": 0,
+            "flags": 0,
+            "volume": 1.0,
+            "balance": 0.5,
+            "enabled": true,
+            "muted": false,
+            "push-to-mute": false,
+            "push-to-mute-delay": 0,
+            "push-to-talk": false,
+            "push-to-talk-delay": 0,
+            "hotkeys": {
+                "OBSBasic.SelectScene": [],
+                "libobs.show_scene_item.1": [],
+                "libobs.hide_scene_item.1": [],
+                "libobs.show_scene_item.2": [],
+                "libobs.hide_scene_item.2": []
+            },
+            "deinterlace_mode": 0,
+            "deinterlace_field_order": 0,
+            "monitoring_type": 0,
+            "canvas_uuid": "6c69626f-6273-4c00-9d88-c5136d61696e",
+            "private_settings": {}
+        },
+        {
+            "prev_ver": 536936449,
+            "name": "CameraOnly",
+            "uuid": "66666666-6666-6666-6666-666666666666",
+            "id": "scene",
+            "versioned_id": "scene",
+            "settings": {
+                "id_counter": 2,
+                "custom_size": false,
+                "items": [
+                    {
+                        "name": "Webcam (Logitech C922) Full",
+                        "source_uuid": "77777777-7777-7777-7777-777777777777",
+                        "visible": true,
+                        "locked": false,
+                        "rot": 0.0,
+                        "scale_ref": {
+                            "x": 3840.0,
+                            "y": 2160.0
+                        },
+                        "align": 5,
+                        "bounds_type": 0,
+                        "bounds_align": 0,
+                        "bounds_crop": false,
+                        "crop_left": 0,
+                        "crop_top": 0,
+                        "crop_right": 0,
+                        "crop_bottom": 0,
+                        "id": 1,
+                        "group_item_backup": false,
+                        "pos": {
+                            "x": 2460.0,
+                            "y": 1620.0
+                        },
+                        "pos_rel": {
+                            "x": 0.5,
+                            "y": 0.5
+                        },
+                        "scale": {
+                            "x": 2.0,
+                            "y": 2.0
+                        },
+                        "scale_rel": {
+                            "x": 2.0,
+                            "y": 2.0
+                        },
+                        "bounds": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "bounds_rel": {
+                            "x": 0.0,
+                            "y": 0.0
+                        },
+                        "scale_filter": "disable",
+                        "blend_method": "default",
+                        "blend_type": "normal",
+                        "show_transition": {
+                            "duration": 300
+                        },
+                        "hide_transition": {
+                            "duration": 300
+                        },
+                        "private_settings": {}
+                    }
+                ]
+            },
+            "mixers": 0,
+            "sync": 0,
+            "flags": 0,
+            "volume": 1.0,
+            "balance": 0.5,
+            "enabled": true,
+            "muted": false,
+            "push-to-mute": false,
+            "push-to-mute-delay": 0,
+            "push-to-talk": false,
+            "push-to-talk-delay": 0,
+            "hotkeys": {
+                "OBSBasic.SelectScene": [],
+                "libobs.show_scene_item.1": [],
+                "libobs.hide_scene_item.1": []
+            },
+            "deinterlace_mode": 0,
+            "deinterlace_field_order": 0,
+            "monitoring_type": 0,
+            "canvas_uuid": "6c69626f-6273-4c00-9d88-c5136d61696e",
+            "private_settings": {}
+        }
+    ],
+    "groups": [],
+    "scene_order": [
+        {
+            "name": "CodingScene"
+        },
+        {
+            "name": "CameraOnly"
+        }
+    ],
+    "current_scene": "CodingScene",
+    "current_program_scene": "CodingScene",
+    "canvases": [],
+    "current_transition": "Fade",
+    "transition_duration": 300,
+    "transitions": [],
+    "quick_transitions": [
+        {
+            "name": "Cut",
+            "duration": 300,
+            "hotkeys": [],
+            "id": 1,
+            "fade_to_black": false
+        },
+        {
+            "name": "Fade",
+            "duration": 300,
+            "hotkeys": [],
+            "id": 2,
+            "fade_to_black": false
+        },
+        {
+            "name": "Fade",
+            "duration": 300,
+            "hotkeys": [],
+            "id": 3,
+            "fade_to_black": true
+        }
+    ],
+    "saved_projectors": [],
+    "preview_locked": false,
+    "scaling_enabled": false,
+    "scaling_level": -13,
+    "scaling_off_x": 0.0,
+    "scaling_off_y": 0.0,
+    "modules": {
+        "scripts-tool": [],
+        "output-timer": {
+            "streamTimerHours": 0,
+            "streamTimerMinutes": 0,
+            "streamTimerSeconds": 30,
+            "recordTimerHours": 0,
+            "recordTimerMinutes": 0,
+            "recordTimerSeconds": 30,
+            "autoStartStreamTimer": false,
+            "autoStartRecordTimer": false,
+            "pauseRecordTimer": true
+        }
+    },
+    "resolution": {
+        "x": 3840,
+        "y": 2160
+    },
+    "version": 2
+}
