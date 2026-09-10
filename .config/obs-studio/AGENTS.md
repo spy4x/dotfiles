@@ -64,10 +64,11 @@ split into 15-minute chunks.
 
 | UUID | Source | Used by | Notes |
 |---|---|---|---|
+| `11111111-...` | Desktop Audio | global | `pulse_output_capture`, default device |
+| `22222222-...` | Microphone (Razer Seiren Mini) | global | `pulse_input_capture`, with 4-filter chain. Lives at the scene-collection level (top-level `AuxAudioDevice1`), so it's global — not per-scene. |
 | `33333333-...` | Screen Capture (PipeWire) | CodingScene | `pipewire-screen-capture-source`, captures HDMI-A-1 only |
 | `44444444-...` | Webcam (Logitech C922) | CodingScene | `v4l2_input`, MJPG 1920×1080 @30 fps, **with crop + mask filters** |
 | `77777777-...` | Webcam (Logitech C922) Full | CameraOnly | `v4l2_input`, **uncropped, full screen** |
-| `22222222-...` | Microphone (Razer Seiren Mini) | both | `pulse_input_capture`, with 4-filter chain |
 
 The bubble webcam and full-screen webcam are **separate v4l2_input
 sources** (not the same source with different per-scene crops). They both
@@ -94,10 +95,12 @@ The full per-filter JSON schema (every required field) is documented at
 the whole filters array on save.** See `basic/scenes/YouTube-Coding.json`
 lines ~64–200 for the working template.
 
-**Webcam (bubble)**:
+**Webcam (bubble)** (filter order top → bottom, as OBS stores them in this scene JSON):
 
-1. **Crop (vertical portrait)** — `crop_filter`, left=600, right=600, top=0, bottom=0. Converts 1920×1080 native C922 to 720×1080 portrait.
-2. **Image Mask/Blend (rounded)** — `mask_filter`, type=`mask_alpha_filter.effect`, image_path=`~/.config/obs-studio/basic/masks/mask-2x3-vertical.png`, color=16777215, opacity=1.0, stretch=false. Uses PNG alpha channel to mask the source (white=visible, transparent=hidden).
+1. **Crop (vertical portrait)** — `crop_filter`, left=425, top=0; cropped-source dimensions: cx=500, cy=730 (right/bottom unset = blank off, OBS infers from native minus left). Converts 1920×1080 native C922 to ~1070×1080 (slightly less aggressively cropped than the original left=600/right=600 — the user tuned this for better head framing).
+2. **Image Mask/Blend (rounded)** — `mask_filter`, type=`mask_alpha_filter.effect`, image_path=`~/.config/obs-studio/basic/masks/mask-2x3-vertical.png`, color=4294967295 (0xFFFFFFFF = white with full alpha), opacity=1.0, stretch=false. Uses PNG alpha channel to mask the source (white=visible, transparent=hidden). Note: the PNG is 600×900 but the cropped source is ~1070×1080 — the mask scales the shape up to fit, and `stretch=false` keeps aspect ratio so the corners stay properly rounded (slight padding on top/bottom is acceptable).
+
+**NOTE**: Earlier versions of this config had `crop_filter` values `left=600, right=600, top=0, bottom=0` and mask color `16777215`. The user tuned both via the OBS GUI for better framing and a more explicit white-with-alpha color value. If a future session reverts to the older numbers, **ask the user first** — they may have intentionally tweaked. See "Workflow & decision protocol" below.
 
 The mask filter source ID in OBS 32 is `mask_filter`; its display name
 in the UI is **"Image Mask/Blend"** (see `obs-filters/data/locale/en-US.ini`).
@@ -135,12 +138,23 @@ source** with a different mask per scene.
   encoder load with no visible benefit for code.
 - **4K over 1440p/1080p**: User explicitly wants maximum sharpness.
   Screen capture on Wayland captures at physical pixel resolution;
-  the file is upload-ready at any quality.
+  the file is upload-ready at any quality. **If recordings keep coming
+  out 1080p even though basic.ini says 3840×2160, the bottleneck is
+  PipeWire screen capture source negotiation with the scaled monitor
+  resolution, NOT the [Video] section. Investigate the screen capture
+  source, not the canvas size.** Changing resolution also causes OBS
+  to **double all scene-item pos/scale values** automatically (since
+  the canvas coordinates doubled in size). Let it; don't undo them.
 - **Vertical webcam (crop+mask)**: Modern UI aesthetic. The mask is
   a built-in OBS filter (mask_filter / "Image Mask/Blend"), no plugin.
 - **MKV + auto-remux**: MKV is crash-resilient (a killed recording
   isn't lost). OBS auto-remuxes to MP4 on stop, so YouTube upload
-  needs no manual conversion step.
+  needs no manual conversion step. **NOTE**: the auto-remux only fires
+  when you click the normal "Stop Recording" button. If you stop a
+  recording by closing OBS or otherwise interrupting it, the MP4 won't
+  be produced. Either use the Stop button, or run
+  `ffmpeg -i input.mkv -c copy output.mp4` (or use the in-app File →
+  Remux Recordings dialog) afterward.
 - **No intro/outro**: User explicitly doesn't want them. Wastes the
   viewer's first 5 seconds.
 
@@ -218,14 +232,144 @@ grep -iE "^error" /tmp/obs-test.log | grep -ivE "portal|frontend_remove"
 python3 -c "import json; json.load(open('<file>'))" && echo "JSON valid"
 ```
 
+## Workflow & decision protocol
+
+### Repository context
+
+- **This directory** (`sync/code/dotfiles/.config/obs-studio/`) is **inside
+  a git repo** rooted two levels up at `~/sync/code/dotfiles/`.
+- Repo host: GitHub `spy4x/dotfiles` (private).
+- Commit style: Angular Conventional Commits (`<type>(<scope>): <subject>`)
+  — see existing log via `cd ~/sync/code/dotfiles && git log --oneline -20`.
+  Preferred types: `feat`, `fix`, `chore`, `refactor`, `docs`.
+  Scopes: `obs` for everything in this directory (use sub-paths in
+  the body if needed, not in the scope).
+- Body wraps at 72 chars, explain *what* and *why*, not *how*.
+
+### On session start (mandatory)
+
+1. **Check git state in `~/sync/code/dotfiles`**:
+   ```sh
+   cd ~/sync/code/dotfiles
+   git status
+   git log --oneline -5
+   ```
+2. **Detect GUI drift**: if `git status` shows modifications under
+   `.config/obs-studio/` that look like they came from the OBS GUI
+   (pos/scale nudges, color/value tweaks, scene item adjustments,
+   filter parameter changes, etc.) — these are NOT to be silently
+   committed. Use `git diff` to show the user what's pending and
+   **ask whether to preserve them as intentional** before doing anything
+   else. The user may have:
+   - Intentionally tweaked a value via the GUI (preserve)
+   - Forgotten about uncommitted experiments (discard)
+   - Tweaked something they later changed their mind about (revert)
+3. **Read this AGENTS.md fully** to load context. Don't skim — the
+   Open/Close thresholds, gain values, and crop numbers are committed
+   decisions, not defaults to be overridden.
+
+### During edits (mandatory hygiene)
+
+1. **Always update AGENTS.md to match the actual on-disk config**
+   after any change to scenes, profiles, filter values, masks, or
+   file layout. Drift between AGENTS.md and config is the #1 source
+   of confusion for future sessions.
+2. **Document the user's intent**, not just the values. "User tuned
+   crop from left=600 to left=425 for better head framing" is better
+   than "left=425".
+3. **Preserve gotcha entries** — when you discover a new gotcha,
+   add it under "Known gotchas". When a gotcha no longer applies,
+   remove or update it. Don't accumulate dead notes.
+4. **Don't reformat this file** except for fixes you're explicitly
+   asked to make.
+
+### PR workflow (mandatory)
+
+All changes to `~/sync/code/dotfiles/` go through pull requests on
+GitHub. **No direct pushes to `main`.** No auto-merge. The user reviews
+and merges manually.
+
+**Concrete steps every session:**
+
+1. Make changes + commit them on a feature branch:
+   ```sh
+   cd ~/sync/code/dotfiles
+   git checkout -b obs/<short-slug>
+   # make edits
+   git add .config/obs-studio/
+   git commit -m "feat(obs): ..."
+   ```
+2. Push the branch:
+   ```sh
+   git push -u origin obs/<short-slug>
+   ```
+3. **Open a PR using `gh`** (CLI available; auth should already be set):
+   ```sh
+   gh pr create --base main --title "obs: <short summary>" \
+     --body "$(cat <<'EOF'
+   ## Summary
+   <one or two lines: what changed and why>
+
+   ## Test plan
+   - [ ] OBS launched + closed gracefully (verified file on disk)
+   - [ ] JSON valid
+   - [ ] No errors in OBS startup log
+   - [ ] (Optional) Actual recording tested
+
+   ## Notes
+   <any context worth carrying into review — gotchas, side effects,
+   things the reviewer should double-check>
+   EOF
+   )"
+   ```
+4. **Report the PR URL to the user.** Do NOT merge. The user will
+   review on GitHub and merge (or request changes) themselves.
+
+**Use `gh pr create --draft`** if the change is experimental or the
+user hasn't confirmed they want to keep it.
+
+**Squash-and-merge is OK** at merge time — the user controls that
+button on GitHub.
+
+### Pre-PR sanity checks
+
+Before pushing, run:
+
+```sh
+cd ~/sync/code/dotfiles
+git status                          # should show only intentional files
+git diff --stat                     # review scope of change
+python3 -c "import json; json.load(open('.config/obs-studio/basic/scenes/YouTube-Coding.json'))" \
+  && echo "JSON valid"
+grep -E "^[A-Z][a-z]+\s+[A-Z]" .config/obs-studio/AGENTS.md | head -5  # spot-check headings
+```
+
+Also re-read the relevant AGENTS.md section that documents the files
+you changed — does it still match? If not, fix it before pushing.
+
+### When AGENTS.md itself is wrong
+
+If you discover during edits that AGENTS.md has incorrect info (drift,
+wrong values, hallucinated features), treat it like any other file:
+
+1. Mention the drift to the user in chat ("Heads up: AGENTS.md says X
+   but the actual config is Y — the user tuned X to Y in the GUI last
+   session, and we missed updating the docs.").
+2. Fix AGENTS.md in the same PR as whatever change you were making,
+   or in a dedicated `docs(obs): ...` commit.
+3. Don't let drift accumulate — small fixes are cheap, big drift is
+   expensive.
+
 ## Known gotchas (learned the hard way)
 
 - **`mask_filter` requires `versioned_id: "mask_filter_v2"`** for the
   OBS 32 v2 schema (float opacity 0.0–1.0). Using the v1 ID works for
   loading but breaks on save in some configurations.
 - **Crop filter absolute pixel values**, not relative. Source
-  dimensions matter. A C922 at MJPG 1920×1080 needs `left=600, right=600`
-  to crop to portrait.
+  dimensions matter. A C922 at MJPG 1920×1080 currently uses `left=425`
+  (with `cx=500, cy=730` set as the cropped dimensions). The user's
+  working value — earlier was `left=600, right=600` (more aggressive crop).
+  Don't override these without asking first.
 - **Scene hotkey format is different from `basic.ini` hotkeys.** Scene
   hotkeys live in the scene JSON's `hotkeys.OBSBasic.SelectScene` array
   as strings like `["OBS_KEY_F11"]`. Global hotkeys (StartRecording,
@@ -245,6 +389,13 @@ python3 -c "import json; json.load(open('<file>'))" && echo "JSON valid"
   push-to-talk, push-to-talk-delay, hotkeys, deinterlace_mode,
   deinterlace_field_order, monitoring_type, private_settings`. Missing
   any field causes OBS to discard the whole `filters` array on save.
+- **OBS can silently revert settings on graceful save.** First OBS
+  launch under KDE's 1.7× display scale auto-negotiated monitor
+  effective resolution (1080p) and subsequent saves kept writing 1080p
+  into `[Video]`, overwriting the 4K values. Always **verify the file
+  on disk after every graceful close** — don't trust the in-memory
+  log. Lesson: also verify after the FIRST ever OBS launch on a new
+  machine or display configuration.
 
 ## What NOT to do
 

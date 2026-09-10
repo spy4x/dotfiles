@@ -240,16 +240,16 @@
             "filters": [
                 {
                     "prev_ver": 536936449,
-                    "name": "Image Mask/Blend (rounded)",
-                    "uuid": "cccc1111-0000-0000-0000-000000000002",
-                    "id": "mask_filter",
-                    "versioned_id": "mask_filter_v2",
+                    "name": "Crop (vertical portrait)",
+                    "uuid": "cccc1111-0000-0000-0000-000000000001",
+                    "id": "crop_filter",
+                    "versioned_id": "crop_filter",
                     "settings": {
-                        "image_path": "/home/spy4x/.config/obs-studio/basic/masks/mask-2x3-vertical.png",
-                        "stretch": false,
-                        "type": "mask_alpha_filter.effect",
-                        "color": 4294967295,
-                        "opacity": 1.0
+                        "left": 425,
+                        "cx": 500,
+                        "cy": 730,
+                        "relative": false,
+                        "top": 0
                     },
                     "mixers": 0,
                     "sync": 0,
@@ -270,18 +270,16 @@
                 },
                 {
                     "prev_ver": 536936449,
-                    "name": "Crop (vertical portrait)",
-                    "uuid": "cccc1111-0000-0000-0000-000000000001",
-                    "id": "crop_filter",
-                    "versioned_id": "crop_filter",
+                    "name": "Image Mask/Blend (rounded)",
+                    "uuid": "cccc1111-0000-0000-0000-000000000002",
+                    "id": "mask_filter",
+                    "versioned_id": "mask_filter_v2",
                     "settings": {
-                        "left": 600,
-                        "right": 600,
-                        "top": 0,
-                        "bottom": 0,
-                        "cx": 720,
-                        "cy": 1080,
-                        "relative": false
+                        "image_path": "/home/spy4x/.config/obs-studio/basic/masks/mask-2x3-vertical.png",
+                        "stretch": false,
+                        "type": "mask_alpha_filter.effect",
+                        "color": 4294967295,
+                        "opacity": 1.0
                     },
                     "mixers": 0,
                     "sync": 0,
@@ -418,12 +416,12 @@
                         "id": 2,
                         "group_item_backup": false,
                         "pos": {
-                            "x": 3206.0,
-                            "y": 1332.0
+                            "x": 3175.0,
+                            "y": 1324.0
                         },
                         "pos_rel": {
-                            "x": 1.190740704536438,
-                            "y": 0.23333334922790527
+                            "x": 1.1620370149612427,
+                            "y": 0.22592592239379883
                         },
                         "scale": {
                             "x": 2.0,
@@ -435,11 +433,11 @@
                         },
                         "bounds": {
                             "x": 508.0,
-                            "y": 762.0
+                            "y": 784.0
                         },
                         "bounds_rel": {
                             "x": 0.47037038207054138,
-                            "y": 0.70555555820465088
+                            "y": 0.72592592239379883
                         },
                         "scale_filter": "disable",
                         "blend_method": "default",
