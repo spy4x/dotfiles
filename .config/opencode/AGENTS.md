@@ -103,6 +103,13 @@ Tests: colocated, deterministic, behavior-named (`t("rejects expired token")`).
 Before task: `~/sync/code/ai-memory/{situation,user,todos}.txt`,
 repo-local `AGENTS.md`, CalDAV MCP todos.
 
+# Experimental
+
+Use `~/.config/opencode/skill-state.md` for a flow. Opt-in per task; skip
+for exploratory/creative work. State at `.skill-state/` (gitignored in the
+worktree). Helpers: `~/sync/code/skill-state/` (github.com/spy4x/skill-state,
+private).
+
 # Language style
 
 Default: senior-dev register. 10x less prose than padded explanations.
