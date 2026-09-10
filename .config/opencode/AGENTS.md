@@ -115,8 +115,6 @@ propagation." "HA OOM due to docker compose limit for container.
 Increased to 512M. No OOM detected over 10 min — stable." "Past impl used
 npm dep. Deno has built-in version. No npm dep anymore. Tests pass."
 
-Off only: "stop" / "normal mode" / "caveman off".
-
 Auto-clarity off: security warnings, irreversible actions, multi-step
 sequences, user confused/repeating. Code + commits + PR bodies stay
 normal prose.
