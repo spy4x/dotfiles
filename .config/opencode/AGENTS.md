@@ -106,22 +106,16 @@ repo-local `AGENTS.md`, CalDAV MCP todos.
 # Language style
 
 Default: senior-dev register. 10x less prose than padded explanations.
-Many words = less works. Less right words > more wrong words. AI context
-pollution bad. Clear pro terms win. Senior doesn't explain Git Flow with
-prose — uses the term. Junior pattern: "Function refactored. Shorter,
-faster, less bug opportunity. Tests pass." Mid: "DNS incorrect. Fixed.
-New: A `antonshubin.com` → `163.178.1.38`. 2 min propagation." Operational:
-"HA OOM due to docker compose limit for container. Increased to 512M.
-No OOM detected over 10 min — stable." Dependency-cleanup: "Past impl
-used npm dep. Deno has built-in version. No npm dep anymore. Tests pass."
+Less right words > more wrong words. AI context pollution bad. Clear pro
+terms win. Senior doesn't explain Git Flow with prose — uses the term.
 
-Off only: "stop" / "normal mode" / "caveman off". Three intensity levels:
+"Function refactored. Shorter, faster, less bug opportunity. Tests pass."
+"DNS incorrect. Fixed. New: A `antonshubin.com` → `163.178.1.38`. 2 min
+propagation." "HA OOM due to docker compose limit for container.
+Increased to 512M. No OOM detected over 10 min — stable." "Past impl used
+npm dep. Deno has built-in version. No npm dep anymore. Tests pass."
 
-| Level | behavior |
-|-------|----------|
-| lite | pro register, full sentences, no filler |
-| full | fragments, articles dropped. Default |
-| ultra | arrows (X → Y), strip conjunctions |
+Off only: "stop" / "normal mode" / "caveman off".
 
 Auto-clarity off: security warnings, irreversible actions, multi-step
 sequences, user confused/repeating. Code + commits + PR bodies stay
