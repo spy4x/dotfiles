@@ -91,15 +91,19 @@ interface TargetResult {
 }
 
 async function planFor(target: (typeof TARGETS)[number], sourceText: string): Promise<TargetResult> {
-  const existing = await fileInfo(target.path)
-  const existingText = await readOrNull(target.path)
+  const lstat = await Deno.lstat(target.path).catch(() => null)
+  const existing = lstat ?? (await fileInfo(target.path))
 
-  if (!existing) {
+  if (!lstat && !existing) {
     return { target, action: "write", reason: "missing" }
   }
-  if (existing.isSymlink) {
+  if (lstat?.isSymlink) {
     return { target, action: "remove-symlink", reason: "symlink (DSH/OpenCode need real file)" }
   }
+  if (!lstat && existing?.isSymlink) {
+    return { target, action: "remove-symlink", reason: "broken symlink" }
+  }
+  const existingText = await readOrNull(target.path)
   if (existingText === sourceText) {
     return { target, action: "skip", reason: "in sync" }
   }
@@ -107,6 +111,12 @@ async function planFor(target: (typeof TARGETS)[number], sourceText: string): Pr
 }
 
 async function writeCopy(path: string, text: string): Promise<void> {
+  // Deno.writeTextFile follows symlinks; for a broken symlink, lstat the path
+  // and remove it first so write creates a real file.
+  const lstat = await Deno.lstat(path).catch(() => null)
+  if (lstat?.isSymlink) {
+    await Deno.remove(path)
+  }
   await Deno.writeTextFile(path, text)
 }
 
