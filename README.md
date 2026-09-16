@@ -112,9 +112,9 @@ Restart DSH after `--apply` to pick up changes (DSH watches the file but only
 on session start for the user-global scope). OpenCode picks up changes on the
 next session start.
 
-Repo-local `.dsh/AGENTS.md` stays a relative symlink to
-`../../.config/opencode/AGENTS.md` — DSH reads it as a layering override when
-the session cwd is inside this repo.
+Repo-local `.dsh/AGENTS.md` is a real-file copy of the source. DSH reads it as
+a layering override when the session cwd is inside this repo. Real file beats
+symlink here too — DSH symlink handling is unreliable across all paths.
 
 ### Tmux plugins
 

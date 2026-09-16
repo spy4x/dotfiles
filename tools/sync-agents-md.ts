@@ -32,6 +32,8 @@ const SOURCE = resolve(
   "AGENTS.md",
 )
 
+const REPO_ROOT = resolve(import.meta.dirname ?? ".", "..")
+
 const TARGETS = [
   {
     label: "OpenCode global (~/.config/opencode/AGENTS.md)",
@@ -45,6 +47,11 @@ const TARGETS = [
         resolve(Deno.env.get("HOME") ?? "~", ".local", "share", "dsh"),
       "AGENTS.md",
     ),
+    mode: "copy" as const,
+  },
+  {
+    label: "Repo-local .dsh/AGENTS.md (layering override)",
+    path: resolve(REPO_ROOT, ".dsh", "AGENTS.md"),
     mode: "copy" as const,
   },
 ]
