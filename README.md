@@ -74,6 +74,48 @@ mv ~/.p10k.zsh ~/.p10k.zsh.bak-$(date +%Y%m%d%H%M%S)
 ln -s ~/dev/dotfiles/.p10k.zsh ~/.p10k.zsh
 ```
 
+## 📜 `AGENTS.md` Sync
+
+`AGENTS.md` is loaded by two harnesses at different paths:
+
+| Harness  | File read                                                |
+| -------- | -------------------------------------------------------- |
+| OpenCode | `~/.config/opencode/AGENTS.md`                           |
+| DSH      | `$DSH_HOME/AGENTS.md` (default `~/.local/share/dsh/...`) |
+
+Both files must contain the **same content** as the tracked source at
+`.config/opencode/AGENTS.md`. They cannot be symlinks to the tracked file:
+
+- OpenCode follows symlinks, but a relative chain through `~/.config/opencode/`
+  is fragile when the repo moves.
+- DSH does not reliably follow symlinks at `$DSH_HOME`; a chain
+  (`AGENTS.md` → `~/.config/opencode/...` → tracked) breaks silently.
+
+**Use the sync script — do not symlink manually:**
+
+```bash
+deno task sync-agents-md           # dry-run, prints planned actions
+deno task sync-agents-md --apply   # copy source to runtime locations
+deno task sync-agents-md --check   # exit 1 if any target drifted
+```
+
+Run `--apply` after every change to `.config/opencode/AGENTS.md`. Optionally
+wire it into a post-commit hook:
+
+```bash
+# .git/hooks/post-commit (per-clone)
+deno task sync-agents-md --apply
+```
+
+`~/.local/share/dsh/AGENTS.md` (DSH global) is read once per session start.
+Restart DSH after `--apply` to pick up changes (DSH watches the file but only
+on session start for the user-global scope). OpenCode picks up changes on the
+next session start.
+
+Repo-local `.dsh/AGENTS.md` stays a relative symlink to
+`../../.config/opencode/AGENTS.md` — DSH reads it as a layering override when
+the session cwd is inside this repo.
+
 ### Tmux plugins
 
 ```bash
