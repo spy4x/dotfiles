@@ -3,7 +3,8 @@
     "install-all": "deno task install-apps && deno task install-shell",
     "install-apps": "deno run -A install-apps.ts",
     "install-shell": "deno run -A install-shell.ts",
-    "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts"
+    "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts",
+    "sync-agents-md": "deno run -A tools/sync-agents-md.ts"
   },
   "exclude": [
     "**/.cache/*",
