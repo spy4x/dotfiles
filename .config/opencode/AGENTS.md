@@ -128,3 +128,6 @@ normal prose.
 
 Subject ≤50 chars, hard cap 72. Imperative (`add`, not `added`). No
 trailing period. No AI attribution. Body only for non-obvious why.
+
+# JSDoc
+JSDoc on non-trivial or >10-line functions/classes/interfaces.
