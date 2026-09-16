@@ -76,14 +76,6 @@
       ],
       "enabled": true,
       "timeout": 300000
-    },
-    "caldav-mcp": {
-      "type": "local",
-      "command": [
-        "/home/spy4x/sync/code/mcps/caldav/start.sh"
-      ],
-      "enabled": true,
-      "timeout": 60000
     }
   }
 }
