@@ -101,7 +101,7 @@ Tests: colocated, deterministic, behavior-named (`t("rejects expired token")`).
 # Memory
 
 Before task: `~/sync/code/ai-memory/{situation,user,todos}.txt`,
-repo-local `AGENTS.md`, CalDAV MCP todos.
+repo-local `AGENTS.md`.
 
 # Experimental
 
