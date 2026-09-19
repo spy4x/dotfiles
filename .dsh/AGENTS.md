@@ -17,6 +17,14 @@ Cost-aware, no wallet-attack risk third party like serverless functions.
 BM/VM with fixed price/mo (Hetzner BM/VM) or usage-based with hard caps
 configurable or prepaid (ex: DeepSeek API).
 
+**UI: own it.** No shadcn/Radix/Headless UI/Material/Chakra. Third-party UI
+libraries' styling opinions, upgrade breakage and extension limits cost more
+than owning the code. Implement components ourselves, lightweight, on our stack.
+Libraries may be **design intent sources, never code sources** — port markup and
+behaviour, not the dependency. Platform primitives (`<dialog>`, `<details>`) over
+JS reimplementations. Accessibility becomes our job: hand-write roles, labels,
+keyboard handling, focus.
+
 # Session bootstrap
 
 Read in parallel before new project: `README.md` + repo-root `*.md`,
@@ -98,6 +106,23 @@ Errors: explicit throw on missing required env. Structured result
 `{ success, output, error }` from commands.
 Tests: colocated, deterministic, behavior-named (`t("rejects expired token")`).
 
+**A green local run is not CI evidence.** Local passes can hide env assumptions
+(`$HOME`, `DENO_DIR`, cache paths). Emulate CI before claiming green:
+
+    CI=true DENO_DIR=$(mktemp -d) <check command>
+
+Never assert a path under `$HOME` — resolve through the tool
+(`import.meta.resolve`) or an injected config. If a test can silently skip when
+its dependency is missing, it will — fail loudly instead.
+
+Verifying inside the real CI image is decisive:
+
+    docker run --rm -v "$PWD":/w:ro -w /w <ci-image> <check command>
+
+Mount a **real worktree**, never `/tmp` scratch — SELinux denies `container_t`
+on `user_tmp_t`, and a pre-fix baseline run that "fails" for that reason proves
+nothing. See `ai-memory/incidents/`.
+
 # Memory
 
 Before task: `~/sync/code/ai-memory/{situation,user,todos}.txt`,
@@ -109,6 +134,55 @@ Use `~/.config/opencode/skill-state.md` for a flow. Opt-in per task; skip
 for exploratory/creative work. State at `.skill-state/` (gitignored in the
 worktree). Helpers: `~/sync/code/skill-state/` (github.com/spy4x/skill-state,
 private).
+
+# Subagent orchestration
+
+Volume work = parallel subagents. You are architect/coordinator: delegate the
+implementation, never write it yourself.
+
+**Wave sizing.** N agents per wave, one package/directory each. Wave is safe
+only when items are **file-disjoint** — that, not size, is the constraint.
+3 is a proven-good first wave; scale by disjoint directories, not confidence.
+
+**Worktree per agent**, branch `<type>/<slug>` from latest `main`. Disjoint
+working trees = no stash/checkout races. Same worktree for two agents = corruption.
+
+**Prompt = complete brief.** Agent sees nothing of this conversation. Include:
+worktree path, sources (read-only), output paths, house style, the issue, and
+"what to do if stuck" (decide + document, don't stop). Enough detail that it
+never explores the repo for context.
+
+**Front-load the serial spine.** If every unit depends on one thing (scaffold,
+schema, base config), build it first, alone, and merge it. Then parallelise.
+Otherwise N agents invent N incompatible versions.
+
+**Prove the no-contention property, don't assume it.** E.g. Deno skips absent
+workspace members, so pre-listing every package dir means each agent's PR
+touches zero shared files. Verify such a claim experimentally before relying
+on it for parallelism.
+
+**Separate reviewer agent, never self-review.** Instruct it to:
+- run the checks itself; a claimed green run is not evidence
+- **verify by mutation** — break the implementation, confirm the test goes red.
+  A test that passes either way is worse than no test
+- check scope, secrets, house rules, and whether the PR body's numbers match
+  reality
+- on pass: post exact evidence. Merge **only when the user delegated merge
+  authority for this run** — orchestration never implies it, Git Flow's
+  explicit user "merge" still binds. On fail: `needs-fix` + exact evidence
+Rejection is a normal outcome, not a failure. Expect ~1 in 4. Send back with
+precise required changes; never let the reviewer fix it.
+
+**Verify claims, especially from a confident report.** The highest-value catches
+are overclaims: "the suite caught 3 bugs" (it caught 1), "one cast" (there were
+8), "check passes" (it doesn't). Demand the reproduction.
+
+**Model/effort.** Cheap tier for mechanical extraction; reviewer same tier
+(adversarial reading is mechanical). Prefer fresh `subagent` over forking —
+forking copies the whole conversation into every child and multiplies input cost.
+
+**Parallelise reads, serialise writes.** Concurrent agents may read the same
+sources; never let two write one file or one repo's config.
 
 # Language style
 
