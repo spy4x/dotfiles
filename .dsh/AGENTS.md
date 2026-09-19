@@ -17,13 +17,21 @@ Cost-aware, no wallet-attack risk third party like serverless functions.
 BM/VM with fixed price/mo (Hetzner BM/VM) or usage-based with hard caps
 configurable or prepaid (ex: DeepSeek API).
 
-**UI: own it.** No shadcn/Radix/Headless UI/Material/Chakra. Third-party UI
-libraries' styling opinions, upgrade breakage and extension limits cost more
-than owning the code. Implement components ourselves, lightweight, on our stack.
-Libraries may be **design intent sources, never code sources** — port markup and
-behaviour, not the dependency. Platform primitives (`<dialog>`, `<details>`) over
-JS reimplementations. Accessibility becomes our job: hand-write roles, labels,
-keyboard handling, focus.
+**Deps: own the small, keep the huge.** Platform (browser/Deno) APIs first, then
+modern std. Own anything small and opinionated whose opinion isn't ours — UI
+components especially (no shadcn/Radix/Headless UI/Material/Chakra), but the rule
+is general: if we'd fight its defaults, we write it.
+
+Keep the giant, well-solved ones — writing them right is a project in itself:
+postgres.js, arktype, preact, wouter, tailwind, `@std/*`, signals, hono,
+qrcode, webpush, otpauth, playwright, ioredis, fresh, vite, d3, leaflet,
+nodemailer, a date/tz lib. Never reimplement these.
+
+Libraries are **design intent sources, never code sources** — port markup and
+behaviour, not the dependency. Prefer platform primitives (`<dialog>`,
+`<details>`, `Intl`, `crypto`, `URL`, `structuredClone`) over JS
+reimplementations. Owning a component means owning its accessibility: hand-write
+roles, labels, keyboard handling, focus.
 
 # Session bootstrap
 
@@ -106,22 +114,11 @@ Errors: explicit throw on missing required env. Structured result
 `{ success, output, error }` from commands.
 Tests: colocated, deterministic, behavior-named (`t("rejects expired token")`).
 
-**A green local run is not CI evidence.** Local passes can hide env assumptions
+**A green local run is not CI evidence.** Local passes hide env assumptions
 (`$HOME`, `DENO_DIR`, cache paths). Emulate CI before claiming green:
-
-    CI=true DENO_DIR=$(mktemp -d) <check command>
-
-Never assert a path under `$HOME` — resolve through the tool
-(`import.meta.resolve`) or an injected config. If a test can silently skip when
-its dependency is missing, it will — fail loudly instead.
-
-Verifying inside the real CI image is decisive:
-
-    docker run --rm -v "$PWD":/w:ro -w /w <ci-image> <check command>
-
-Mount a **real worktree**, never `/tmp` scratch — SELinux denies `container_t`
-on `user_tmp_t`, and a pre-fix baseline run that "fails" for that reason proves
-nothing. See `ai-memory/incidents/`.
+`CI=true DENO_DIR=$(mktemp -d) <check command>`. Never assert a path under
+`$HOME` — resolve through the tool (`import.meta.resolve`) or injected config.
+A test that can silently skip when its dependency is missing will — fail loudly.
 
 # Memory
 
