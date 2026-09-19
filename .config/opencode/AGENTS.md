@@ -167,7 +167,9 @@ on it for parallelism.
   A test that passes either way is worse than no test
 - check scope, secrets, house rules, and whether the PR body's numbers match
   reality
-- merge on pass; post exact evidence and `needs-fix` on fail
+- on pass: post exact evidence. Merge **only when the user delegated merge
+  authority for this run** — orchestration never implies it, Git Flow's
+  explicit user "merge" still binds. On fail: `needs-fix` + exact evidence
 Rejection is a normal outcome, not a failure. Expect ~1 in 4. Send back with
 precise required changes; never let the reviewer fix it.
 
