@@ -24,8 +24,8 @@ is general: if we'd fight its defaults, we write it.
 
 Keep the giant, well-solved ones — writing them right is a project in itself:
 postgres.js, arktype, preact, wouter, tailwind, `@std/*`, signals, hono,
-qrcode, webpush, otpauth, playwright, ioredis, fresh, vite, d3, leaflet,
-nodemailer, a date/tz lib. Never reimplement these.
+qrcode, webpush, otpauth, playwright, ioredis, fresh, vite, d3, leaflet.
+Also an SMTP lib and a date/tz lib. Never reimplement these.
 
 Libraries are **design intent sources, never code sources** — port markup and
 behaviour, not the dependency. Prefer platform primitives (`<dialog>`,
@@ -123,7 +123,8 @@ A test that can silently skip when its dependency is missing will — fail loudl
 # Memory
 
 Before task: `~/sync/code/ai-memory/{situation,user,todos}.txt`,
-repo-local `AGENTS.md`.
+repo-local `AGENTS.md`. Postmortems and standing rules from past incidents:
+`~/sync/code/ai-memory/incidents/`.
 
 # Experimental
 
