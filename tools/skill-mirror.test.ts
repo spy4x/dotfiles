@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "jsr:@std/assert@1.0.19"
 import { resolve } from "jsr:@std/path@^1.0.0"
+import { parse } from "jsr:@std/yaml@^1.0.0"
 
 /**
  * A skill that exists under both `.claude/skills` and `.config/opencode/skills` is one
@@ -30,26 +31,21 @@ async function dirNames(dir: string): Promise<string[]> {
 const opencodeDirs = await dirNames(OPENCODE)
 const mirrored = (await dirNames(CLAUDE)).filter((name) => opencodeDirs.includes(name))
 
-/** Splits a SKILL.md into its frontmatter lines and everything after them. */
-function split(text: string): { frontmatter: string[]; body: string } {
+/**
+ * Splits a SKILL.md into its parsed frontmatter and everything after it. The frontmatter
+ * goes through a YAML parser rather than a line match: a value may be quoted, folded over
+ * several lines or sit on the line below its key, and every one of those spellings has to
+ * compare as the string it really is.
+ */
+function split(text: string): { frontmatter: Record<string, unknown>; body: string } {
   const match = text.match(/^---\n([\s\S]*?)\n---\n/)
   if (!match) throw new Error(`no frontmatter block`)
-  return { frontmatter: match[1].split(`\n`), body: text.slice(match[0].length) }
-}
-
-/**
- * The value of `key` in a frontmatter block, or null when it is absent. A YAML block
- * scalar (`>-`, `|`) puts the text on the following lines, where this would not see it
- * and every such value would compare equal to every other. Refuse instead of pretending.
- */
-function field(frontmatter: string[], key: string): string | null {
-  const line = frontmatter.find((entry) => entry.startsWith(`${key}:`))
-  if (line === undefined) return null
-  const value = line.slice(key.length + 1).trim()
-  if (/^[>|][0-9+-]*(\s+#.*)?$/.test(value)) {
-    throw new Error(`frontmatter "${key}" is a YAML block scalar, which this check cannot compare`)
-  }
-  return value
+  const frontmatter = parse(match[1])
+  assert(
+    typeof frontmatter === `object` && frontmatter !== null && !Array.isArray(frontmatter),
+    `frontmatter is not a mapping`,
+  )
+  return { frontmatter: frontmatter as Record<string, unknown>, body: text.slice(match[0].length) }
 }
 
 Deno.test(`every required skill is mirrored`, () => {
@@ -71,9 +67,13 @@ for (const skill of mirrored) {
     const opencode = await read(OPENCODE)
     assertEquals(opencode.body, claude.body, `body differs`)
     for (const key of SHARED_KEYS) {
+      assert(
+        typeof claude.frontmatter[key] === `string`,
+        `Claude frontmatter "${key}" is not a string`,
+      )
       assertEquals(
-        field(opencode.frontmatter, key),
-        field(claude.frontmatter, key),
+        opencode.frontmatter[key],
+        claude.frontmatter[key],
         `frontmatter "${key}" differs`,
       )
     }
