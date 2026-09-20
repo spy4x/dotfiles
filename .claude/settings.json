@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "permissions": {
+    "ask": [
+      "Bash(gh pr merge *)",
+      "Bash(gh release create *)",
+      "Bash(gh repo delete *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push --force-with-lease *)",
+      "Read(//**/.env)",
+      "Read(//**/.env.local)",
+      "Read(//**/.env.decrypted)"
+    ],
+    "deny": [
+      "Read(//**/.age/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --no-config --no-lock --allow-read --allow-env=HOME --allow-run=git,gitleaks \"$HOME/.claude/hooks/guard-git.ts\"",
+            "timeout": 120,
+            "statusMessage": "guard-git"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --no-config --no-lock --allow-read --allow-write --allow-env=HOME --allow-run=git \"$HOME/.claude/hooks/worktree.ts\" create",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --no-config --no-lock --allow-read --allow-write --allow-env=HOME --allow-run=git \"$HOME/.claude/hooks/worktree.ts\" remove",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,68 @@
+---
+name: audit
+description: Whole-repo adversarial audit (not PR-scoped) — verifies what previous agents claimed, finds overreach, dead weight and security holes. Report only, no edits.
+argument-hint: "[path or package — default: whole repo]"
+disable-model-invocation: true
+---
+
+# /audit $ARGUMENTS
+
+Goal: an evidence-backed verdict on every unit in scope. You are verifying someone else's work, not
+extending it. **No edits, no issues created, no PR comments** — the report is the deliverable; the
+user decides what happens next.
+
+Scope: `$ARGUMENTS`, or the whole repo when empty. A unit = one package / top-level directory.
+
+## 0. Ground truth first
+
+- Read repo `AGENTS.md`, `README.md`, manifest. Note the repo's own scope statement — it is the
+  yardstick for "does this belong here".
+- Cold run on the default branch: `CI=true DENO_DIR=$(mktemp -d) deno task check`. Record exit code,
+  test count, duration. Red here is finding #1, and everything downstream is read in that light.
+
+## 1. Inventory (cheap, parallel — Explore / `haiku`)
+
+Per unit: exported API, source vs test line counts, dependencies added, and **provenance**: which
+repo(s) the code came from and who imports it today (`grep` the consumer repos for the package name
+and for near-duplicates of its main functions).
+
+The reuse test, applied to every unit: **two or more real consumers, or a stated reason it is
+platform-level.** One consumer = project code living in the wrong repo, however clean it is.
+
+## 2. Deep review (parallel `reviewer` subagents, one per unit, file-disjoint)
+
+Brief each with: repo path (read-only), unit directory, the inventory facts, the repo's scope
+statement, global + repo `AGENTS.md` rules that bind it, and the issues/PRs that claim to have
+delivered it. Units touching auth, crypto, SSRF/URL policy, SQL, email/DKIM, money, secrets/env
+tooling → run that reviewer on `fable`.
+
+Each reviewer answers:
+
+1. Does it belong? (reuse test, scope statement, deps policy — "own the small, keep the huge":
+   a hand-rolled SMTP/TLS/timezone/XML/crypto implementation is a finding by default)
+2. Is it correct? Read the riskiest paths, not the longest files.
+3. Are the tests real? Mutation-sample 3–5 behaviours. Report survivors. Flag test bulk that
+   asserts nothing (snapshot of constants, tests of the mock).
+4. Did the closing PR/issue overclaim? Count what it counted.
+
+## 3. Cross-cutting (lead, not delegated)
+
+- Version/pin drift between this repo and its consumers.
+- Duplication _between_ units (two validators, two retry helpers, two `cn()`).
+- Licensing of anything vendored or ported (icons, fonts, copied snippets). Public + MIT repo with
+  unlicensed assets is a 🔴, not a backlog item.
+- Open issues and `[WIP]` PRs: still wanted, given the verdicts?
+
+## 4. Report
+
+Executive summary, 3 lines max. Then one row per unit:
+
+```
+<unit> — KEEP | FIX | MOVE-OUT (<where>) | DELETE — <one-line why>
+  evidence: <consumers found> · <mutation k/n> · <claim refuted, if any> · <file:line of worst finding>
+```
+
+Then findings ranked by exploit/loss probability, not by count:
+`<file>:L<line>: <severity> <problem>. <fix>.`
+
+Close with what was **not** verified and why. Unverified is never reported as passed.
