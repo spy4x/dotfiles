@@ -1,1 +1,32 @@
-/home/spy4x/sync/code/rostok/servers/portable/configs/dsh/settings.yaml
+# DSH user settings. Mirrored from opencode.json: model, default agent,
+# permission, providers, MCP servers.
+#
+# Pre-existing keys (ui-onboarding, llm-pi-ai, permission, agent-default-model)
+# came from the original `~/.local/share/dsh/settings.yaml` that dsh
+# auto-created at first boot. `agent-default-agent` is new (mirrors
+# opencode.json's `default_agent: architect`).
+
+ui-onboarding:
+  welcomeNoticeVersion: 2026-08-13.1
+
+# LLM provider config — translated from opencode.json's `provider` block.
+# `minimax-coding-plan` (OpenCode) → `minimax` (DSH, already configured).
+llm-pi-ai:
+  providers:
+    minimax:
+      apiKeyEnv: MINIMAX_API_KEY
+
+permission:
+  defaultPreset: danger-full-access
+
+# Default model.
+agent-default-model:
+  provider: deepseek-official
+  model: deepseek-v4-flash
+  reasoningEffort: off
+ui-conversation:
+  busyEnter: steer
+
+# Default agent preset is configured in profiles/web/cordis.patch.yml
+# (agent-presets.default: architect). The `default_agent` key in
+# opencode.json maps to that, not to a settings namespace.
