@@ -242,14 +242,14 @@ JSDoc on non-trivial or >10-line functions/classes/interfaces.
 
 # Harness notes
 
-**Claude Code.** Config tracked in `dotfiles/.claude/` (settings, hooks,
-agents, skills), copied to `~/.claude/` by the sync task. Hooks enforce what
-prose can't: commit on `main`/`master` and `gh pr merge` prompt the user, a
-worktree inside a repo is denied, gitleaks scans every push and every `gh`
-body, built-in worktrees land in sibling `worktrees/`. A hook deny is the rule
-speaking — fix the cause, never route around it. Agents: `reviewer`
-(read-only), `implementer`. Built-ins cover the rest: Plan, Explore,
-`/code-review`, `/security-review`.
+**Claude Code.** Config tracked in `dotfiles/.claude/` (settings, agents,
+skills), copied to `~/.claude/` by the sync task. Runs in auto mode: no
+per-command prompts, judgment is yours — so the rules above are yours to hold,
+nothing enforces them. Never use the built-in worktree features (`--worktree`,
+`EnterWorktree`, `isolation: worktree`, the desktop "worktree" option): they
+nest the checkout in `<repo>/.claude/worktrees/`. Create worktrees with the
+Git Flow command. Agents: `reviewer` (read-only), `implementer`. Built-ins
+cover the rest: Plan, Explore, `/code-review`, `/security-review`.
 
 **OpenCode / DSH.** Agents in `.config/opencode/agents/`, commands in
 `opencode.json`. DSH presets and skills are generated — `tools/gen_dsh.py`,
