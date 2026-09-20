@@ -146,11 +146,12 @@ A test that can silently skip when its dependency is missing will — fail loudl
   marketing, reviewing my work or direction. Skip it for routine coding.
 - `TASKS.md` — the ordered task list. Read when asked what is next or whether
   something fits the plan.
-- `situation.txt` — strategy, priorities, budget. Read when the task touches
-  them (what to build next, stack/vendor choice), not for routine coding.
+- `situation.md` — the current plan, money, priorities. Read when the task
+  touches them (what to build next, stack/vendor choice), not for routine
+  coding.
 - `incidents/` — postmortems + standing rules. Read when working in an area
   that had one (containers/SELinux, secrets, deploys).
-- `user.txt` — **personal. Never read it unless the user says to in this
+- `personal.md` — **personal. Never read it unless the user says to in this
   session.** A coding task is never a reason.
 
 Durable project knowledge → the repo (`AGENTS.md`, `docs/`): git-synced and
