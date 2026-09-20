@@ -74,47 +74,73 @@ mv ~/.p10k.zsh ~/.p10k.zsh.bak-$(date +%Y%m%d%H%M%S)
 ln -s ~/dev/dotfiles/.p10k.zsh ~/.p10k.zsh
 ```
 
-## 📜 `AGENTS.md` Sync
+## 📜 AI harness config sync
 
-`AGENTS.md` is loaded by two harnesses at different paths:
+One global instruction file, `.config/opencode/AGENTS.md`, feeds every harness. Same text
+everywhere — three harnesses reading three dialects of the rules is how they drift.
 
-| Harness  | File read                                                |
-| -------- | -------------------------------------------------------- |
-| OpenCode | `~/.config/opencode/AGENTS.md`                           |
-| DSH      | `$DSH_HOME/AGENTS.md` (default `~/.local/share/dsh/...`) |
+| Harness     | File read                                                |
+| ----------- | -------------------------------------------------------- |
+| OpenCode    | `~/.config/opencode/AGENTS.md`                           |
+| DSH         | `$DSH_HOME/AGENTS.md` (default `~/.local/share/dsh/...`) |
+| Claude Code | `~/.claude/CLAUDE.md`                                    |
 
-Both files must contain the **same content** as the tracked source at
-`.config/opencode/AGENTS.md`. They cannot be symlinks to the tracked file:
+Claude Code also gets the contents of `.claude/` in this repo:
 
-- OpenCode follows symlinks, but a relative chain through `~/.config/opencode/`
-  is fragile when the repo moves.
-- DSH does not reliably follow symlinks at `$DSH_HOME`; a chain
-  (`AGENTS.md` → `~/.config/opencode/...` → tracked) breaks silently.
+| Tracked here                        | Lands in                  | How                                         |
+| ----------------------------------- | ------------------------- | ------------------------------------------- |
+| `.claude/agents`, `skills`, `hooks` | `~/.claude/<same>`        | mirrored; `*.test.ts` skipped               |
+| `.claude/settings.json`             | `~/.claude/settings.json` | merged — tracked keys win, the rest is kept |
 
 **Use the sync script — do not symlink manually:**
 
 ```bash
 deno task sync-agents-md           # dry-run, prints planned actions
-deno task sync-agents-md --apply   # copy source to runtime locations
+deno task sync-agents-md --apply   # write to runtime locations
 deno task sync-agents-md --check   # exit 1 if any target drifted
 ```
 
-Run `--apply` after every change to `.config/opencode/AGENTS.md`. Optionally
-wire it into a post-commit hook:
+Run `--apply` from the **main checkout, after merge**. From a linked worktree `--apply` writes
+only the tracked copies inside that worktree and prints the rest as `[WITHHELD]`: config from an
+unmerged branch — hooks included — must not go live for every session on the machine before it
+is reviewed. `--apply --from-worktree` overrides that, deliberately.
 
-```bash
-# .git/hooks/post-commit (per-clone)
-deno task sync-agents-md --apply
-```
+Why copies, not symlinks:
 
-`~/.local/share/dsh/AGENTS.md` (DSH global) is read once per session start.
-Restart DSH after `--apply` to pick up changes (DSH watches the file but only
-on session start for the user-global scope). OpenCode picks up changes on the
-next session start.
+- DSH does not reliably follow a symlink at `$DSH_HOME`; a chain breaks silently.
+- Claude Code skips a symlinked `~/.claude/CLAUDE.md` in some session types, and an app that
+  saves `settings.json` atomically replaces a symlink with a real file.
+- This repo's path differs per machine, so an absolute `@import` cannot be shared either.
 
-Repo-local `.dsh/AGENTS.md` is a real-file copy of the source. DSH reads it as
-a layering override when the session cwd is inside this repo. Real file beats
-symlink here too — DSH symlink handling is unreliable across all paths.
+Details worth knowing:
+
+- **Settings merge.** The tracked file owns the keys it names, one level deep inside objects:
+  `permissions.ask` and `hooks.PreToolUse` are replaced wholesale, while `permissions.allow`,
+  `theme` and anything else the app saved are left alone. Machine-specific settings go in
+  `~/.claude/settings.json` directly — just not under a tracked key.
+- **Manifest.** `~/.claude/.dotfiles-sync.json` lists what the script wrote. A file deleted here
+  is deleted there on the next `--apply`; a file the script never wrote is never touched.
+- **Symlinked runtime dirs.** Where `~/.config/opencode` or `~/.local/share/dsh` is a symlink
+  into a checkout of this repo, the "runtime" file _is_ a tracked file. The script detects that
+  and skips it — git updates it.
+- **`.claude/` does double duty.** Claude Code also reads it as _project_ config for sessions
+  opened in this repo. Identical hook handlers from user and project settings run once.
+
+### Claude Code hooks (`.claude/hooks/`)
+
+| Hook           | Event                             | Does                                                                                                                                                                |
+| -------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `guard-git.ts` | `PreToolUse` (Bash)               | asks before a commit on `main`/`master` and before `gh pr merge`; denies `git worktree add` inside a checkout; runs gitleaks on unpushed commits and on `gh` bodies |
+| `worktree.ts`  | `WorktreeCreate`/`WorktreeRemove` | puts Claude Code's built-in worktrees in the sibling `worktrees/<repo>/<type>/<slug>` layout instead of `<repo>/.claude/worktrees/`; copies `.age/key.txt`          |
+
+Both fail open on their own bugs (a crash is a non-blocking error); a gitleaks _failure_ while
+something is leaving the box asks instead. gitleaks is optional: not installed → the scan is
+skipped silently. `deno task test` runs the hook and sync tests against temp dirs.
+
+OpenCode picks up `AGENTS.md` changes on the next session start; DSH reads the global file once
+per session start. `.dsh/skills` and `.dsh/.agent-presets` are generated — re-run
+`python3 tools/gen_dsh_skills.py` / `tools/gen_dsh.py` after editing `opencode.json` commands or
+`.config/opencode/agents/`.
 
 ### Tmux plugins
 

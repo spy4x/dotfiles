@@ -4,7 +4,8 @@
     "install-apps": "deno run -A install-apps.ts",
     "install-shell": "deno run -A install-shell.ts",
     "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts",
-    "sync-agents-md": "deno run -A tools/sync-agents-md.ts"
+    "sync-agents-md": "deno run -A tools/sync-agents-md.ts",
+    "test": "deno test -A tools/ .claude/hooks/"
   },
   "exclude": [
     "**/.cache/*",
