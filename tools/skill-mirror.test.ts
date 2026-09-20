@@ -1,0 +1,81 @@
+import { assert, assertEquals } from "jsr:@std/assert@1.0.19"
+import { resolve } from "jsr:@std/path@^1.0.0"
+import { parse } from "jsr:@std/yaml@^1.0.0"
+
+/**
+ * A skill that exists under both `.claude/skills` and `.config/opencode/skills` is one
+ * skill, and the harness you happen to be in must not decide which rules you get. Each
+ * harness needs its own frontmatter keys — Claude Code reads `argument-hint`, OpenCode
+ * reads `compatibility` — so only `name`, `description` and the body are compared. A
+ * skill that lives under one harness on purpose is not mirrored and is not checked.
+ */
+const CLAUDE = resolve(import.meta.dirname!, `..`, `.claude`, `skills`)
+const OPENCODE = resolve(import.meta.dirname!, `..`, `.config`, `opencode`, `skills`)
+
+/**
+ * Skills that must exist for both harnesses. Discovery alone would go green if a copy
+ * were deleted or its directory misspelled, because the skill would simply stop looking
+ * mirrored. Add a name here when you deliberately ship a skill to both.
+ */
+const REQUIRED = [`upwork-triage`]
+
+/** Frontmatter keys that carry meaning rather than harness plumbing. */
+const SHARED_KEYS = [`name`, `description`]
+
+async function dirNames(dir: string): Promise<string[]> {
+  const names: string[] = []
+  for await (const entry of Deno.readDir(dir)) if (entry.isDirectory) names.push(entry.name)
+  return names.sort()
+}
+
+const opencodeDirs = await dirNames(OPENCODE)
+const mirrored = (await dirNames(CLAUDE)).filter((name) => opencodeDirs.includes(name))
+
+/**
+ * Splits a SKILL.md into its parsed frontmatter and everything after it. The frontmatter
+ * goes through a YAML parser rather than a line match: a value may be quoted, folded over
+ * several lines or sit on the line below its key, and every one of those spellings has to
+ * compare as the string it really is.
+ */
+function split(text: string): { frontmatter: Record<string, unknown>; body: string } {
+  const match = text.match(/^---\n([\s\S]*?)\n---\n/)
+  if (!match) throw new Error(`no frontmatter block`)
+  const frontmatter = parse(match[1])
+  assert(
+    typeof frontmatter === `object` && frontmatter !== null && !Array.isArray(frontmatter),
+    `frontmatter is not a mapping`,
+  )
+  return { frontmatter: frontmatter as Record<string, unknown>, body: text.slice(match[0].length) }
+}
+
+Deno.test(`every required skill is mirrored`, () => {
+  assertEquals(REQUIRED.filter((name) => !mirrored.includes(name)), [], `missing from one harness`)
+})
+
+for (const skill of mirrored) {
+  Deno.test(`${skill} reads the same in Claude Code and OpenCode`, async () => {
+    const read = async (dir: string) => {
+      const path = resolve(dir, skill, `SKILL.md`)
+      const text = await Deno.readTextFile(path).catch((error) => {
+        if (error instanceof Deno.errors.NotFound) return null
+        throw error
+      })
+      assert(text !== null, `${path} is missing, but the skill exists under the other harness`)
+      return split(text)
+    }
+    const claude = await read(CLAUDE)
+    const opencode = await read(OPENCODE)
+    assertEquals(opencode.body, claude.body, `body differs`)
+    for (const key of SHARED_KEYS) {
+      assert(
+        typeof claude.frontmatter[key] === `string`,
+        `Claude frontmatter "${key}" is not a string`,
+      )
+      assertEquals(
+        opencode.frontmatter[key],
+        claude.frontmatter[key],
+        `frontmatter "${key}" differs`,
+      )
+    }
+  })
+}
