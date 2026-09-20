@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "permissions": {
+    "defaultMode": "auto",
+    "ask": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push --force-with-lease *)",
+      "Bash(gh repo delete *)",
+      "Read(//**/.env)",
+      "Read(//**/.env.local)",
+      "Read(//**/.env.decrypted)"
+    ],
+    "deny": [
+      "Read(//**/.age/**)"
+    ]
+  },
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "Solo developer workstation: software development plus automation of the owner's own self-hosted servers",
+      "Source control: github.com/spy4x and all repos under it"
+    ]
+  }
+}

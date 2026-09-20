@@ -16,14 +16,13 @@ Steps:
 1. Read task file (contract). Note What, Relevant files, Reference patterns, DoD.
 2. Read referenced PRD + design for context.
 3. Read reference pattern files first — match existing style exactly (CQRS layout, Deno idioms, monorepo conventions).
-4. Confirm branch: task files start with "0.0 Create branch". If branch absent, create worktree FIRST per AGENTS.md:
-   git worktree add -b <type>/<slug> <type>/<slug> <base>
+4. Confirm branch: task files start with "0.0 Create branch". If branch absent, create the worktree FIRST, in the sibling worktrees/ dir, with the exact command from AGENTS.md (Git Flow). Never inside the repo.
 5. Implement within Relevant files scope. Outside scope = blocker, ask user.
 6. Stack guardrails: Deno + Hono backend, Preact + Signals frontend, Postgres + indexed queries, CQRS separation, money as ints, enums start at 1, no new deps without justification.
 7. Verify DoD:
    - Run task's "tests pass" command.
    - Run deno task check (lint + fmt + type-check + tests) before any commit.
-   - For infra/deploy changes: run deno task deploy <server> [stack] + verify service healthy.
+   - For infra/deploy changes: run the repo's deploy task (see its manifest) + verify service healthy.
 8. Show user: completed work + diff stat + proposed Angular commit message + next task in sequence.
 9. Create WIP PR immediately if not yet created for this branch:
    gh pr create --fill --draft (or just gh pr create --fill if user prefers)

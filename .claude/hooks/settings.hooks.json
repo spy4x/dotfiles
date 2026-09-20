@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --no-config --no-lock --allow-read --allow-env=HOME --allow-run=git,gitleaks \"$HOME/.claude/hooks/guard-git.ts\"",
+            "timeout": 120,
+            "statusMessage": "guard-git"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --no-config --no-lock --allow-read --allow-write --allow-env=HOME --allow-run=git \"$HOME/.claude/hooks/worktree.ts\" create",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run --no-config --no-lock --allow-read --allow-write --allow-env=HOME --allow-run=git \"$HOME/.claude/hooks/worktree.ts\" remove",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -153,6 +153,13 @@
     "homebrew": ["neovim"]
   },
   {
+    // Secret scanner. Used by .claude/hooks/guard-git.ts before push and gh create/edit.
+    "name": "gitleaks",
+    "dnf": ["gitleaks"],
+    "homebrew": ["gitleaks"],
+    "winget": ["Gitleaks.Gitleaks"]
+  },
+  {
     "name": "lazygit",
     "dnf": ["lazygit"],
     "apt": ["lazygit"],

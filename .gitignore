@@ -122,3 +122,9 @@ volumes/
 
 # DSH session attachments (runtime, not user-edited)
 .dsh/attachments/
+# Per-install telemetry id — never publish
+.dsh/.anonymous-user-id
+
+# Claude Code: track .claude/{settings.json,agents,skills,hooks}; skip local + runtime state
+.claude/settings.local.json
+.claude/worktrees/
