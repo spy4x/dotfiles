@@ -6,10 +6,15 @@ body = what + why, not how). Sacrifice grammar. Don't narrate tool calls.
 Global default. Repo-local `AGENTS.md` adds constraints or overrides.
 Conflict → repo wins for that repo.
 
+One source for every harness: `dotfiles/.config/opencode/AGENTS.md`.
+`deno task sync-agents-md --apply` copies it to OpenCode, DSH and Claude Code
+(`~/.claude/CLAUDE.md`). Edit the source, never a copy.
+
 # Stack
 
-Deno 2 + Hono + Fresh + Preact + (SQLite + Litestream) OR Postgres (depends
-on project) + syncthing + restic. Hetzner BM/VM, Docker Compose per project.
+Deno 2 + Hono + Fresh + Preact + syncthing + restic. Hetzner BM/VM, Docker
+Compose per project. DB per project: SQLite + Litestream or Postgres —
+scaffolding a new project → ask which, never assume.
 Shared: Traefik, VictoriaMetrics, Woodpecker CI, Watchtower, Syncthing,
 NTFY, Gatus, Authelia.
 
@@ -35,11 +40,14 @@ roles, labels, keyboard handling, focus.
 
 # Session bootstrap
 
-Read in parallel before new project: `README.md` + repo-root `*.md`,
-manifest (`deno.jsonc`/`package.json`/etc), lint config, runtime
-(`docker-compose.yml`/`Dockerfile`), repo-local `AGENTS.md`. Extract:
-exact commands, allowed patterns, libs, hooks, conventions. Greenfield with
-none → say so. Repeat per worktree.
+New repo, before first edit, read in parallel: repo-local `AGENTS.md` (skip
+if the harness preloaded it), `README.md`, manifest (`deno.jsonc`/
+`package.json`/etc) for exact task names, lint/fmt config. Everything else —
+other root `*.md`, `docs/`, runtime (`compose.yml`/`Dockerfile`), hooks — on
+demand, when the task touches it. Eager-reading a whole `docs/` tree burns
+context on specs the task never needs. Never guess a command the manifest
+defines. Greenfield with none → say so. New worktree of a known repo → no
+re-read.
 
 # Hard rule: no secrets anywhere they leave box
 
@@ -63,7 +71,7 @@ Reviewer gate on 🔴/🟡.
 
 If leaked: **rotate first**, stop further sends, cascade dependents, edit
 (only cosmetic — alerts/RSS/archives already delivered), notify, log to
-`~/.local/share/opencode/rotation-log.md`. Edit-after-ship = theater.
+`~/sync/code/ai-memory/incidents/rotation-log.md` (event only, never the value). Edit-after-ship = theater.
 
 # Fail-open
 
@@ -72,9 +80,17 @@ Secret-bearing sends fail-closed (see Hard rule).
 
 # Git Flow
 
-Worktree first (sibling `worktrees/<repo>/`, never inside repo).
-Branch `<type>/<short-kebab-slug>` from latest `main` (fetch from remote
-to be sure). PR always exists; `[WIP]` prefix until done.
+Worktree first (sibling `worktrees/<repo>/`, never inside repo — repo tooling
+walks the tree and sweeps nested checkouts into fmt/type-check). Already in a
+linked worktree (`.git` is a file) → work there, never nest. Else:
+
+```bash
+MAIN=$(realpath "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")")
+WT="$(dirname "$MAIN")/worktrees/$(basename "$MAIN")/<type>/<slug>"
+git fetch origin && mkdir -p "$(dirname "$WT")" && git worktree add -b <type>/<slug> "$WT" origin/main
+```
+
+Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR always exists; `[WIP]` prefix until done.
 `gh pr create --fill` immediately after push — never ask. Pre-push reviewer
 gate (`@reviewer`, scope: diff, secrets, conventions). Merge only on
 explicit user "merge" in current session. Squash one feature →
@@ -122,9 +138,16 @@ A test that can silently skip when its dependency is missing will — fail loudl
 
 # Memory
 
-Before task: `~/sync/code/ai-memory/{situation,user,todos}.txt`,
-repo-local `AGENTS.md`. Postmortems and standing rules from past incidents:
-`~/sync/code/ai-memory/incidents/`.
+`~/sync/code/ai-memory/`, on demand only:
+- `situation.txt` — strategy, priorities, budget. Read when the task touches
+  them (what to build next, stack/vendor choice), not for routine coding.
+- `incidents/` — postmortems + standing rules. Read when working in an area
+  that had one (containers/SELinux, secrets, deploys).
+- `user.txt` — **personal. Never read it unless the user says to in this
+  session.** A coding task is never a reason.
+
+Durable project knowledge → the repo (`AGENTS.md`, `docs/`): git-synced and
+visible to every harness. Harness-local memory only for facts no repo owns.
 
 # Experimental
 
@@ -135,8 +158,16 @@ private).
 
 # Subagent orchestration
 
-Volume work = parallel subagents. You are architect/coordinator: delegate the
-implementation, never write it yourself.
+Volume work (3+ file-disjoint units) = parallel subagents; you are
+architect/coordinator: brief, review, integrate — don't implement. Small or
+cross-cutting change → do it yourself: a brief costs more than the edit, and a
+subagent sees none of the context that makes the change safe.
+
+**Issue-scoped sessions.** One session = one issue/PR, closed out when the PR
+is ready. No long-lived per-repo coordinator grinding a backlog: context rots,
+every turn re-pays the whole history, and overclaims stack up unreviewed.
+Backlog state lives in GitHub issues, never in a session. A wave is one
+session's subagents, not a session per repo running for days.
 
 **Wave sizing.** N agents per wave, one package/directory each. Wave is safe
 only when items are **file-disjoint** — that, not size, is the constraint.
@@ -175,9 +206,13 @@ precise required changes; never let the reviewer fix it.
 are overclaims: "the suite caught 3 bugs" (it caught 1), "one cast" (there were
 8), "check passes" (it doesn't). Demand the reproduction.
 
-**Model/effort.** Cheap tier for mechanical extraction; reviewer same tier
-(adversarial reading is mechanical). Prefer fresh `subagent` over forking —
-forking copies the whole conversation into every child and multiplies input cost.
+**Model/effort.** Match tier to judgment needed, not to volume. Search and
+inventory → cheapest (Claude: `haiku`). Briefed implementation → mid
+(`sonnet`). Reviewer → strong (`opus`; `fable` for auth/crypto/SSRF/money) —
+catching an overclaim is judgment, and a weak reviewer rubber-stamps a weak
+author. Architecture and final verdicts stay with the lead. Prefer fresh
+`subagent` over forking — forking copies the whole conversation into every
+child and multiplies input cost.
 
 **Parallelise reads, serialise writes.** Concurrent agents may read the same
 sources; never let two write one file or one repo's config.
@@ -202,4 +237,20 @@ Subject ≤50 chars, hard cap 72. Imperative (`add`, not `added`). No
 trailing period. No AI attribution. Body only for non-obvious why.
 
 # JSDoc
+
 JSDoc on non-trivial or >10-line functions/classes/interfaces.
+
+# Harness notes
+
+**Claude Code.** Config tracked in `dotfiles/.claude/` (settings, hooks,
+agents, skills), copied to `~/.claude/` by the sync task. Hooks enforce what
+prose can't: commit on `main`/`master` and `gh pr merge` prompt the user, a
+worktree inside a repo is denied, gitleaks scans every push and every `gh`
+body, built-in worktrees land in sibling `worktrees/`. A hook deny is the rule
+speaking — fix the cause, never route around it. Agents: `reviewer`
+(read-only), `implementer`. Built-ins cover the rest: Plan, Explore,
+`/code-review`, `/security-review`.
+
+**OpenCode / DSH.** Agents in `.config/opencode/agents/`, commands in
+`opencode.json`. DSH presets and skills are generated — `tools/gen_dsh.py`,
+`tools/gen_dsh_skills.py` — never hand-edit `.dsh/`.
