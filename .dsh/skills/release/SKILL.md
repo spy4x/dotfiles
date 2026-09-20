@@ -32,7 +32,7 @@ Steps:
 7. Create: gh release create <version> --title "<version>" --notes "..." [--prerelease] [--target <branch>]
 8. Output release URL. Suggest: bump version in package.json/deno.jsonc if tracked, announce in changelog.
 
-Caveman. PR links mandatory. User confirms before publish.
+Release notes are read cold by users — full sentences. PR links mandatory. User confirms before publish.
 
 ## Invocation
 

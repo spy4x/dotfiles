@@ -19,16 +19,11 @@ Steps:
    - reviewer agent: architecture drift, dead code, duplication, CQRS violations
    - qa agent: test coverage gaps, flaky tests, missing e2e
    - devops agent: deploy safety, secret rotation, backup integrity, monitoring gaps
-3. Aggregate findings into single report:
-   Critical (exploit or data loss risk): <finding, file:line, fix priority>
-   Architecture drift (CQRS bleed, layer violation, missing lib): <finding>
-   Coverage gap (untested critical path): <finding>
-   Hygiene (dead code, dead deps, stale config): <finding>
-   Looks good: <positive obs, max 3 lines>
-4. Rank by exploit/loss probability, not by file count. Output executive summary first (3 lines max).
+3. Aggregate findings into one report in the Issues and reports shape from AGENTS.md: In short (two or three plain sentences), Why it matters, What I suggest, Done when (at most five checkboxes), then evidence in a collapsed <details> block. At most five findings in the body; smaller ones go in a collapsed list. Group them as Critical (exploit or data loss risk), Architecture drift (CQRS bleed, layer violation, missing lib), Coverage gap (untested critical path), Hygiene (dead code, dead deps, stale config). Each finding says what a person notices, then the cause, then file:line.
+4. Rank by exploit/loss probability, not by file count. No praise section. Describe a test gap as "I broke X and the tests still passed", never as "mutant survived".
 5. Do NOT edit. Recommend fixes; do not apply.
 
-Caveman. Prioritized by risk, not effort.
+Full sentences: the report is read cold, months later. Prioritized by risk, not effort.
 
 ## Invocation
 

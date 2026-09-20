@@ -284,6 +284,11 @@ person opens later, cold. Shape, in this order:
 - **Evidence** — commands, `file:line`, tables, logs. Inside a collapsed
   `<details>` block, never mixed into the narrative above.
 
+One **In short** covers the whole document, not one per finding. The findings
+themselves go under **What I suggest**, most severe first, a short paragraph
+each; their `file:line` and the commands that prove them go in the evidence
+block.
+
 At most five findings in the body; put the smaller ones in a collapsed list at
 the end. Twelve findings in one issue is not thoroughness, it is an unreadable
 issue: split it, or drop the small ones.

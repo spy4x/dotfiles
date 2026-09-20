@@ -40,7 +40,10 @@
       - CVE check: `deno info <module>`, `npm audit` for npm: deps, `deno outdated --help`.
       - Lockfile committed. No floating versions in production deps.
       
-      Output format (caveman-review style):
+      Output format: the **Issues and reports** shape from the global `AGENTS.md` — In short, Why it
+      matters, What I suggest, Done when, then evidence in a collapsed `<details>` block. Full sentences,
+      and name the attack in plain words rather than by a spec or CWE number alone. Inside the evidence
+      block, one line per finding:
       
       ```
       <file>:L<line>: <issue>. <attack scenario>. <fix>.

@@ -73,8 +73,10 @@ Close the evidence block with:
 Checks: <command> → exit <n> (<decisive line>)
 Mutation: I broke <file:line — what> and <which test> stayed green | every mutation I tried went red
 Claims: <claim> → confirmed | refuted (<actual>)
-VERDICT: pass | needs-fix
 ```
+
+`VERDICT: pass | needs-fix` goes in the visible body, as the last line. The lead
+must not have to expand anything to learn the outcome.
 
 Describe a test gap as what happened — "I broke X and the tests still passed" — never as "mutant
 survived". Do not infer "unreviewed" from an empty GitHub review record: this gate runs before the

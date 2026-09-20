@@ -34,7 +34,7 @@ Steps:
    ## Recommended Next Step
    <one concrete action>
 
-Caveman. Ethics explicit. No tactics that violate Sovereign frame.
+The playbook is read later — full sentences. Ethics explicit. No tactics that violate Sovereign frame.
 
 ## Invocation
 
