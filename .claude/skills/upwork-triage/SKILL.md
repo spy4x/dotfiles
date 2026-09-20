@@ -1,6 +1,6 @@
 ---
 name: upwork-triage
-description: Judge a pasted Upwork job post and draft the opening of a proposal — a yes/no verdict, the reason in two lines, and a cover letter of two or three short sentences. Load whenever a job post, job listing or client brief is pasted for a go/no-go call. Never submits anything.
+description: Judge a pasted Upwork job post and draft the opening of a proposal — a yes/no verdict with its reasons, and a cover letter of two or three short sentences. Load whenever a job post, job listing or client brief is pasted for a go/no-go call. Never submits anything.
 argument-hint: "[paste the job post, or a link plus the client stats]"
 ---
 
