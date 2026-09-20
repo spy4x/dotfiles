@@ -12,6 +12,25 @@ One source for every harness: `dotfiles/.config/opencode/AGENTS.md`.
 `deno task sync-agents-md --apply` copies it to OpenCode, DSH and Claude Code
 (`~/.claude/CLAUDE.md`). Edit the source, never a copy.
 
+# Autonomy
+
+Default: finish the job and report the result. I do not review the code before
+it lands — the `@reviewer` gate does, and a green gate is the authority to
+merge. Where a sensible default exists, take it and record the decision in the
+PR body instead of asking me first.
+
+Ask only when one of these holds:
+- The choice is mine and the options lead to materially different work — the
+  SQLite-versus-Postgres kind, not the naming kind.
+- A revert commit cannot undo it: destroying data, rotating a secret,
+  publishing to a registry or to customers, deleting the only copy of
+  something.
+- The reviewer gate fails twice on the same cause, which means the brief is
+  wrong and a third attempt will not fix it.
+
+A round trip costs my attention. Guessing wrong on a reversible call costs one
+revert. Prefer the revert.
+
 # Stack
 
 Deno 2 + Hono + Fresh + Preact + syncthing + restic. Hetzner BM/VM, Docker
@@ -94,10 +113,11 @@ git fetch origin && mkdir -p "$(dirname "$WT")" && git worktree add -b <type>/<s
 
 Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR always exists; `[WIP]` prefix until done.
 `gh pr create --fill` immediately after push — never ask. Pre-push reviewer
-gate (`@reviewer`, scope: diff, secrets, conventions). Merge only on
-explicit user "merge" in current session. Squash one feature →
-`gh pr merge --squash --delete-branch`. Rebase independent commits →
-`gh pr merge --rebase --delete-branch`.
+gate (`@reviewer`, scope: diff, secrets, conventions). A green gate is the
+merge authority — merge without asking. Leave the PR open and say so instead of
+merging when the gate fails, or when a revert cannot undo the change. Squash
+one feature → `gh pr merge --squash --delete-branch`. Rebase independent
+commits → `gh pr merge --rebase --delete-branch`.
 
 Post-merge cleanup always, unless told otherwise. Worktree remove,
 local branch delete, remote branch delete if `--delete-branch` missed,
@@ -199,9 +219,8 @@ on it for parallelism.
   A test that passes either way is worse than no test
 - check scope, secrets, house rules, and whether the PR body's numbers match
   reality
-- on pass: post exact evidence. Merge **only when the user delegated merge
-  authority for this run** — orchestration never implies it, Git Flow's
-  explicit user "merge" still binds. On fail: `needs-fix` + exact evidence
+- on pass: post exact evidence. That verdict is the merge authority, and the
+  lead merges on it. On fail: `needs-fix` + exact evidence
 - write the verdict in the Issues and reports shape — it is read cold, by a
   person who was not in the run
 Rejection is a normal outcome, not a failure. Expect ~1 in 4. Send back with
