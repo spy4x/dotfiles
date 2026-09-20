@@ -46,7 +46,7 @@ function field(frontmatter: string[], key: string): string | null {
   const line = frontmatter.find((entry) => entry.startsWith(`${key}:`))
   if (line === undefined) return null
   const value = line.slice(key.length + 1).trim()
-  if (/^[>|][-+]?\d*$/.test(value)) {
+  if (/^[>|][0-9+-]*(\s+#.*)?$/.test(value)) {
     throw new Error(`frontmatter "${key}" is a YAML block scalar, which this check cannot compare`)
   }
   return value
@@ -60,7 +60,10 @@ for (const skill of mirrored) {
   Deno.test(`${skill} reads the same in Claude Code and OpenCode`, async () => {
     const read = async (dir: string) => {
       const path = resolve(dir, skill, `SKILL.md`)
-      const text = await Deno.readTextFile(path).catch(() => null)
+      const text = await Deno.readTextFile(path).catch((error) => {
+        if (error instanceof Deno.errors.NotFound) return null
+        throw error
+      })
       assert(text !== null, `${path} is missing, but the skill exists under the other harness`)
       return split(text)
     }
