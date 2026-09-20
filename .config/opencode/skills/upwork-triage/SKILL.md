@@ -32,8 +32,8 @@ history yet, is neutral: judge on what is there and name the gap in the reason. 
 the exception — if the post does not say it is verified, treat it as not verified.
 
 The client average is an hourly figure, so it only decides anything when the post shows one. On a
-fixed-price job, read the budget against the scope instead: a budget that works out under $35 an
-hour for the work described fails the same check.
+fixed-price job, read the budget against the scope instead: a budget that works out to less per
+hour than the client average row asks for, over the work described, fails that same row.
 
 ## Verdict
 
@@ -45,13 +45,19 @@ Verdict: yes
 <one line: what is still unknown or weak about it>
 ```
 
-Two short sentences on their own lines, no bullet list, nothing else in the block.
+```
+Verdict: no
+<one line: the most serious reason it is a no>
+<one line: the next reason, or what the post has going for it anyway>
+<one line: what would flip it>
+```
 
-On a **no**, the two lines are the reasons it is a no, most serious first, and a third line names
-what would flip it — a rate, a reply from the client, a missing detail worth asking for. When
-only one check failed, the second line says what the post has going for it anyway, so a near miss
-is visible as a near miss. When nothing would flip it short of a different job, say that in one
-clause and stop.
+Short sentences, one per line, no bullet list and nothing else inside the block.
+
+On a no, the second line matters most when only one check failed: say what the post has going for
+it, so a near miss reads as a near miss rather than as a rejection. The third line names the thing
+that would change the answer — a rate, a reply from the client, a missing detail worth asking
+for. When nothing would flip it short of a different job, that line says so in one clause.
 
 On a **yes**, the cover letter follows.
 
@@ -62,9 +68,10 @@ Two or three short sentences, in a plain-text code block so it pastes cleanly.
 - **Sentence one** — one concrete observation about _their_ project. Name the thing they are
   building and the part that is actually hard. This proves the post was read.
 - **Sentence two** — one past result that matches that hard part. One. Not a list.
-- **Sentence three, optional** — on a fixed-price job, the one question whose answer decides the
-  price. On hourly or open-ended work, the first milestone offered instead: one or two weeks,
-  either side free to stop after it. Drop the sentence entirely when neither is sharp.
+- **Sentence three, optional** — on a fixed-price job, the one question whose answer decides
+  the price. On hourly or open-ended work, offer the small first milestone from `profile.md`
+  instead, in its own words, when the post reads as open-ended enough to need de-risking. Drop the
+  sentence when neither is sharp.
 
 The first two sentences are the hook: Upwork shows about two lines in the list before the client
 clicks. Keep them to roughly 200 characters together, and make them carry the whole pitch on their
@@ -80,8 +87,8 @@ Past results come from `~/sync/code/ai-memory/profile.md`, section "Proof I can 
 facts Anton stated in this session. Nothing else.
 
 Never write a client name, number, prize, testimonial, guarantee or case study that is not in one
-of those two places. An agent invented case studies and figures in June 2026 and they had to be
-torn out of every profile in September.
+of those two places. An agent has invented proof here before, and it took months to find and
+remove.
 
 When no past result matches exactly, reach for the nearest real one and write the sentence without
 a number rather than stretching the claim. When nothing in the list is even adjacent, drop the
