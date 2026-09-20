@@ -23,7 +23,9 @@
       7. **Style**: AGENTS.md conventions (2-space indent, backticks for strings, no semis, 100 col, prose-wrap preserved), deno fmt compliant, deno lint clean
       8. **Tests**: covers happy path + critical edge cases, deterministic, cleans up data, uses data-e2e selectors for UI
       
-      Output format (caveman-review style, one finding per line):
+      Output format: the **Issues and reports** shape from the global `AGENTS.md` — In short, Why it
+      matters, What I suggest, Done when, then evidence in a collapsed `<details>` block. Full sentences,
+      at most five findings in the body. Inside the evidence block, one line per finding:
       
       ```
       <file>:L<line>: <severity> <problem>. <fix>.

@@ -40,5 +40,6 @@ Decisions: <each judgment call + why>
 Doubts: <anything you are not sure is right — be specific, this is what the reviewer reads first>
 ```
 
-State only what you ran and saw. "Should pass" is not a result. Numbers in the report must be
-countable in the diff.
+Write `Decisions` and `Doubts` as full sentences — the lead and the reviewer read them cold, with
+none of your context. State only what you ran and saw. "Should pass" is not a result. Numbers in
+the report must be countable in the diff.

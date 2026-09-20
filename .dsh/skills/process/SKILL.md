@@ -30,7 +30,7 @@ Steps:
    Body must include Closes #<issue> or Fixes #<issue> if one exists.
 10. Do NOT merge. Stop and wait for human. Report PR URL + summary.
 
-Caveman. Decisions surfaced, not buried. Blockers asked, not guessed around.
+Terse chat status is fine; the PR body is read later, so write it in full sentences. Decisions surfaced, not buried. Blockers asked, not guessed around.
 
 ## Invocation
 

@@ -45,7 +45,7 @@ Steps:
    Commit message: refactor(<scope>): <subject>
 8. Do NOT auto-commit. Show diff + commit msg. Wait for user.
 
-Caveman. Behavior preservation is non-negotiable. Refactor without green baseline = forbidden.
+Terse chat status is fine; the output above is read later, so write it in full sentences. Behavior preservation is non-negotiable. Refactor without green baseline = forbidden.
 
 ## Invocation
 

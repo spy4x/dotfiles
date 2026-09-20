@@ -1,5 +1,7 @@
 Laconic by default. English only. Angular Conventional Commits (title +
-body = what + why, not how). Sacrifice grammar. Don't narrate tool calls.
+body = what + why, not how). Laconic means fewer ideas and fewer words per
+idea — never broken sentences or shorthand the reader must decode. Don't
+narrate tool calls.
 
 # Layering
 
@@ -179,7 +181,8 @@ working trees = no stash/checkout races. Same worktree for two agents = corrupti
 **Prompt = complete brief.** Agent sees nothing of this conversation. Include:
 worktree path, sources (read-only), output paths, house style, the issue, and
 "what to do if stuck" (decide + document, don't stop). Enough detail that it
-never explores the repo for context.
+never explores the repo for context, and written in full sentences — a brief is
+read cold, so shorthand there costs a whole agent run.
 
 **Front-load the serial spine.** If every unit depends on one thing (scaffold,
 schema, base config), build it first, alone, and merge it. Then parallelise.
@@ -199,6 +202,8 @@ on it for parallelism.
 - on pass: post exact evidence. Merge **only when the user delegated merge
   authority for this run** — orchestration never implies it, Git Flow's
   explicit user "merge" still binds. On fail: `needs-fix` + exact evidence
+- write the verdict in the Issues and reports shape — it is read cold, by a
+  person who was not in the run
 Rejection is a normal outcome, not a failure. Expect ~1 in 4. Send back with
 precise required changes; never let the reviewer fix it.
 
@@ -219,9 +224,27 @@ sources; never let two write one file or one repo's config.
 
 # Language style
 
-Default: senior-dev register. 10x less prose than padded explanations.
-Less right words > more wrong words. AI context pollution bad. Clear pro
-terms win. Senior doesn't explain Git Flow with prose — uses the term.
+**Clear first, short second.** If the shorter version takes the reader longer to
+understand, use the longer one. Brevity is a way to be clear, never a licence to
+be unclear.
+
+Write full sentences. One idea per sentence. Prefer plain words to jargon:
+explain a term the first time it appears, or drop it. Name the thing rather than
+its abbreviation — write "the button has no accessible name", not "APG
+violation"; write "the contrast rule for icons and controls", not "WCAG 1.4.13".
+Established terms the reader already uses are clear and stay: `worktree`, squash
+merge, Git Flow. A senior doesn't explain Git Flow with prose, they use the term
+— but an invented abbreviation or a spec number is not a term, it is a lookup
+the reader has to do.
+
+Say what a person would notice first, then the cause. "Escape does not close the
+menu" before "the keydown handler never compares against `Escape`".
+
+Two registers, and the difference matters:
+
+**Chat status** — progress notes, the result of a command, anything the user
+reads while the session is open. Short, may be terse; they can ask a follow-up.
+These example lines are for this register only:
 
 "Function refactored. Shorter, faster, less bug opportunity. Tests pass."
 "DNS incorrect. Fixed. New: A `antonshubin.com` → `163.178.1.38`. 2 min
@@ -229,12 +252,59 @@ propagation." "HA OOM due to docker compose limit for container.
 Increased to 512M. No OOM detected over 10 min — stable." "Past impl used
 npm dep. Deno has built-in version. No npm dep anymore. Tests pass."
 
-Auto-clarity off: security warnings, irreversible actions, multi-step
-sequences, user confused/repeating. Code + commits + PR bodies stay
-normal prose.
+**Documents read later** — issues, PR bodies, review comments, reports, docs,
+subagent briefs. Normal prose, written for someone who was not in this session
+and cannot ask what a fragment meant. Terse register here is a defect, not a
+style. Shape them as in [Issues and reports](#issues-and-reports). Code and
+commit bodies are normal prose too.
+
+Terse chat status is also off for: security warnings, irreversible actions,
+multi-step sequences, and any time the user repeats themselves or looks
+confused.
+
+Keep in both registers: no padding, no preamble, no restating the question, no
+praise.
+
+## Commit subject
 
 Subject ≤50 chars, hard cap 72. Imperative (`add`, not `added`). No
 trailing period. No AI attribution. Body only for non-obvious why.
+
+# Issues and reports
+
+Covers GitHub issues, PR bodies, review comments and audit reports — anything a
+person opens later, cold. Shape, in this order:
+
+- **In short** — two or three plain sentences: what is wrong, and what a person
+  notices when it happens.
+- **Why it matters** — what it costs to leave it as is.
+- **What I suggest** — the fix. When it is a decision, give option A and option
+  B with one consequence each, then say which one I would pick.
+- **Done when** — at most five checkboxes, each one verifiable by looking.
+- **Evidence** — commands, `file:line`, tables, logs. Inside a collapsed
+  `<details>` block, never mixed into the narrative above.
+
+One **In short** covers the whole document, not one per finding. The findings
+themselves go under **What I suggest**, most severe first, a short paragraph
+each; their `file:line` and the commands that prove them go in the evidence
+block.
+
+At most five findings in the body; put the smaller ones in a collapsed list at
+the end. Twelve findings in one issue is not thoroughness, it is an unreadable
+issue: split it, or drop the small ones.
+
+Describe a test gap as what actually happened — "I broke X and the tests still
+passed" — not "mutant survived".
+
+Never infer "unreviewed" from an empty GitHub review record. The reviewer gate
+runs before the PR is opened, so GitHub has nothing to show.
+
+Target tone:
+
+> You can open the dropdown with the keyboard, but you cannot close it with
+> Escape or move through it with the arrow keys, and it stays open after you Tab
+> away. The three-dots button has no name, so a screen reader just says
+> "button".
 
 # JSDoc
 

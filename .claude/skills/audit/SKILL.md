@@ -42,8 +42,9 @@ Each reviewer answers:
 1. Does it belong? (reuse test, scope statement, deps policy — "own the small, keep the huge":
    a hand-rolled SMTP/TLS/timezone/XML/crypto implementation is a finding by default)
 2. Is it correct? Read the riskiest paths, not the longest files.
-3. Are the tests real? Mutation-sample 3–5 behaviours. Report survivors. Flag test bulk that
-   asserts nothing (snapshot of constants, tests of the mock).
+3. Are the tests real? Mutation-sample 3–5 behaviours, and report each one I could break with the
+   tests still passing. Flag test bulk that asserts nothing (snapshot of constants, tests of the
+   mock).
 4. Did the closing PR/issue overclaim? Count what it counted.
 
 ## 3. Cross-cutting (lead, not delegated)
@@ -56,14 +57,25 @@ Each reviewer answers:
 
 ## 4. Report
 
-Executive summary, 3 lines max. Then one row per unit:
+The report and every issue filed from it are read cold, months later. Use the **Issues and
+reports** shape from the global `AGENTS.md`: full sentences, plain words, at most five findings in
+the body, evidence in a collapsed `<details>` block. Twelve clipped findings in one issue is not
+thoroughness, it is an issue nobody can read.
+
+Open with **In short** — two or three plain sentences on what the audit found and what it means
+for the repo. Then the verdict per unit:
 
 ```
-<unit> — KEEP | FIX | MOVE-OUT (<where>) | DELETE — <one-line why>
-  evidence: <consumers found> · <mutation k/n> · <claim refuted, if any> · <file:line of worst finding>
+<unit> — KEEP | FIX | MOVE-OUT (<where>) | DELETE — <one sentence on why>
 ```
 
-Then findings ranked by exploit/loss probability, not by count:
-`<file>:L<line>: <severity> <problem>. <fix>.`
+Then **Why it matters**, **What I suggest** (for a decision: option A and option B with one
+consequence each, then my pick), and **Done when** (at most five checkboxes).
+
+Evidence goes last, inside `<details>`: consumers found, what I broke and which test still passed,
+any claim refuted, and `<file>:L<line>` for each finding, ranked by exploit/loss probability rather
+than by count. Describe a test gap as "I broke X and the tests still passed", never as "mutant
+survived". Do not infer "unreviewed" from an empty GitHub review record — the reviewer gate runs
+before the PR is opened.
 
 Close with what was **not** verified and why. Unverified is never reported as passed.
