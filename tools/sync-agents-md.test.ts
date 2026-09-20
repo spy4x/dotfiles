@@ -17,6 +17,7 @@ async function fixture(): Promise<{ paths: Paths; cleanup: () => Promise<void> }
   await write(join(repoRoot, `.claude`, `skills`, `audit`, `SKILL.md`), `audit\n`)
   await write(join(repoRoot, `.claude`, `hooks`, `guard.ts`), `// hook\n`)
   await write(join(repoRoot, `.claude`, `hooks`, `guard.test.ts`), `// test\n`)
+  await write(join(repoRoot, `.claude`, `skills`, `audit`, `helper.test.ts`), `// test\n`)
   await write(
     join(repoRoot, `.claude`, `settings.json`),
     JSON.stringify({ permissions: { ask: [`Bash(x *)`] } }),
@@ -56,10 +57,9 @@ Deno.test(`apply is idempotent, skips test files, preserves untracked live setti
     assertEquals(pending(await plan(paths)), 0)
     assertEquals(await Deno.readTextFile(join(paths.claudeHome, `CLAUDE.md`)), `# rules\n`)
     assertEquals(await Deno.readTextFile(join(paths.dshHome, `AGENTS.md`)), `# rules\n`)
-    assertEquals(
-      await Deno.lstat(join(paths.claudeHome, `hooks`, `guard.test.ts`)).catch(() => null),
-      null,
-    )
+    const skill = join(paths.claudeHome, `skills`, `audit`)
+    assertEquals(await Deno.lstat(join(skill, `helper.test.ts`)).catch(() => null), null)
+    assertEquals(await Deno.readTextFile(join(skill, `SKILL.md`)), `audit\n`)
     assertEquals(JSON.parse(await Deno.readTextFile(join(paths.claudeHome, `settings.json`))), {
       theme: `dark-ansi`,
       permissions: { ask: [`Bash(x *)`] },
@@ -199,6 +199,30 @@ Deno.test(`--apply from a linked worktree leaves the runtime config alone unless
 
     await run(`--apply`, `--from-worktree`)
     assertEquals(await Deno.readTextFile(join(paths.claudeHome, `CLAUDE.md`)), `# rules\n`)
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`hook scripts ship only while the tracked settings wire them up`, async () => {
+  const { paths, cleanup } = await fixture()
+  try {
+    const hook = join(paths.claudeHome, `hooks`, `guard.ts`)
+    await apply(await plan(paths))
+    assertEquals(await Deno.lstat(hook).catch(() => null), null) // fixture settings have no hooks key
+
+    const settings = join(paths.repoRoot, `.claude`, `settings.json`)
+    await write(settings, JSON.stringify({ hooks: { PreToolUse: [] } }))
+    await apply(await plan(paths))
+    assertEquals(await Deno.readTextFile(hook), `// hook\n`)
+    assertEquals(
+      await Deno.lstat(join(paths.claudeHome, `hooks`, `guard.test.ts`)).catch(() => null),
+      null,
+    )
+
+    await write(settings, JSON.stringify({}))
+    await apply(await plan(paths)) // disabled again: the manifest takes the script back out
+    assertEquals(await Deno.lstat(hook).catch(() => null), null)
   } finally {
     await cleanup()
   }

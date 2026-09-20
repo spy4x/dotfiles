@@ -87,10 +87,10 @@ everywhere — three harnesses reading three dialects of the rules is how they d
 
 Claude Code also gets the contents of `.claude/` in this repo:
 
-| Tracked here                        | Lands in                  | How                                         |
-| ----------------------------------- | ------------------------- | ------------------------------------------- |
-| `.claude/agents`, `skills`, `hooks` | `~/.claude/<same>`        | mirrored; `*.test.ts` skipped               |
-| `.claude/settings.json`             | `~/.claude/settings.json` | merged — tracked keys win, the rest is kept |
+| Tracked here               | Lands in                  | How                                         |
+| -------------------------- | ------------------------- | ------------------------------------------- |
+| `.claude/agents`, `skills` | `~/.claude/<same>`        | mirrored; `*.test.ts` skipped               |
+| `.claude/settings.json`    | `~/.claude/settings.json` | merged — tracked keys win, the rest is kept |
 
 **Use the sync script — do not symlink manually:**
 
@@ -126,16 +126,27 @@ Details worth knowing:
 - **`.claude/` does double duty.** Claude Code also reads it as _project_ config for sessions
   opened in this repo. Identical hook handlers from user and project settings run once.
 
-### Claude Code hooks (`.claude/hooks/`)
+### Claude Code hooks (`.claude/hooks/`) — disabled
 
-| Hook           | Event                             | Does                                                                                                                                                                |
-| -------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `guard-git.ts` | `PreToolUse` (Bash)               | asks before a commit on `main`/`master` and before `gh pr merge`; denies `git worktree add` inside a checkout; runs gitleaks on unpushed commits and on `gh` bodies |
-| `worktree.ts`  | `WorktreeCreate`/`WorktreeRemove` | puts Claude Code's built-in worktrees in the sibling `worktrees/<repo>/<type>/<slug>` layout instead of `<repo>/.claude/worktrees/`; copies `.age/key.txt`          |
+Written, tested, **not wired up**: `settings.json` has no `hooks` key, so nothing runs and the
+scripts are not copied to `~/.claude/`. A `PreToolUse` hook on Bash runs before every shell
+command, which is more ceremony than the rules it guards are worth right now.
 
-Both fail open on their own bugs (a crash is a non-blocking error); a gitleaks _failure_ while
-something is leaving the box asks instead. gitleaks is optional: not installed → the scan is
-skipped silently. `deno task test` runs the hook and sync tests against temp dirs.
+| Hook           | Event                             | Would do                                                                                                                                                        |
+| -------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `guard-git.ts` | `PreToolUse` (Bash)               | ask before a commit on `main`/`master` and before `gh pr merge`; deny `git worktree add` inside a checkout; run gitleaks on unpushed commits and on `gh` bodies |
+| `worktree.ts`  | `WorktreeCreate`/`WorktreeRemove` | put Claude Code's built-in worktrees in the sibling `worktrees/<repo>/<type>/<slug>` layout instead of `<repo>/.claude/worktrees/`                              |
+
+To enable: copy the `hooks` block from `.claude/hooks/settings.hooks.json` into
+`.claude/settings.json`, merge, `deno task sync-agents-md --apply`. The sync script ships `hooks/`
+only while that key exists, and removes the scripts again when it goes. To run the guard less
+often, add `"if": "Bash(git *)"` to its handler (and a second handler with `"Bash(gh *)"`).
+
+Without the worktree hook, Claude Code's built-in worktree features nest checkouts under
+`<repo>/.claude/worktrees/`, which repo tooling then walks. `AGENTS.md` tells the agent to create
+worktrees by hand instead; don't tick the worktree option when starting a desktop session.
+
+`deno task test` runs the hook and sync tests against temp dirs.
 
 OpenCode picks up `AGENTS.md` changes on the next session start; DSH reads the global file once
 per session start. `.dsh/skills` and `.dsh/.agent-presets` are generated — re-run

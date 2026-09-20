@@ -5,7 +5,8 @@
 // 1. `.config/opencode/AGENTS.md` — the one global instruction file — is copied to
 //    OpenCode, DSH and Claude Code (`~/.claude/CLAUDE.md`). Same text everywhere:
 //    three harnesses reading three dialects of the rules is how they drift.
-// 2. `.claude/{agents,skills,hooks}` is mirrored into `~/.claude/`. A manifest
+// 2. `.claude/{agents,skills}` is mirrored into `~/.claude/` — plus `hooks/`, but only
+//    while the tracked settings.json has a `hooks` key (they are disabled today). A manifest
 //    records what this script wrote, so a file deleted here is deleted there and
 //    nothing the script did not write is ever touched.
 // 3. `.claude/settings.json` is merged into `~/.claude/settings.json`: the tracked
@@ -59,7 +60,7 @@ export interface Op {
 
 type Json = Record<string, unknown>
 
-const MIRRORED_DIRS = [`agents`, `skills`, `hooks`]
+const MIRRORED_DIRS = [`agents`, `skills`]
 const MANIFEST = `.dotfiles-sync.json`
 
 export function defaultPaths(): Paths {
@@ -146,11 +147,15 @@ async function* walk(dir: string): AsyncGenerator<string> {
   }
 }
 
-/** Plans the `.claude/{agents,skills,hooks}` mirror, including removal of files no longer tracked. */
+/** Plans the `.claude/{agents,skills[,hooks]}` mirror, including removal of files no longer tracked. */
 async function planMirror(paths: Paths): Promise<Op[]> {
   const ops: Op[] = []
   const tracked: string[] = []
-  for (const name of MIRRORED_DIRS) {
+  // Hook scripts ship only while the tracked settings wire them up: dormant code stays in the repo.
+  const settings = JSON.parse(
+    await readOrNull(join(paths.repoRoot, `.claude`, `settings.json`)) ?? `{}`,
+  )
+  for (const name of settings.hooks ? [...MIRRORED_DIRS, `hooks`] : MIRRORED_DIRS) {
     const from = join(paths.repoRoot, `.claude`, name)
     if (await Deno.lstat(from).then(() => false, () => true)) continue
     for await (const file of walk(from)) {
