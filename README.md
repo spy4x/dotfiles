@@ -123,6 +123,12 @@ Details worth knowing:
 - **Symlinked runtime dirs.** Where `~/.config/opencode` or `~/.local/share/dsh` is a symlink
   into a checkout of this repo, the "runtime" file _is_ a tracked file. The script detects that
   and skips it — git updates it.
+- **`deno fmt` picks the wrong config under `.config/opencode/`.** That directory has its own
+  `package.json`, so Deno treats it as the project root and ignores this repo's `deno.jsonc`
+  whenever the first path argument is inside it — or, with no path argument, whenever the current
+  directory is. Markdown is then rewrapped at 80 columns instead of left as written, and a synced
+  skill file stops matching its `.claude/` twin. Pass `--config deno.jsonc`, or put a path outside
+  `.config/opencode/` first.
 - **`.claude/` does double duty.** Claude Code also reads it as _project_ config for sessions
   opened in this repo. Identical hook handlers from user and project settings run once.
 
