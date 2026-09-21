@@ -270,6 +270,8 @@ on it for parallelism.
   reality
 - on pass: post exact evidence. That verdict is the merge authority, and the
   lead merges on it. On fail: `needs-fix` + exact evidence
+- name the cause of a `needs-fix` in one line at the top, so a repeat is
+  visible across calls; Autonomy says what to do when it repeats
 - write the verdict in the Issues and reports shape — it is read cold, by a
   person who was not in the run
 Rejection is a normal outcome, not a failure. Expect ~1 in 4. Send back with
@@ -280,12 +282,23 @@ are overclaims: "the suite caught 3 bugs" (it caught 1), "one cast" (there were
 8), "check passes" (it doesn't). Demand the reproduction.
 
 **Model/effort.** Match tier to judgment needed, not to volume. Search and
-inventory → cheapest (Claude: `haiku`). Briefed implementation → mid
-(`sonnet`). Reviewer → strong (`opus`; `fable` for auth/crypto/SSRF/money) —
-catching an overclaim is judgment, and a weak reviewer rubber-stamps a weak
-author. Architecture and final verdicts stay with the lead. Prefer fresh
-`subagent` over forking — forking copies the whole conversation into every
-child and multiplies input cost.
+inventory → cheapest (Claude: `haiku`). Architecture and final verdicts stay
+with the lead. Prefer fresh `subagent` over forking — forking copies the whole
+conversation into every child and multiplies input cost.
+
+Every `Agent` call passes `model` explicitly. An omitted `model` inherits the
+lead's tier, which is always the most expensive one available.
+
+`implementer` is `sonnet`. Escalate to `opus` only when the brief cannot state
+the definition of done in checkable terms — which usually means the unit should
+not have been delegated at all.
+
+Reviewer tier follows the diff, not the ritual. Docs, config, dotfiles and
+pure-deletion diffs → `sonnet`. Code that runs in production → `opus`. Auth,
+crypto, SSRF, money → `fable`. `effort: high` only for the last two — a
+high-effort reviewer on a README costs as much as an implementation run.
+Catching an overclaim is judgment and a weak reviewer rubber-stamps a weak
+author, so never tier down a diff that ships.
 
 **Parallelise reads, serialise writes.** Concurrent agents may read the same
 sources; never let two write one file or one repo's config.
