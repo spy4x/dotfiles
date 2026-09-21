@@ -146,10 +146,12 @@ containers, `tmux` sessions. Clean them up in a `trap`, not in a trailing line.
 
 **Sweep before reporting done.** A task is not finished while something it
 started is still running. Match on where a process lives, not on what it looks
-like: everything a tool call starts inherits the harness's own cgroup, and a
-process keeps its cgroup when it is reparented. So the orphans are exactly the
-members of that cgroup whose parent is now init or the user manager, whatever
-shape they took.
+like: a tool call's children inherit the harness's own cgroup, and a process
+keeps its cgroup when it is reparented. So the orphans are the members of that
+cgroup whose parent is now init or the user manager, whatever shape they took.
+The exception is anything that puts itself in a fresh cgroup — a Docker
+container, a `systemd-run --scope` — which leaves the harness's cgroup on
+purpose and so has to be cleaned by name.
 
 ```bash
 CG=$(cut -d: -f3 /proc/self/cgroup)
@@ -157,19 +159,24 @@ ps -o pid=,ppid=,etime=,pcpu=,args= -p "$(paste -sd, "/sys/fs/cgroup$CG/cgroup.p
   awk -v mgr="$(pgrep -xu "$USER" systemd || echo 1)" '
     ($2==1 || $2==mgr) {
       cmd = $0; sub(/^ *([^ ]+ +){4}/, "", cmd)
-      if (cmd !~ /^\/usr\/bin\/zsh -l$/ && cmd !~ /claude-desktop$/) print
+      if (cmd != "/usr/bin/zsh -l" && cmd != "/opt/claude-desktop/claude-desktop") print
     }'
 ```
 
-Empty output means clean. The two exclusions are the harness's own long-lived
-processes — the desktop app and the login shells it starts per session — and
-they are an exclusion list on purpose: anything unexpected still shows up. Read
-a non-empty result before killing it; a live sibling session's work can appear
-there too.
+Empty output means clean. The two exclusions are the desktop app and the login
+shells it abandons one set per session — harmless, but too numerous to read
+past. Both match the full command line exactly, and that matters: a suffix
+pattern would also hide an orphan whose last argument happens to end the same
+way, such as `tail -f /opt/claude-desktop/claude-desktop`. Keep the list short,
+keep every entry exact, and an unexpected shape still shows up. Read a
+non-empty result before killing anything in it; a live sibling session's work
+can appear there too.
 
-This wants Linux with cgroup v2 and a systemd user manager. Elsewhere, fall
-back to `ps -eo pcpu,etime,args --sort=-pcpu | head` — less exact, but nothing
-you started belongs at the top of that list either.
+This wants Linux with cgroup v2 and a systemd user manager. On anything else
+the command fails loudly rather than printing a falsely clean result, and the
+fallback is `ps -eo pcpu,etime,args --sort=-pcpu | head`. That fallback finds
+only orphans that burn CPU, so it would have caught the busy-loops above and
+would miss an idle dev server or file watcher entirely.
 
 # Git Flow
 
