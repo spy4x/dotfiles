@@ -1,0 +1,7 @@
+node_modules
+.volumes
+// Agent worktrees. Ephemeral, rebuilt from origin, and their `.git` file points
+// at an absolute path in the main checkout, so a copy on another machine is
+// broken by construction. Syncing them replicated build output and held
+// thousands of inotify watches.
+/worktrees
