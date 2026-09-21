@@ -164,7 +164,7 @@ ps -o pid=,ppid=,etime=,pcpu=,args= -p "$(paste -sd, "/sys/fs/cgroup$CG/cgroup.p
 ```
 
 Empty output means clean. The two exclusions are the desktop app and the login
-shells it abandons one set per session — harmless, but too numerous to read
+shells it abandons, one set per session — harmless, but too numerous to read
 past. Both match the full command line exactly, and that matters: a suffix
 pattern would also hide an orphan whose last argument happens to end the same
 way, such as `tail -f /opt/claude-desktop/claude-desktop`. Keep the list short,
