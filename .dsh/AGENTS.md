@@ -108,6 +108,76 @@ If leaked: **rotate first**, stop further sends, cascade dependents, edit
 Non-critical external calls (monitoring/reporting/analytics) → `|| true`.
 Secret-bearing sends fail-closed (see Hard rule).
 
+# Leave nothing running
+
+A Bash tool call can be interrupted, time out, or lose its session at any
+moment. The shell dies, but anything it started with `&` does not: those
+children are reparented to `systemd --user` and nothing ever cleans them up.
+Cleanup written as the last line of the same command is not cleanup — it is a
+line that never runs. This has already cost 32 orphaned busy-loops that spun
+for eleven and a half hours on eleven of sixteen cores, left behind by a
+load-generation command that was interrupted before its `kill` line.
+
+In order of preference:
+
+1. **Do not background anything.** Run it in the foreground and wait.
+2. **Background through the harness, never with `&`.** Claude Code's
+   `run_in_background` keeps a handle on the process and stops it with the
+   session. A bare `&` inside a foreground command does not.
+3. **Give every background process its own deadline.** `timeout` is the
+   simplest guard that still works after the parent is killed, because the
+   timer lives in the child:
+
+   ```bash
+   timeout 300 <cmd> &
+   ```
+
+   Add `trap 'kill $PIDS 2>/dev/null' EXIT INT TERM` as well, but do not rely
+   on it alone: a trap does not run on SIGKILL. `timeout` is the braces, the
+   trap is the belt.
+
+Generating CPU load is the common case and has a safe form. Never write
+`while :; do :; done &`. Use a load tool with a built-in duration
+(`stress-ng --cpu 0 --timeout 60s`), or at minimum `timeout 60s yes >/dev/null &`.
+
+The same rule covers every other artifact a run leaves behind: temp
+directories, `DENO_DIR` caches, dev servers, bound ports, file watchers, Docker
+containers, `tmux` sessions. Clean them up in a `trap`, not in a trailing line.
+
+**Sweep before reporting done.** A task is not finished while something it
+started is still running. Match on where a process lives, not on what it looks
+like: a tool call's children inherit the harness's own cgroup, and a process
+keeps its cgroup when it is reparented. So the orphans are the members of that
+cgroup whose parent is now init or the user manager, whatever shape they took.
+The exception is anything that puts itself in a fresh cgroup — a Docker
+container, a `systemd-run --scope` — which leaves the harness's cgroup on
+purpose and so has to be cleaned by name.
+
+```bash
+CG=$(cut -d: -f3 /proc/self/cgroup)
+ps -o pid=,ppid=,etime=,pcpu=,args= -p "$(paste -sd, "/sys/fs/cgroup$CG/cgroup.procs")" |
+  awk -v mgr="$(pgrep -xu "$USER" systemd || echo 1)" '
+    ($2==1 || $2==mgr) {
+      cmd = $0; sub(/^ *([^ ]+ +){4}/, "", cmd)
+      if (cmd != "/usr/bin/zsh -l" && cmd != "/opt/claude-desktop/claude-desktop") print
+    }'
+```
+
+Empty output means clean. The two exclusions are the desktop app and the login
+shells it abandons, one set per session — harmless, but too numerous to read
+past. Both match the full command line exactly, and that matters: a suffix
+pattern would also hide an orphan whose last argument happens to end the same
+way, such as `tail -f /opt/claude-desktop/claude-desktop`. Keep the list short,
+keep every entry exact, and an unexpected shape still shows up. Read a
+non-empty result before killing anything in it; a live sibling session's work
+can appear there too.
+
+This wants Linux with cgroup v2 and a systemd user manager. On anything else
+the command fails loudly rather than printing a falsely clean result, and the
+fallback is `ps -eo pcpu,etime,args --sort=-pcpu | head`. That fallback finds
+only orphans that burn CPU, so it would have caught the busy-loops above and
+would miss an idle dev server or file watcher entirely.
+
 # Git Flow
 
 Worktree first (sibling `worktrees/<repo>/`, never inside repo — repo tooling
@@ -144,7 +214,10 @@ Post-merge cleanup always, unless told otherwise. Worktree remove,
 local branch delete, remote branch delete if `--delete-branch` missed,
 temp dir `shred -u`, untracked subtree `rm -rf` before worktree remove.
 Repo-wide: `git fetch --prune`, `git worktree prune`, `git branch -d`
-merged-locally, orphan dir `rm -rf`, ff-only sync to origin/main.
+merged-locally, orphan dir `rm -rf`, ff-only sync to origin/main. Run the
+orphan-process sweep from [Leave nothing running](#leave-nothing-running) in
+the same pass — a worktree removed while a watcher still holds it open is half
+a cleanup.
 
 ## After worktree creation — env setup
 
@@ -195,7 +268,10 @@ D=$(mktemp -d) && trap 'rm -rf "$D"' EXIT && CI=true DENO_DIR=$D <check command>
 ```
 
 One check per command. A shell has a single `EXIT` trap, so a second run in
-the same command replaces the first trap and leaks the first cache.
+the same command replaces the first trap and leaks the first cache. The trap
+covers an ordinary exit and an interrupt; it does not cover SIGKILL, which is
+why [Leave nothing running](#leave-nothing-running) asks for a `timeout` on
+anything that keeps running on its own.
 
 Never assert a path under `$HOME` — resolve through the tool
 (`import.meta.resolve`) or injected config. A test that can silently skip when
@@ -251,7 +327,10 @@ working trees = no stash/checkout races. Same worktree for two agents = corrupti
 worktree path, sources (read-only), output paths, house style, the issue, and
 "what to do if stuck" (decide + document, don't stop). Enough detail that it
 never explores the repo for context, and written in full sentences — a brief is
-read cold, so shorthand there costs a whole agent run.
+read cold, so shorthand there costs a whole agent run. State that the agent
+leaves nothing running ([Leave nothing running](#leave-nothing-running)): it
+owns its worktree, its temp dirs and every process it starts, and a subagent
+that ends mid-run is exactly the case that orphans them.
 
 **Front-load the serial spine.** If every unit depends on one thing (scaffold,
 schema, base config), build it first, alone, and merge it. Then parallelise.
