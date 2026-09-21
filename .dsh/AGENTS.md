@@ -108,6 +108,54 @@ If leaked: **rotate first**, stop further sends, cascade dependents, edit
 Non-critical external calls (monitoring/reporting/analytics) → `|| true`.
 Secret-bearing sends fail-closed (see Hard rule).
 
+# Leave nothing running
+
+A Bash tool call can be interrupted, time out, or lose its session at any
+moment. The shell dies, but anything it started with `&` does not: those
+children are reparented to `systemd --user` and nothing ever cleans them up.
+Cleanup written as the last line of the same command is not cleanup — it is a
+line that never runs. This has already cost 32 orphaned busy-loops that spun
+for eleven and a half hours on eleven of sixteen cores, left behind by a
+load-generation command that was interrupted before its `kill` line.
+
+In order of preference:
+
+1. **Do not background anything.** Run it in the foreground and wait.
+2. **Background through the harness, never with `&`.** Claude Code's
+   `run_in_background` keeps a handle on the process and stops it with the
+   session. A bare `&` inside a foreground command does not.
+3. **Give every background process its own deadline.** `timeout` is the only
+   guard that still works after the parent is killed, because the timer lives
+   in the child:
+
+   ```bash
+   timeout 300 <cmd> &
+   ```
+
+   Add `trap 'kill $PIDS 2>/dev/null' EXIT INT TERM` as well, but do not rely
+   on it alone: a trap does not run on SIGKILL. `timeout` is the braces, the
+   trap is the belt.
+
+Generating CPU load is the common case and has a safe form. Never write
+`while :; do :; done &`. Use a load tool with a built-in duration
+(`stress-ng --cpu 0 --timeout 60s`), or at minimum `timeout 60s yes >/dev/null &`.
+
+The same rule covers every other artifact a run leaves behind: temp
+directories, `DENO_DIR` caches, dev servers, bound ports, file watchers, Docker
+containers, `tmux` sessions. Clean them up in a `trap`, not in a trailing line.
+
+**Sweep before reporting done.** A task is not finished while something it
+started is still running. Empty output means clean:
+
+```bash
+ps -eo pid,ppid,etime,pcpu,args --no-headers |
+  awk -v mgr="$(pgrep -xu "$USER" systemd || echo 1)" '$2==1 || $2==mgr' |
+  grep -E 'shell-snapshots|while :' | grep -v grep
+```
+
+If the machine feels loaded, `ps -eo pcpu,etime,args --sort=-pcpu | head` names
+the cause in one line. Nothing you started belongs in that list.
+
 # Git Flow
 
 Worktree first (sibling `worktrees/<repo>/`, never inside repo — repo tooling
@@ -144,7 +192,10 @@ Post-merge cleanup always, unless told otherwise. Worktree remove,
 local branch delete, remote branch delete if `--delete-branch` missed,
 temp dir `shred -u`, untracked subtree `rm -rf` before worktree remove.
 Repo-wide: `git fetch --prune`, `git worktree prune`, `git branch -d`
-merged-locally, orphan dir `rm -rf`, ff-only sync to origin/main.
+merged-locally, orphan dir `rm -rf`, ff-only sync to origin/main. Run the
+orphan-process sweep from [Leave nothing running](#leave-nothing-running) in
+the same pass — a worktree removed while a watcher still holds it open is half
+a cleanup.
 
 ## After worktree creation — env setup
 
@@ -195,7 +246,10 @@ D=$(mktemp -d) && trap 'rm -rf "$D"' EXIT && CI=true DENO_DIR=$D <check command>
 ```
 
 One check per command. A shell has a single `EXIT` trap, so a second run in
-the same command replaces the first trap and leaks the first cache.
+the same command replaces the first trap and leaks the first cache. The trap
+covers an ordinary exit and an interrupt; it does not cover SIGKILL, which is
+why [Leave nothing running](#leave-nothing-running) asks for a `timeout` on
+anything that keeps running on its own.
 
 Never assert a path under `$HOME` — resolve through the tool
 (`import.meta.resolve`) or injected config. A test that can silently skip when
@@ -251,7 +305,10 @@ working trees = no stash/checkout races. Same worktree for two agents = corrupti
 worktree path, sources (read-only), output paths, house style, the issue, and
 "what to do if stuck" (decide + document, don't stop). Enough detail that it
 never explores the repo for context, and written in full sentences — a brief is
-read cold, so shorthand there costs a whole agent run.
+read cold, so shorthand there costs a whole agent run. State that the agent
+leaves nothing running: it owns its worktree, its temp dirs and every process
+it starts, and a subagent that ends mid-run is exactly the case that orphans
+them.
 
 **Front-load the serial spine.** If every unit depends on one thing (scaffold,
 schema, base config), build it first, alone, and merge it. Then parallelise.
