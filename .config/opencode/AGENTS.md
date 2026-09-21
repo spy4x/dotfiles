@@ -120,6 +120,18 @@ WT="$(dirname "$MAIN")/worktrees/$(basename "$MAIN")/<type>/<slug>"
 git fetch origin && mkdir -p "$(dirname "$WT")" && git worktree add -b <type>/<slug> "$WT" origin/main
 ```
 
+On my machine `worktrees/` lands under `~/sync/code/`, which Syncthing
+replicates. Syncthing must be told to skip it: a worktree is rebuilt from
+`origin` on demand, and its `.git` file names an absolute path in the main
+checkout, so a copy on a second machine is broken by construction. Syncing
+them replicates build output and holds an inotify watch per directory for no
+benefit. `system/syncthing-code.stignore` in the dotfiles repo is the tracked
+copy of that ignore list; see the README for how to install it. Syncthing owns
+the live file, so this is a per-machine step, not something git applies.
+
+Post-merge cleanup matters for the same reason — a worktree left behind is a
+directory something is still watching.
+
 Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR always exists; `[WIP]` prefix until done.
 `gh pr create --fill` immediately after push — never ask. Pre-push reviewer
 gate (`@reviewer`, scope: diff, secrets, conventions). A green gate is the
@@ -172,10 +184,22 @@ Errors: explicit throw on missing required env. Structured result
 Tests: colocated, deterministic, behavior-named (`t("rejects expired token")`).
 
 **A green local run is not CI evidence.** Local passes hide env assumptions
-(`$HOME`, `DENO_DIR`, cache paths). Emulate CI before claiming green:
-`CI=true DENO_DIR=$(mktemp -d) <check command>`. Never assert a path under
-`$HOME` — resolve through the tool (`import.meta.resolve`) or injected config.
-A test that can silently skip when its dependency is missing will — fail loudly.
+(`$HOME`, `DENO_DIR`, cache paths). Emulate CI before claiming green, and
+delete the throwaway cache in the same command — `/tmp` is tmpfs here, so a
+cache left behind holds RAM until the next reboot. How much depends on the
+repo: this one's suite fills about 5 MB, a Fresh app with npm dependencies
+fills over 150 MB.
+
+```bash
+D=$(mktemp -d) && trap 'rm -rf "$D"' EXIT && CI=true DENO_DIR=$D <check command>
+```
+
+One check per command. A shell has a single `EXIT` trap, so a second run in
+the same command replaces the first trap and leaks the first cache.
+
+Never assert a path under `$HOME` — resolve through the tool
+(`import.meta.resolve`) or injected config. A test that can silently skip when
+its dependency is missing will — fail loudly.
 
 # Memory
 
