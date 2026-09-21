@@ -118,6 +118,12 @@ Details worth knowing:
   `permissions.ask` and `hooks.PreToolUse` are replaced wholesale, while `permissions.allow`,
   `theme` and anything else the app saved are left alone. Machine-specific settings go in
   `~/.claude/settings.json` directly — just not under a tracked key.
+- **The merge adds and replaces; it never removes.** Deleting a key here does not delete it
+  from the runtime — the merge only overlays the keys the tracked file still names, so the old
+  value survives in `~/.claude/settings.json` and `--apply` reports `in sync`. Dropping
+  `permissions.ask` from the tracked file, for example, leaves the prompts firing on every
+  machine that already had them. Remove such a key from `~/.claude/settings.json` by hand on
+  each machine, in the same change.
 - **Manifest.** `~/.claude/.dotfiles-sync.json` lists what the script wrote. A file deleted here
   is deleted there on the next `--apply`; a file the script never wrote is never touched.
 - **Symlinked runtime dirs.** Where `~/.config/opencode` or `~/.local/share/dsh` is a symlink
