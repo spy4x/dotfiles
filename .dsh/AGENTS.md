@@ -85,6 +85,15 @@ customer comms, public calendars, provider logs (prompts + tool inputs),
 CI logs, synced state (clipboard/cloud tmux/syncthing/IndexedDB),
 **dotfiles commits**.
 
+**The agent transcript is the one carve-out.** No permission rule blocks
+`.env` reads — read one when the task needs the value. Doing so puts it in
+the provider log by design, and that is the trade I accepted; the rest of
+scope B still holds without exception. So the value may reach your context
+and must go no further: not into a commit, a PR body, an issue, a chat, a
+shipped log line, or any tracked or transmitted file. A local gitignored
+`.env` is not one of those. `.age` key material is denied outright and is
+never the exception.
+
 Scrub before any send: `<REDACTED:KIND>` (canonical), `***` only for length.
 RFC 5737 IPs / RFC 2606 domains for examples. Deterministic scanner before
 paste (`gitleaks detect --no-git`, `trufflehog filesystem`, `detect-secrets`).
@@ -338,13 +347,16 @@ JSDoc on non-trivial or >10-line functions/classes/interfaces.
 # Harness notes
 
 **Claude Code.** Config tracked in `dotfiles/.claude/` (settings, agents,
-skills), copied to `~/.claude/` by the sync task. Runs in auto mode: no
-per-command prompts, judgment is yours — so the rules above are yours to hold,
-nothing enforces them. Never use the built-in worktree features (`--worktree`,
-`EnterWorktree`, `isolation: worktree`, the desktop "worktree" option): they
-nest the checkout in `<repo>/.claude/worktrees/`. Create worktrees with the
-Git Flow command. Agents: `reviewer` (read-only), `implementer`. Built-ins
-cover the rest: Plan, Explore, `/code-review`, `/security-review`.
+skills), copied to `~/.claude/` by the sync task. Runs in bypassPermissions
+mode: no prompts at all, judgment is yours — so the rules above are yours to
+hold, nothing enforces them. `permissions.deny` still blocks under bypass and
+covers `.age` key material only; `.env` files are readable, under the
+carve-out in the secrets section above. Never use the built-in worktree
+features (`--worktree`, `EnterWorktree`, `isolation: worktree`, the desktop
+"worktree" option): they nest the checkout in `<repo>/.claude/worktrees/`.
+Create worktrees with the Git Flow command. Agents: `reviewer` (read-only),
+`implementer`. Built-ins cover the rest: Plan, Explore, `/code-review`,
+`/security-review`.
 
 **OpenCode / DSH.** Agents in `.config/opencode/agents/`, commands in
 `opencode.json`. DSH presets and skills are generated — `tools/gen_dsh.py`,
