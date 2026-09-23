@@ -106,7 +106,7 @@ volumes/
 
 # OBS Studio
 # Track: profiles (basic/profiles/), scenes (basic/scenes/),
-#   plugin_config/ (obs-websocket config etc.),
+#   plugin_config/ (except the obs-websocket config),
 #   plugin_manager/ (which plugins are enabled).
 # Skip: runtime crash logs, profiler dumps, .bak scene backups,
 #   rtmp-services/ (auto-refetched ingest data — re-pulled by OBS
@@ -114,11 +114,12 @@ volumes/
 .config/obs-studio/basic/scenes/*.bak
 .config/obs-studio/basic/profiles/*/service.json
 /.config/obs-studio/plugin_config/rtmp-services/
-# PipeWire screen capture session token — rotates every launch,
-# no value for cross-machine reproducibility.
-# Note: gitignore can't match lines inside JSON, so this leaves
-# small diffs on every launch. Acceptable noise.
-.config/obs-studio/basic/scenes/**/RestoreToken
+# obs-websocket config holds the server password; OBS generates it
+# per install, so nothing in it is worth sharing across machines.
+/.config/obs-studio/plugin_config/obs-websocket/config.json
+# Scene files carry a PipeWire `RestoreToken` that changes every launch.
+# gitignore cannot match inside JSON: accept the diff noise.
+# .gitleaks.toml allowlists it — it is not a credential.
 
 # DSH session attachments (runtime, not user-edited)
 .dsh/attachments/
