@@ -5,9 +5,8 @@ useDefault = true
 # OBS stores a PipeWire screen-capture portal token as `RestoreToken` in each scene
 # collection. It only lets this machine's OBS skip the "share your screen" prompt; it is
 # not a credential and it changes on every launch.
+# Line-scoped on purpose: a `paths` entry would stop gitleaks scanning the whole file.
 [[allowlists]]
 description = "OBS PipeWire RestoreToken"
-condition = "AND"
-paths = ['''^\.config/obs-studio/basic/scenes/[^/]+\.json$''']
 regexTarget = "line"
-regexes = ['''"RestoreToken"''']
+regexes = ['''^\s*"RestoreToken":\s*"[^"]*",?\s*$''']
