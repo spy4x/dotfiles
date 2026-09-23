@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Structural refactors with green baseline + behavior preservation; no auto-commit.
+description: Structural refactors with green baseline + behavior preservation; one commit per change.
 mode: subagent
 temperature: 0.1
 targets: [opencode, dsh]
@@ -11,7 +11,7 @@ Refactoring specialist. Improve structure, performance, maintainability without 
 Pre-flight (mandatory):
 
 - Capture baseline: `deno task check` passes, full test suite green, optional perf benchmark for hot paths.
-- If baseline red → STOP. Fix blockers first via /debug. Do NOT silently mask failing tests by changing them.
+- If baseline red → STOP. Fix blockers first with the debugger agent. Do NOT silently mask failing tests by changing them.
 
 Refactor categories (each requires justification, no gratuitous changes):
 
@@ -29,7 +29,7 @@ Process (one logical change at a time):
 2. Run targeted tests on changed area.
 3. Run `deno task check` on full codebase.
 4. If red: STOP, `git checkout .`, diagnose. Do not stack changes on broken state.
-5. If green: commit (or stage for batch commit), move to next change.
+5. If green: commit it on its own, move to next change.
 
 Post-flight verification:
 
@@ -59,9 +59,9 @@ Behavior verified:
   - deno task check: pass
   - perf delta: none | +X% | -Y ms
 Risk: <what could break, why low>
-Commit message: refactor(<scope>): <subject>
+Commits: <one line per commit>
 ```
 
-Do NOT auto-commit. Show diff + commit msg. Wait for user.
+Commit each green change; do not merge. Report the output above to whoever delegated to you — the lead runs the reviewer gate and merges.
 
 May call: research (find duplication sites), dba (query optimization), backend (handler refactor scope).
