@@ -1,0 +1,20 @@
+// Fixture config: every harness forced on, homes under $HOME.
+{
+  "harnesses": {
+    "claude": {
+      "enabled": true,
+      "home": "~/.claude",
+      "bin": "claude",
+      "merge": ["settings.json"],
+      "tiers": { "cheap": "haiku", "standard": "sonnet", "strong": "opus", "strongest": "fable" }
+    },
+    "opencode": {
+      "enabled": true,
+      "home": "~/.config/opencode",
+      "bin": "opencode",
+      "merge": ["opencode.json"],
+      "tiers": { "cheap": "vendor/small", "standard": null, "strong": null, "strongest": null }
+    },
+    "dsh": { "enabled": true, "home": "$DSH_HOME|~/.dsh", "bin": "dsh", "merge": ["settings.yaml"] }
+  }
+}

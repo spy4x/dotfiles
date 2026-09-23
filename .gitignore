@@ -44,7 +44,6 @@ coverage/
 # Dependency directories
 node_modules/
 jspm_packages/
-/.config/opencode/node_modules/
 /.config/nvim/.git/
 
 # Optional npm cache directory
@@ -91,18 +90,11 @@ volumes/
 # Playwright MCP runtime cache (session logs, page snapshots)
 .playwright-mcp/
 
-# DSH (DeepSeek Harness) runtime + caches
-# Track: AGENTS.md symlink, settings.yaml, profiles/<web>/ (4 files),
-#   .agent-presets/<name>/{preset.yml,agent.cordis.yml},
-#   skills/<name>/SKILL.md (the symlinked one too, as a symlink).
-# Skip: sessions/, storages/, .credentials.yaml, plugin node_modules,
-#   auto-regenerated snapshots.
-.dsh/sessions/
-.dsh/storages/
-.dsh/.credentials.yaml
-.dsh/.agent-presets/*/node_modules/
-.dsh/profiles/node_modules/
-.dsh/profiles/*/cordis.snapshot.yml
+# Former AI harness homes. ~/.config/opencode and ~/.local/share/dsh were symlinks into
+# these paths until `deno task ai migrate` moved them out; ignore any leftover so a session,
+# lockfile or credential never gets committed. Tracked harness config lives in ai-harnesses/.
+/.config/opencode/
+/.dsh/
 
 # OBS Studio
 # Track: profiles (basic/profiles/), scenes (basic/scenes/),
@@ -121,11 +113,6 @@ volumes/
 # gitignore cannot match inside JSON: accept the diff noise.
 # .gitleaks.toml allowlists it — it is not a credential.
 
-# DSH session attachments (runtime, not user-edited)
-.dsh/attachments/
-# Per-install telemetry id — never publish
-.dsh/.anonymous-user-id
-
-# Claude Code: track .claude/{settings.json,agents,skills,hooks}; skip local + runtime state
+# Claude Code project-local state for sessions opened in this repo
 .claude/settings.local.json
 .claude/worktrees/

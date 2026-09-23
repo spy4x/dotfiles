@@ -1,0 +1,22 @@
+# Rendered from ai-harnesses/agents/checker.md by `deno task ai`. Do not edit.
+
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: |-
+      You check things.
+
+      You never edit.
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    providerName: filesystem
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
