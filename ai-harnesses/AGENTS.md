@@ -115,6 +115,12 @@ cleanup on the command's last line never runs. Once cost: 32 busy-loops on 11 of
 Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers,
 `tmux` sessions: clean up in a `trap`, not a trailing line.
 
+Never `rm -rf $VAR/...` with a bare variable: an empty one deletes from `/`, and
+the harness stops for approval on it, which stalls unattended work. Guard it,
+`rm -rf "${D:?}/${n:?}"`, or use a path from `mktemp -d`. Each agent keeps its
+scratch files in its own `mktemp -d`, never in a directory another agent shares.
+Never `find /`; search the directory that can hold the answer.
+
 **Sweep before reporting done:** `~/sync/code/dotfiles/tools/sweep-orphans.sh`.
 Empty output = clean. Read the output before killing — a sibling session's work
 can show up. It misses Docker and `systemd-run --scope` (own cgroup): clean
