@@ -18,6 +18,7 @@ harness's format; `--check` reports drift. Edit the source, never a copy.
 Finish the job and report the result. I don't review code before it lands; the
 `@reviewer` gate does, and a green gate is the authority to merge. Where a
 sensible default exists, take it and record it in the PR body. Ask only when:
+
 - the choice is mine and the options mean materially different work (SQLite
   versus Postgres, not naming);
 - a revert can't undo it: destroying data, rotating a secret, publishing to a
@@ -97,6 +98,7 @@ Secret-bearing sends fail-closed (see Hard rule).
 A killed shell leaves its `&` children running, reparented to `systemd --user`;
 cleanup on the command's last line never runs. Once cost: 32 busy-loops on 11 of
 16 cores for 11.5 hours. In order of preference:
+
 1. Run in the foreground.
 2. Background through the harness (`run_in_background`), never bare `&`.
 3. Unavoidable `&` → own deadline, `timeout 300 <cmd> &` (the timer lives in the
@@ -194,6 +196,7 @@ its dependency is missing will — fail loudly.
 # Memory
 
 `~/sync/code/ai-memory/`, on demand only:
+
 - `profile.md` — who I am, how to work with me, how I sell, goals. Read first
   in any non-coding session: planning, writing, marketing, reviewing my work.
 - `TASKS.md` — ordered task list: what's next, does X fit the plan.
@@ -261,6 +264,7 @@ accessible name", not "APG violation". Lead with what a person notices, then
 the cause: "Escape does not close the menu" before the keydown handler.
 
 Two registers:
+
 - **Chat status** (progress, command results) — terse is fine, they can ask:
   "DNS incorrect. Fixed. New: A `antonshubin.com` → `163.178.1.38`. 2 min
   propagation." "Past impl used npm dep. Deno has built-in version. No npm dep
@@ -279,6 +283,7 @@ attribution. Body only for non-obvious why.
 
 Issues, PR bodies, review comments, audit reports — anything opened later,
 cold. In order:
+
 - **In short** — two or three plain sentences for the whole document: what is
   wrong, what a person notices.
 - **Why it matters** — the cost of leaving it.
