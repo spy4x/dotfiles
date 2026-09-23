@@ -213,7 +213,9 @@ How `invocation` renders:
   hand on each machine, in the same change.
 - **Manifest.** Each home gets a `.dotfiles-sync.json` listing what the script wrote. A file
   deleted here is deleted there on the next `--apply`; a file the script never wrote is never
-  touched. Merged settings are never deleted.
+  touched. Merged settings are never deleted, and neither is anything that resolves into a git
+  checkout: such a file is never recorded, and a recorded one that later resolves into a
+  checkout stays `[BLOCKED]` instead of being removed.
 - **Tests.** `deno task test` covers each adapter with golden files in `fixtures/golden/`. After
   an intended rendering change: `deno test -A ai-harnesses/adapters.test.ts -- --update`, then
   review the golden diff.
@@ -235,9 +237,11 @@ systemctl --user start dsh opencode-web
 ```
 
 `migrate` refuses while the old directory still holds tracked files, so only runtime leftovers
-move — sessions, storages, credentials, lockfiles. It never deletes. On a machine where Syncthing
-already emptied the old directory, the credentials are gone there: sign in to DSH again. They
-stay out of `~/sync/code` from then on.
+move — sessions, storages, credentials, lockfiles. It renames the old directory into place in one
+step and never deletes; if the rename fails, the symlink is put back. On a machine where
+Syncthing already emptied the old directory, the symlink dangles: `--apply` reports that home as
+`[BLOCKED]`, and `migrate` replaces the symlink with an empty directory. The DSH credentials are
+gone on that machine, so sign in to DSH again. They stay out of `~/sync/code` from then on.
 
 ### Claude Code hooks (`settings/claude/hooks/`) — disabled
 

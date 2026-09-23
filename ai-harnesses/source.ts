@@ -2,7 +2,7 @@
 // beside it, `agents/<name>.md`, and `settings/<harness>/**`.
 
 import { join, relative } from "jsr:@std/path@^1.0.0"
-import { extract } from "jsr:@std/front-matter@^1.0.0/yaml"
+import { extract } from "jsr:@std/front-matter@1.0.9/yaml"
 import {
   AgentFrontmatter,
   HARNESSES,

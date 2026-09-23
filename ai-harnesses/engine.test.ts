@@ -225,34 +225,130 @@ Deno.test(`refuses to overwrite a live settings file it cannot parse`, async () 
   }
 })
 
+/** `~/.dsh` symlinked into a git checkout holding a session and a credential, nothing tracked. */
+async function symlinkedDsh(root: string, home: string): Promise<string> {
+  const checkout = join(root, `checkout`)
+  const old = join(checkout, `.dsh`)
+  await write(join(old, `sessions`, `one.json`), `{}\n`)
+  await write(join(old, `.credentials.yaml`), `key: <REDACTED:TOKEN>\n`)
+  await git(checkout, `init`, `-q`)
+  await Deno.symlink(old, join(home, `.dsh`))
+  return old
+}
+
 Deno.test(`migrate moves runtime leftovers off a symlink into a real home`, async () => {
   const { root, home, cleanup } = await fixture()
   try {
-    const checkout = join(root, `checkout`)
-    const old = join(checkout, `.dsh`)
-    await write(join(old, `sessions`, `one.json`), `{}\n`)
-    await write(join(old, `.credentials.yaml`), `key: <REDACTED:TOKEN>\n`)
+    const old = await symlinkedDsh(root, home)
     await write(join(old, `AGENTS.md`), `tracked\n`)
-    await git(checkout, `init`, `-q`)
-    await git(checkout, `add`, `.dsh/AGENTS.md`)
-    await Deno.symlink(old, join(home, `.dsh`))
+    await git(join(root, `checkout`), `add`, `.dsh/AGENTS.md`)
     const config = await loadConfig(join(FIXTURES, `config.jsonc`))
     const env = envOf({ HOME: home })
 
     await assertRejects(() => planMigration(config, env), Error, `tracked file`)
 
-    await git(checkout, `rm`, `-q`, `--cached`, `.dsh/AGENTS.md`)
+    await git(join(root, `checkout`), `rm`, `-q`, `--cached`, `.dsh/AGENTS.md`)
     await Deno.remove(join(old, `AGENTS.md`))
     const migrations = await planMigration(config, env)
     assertEquals(migrations.map((m) => [m.name, m.entries]), [
       [`dsh`, [`.credentials.yaml`, `sessions`]],
     ])
+    // Written after planning: it must move too, not be stranded in the synced repo.
+    await write(join(old, `.anonymous-user-id`), `id\n`)
     await applyMigration(migrations)
 
     assertEquals((await Deno.lstat(join(home, `.dsh`))).isDirectory, true)
     assertEquals(await Deno.readTextFile(join(home, `.dsh`, `sessions`, `one.json`)), `{}\n`)
+    assertEquals(await Deno.readTextFile(join(home, `.dsh`, `.anonymous-user-id`)), `id\n`)
     assertEquals(await Deno.lstat(old).catch(() => null), null)
     assertEquals(await planMigration(config, env), [])
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`a migration that fails puts the symlink back, so it can be retried`, async () => {
+  const { root, home, cleanup } = await fixture()
+  try {
+    const old = await symlinkedDsh(root, home)
+    const config = await loadConfig(join(FIXTURES, `config.jsonc`))
+    const migrations = await planMigration(config, envOf({ HOME: home }))
+    // Point the move at a source that is gone, so the rename fails.
+    await assertRejects(() => applyMigration([{ ...migrations[0], from: `${old}-gone` }]))
+    assertEquals((await Deno.lstat(join(home, `.dsh`))).isSymlink, true)
+    assertEquals(
+      await Deno.readTextFile(join(home, `.dsh`, `.credentials.yaml`)),
+      `key: <REDACTED:TOKEN>\n`,
+    )
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`a dangling home blocks --apply without crashing, and migrate replaces it`, async () => {
+  const { root, home, source, targets, cleanup } = await fixture()
+  try {
+    await Deno.symlink(join(root, `emptied-by-sync`), join(home, `.dsh`))
+    const ops = await plan(source, targets)
+    assertEquals(ops.filter((op) => op.label.startsWith(`dsh `)).map((op) => op.action), [
+      `blocked`,
+    ])
+    await apply(ops)
+
+    const config = await loadConfig(join(FIXTURES, `config.jsonc`))
+    await applyMigration(await planMigration(config, envOf({ HOME: home })))
+    assertEquals((await Deno.lstat(join(home, `.dsh`))).isDirectory, true)
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`a file inside a symlinked checkout is never recorded or removed`, async () => {
+  const { root, home, source, targets, cleanup } = await fixture()
+  try {
+    // A real DSH home whose profiles/ is a symlink into another repo, as rostok's once was.
+    const checkout = join(root, `rostok`)
+    await write(join(checkout, `.git`, `HEAD`), `ref: refs/heads/main\n`)
+    await write(join(checkout, `profiles`, `web`, `cordis.patch.yml`), `their file\n`)
+    await Deno.mkdir(join(home, `.dsh`))
+    await Deno.symlink(join(checkout, `profiles`), join(home, `.dsh`, `profiles`))
+
+    await apply(await plan(source, targets))
+    const manifest = JSON.parse(await Deno.readTextFile(join(home, `.dsh`, `.dotfiles-sync.json`)))
+    assertEquals(manifest.files.includes(`profiles/web/cordis.patch.yml`), false)
+
+    const dsh = source.settings.dsh.filter((file) => !file.path.startsWith(`profiles/`))
+    await apply(await plan({ ...source, settings: { ...source.settings, dsh } }, targets))
+    assertEquals(
+      await Deno.readTextFile(join(checkout, `profiles`, `web`, `cordis.patch.yml`)),
+      `their file\n`,
+    )
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`a recorded file that now resolves into a checkout is blocked, not removed`, async () => {
+  const { root, home, source, targets, cleanup } = await fixture()
+  try {
+    await apply(await plan(source, targets))
+    // profiles/ is swapped for a symlink into a checkout that holds a file of the same name.
+    const checkout = join(root, `rostok`)
+    await write(join(checkout, `.git`, `HEAD`), `ref: refs/heads/main\n`)
+    await write(join(checkout, `profiles`, `web`, `cordis.patch.yml`), `their file\n`)
+    await Deno.remove(join(home, `.dsh`, `profiles`), { recursive: true })
+    await Deno.symlink(join(checkout, `profiles`), join(home, `.dsh`, `profiles`))
+
+    const dsh = source.settings.dsh.filter((file) => !file.path.startsWith(`profiles/`))
+    const ops = await plan({ ...source, settings: { ...source.settings, dsh } }, targets)
+    assertEquals(ops.filter((op) => op.action === `remove`), [])
+    await apply(ops)
+    assertEquals(
+      await Deno.readTextFile(join(checkout, `profiles`, `web`, `cordis.patch.yml`)),
+      `their file\n`,
+    )
+    const manifest = JSON.parse(await Deno.readTextFile(join(home, `.dsh`, `.dotfiles-sync.json`)))
+    assertEquals(manifest.files.includes(`profiles/web/cordis.patch.yml`), true)
   } finally {
     await cleanup()
   }

@@ -1,13 +1,6 @@
-# DSH user settings. Mirrored from opencode.json: model, default agent,
-# permission, providers, MCP servers.
-#
-# Pre-existing keys (ui-onboarding, llm-pi-ai, permission, agent-default-model)
-# came from the original `~/.local/share/dsh/settings.yaml` that dsh
-# auto-created at first boot. `agent-default-agent` is new (mirrors
-# opencode.json's `default_agent: architect`).
-
-ui-onboarding:
-  welcomeNoticeVersion: 2026-08-13.1
+# DSH user settings, merged key by key into $DSH_HOME/settings.yaml by
+# `deno task ai`: keys named here win, one level deep, and everything else
+# DSH saves (such as `ui-onboarding`) is left alone.
 
 # LLM provider config — translated from opencode.json's `provider` block.
 # `minimax-coding-plan` (OpenCode) → `minimax` (DSH, already configured).

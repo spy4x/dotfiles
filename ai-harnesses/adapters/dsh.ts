@@ -1,7 +1,7 @@
 // DSH (the DeepSeek harness): `AGENTS.md`, `skills/<name>/SKILL.md`, one agent preset per agent
 // under `.agent-presets/<name>/`, `settings.yaml` merged key by key, and the `web` profile.
 
-import { stringify } from "jsr:@std/yaml@^1.0.0"
+import { stringify } from "jsr:@std/yaml@1.2.0"
 import { type Adapter, markdown, type RenderedFile, settingsFile } from "./shared.ts"
 import { targets } from "../source.ts"
 

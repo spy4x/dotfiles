@@ -3,7 +3,7 @@
 
 import { dirname, join, relative, resolve } from "jsr:@std/path@^1.0.0"
 import { parse as parseJsonc } from "jsr:@std/jsonc@^1.0.0"
-import { parse as parseYaml, stringify as stringifyYaml } from "jsr:@std/yaml@^1.0.0"
+import { parse as parseYaml, stringify as stringifyYaml } from "jsr:@std/yaml@1.2.0"
 import type { Adapter, RenderedFile } from "./adapters/shared.ts"
 import { claude } from "./adapters/claude.ts"
 import { dsh } from "./adapters/dsh.ts"
@@ -99,12 +99,15 @@ async function readOrNull(path: string): Promise<string | null> {
 
 /** Root of the git checkout that really contains `path` (symlinks resolved), or null. */
 export async function checkoutOf(path: string): Promise<string | null> {
+  // Walk up past anything that does not resolve: a missing file or a dangling symlink.
   let dir = path
-  while (!await exists(dir)) {
+  let real = await Deno.realPath(dir).catch(() => null)
+  while (!real) {
     if (dirname(dir) === dir) return null
     dir = dirname(dir)
+    real = await Deno.realPath(dir).catch(() => null)
   }
-  dir = await Deno.realPath(dir)
+  dir = real
   for (;;) {
     if (await exists(join(dir, `.git`))) return dir
     if (dirname(dir) === dir) return null
@@ -112,18 +115,19 @@ export async function checkoutOf(path: string): Promise<string | null> {
   }
 }
 
+/** The reason for a `blocked` op when `path` resolves into a git checkout, else null. */
+async function blockedBy(path: string): Promise<string | null> {
+  const checkout = await checkoutOf(path)
+  return checkout
+    ? `resolves into git checkout ${checkout}; run \`deno task ai migrate\` first`
+    : null
+}
+
 /** Plans a plain copy of `content` to `path`. */
 async function planCopy(label: string, path: string, content: string): Promise<Op> {
   // A harness home still symlinked into a checkout: writing there would dirty the repo.
-  const checkout = await checkoutOf(path)
-  if (checkout) {
-    return {
-      label,
-      path,
-      action: `blocked`,
-      reason: `resolves into git checkout ${checkout}; run \`deno task ai migrate\` first`,
-    }
-  }
+  const blocked = await blockedBy(path)
+  if (blocked) return { label, path, action: `blocked`, reason: blocked }
   const lstat = await Deno.lstat(path).catch(() => null)
   if (!lstat) return { label, path, action: `write`, reason: `missing`, content }
   if (lstat.isSymlink) {
@@ -167,15 +171,8 @@ function canonical(value: unknown): string {
 
 /** Plans a key-level merge of a tracked JSON or YAML settings file into the live one. */
 async function planMerge(label: string, path: string, file: RenderedFile): Promise<Op> {
-  const checkout = await checkoutOf(path)
-  if (checkout) {
-    return {
-      label,
-      path,
-      action: `blocked`,
-      reason: `resolves into git checkout ${checkout}; run \`deno task ai migrate\` first`,
-    }
-  }
+  const blocked = await blockedBy(path)
+  if (blocked) return { label, path, action: `blocked`, reason: blocked }
   const [decode, encode] = file.merge === `yaml`
     ? [parseYaml, (data: Json) => stringifyYaml(data, { lineWidth: -1 })]
     : [JSON.parse, (data: Json) => JSON.stringify(data, null, 2) + `\n`]
@@ -199,10 +196,22 @@ async function planMerge(label: string, path: string, file: RenderedFile): Promi
   return { label, path, action: `write`, reason, content }
 }
 
-/** Every change that brings one harness home in line with the rendered files. */
+/**
+ * Every change that brings one harness home in line with the rendered files. The manifest lists
+ * only files this engine really wrote: a blocked write is not recorded, and a blocked removal
+ * stays recorded until it can happen. So a file inside another checkout is never deleted.
+ */
 export async function planTarget(target: Target, rendered: RenderedFile[]): Promise<Op[]> {
+  const home = await Deno.lstat(target.home).catch(() => null)
+  if (home?.isSymlink && !await Deno.realPath(target.home).then(() => true, () => false)) {
+    const reason = `home is a dangling symlink; run \`deno task ai migrate\``
+    return [{ label: `${target.name} home`, path: target.home, action: `blocked`, reason }]
+  }
+
+  const manifestPath = join(target.home, MANIFEST)
+  const previous: string[] = JSON.parse(await readOrNull(manifestPath) ?? `{}`).files ?? []
   const ops: Op[] = []
-  const copied: string[] = []
+  const recorded: string[] = []
   const seen = new Set<string>()
   for (const file of rendered) {
     if (seen.has(file.path)) throw new Error(`${target.name}: two items render ${file.path}`)
@@ -211,27 +220,26 @@ export async function planTarget(target: Target, rendered: RenderedFile[]): Prom
     const label = `${target.name} ${file.path}`
     if (file.merge) {
       ops.push(await planMerge(`${label} (merge of tracked keys)`, path, file))
-    } else {
-      copied.push(file.path)
-      ops.push(await planCopy(label, path, file.content))
+      continue
     }
+    const op = await planCopy(label, path, file.content)
+    if (op.action !== `blocked` || previous.includes(file.path)) recorded.push(file.path)
+    ops.push(op)
   }
-  copied.sort()
 
-  const manifestPath = join(target.home, MANIFEST)
-  const previous: string[] = JSON.parse(await readOrNull(manifestPath) ?? `{}`).files ?? []
   for (const rel of previous.filter((file) => !seen.has(file))) {
     const path = join(target.home, rel)
-    if (await exists(path)) {
-      ops.push({
-        label: `${target.name} ${rel}`,
-        path,
-        action: `remove`,
-        reason: `no longer tracked`,
-      })
+    if (!await exists(path)) continue
+    const label = `${target.name} ${rel}`
+    const reason = await blockedBy(path)
+    if (reason) {
+      recorded.push(rel)
+      ops.push({ label, path, action: `blocked`, reason })
+    } else {
+      ops.push({ label, path, action: `remove`, reason: `no longer tracked` })
     }
   }
-  const manifest = JSON.stringify({ files: copied }, null, 2) + `\n`
+  const manifest = JSON.stringify({ files: recorded.sort() }, null, 2) + `\n`
   ops.push(await planCopy(`${target.name} sync manifest`, manifestPath, manifest))
   return ops
 }
@@ -245,6 +253,7 @@ export async function plan(source: Source, found: Target[]): Promise<Op[]> {
   return ops
 }
 
+/** Carries out every `write` and `remove`; returns how many files changed. */
 export async function apply(ops: Op[]): Promise<number> {
   let changed = 0
   for (const op of ops) {
@@ -265,8 +274,8 @@ export async function apply(ops: Op[]): Promise<number> {
 export interface Migration {
   name: HarnessName
   home: string
-  /** Where the symlink points today. */
-  from: string
+  /** Where the symlink points today; null when it points nowhere. */
+  from: string | null
   /** Untracked leftovers (sessions, credentials, lockfiles) that move into the new home. */
   entries: string[]
 }
@@ -292,7 +301,11 @@ export async function planMigration(config: Config, env: Env): Promise<Migration
     const lstat = await Deno.lstat(home).catch(() => null)
     if (!lstat?.isSymlink) continue
     const from = await Deno.realPath(home).catch(() => null)
-    if (!from) throw new Error(`${home} is a dangling symlink; remove it by hand`)
+    if (!from) {
+      // Another machine's sync already emptied the old directory: nothing is left to move.
+      migrations.push({ name, home, from: null, entries: [] })
+      continue
+    }
     const checkout = await checkoutOf(from)
     if (!checkout) continue
     const tracked = await trackedFiles(checkout, from)
@@ -309,12 +322,21 @@ export async function planMigration(config: Config, env: Env): Promise<Migration
   return migrations
 }
 
-/** Replaces each symlink with a real directory and moves the leftovers into it. Never deletes. */
+/**
+ * Replaces each symlink with the directory it points to, in one rename: the leftovers move with
+ * it, and nothing is deleted. If the rename fails, the symlink is put back, so a failed run leaves
+ * the machine as it was and can be retried.
+ */
 export async function applyMigration(migrations: Migration[]): Promise<void> {
-  for (const { home, from, entries } of migrations) {
+  for (const { home, from } of migrations) {
+    const target = await Deno.readLink(home)
     await Deno.remove(home) // the symlink itself, not its target
-    await Deno.mkdir(home, { recursive: true })
-    for (const entry of entries) await Deno.rename(join(from, entry), join(home, entry))
-    await Deno.remove(from) // now empty; fails loudly if it is not
+    try {
+      if (from) await Deno.rename(from, home)
+      else await Deno.mkdir(home, { recursive: true })
+    } catch (error) {
+      await Deno.symlink(target, home)
+      throw error
+    }
   }
 }

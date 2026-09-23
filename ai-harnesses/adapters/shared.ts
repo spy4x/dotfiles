@@ -2,7 +2,7 @@
 // out, no filesystem access, so each one is tested against golden files alone.
 
 import { extname } from "jsr:@std/path@^1.0.0"
-import { stringify } from "jsr:@std/yaml@^1.0.0"
+import { stringify } from "jsr:@std/yaml@1.2.0"
 import type { HarnessConfig, HarnessName } from "../schema.ts"
 import type { Source, SourceFile } from "../source.ts"
 

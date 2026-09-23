@@ -59,6 +59,7 @@ function parseArgs(argv: readonly string[]): Args {
   return args
 }
 
+/** Prints the planned migration and, with `--apply`, carries it out. */
 async function migrate(root: string, mode: Mode): Promise<void> {
   const migrations = await planMigration(await loadConfig(join(root, `config.jsonc`)), Deno.env)
   if (migrations.length === 0) {
@@ -66,7 +67,7 @@ async function migrate(root: string, mode: Mode): Promise<void> {
     return
   }
   for (const { name, home, from, entries } of migrations) {
-    console.log(`[MIGRATE] ${name}: ${home} → real directory; move from ${from}:`)
+    console.log(`[MIGRATE] ${name}: ${home} → real directory; move from ${from ?? `nowhere`}:`)
     for (const entry of entries) console.log(`  ${entry}`)
   }
   if (mode !== `apply`) {
@@ -77,6 +78,7 @@ async function migrate(root: string, mode: Mode): Promise<void> {
   console.log(`\nMigrated. Now run: deno task ai --apply`)
 }
 
+/** Parses the arguments, plans every harness, and prints, checks or applies the plan. */
 async function main(): Promise<void> {
   const { mode, migrate: migrating, fromWorktree } = parseArgs(Deno.args)
   const root = import.meta.dirname!
