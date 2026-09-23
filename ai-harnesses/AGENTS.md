@@ -29,9 +29,10 @@ A question costs my attention; a wrong reversible guess costs one revert. Prefer
 the revert.
 
 New work with no issue written down (a feature, bug, task or idea) → the
-`start-task` skill: one batch of questions about intent up front (the one
-exception to "ask only when" above), then spec, design and a GitHub issue before
-any code, then implementation, unless I asked only for the spec or the design.
+`start-task` skill: one batch of questions up front, about intent and the
+technical choices that are costly to reverse (the one exception to "ask only
+when" above), then spec, design and a GitHub issue before any code, then
+implementation, unless I asked only for the spec or the design.
 
 # Stack
 

@@ -27,11 +27,18 @@ where to stop.
   becomes the evidence and, later, the test.
 - Then, before writing the spec, ask me one batch of questions. This is the cheapest moment to
   catch a misunderstanding: a wrong guess here costs the whole spec, design and PR, not one revert.
-  - **Only intent:** who it is for, what is in and out of scope, what "done" looks like, and
-    choices between options that mean materially different work. Never ask what the code, the
-    docs or the git history can answer; look it up instead.
-  - **One message, at most five questions, numbered, each with your recommended answer**, so I can
-    reply "defaults" or change only one.
+  - **What to ask:**
+    - intent: who it is for, what is in and out of scope, what "done" looks like;
+    - technical choices that are expensive to change later and that neither the repo nor the Stack
+      section of `AGENTS.md` settles: architecture, the data store (SQLite or Postgres), SPA or
+      SSR, hosting and infrastructure, a new dependency or external service, a public API or data
+      format.
+
+    Never ask what the code, the docs, the git history or `AGENTS.md` can answer; look it up
+    instead.
+  - **One message, at most five questions, numbered, each with your recommended answer and its
+    main trade-off**, so I can reply "defaults" or change only one. More than five open → ask the
+    five most expensive to reverse, and list the defaults you will take for the rest.
   - **Skip the batch** when the request already answers all of this, or when I said "just go" or
     "don't ask".
   - **After my answers, do not ask again**, except in the cases the Autonomy section of
