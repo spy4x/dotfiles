@@ -339,6 +339,11 @@ Deno.test(`a recorded file that now resolves into a checkout is blocked, not rem
     await Deno.remove(join(home, `.dsh`, `profiles`), { recursive: true })
     await Deno.symlink(join(checkout, `profiles`), join(home, `.dsh`, `profiles`))
 
+    // Still rendered but now blocked: it was written before, so it stays recorded.
+    await apply(await plan(source, targets))
+    const before = JSON.parse(await Deno.readTextFile(join(home, `.dsh`, `.dotfiles-sync.json`)))
+    assertEquals(before.files.includes(`profiles/web/cordis.patch.yml`), true)
+
     const dsh = source.settings.dsh.filter((file) => !file.path.startsWith(`profiles/`))
     const ops = await plan({ ...source, settings: { ...source.settings, dsh } }, targets)
     assertEquals(ops.filter((op) => op.action === `remove`), [])

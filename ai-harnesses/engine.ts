@@ -274,8 +274,10 @@ export async function apply(ops: Op[]): Promise<number> {
 export interface Migration {
   name: HarnessName
   home: string
-  /** Where the symlink points today; null when it points nowhere. */
+  /** Where the symlink resolves today; null when it dangles. */
   from: string | null
+  /** The symlink's own target, as written. */
+  link: string
   /** Untracked leftovers (sessions, credentials, lockfiles) that move into the new home. */
   entries: string[]
 }
@@ -303,7 +305,7 @@ export async function planMigration(config: Config, env: Env): Promise<Migration
     const from = await Deno.realPath(home).catch(() => null)
     if (!from) {
       // Another machine's sync already emptied the old directory: nothing is left to move.
-      migrations.push({ name, home, from: null, entries: [] })
+      migrations.push({ name, home, from: null, link: await Deno.readLink(home), entries: [] })
       continue
     }
     const checkout = await checkoutOf(from)
@@ -317,7 +319,7 @@ export async function planMigration(config: Config, env: Env): Promise<Migration
     }
     const entries: string[] = []
     for await (const entry of Deno.readDir(from)) entries.push(entry.name)
-    migrations.push({ name, home, from, entries: entries.sort() })
+    migrations.push({ name, home, from, link: await Deno.readLink(home), entries: entries.sort() })
   }
   return migrations
 }

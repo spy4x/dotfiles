@@ -66,8 +66,9 @@ async function migrate(root: string, mode: Mode): Promise<void> {
     console.log(`No harness home is a symlink into a git checkout. Nothing to migrate.`)
     return
   }
-  for (const { name, home, from, entries } of migrations) {
-    console.log(`[MIGRATE] ${name}: ${home} → real directory; move from ${from ?? `nowhere`}:`)
+  for (const { name, home, from, link, entries } of migrations) {
+    const source = from ?? `nowhere (dangling link to ${link}; an empty directory replaces it)`
+    console.log(`[MIGRATE] ${name}: ${home} → real directory; move from ${source}:`)
     for (const entry of entries) console.log(`  ${entry}`)
   }
   if (mode !== `apply`) {
