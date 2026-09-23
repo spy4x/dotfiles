@@ -8,8 +8,8 @@ here. After every merge, from the main checkout (never a worktree):
    `~/.config/obs-studio/*`.
 2. A merge that untracks a file also deletes it from disk. If the machine still needs it,
    restore it: `git show ORIG_HEAD:<path> > <path>` (recreate its directory first).
-3. Touched `ai-harnesses/` → `deno task ai --apply`, then `deno task ai --check` must
-   print `All targets in sync.` That covers Claude Code, OpenCode and DSH; they are real
+3. Touched `ai-harnesses/` → `deno task ai`, then `deno task ai --check` must print
+   `All targets in sync.` That covers Claude Code, OpenCode and DSH; they are real
    directories, never symlinks into this repo.
 4. Touched `system/syncthing-code.stignore` → `cp system/syncthing-code.stignore
    ~/sync/code/.stignore`.

@@ -8,8 +8,8 @@ narrate tool calls.
 Global default. Repo-local `AGENTS.md` adds constraints or overrides.
 Conflict → repo wins for that repo.
 
-One source for every harness: `dotfiles/ai-harnesses/`. `deno task ai --apply`
-copies this file byte-for-byte to OpenCode, DSH and Claude Code
+One source for every harness: `dotfiles/ai-harnesses/`. `deno task ai` copies
+this file byte-for-byte to OpenCode, DSH and Claude Code
 (`~/.claude/CLAUDE.md`), and renders every skill and agent there into each
 harness's format; `--check` reports drift. Edit the source, never a copy.
 
@@ -315,4 +315,4 @@ the built-in worktree features (`--worktree`, `EnterWorktree`,
 
 **OpenCode / DSH.** Agents, skills, commands and DSH presets are rendered from
 `dotfiles/ai-harnesses/` into `~/.config/opencode` and `$DSH_HOME` — never
-hand-edit a rendered file; the next `--apply` overwrites it.
+hand-edit a rendered file; the next `deno task ai` overwrites it.
