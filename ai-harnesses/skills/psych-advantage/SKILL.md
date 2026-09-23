@@ -2,7 +2,6 @@
 name: psych-advantage
 description: "Parallel psych + marketing analysis -> combined playbook with ethical boundaries. Respects Sovereign B2B positioning."
 invocation: user
-targets: [opencode, dsh]
 harness:
   opencode:
     subtask: true
@@ -13,10 +12,11 @@ harness:
 Goal: combined psychology + marketing analysis. Find unfair advantages, surface ethical boundaries.
 
 Steps:
+
 1. Spawn TWO subagents IN PARALLEL (independent analyses):
    - psychologist agent: human nature, persuasion, influence, decision biases, emotional drivers
    - marketing-seo agent: positioning, channels, CRO, SEO, growth loops, distribution
-   Both get the same brief: $ARGUMENTS. Wait for both outputs before synthesizing.
+     Both get the same brief: $ARGUMENTS. Wait for both outputs before synthesizing.
 2. Synthesize into combined playbook:
    - Psychological dynamics: which biases/needs/principles drive behavior here
    - Marketing execution: how to reach, convert, retain using those insights

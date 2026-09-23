@@ -22,19 +22,24 @@ Each task file format:
 # NN - Task Title
 
 ## What
+
 One paragraph - what outcome does this deliver?
 
 ## Relevant files
+
 - path/to/file - description
 
 ## Reference patterns
+
 - path/to/example - what pattern this shows
 
 ## Notes
+
 - PR base branch is the project's default
 - Any gotchas, related docs, blockers
 
 ## Definition of Done
+
 - [ ] Verifiable outcome 1
 - [ ] Verifiable outcome 2
 - [ ] Relevant tests pass: <command>
@@ -46,4 +51,4 @@ Rules:
 - Code tasks MUST include a "tests pass" DoD item with the exact command
 - DoD items must be observable from outside (commands, screenshots, API responses) — not "I think it's done"
 - First task always branch creation
-- Return list of created files + suggested invocation for task 1 (typically `/process` command)
+- Return list of created files + suggested invocation for task 1 (`/start-task <task file path>`)
