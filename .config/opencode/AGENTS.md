@@ -44,17 +44,19 @@ anything small and opinionated whose defaults we'd fight — UI components
 especially (no shadcn/Radix/Headless UI/Material/Chakra). Keep the giant,
 well-solved ones: postgres.js, arktype, preact, wouter, tailwind, `@std/*`,
 signals, hono, qrcode, webpush, otpauth, playwright, ioredis, fresh, vite, d3,
-leaflet, an SMTP lib, a date/tz lib. Libraries are design references, never code
-sources: port markup and behaviour, not the dependency. Owning a component means
-owning its accessibility: roles, labels, keyboard handling, focus.
+leaflet, an SMTP lib, a date/tz lib — never reimplement these. Libraries are
+design references, never code sources: port markup and behaviour, not the
+dependency. Owning a component means owning its accessibility: roles, labels,
+keyboard handling, focus.
 
 # Session bootstrap
 
 New repo, before first edit, read in parallel: repo-local `AGENTS.md` (unless
 preloaded), `README.md`, manifest (`deno.jsonc`/`package.json`/etc) for exact
-task names, lint/fmt config. Everything else (`docs/`, compose, hooks) only when
-the task touches it. Never guess a command the manifest defines. Greenfield with
-none → say so. New worktree of a known repo → no re-read.
+task names, lint/fmt config. Everything else (other root `*.md`, `docs/`,
+`compose.yml`/`Dockerfile`, hooks) only when the task touches it. Never guess a
+command the manifest defines. Greenfield with none → say so. New worktree of a
+known repo → no re-read.
 
 # Hard rule: no secrets anywhere they leave box
 
@@ -99,8 +101,8 @@ cleanup on the command's last line never runs. Once cost: 32 busy-loops on 11 of
 2. Background through the harness (`run_in_background`), never bare `&`.
 3. Unavoidable `&` → own deadline, `timeout 300 <cmd> &` (the timer lives in the
    child), plus `trap 'kill $PIDS 2>/dev/null' EXIT INT TERM` (no help on
-   SIGKILL). CPU load: `stress-ng --cpu 0 --timeout 60s`, never
-   `while :; do :; done &`.
+   SIGKILL). CPU load: `stress-ng --cpu 0 --timeout 60s` or at least
+   `timeout 60s yes >/dev/null &`, never `while :; do :; done &`.
 
 Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers,
 `tmux` sessions: clean up in a `trap`, not a trailing line.
@@ -122,8 +124,9 @@ WT="$(dirname "$MAIN")/worktrees/$(basename "$MAIN")/<type>/<slug>"
 git fetch origin && mkdir -p "$(dirname "$WT")" && git worktree add -b <type>/<slug> "$WT" origin/main
 ```
 
-Syncthing ignores `worktrees/` (per-machine step, see README): a synced
-worktree is broken by construction and burns inotify watches.
+Syncthing ignores `worktrees/` (per-machine step: README,
+`system/syncthing-code.stignore`): a synced worktree is broken by construction
+and burns inotify watches.
 
 Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR always exists; `[WIP]` prefix until done.
 `gh pr create --fill` immediately after push — never ask. Pre-push reviewer
@@ -148,8 +151,9 @@ deno run --allow-read --allow-write --allow-run=git ~/sync/code/dotfiles/tools/e
 deno task env:decrypt
 ```
 
-It copies the age key from the main checkout (a plain `cp` is refused by
-`permissions.deny`). Idempotent. Repos with `post-checkout` hooks auto-decrypt
+It copies the age key from the main checkout without printing it or naming
+`.age/` on the command line (a plain `cp` is refused by `permissions.deny`).
+Idempotent. Repos with `post-checkout` hooks auto-decrypt
 once the key is in place (check repo-local `AGENTS.md`).
 
 ## Infrastructure as Code
@@ -215,10 +219,11 @@ the brief costs more than the edit, and a subagent lacks the context that makes
 it safe.
 
 - **One session = one issue/PR.** No long-lived coordinator grinding a backlog:
-  context rots and overclaims pile up. Backlog lives in GitHub issues.
+  context rots and overclaims pile up. Backlog lives in GitHub issues. A wave is
+  one session's subagents, not a session per repo running for days.
 - **Waves must be file-disjoint** — that, not size, is the constraint. Start
-  with 3, scale by disjoint directories. One worktree and `<type>/<slug>` branch
-  per agent; two agents in one worktree = corruption. Parallelise reads,
+  with 3, scale by disjoint directories. One worktree per agent, branch
+  `<type>/<slug>` from latest `main`; two agents in one worktree = corruption. Parallelise reads,
   serialise writes.
 - **Serial spine first.** If every unit needs one scaffold/schema/config, build
   and merge it alone, then fan out. Prove no-contention by experiment (e.g. Deno
@@ -236,14 +241,15 @@ it safe.
 - **Verify confident claims.** The best catches are overclaims ("caught 3
   bugs" → 1, "one cast" → 8, "check passes" → it doesn't). Demand reproduction.
 
-**Models.** Every `Agent` call passes `model`; omitted inherits the lead's,
-most expensive tier. Search/inventory → `haiku`. `implementer` → `sonnet`;
-`opus` only when done can't be stated in checkable terms (then don't delegate).
-Architecture and final verdicts stay with the lead. Reviewer tier follows the
-diff: docs/config/dotfiles/deletions → `sonnet`; production code → `opus`;
-auth, crypto, SSRF, money → `fable`. `effort: high` for `opus` and `fable` only. A
-weak reviewer rubber-stamps a weak author: never tier down a diff that ships.
-Fresh subagents over forks (a fork copies the whole conversation).
+**Models.** Every `Agent` call passes `model`: an omitted one inherits the
+lead's tier, always the most expensive. Search/inventory → `haiku`.
+`implementer` → `sonnet`; `opus` only when done can't be stated in checkable
+terms (then don't delegate). Architecture and final verdicts stay with the lead.
+Reviewer tier follows the diff: docs/config/dotfiles/deletions → `sonnet`;
+production code → `opus`; auth, crypto, SSRF, money → `fable`. `effort: high`
+for `opus` and `fable` only. A weak reviewer rubber-stamps a weak author: never
+tier down a diff that ships. Fresh subagents over forks (a fork copies the whole
+conversation).
 
 # Language style
 
@@ -297,9 +303,10 @@ gate runs before the PR. Target tone:
 **Claude Code.** Config tracked in `dotfiles/.claude/` (settings, agents,
 skills), synced by the same task. Runs in bypassPermissions mode: nothing
 prompts, so these rules are yours to hold. `permissions.deny` still blocks
-`.age` key material. Never use the built-in worktree features (`--worktree`,
-`EnterWorktree`, `isolation: worktree`, the desktop "worktree" option) — they
-nest in `<repo>/.claude/worktrees/`; use the Git Flow command.
+`.age` key material; `.env` stays readable under the carve-out above. Never use
+the built-in worktree features (`--worktree`, `EnterWorktree`,
+`isolation: worktree`, the desktop "worktree" option) — they nest in
+`<repo>/.claude/worktrees/`; use the Git Flow command.
 
 **OpenCode / DSH.** Agents in `.config/opencode/agents/`, commands in
 `opencode.json`. DSH presets and skills are generated by `tools/gen_dsh.py` and
