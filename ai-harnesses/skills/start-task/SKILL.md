@@ -31,8 +31,8 @@ where to stop.
     - intent: who it is for, what is in and out of scope, what "done" looks like;
     - technical choices that are expensive to change later and that neither the repo nor the Stack
       section of `AGENTS.md` settles: architecture, the data store (SQLite or Postgres), SPA or
-      SSR, hosting and infrastructure, a new dependency or external service, a public API or data
-      format.
+      SSR, infrastructure beyond the standard setup (a new shared service, a queue or object store,
+      which server it runs on), a new dependency or external service, a public API or data format.
 
     Never ask what the code, the docs, the git history or `AGENTS.md` can answer; look it up
     instead.
