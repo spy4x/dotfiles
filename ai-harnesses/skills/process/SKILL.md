@@ -13,6 +13,7 @@ harness:
 Goal: execute one task file end-to-end. Implementation -> verification -> reviewer gate -> merged PR.
 
 Steps:
+
 1. Read task file (contract). Note What, Relevant files, Reference patterns, DoD.
 2. Read referenced PRD + design for context.
 3. Read reference pattern files first — match existing style exactly (CQRS layout, Deno idioms, monorepo conventions).
