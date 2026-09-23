@@ -1,0 +1,73 @@
+# Profile patch layer for `web`. Applied after every bundle, before any
+# home-level patch or --patch overrides. id-targeted config overrides,
+# disables, and insert lists; `!!js` allowed.
+#
+# Contents:
+#   0. agent-presets default → architect (matches opencode.json default_agent)
+#   1. tool-* re-enables — dsh-web-app ships with every user-facing tool
+#      `disabled: true` (it targets a constrained browser surface; the
+#      sibling dsh-headless profile keeps them on). We turn them all on
+#      except tool-pwsh (Windows-only). See `dsh --profile web
+#      --dump-default-config` for the full default-disabled set.
+
+- id: agent-presets
+  config:
+    default: architect
+
+# ── filesystem ───────────────────────────────────────────────────────────────
+- id: tool-fs
+  disabled: false
+
+- id: tool-fs-search
+  disabled: false
+
+# File edit (also writes new files via the str-replace path).
+- id: tool-str-replace-editor
+  disabled: false
+
+# ── shell ────────────────────────────────────────────────────────────────────
+- id: tool-bash
+  disabled: false
+
+# (tool-pwsh stays disabled — PowerShell, irrelevant on Linux.)
+
+# ── discovery / delegation ───────────────────────────────────────────────────
+- id: tool-skill
+  disabled: false
+
+- id: tool-todo
+  disabled: false
+
+- id: tool-web
+  disabled: false
+
+# Subagents — task delegation (the architect persona's "delegate via Task
+# tool" instruction maps here), plus parent-side management and listing.
+- id: tool-subagent
+  disabled: false
+
+- id: tool-subagent-fork
+  disabled: false
+
+- id: tool-subagent-control
+  disabled: false
+
+- id: tool-subagent-list-agents
+  disabled: false
+
+# ── dsh-specific UX plumbing ─────────────────────────────────────────────────
+# Enable these too unless they're Windows-only.
+
+# (tool-ralph and tool-workflow stay disabled — they wait on a
+# `workflowEngine` service only `dsh-headless` provides. Enabling them
+# in `dsh-web` makes the plugin tree fail to activate and the service
+# loop on restart.)
+
+- id: tool-goal
+  disabled: false
+
+- id: tool-jobs
+  disabled: false
+
+- id: tool-result-pruner
+  disabled: false

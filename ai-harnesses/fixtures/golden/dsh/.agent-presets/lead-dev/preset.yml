@@ -1,0 +1,4 @@
+name: Lead Dev
+description: Primary agent that leads the work.
+kind: primary
+order: 10

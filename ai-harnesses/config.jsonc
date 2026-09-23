@@ -1,0 +1,27 @@
+// Which harnesses `deno task ai` renders for, where each one reads its config, and which model
+// each neutral tier means there. See README → "AI harness config".
+{
+  "harnesses": {
+    "claude": {
+      "enabled": "auto",
+      "home": "$CLAUDE_CONFIG_DIR|~/.claude",
+      "bin": "claude",
+      "merge": ["settings.json"],
+      "tiers": { "cheap": "haiku", "standard": "sonnet", "strong": "opus", "strongest": "fable" }
+    },
+    // No tiers: every agent runs on the default model from opencode.json.
+    "opencode": {
+      "enabled": "auto",
+      "home": "~/.config/opencode",
+      "bin": "opencode",
+      "merge": ["opencode.json", "tui.json"]
+    },
+    // No tiers: presets run on the default model from settings.yaml.
+    "dsh": {
+      "enabled": "auto",
+      "home": "$DSH_HOME|~/.local/share/dsh",
+      "bin": "dsh",
+      "merge": ["settings.yaml"]
+    }
+  }
+}

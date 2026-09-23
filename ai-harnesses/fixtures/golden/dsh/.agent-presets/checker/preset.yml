@@ -1,0 +1,4 @@
+name: Checker
+description: 'Read-only checker; reports, never edits.'
+kind: subagent
+order: 10

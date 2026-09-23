@@ -1,0 +1,25 @@
+# DSH user settings, merged key by key into $DSH_HOME/settings.yaml by
+# `deno task ai`: keys named here win, one level deep, and everything else
+# DSH saves (such as `ui-onboarding`) is left alone.
+
+# LLM provider config — translated from opencode.json's `provider` block.
+# `minimax-coding-plan` (OpenCode) → `minimax` (DSH, already configured).
+llm-pi-ai:
+  providers:
+    minimax:
+      apiKeyEnv: MINIMAX_API_KEY
+
+permission:
+  defaultPreset: danger-full-access
+
+# Default model.
+agent-default-model:
+  provider: deepseek-official
+  model: deepseek-v4-flash
+  reasoningEffort: off
+ui-conversation:
+  busyEnter: steer
+
+# Default agent preset is configured in profiles/web/cordis.patch.yml
+# (agent-presets.default: architect). The `default_agent` key in
+# opencode.json maps to that, not to a settings namespace.
