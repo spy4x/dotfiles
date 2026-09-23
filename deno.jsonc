@@ -5,8 +5,6 @@
     "install-shell": "deno run -A install-shell.ts",
     "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts",
     "ai": "deno run -A ai-harnesses/manage.ts",
-    // Old name, kept for one release so muscle memory keeps working.
-    "sync-agents-md": "deno run -A ai-harnesses/manage.ts",
     "test": "deno test -A tools/ ai-harnesses/"
   },
   "exclude": [

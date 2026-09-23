@@ -91,8 +91,8 @@ volumes/
 .playwright-mcp/
 
 # Former AI harness homes. ~/.config/opencode and ~/.local/share/dsh were symlinks into
-# these paths until `deno task ai migrate` moved them out; ignore any leftover so a session,
-# lockfile or credential never gets committed. Tracked harness config lives in ai-harnesses/.
+# these paths; ignore any leftover so a session, lockfile or credential never gets committed.
+# Tracked harness config lives in ai-harnesses/.
 /.config/opencode/
 /.dsh/
 
