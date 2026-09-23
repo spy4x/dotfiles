@@ -20,14 +20,23 @@ where to stop.
 - A question, a lookup, or a change small enough to need no design (a typo, a one-line config
   value) → just do it. This flow is for work that ends in a reviewed PR.
 
-## 1. Understand
+## 1. Understand, then ask once
 
 - Bootstrap the repo as `AGENTS.md` describes: repo-local `AGENTS.md`, `README.md`, the manifest.
 - Read the code the work touches. For a bug, reproduce it first and keep the reproduction: it
   becomes the evidence and, later, the test.
-- Ask only in the cases the Autonomy section of `AGENTS.md` lists: the choice is mine and the
-  options mean materially different work, or a revert cannot undo it. Put every question in one
-  message. For everything else, take the sensible default and record it as a decision.
+- Then, before writing the spec, ask me one batch of questions. This is the cheapest moment to
+  catch a misunderstanding: a wrong guess here costs the whole spec, design and PR, not one revert.
+  - **Only intent:** who it is for, what is in and out of scope, what "done" looks like, and
+    choices between options that mean materially different work. Never ask what the code, the
+    docs or the git history can answer; look it up instead.
+  - **One message, at most five questions, numbered, each with your recommended answer**, so I can
+    reply "defaults" or change only one.
+  - **Skip the batch** when the request already answers all of this, or when I said "just go" or
+    "don't ask".
+  - **After my answers, do not ask again**, except in the cases the Autonomy section of
+    `AGENTS.md` lists. Take the sensible default for every later judgment call and record it as a
+    decision.
 
 ## 2. Spec — what and why, never how
 
