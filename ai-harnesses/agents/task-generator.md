@@ -22,19 +22,24 @@ Each task file format:
 # NN - Task Title
 
 ## What
+
 One paragraph - what outcome does this deliver?
 
 ## Relevant files
+
 - path/to/file - description
 
 ## Reference patterns
+
 - path/to/example - what pattern this shows
 
 ## Notes
+
 - PR base branch is the project's default
 - Any gotchas, related docs, blockers
 
 ## Definition of Done
+
 - [ ] Verifiable outcome 1
 - [ ] Verifiable outcome 2
 - [ ] Relevant tests pass: <command>

@@ -14,8 +14,9 @@ where to stop.
 
 ## 0. Is this new work?
 
-- The request names an issue or PR, or `gh issue list --search "<keywords>"` finds an open one that
-  covers it → that issue is the spec. Read it, then go to step 5.
+- The request names an issue, a PR or a task file (from the `task-generator` agent), or
+  `gh issue list --search "<keywords>"` finds an open issue that covers it → that is the spec. Read
+  it, then go to step 5.
 - A question, a lookup, or a change small enough to need no design (a typo, a one-line config
   value) → just do it. This flow is for work that ends in a reviewed PR.
 
@@ -96,7 +97,7 @@ says `running`:
 - **Before step 1, pick the arm.** This applies only to tasks expected to take ten or more tool
   calls and end in a PR.
   - The request says "with skill-state" or "without skill-state" → that decides.
-  - Otherwise, take the opposite of the last row in the log.
+  - Otherwise, take the opposite of the last row in the log. With no rows yet, take skill-state.
   - The skill-state arm → load the `skill-state` skill and run steps 1–6 through it.
 - **After step 7, add one row to the log** for either arm, following the instructions at the top of
   that file.
