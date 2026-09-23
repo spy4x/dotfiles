@@ -28,6 +28,10 @@ sensible default exists, take it and record it in the PR body. Ask only when:
 A question costs my attention; a wrong reversible guess costs one revert. Prefer
 the revert.
 
+New work with no issue written down (a feature, bug, task or idea) → the
+`start-task` skill: spec, design and a GitHub issue before any code, then
+implementation, unless I asked only for the spec or the design.
+
 # Stack
 
 Deno 2 + Hono + Fresh + Preact + syncthing + restic. Hetzner BM/VM, Docker
@@ -210,9 +214,10 @@ memory only for facts no repo owns.
 
 # Experimental
 
-Opt-in `skill-state` flow: the `skill-state` skill, state in
-gitignored `.skill-state/`, helpers in `~/sync/code/skill-state/`
-(github.com/spy4x/skill-state, private). Skip for exploratory/creative work.
+`skill-state` experiment: `start-task` alternates long tasks between the
+`skill-state` skill and the normal flow, and logs both arms in
+`~/sync/code/ai-memory/experiments/skill-state.md`. Helpers in
+`~/sync/code/skill-state/` (github.com/spy4x/skill-state, private).
 
 # Subagent orchestration
 
