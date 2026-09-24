@@ -105,6 +105,18 @@ sudo cp system/etc/tmpfiles.d/tmp.conf /etc/tmpfiles.d/tmp.conf
 sudo systemd-tmpfiles --clean
 ```
 
+**zram swap.** Fedora sizes zram at the smaller of RAM and 8 GB. Many parallel sessions fill
+that quickly, and the kernel then falls back to disk swap or the OOM killer.
+`system/etc/systemd/zram-generator.conf` raises it to 64 GB. zram only takes RAM for pages
+actually swapped, compressed, so a large size costs nothing while idle.
+
+```bash
+sudo cp system/etc/systemd/zram-generator.conf /etc/systemd/zram-generator.conf
+sudo systemctl daemon-reload
+sudo systemctl restart systemd-zram-setup@zram0.service
+zramctl
+```
+
 **Syncthing and worktrees.** Agent worktrees are created under `~/sync/code/worktrees/`, inside a
 Syncthing folder. Syncthing indexes and watches everything it does not ignore, so without an
 ignore line it holds an inotify watch per worktree directory and replicates build output to
