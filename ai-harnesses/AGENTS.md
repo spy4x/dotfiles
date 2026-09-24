@@ -282,7 +282,8 @@ it safe.
   same reviewer (`SendMessage`) with the fix: it already read the code, and its
   context is cached, so a second round costs a fraction of a fresh one. It
   still reruns the checks. A new PR, or a rework that rewrote most of the diff →
-  a fresh reviewer.
+  a fresh reviewer. Never count or report rejections in a summary, PR body or
+  issue: report what the review found and what changed.
 - **Verify confident claims.** The best catches are overclaims ("caught 3
   bugs" → 1, "one cast" → 8, "check passes" → it doesn't). Demand reproduction.
 
