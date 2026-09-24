@@ -69,6 +69,13 @@ design references, never code sources: port markup and behaviour, not the
 dependency. Owning a component means owning its accessibility: roles, labels,
 keyboard handling, focus.
 
+**Shared libs before local code.** In any `spy4x/*` TypeScript repo, before
+writing a component, helper or library, check `spy4x/ts-libs` and
+`spy4x/preact-components`. Already there → import it, never duplicate it. Not
+there but reusable by other TypeScript projects → add it to the fitting shared
+repo first, then import it from there. The final report lists every addition to
+those repos.
+
 # Session bootstrap
 
 New repo, before first edit, read in parallel: repo-local `AGENTS.md` (unless
