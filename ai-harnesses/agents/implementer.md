@@ -28,7 +28,7 @@ definition of done, say so in your first line and stop — do not explore the re
 ## Done means
 
 1. `deno task check` (or the repo's equivalent) exits 0, **and**
-   `D=$(mktemp -d) && trap 'rm -rf "$D"' EXIT && CI=true DENO_DIR=$D deno task check` exits 0.
+   `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D deno task check` exits 0.
    A warm local run is not evidence.
 2. Angular commits, small, one logical change each. No AI attribution.
 3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]` until the lead's
