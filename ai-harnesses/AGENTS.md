@@ -135,6 +135,9 @@ cleanup on the command's last line never runs. Once cost: 32 busy-loops on 11 of
 Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers,
 `tmux` sessions: clean up in a `trap`, not a trailing line.
 
+Always close browser contexts at the end of a lane, including on the failure
+path. A failed lane that leaks a browser is worse than a failed lane.
+
 Never `rm -rf` a variable path from a command line, guarded or not: the harness
 stops for approval on it even in bypass mode, which stalls unattended work, and
 an empty variable deletes from `/`. Delete with `find "$D" -delete` (it
@@ -273,6 +276,10 @@ it safe.
   sources, output paths, house style, the issue, and what to do when stuck
   (decide + document, don't stop). It owns its worktree, temp dirs and
   processes, and leaves nothing running.
+- **Check this machine's CPU and RAM while running parallel work.** Rapid work
+  on several projects in parallel sessions has left zombie processes, a RAM leak
+  and similar problems. Report anything off (what, which process, how much); a
+  separate session fixes the cause, so these get eliminated one by one.
 - **Separate reviewer, never self-review.** It runs the checks itself; verifies
   by mutation (break the code, the test must go red); checks scope, secrets,
   house rules and the PR body's numbers. Pass → exact evidence, which is the
