@@ -113,5 +113,14 @@ source $ZSH/oh-my-zsh.sh
 # Source custom aliases from dotfiles
 [[ -f "/home/spy4x/sync/code/dotfiles/aliases.sh" ]] && source "/home/spy4x/sync/code/dotfiles/aliases.sh"
 
+# Claude Code runs its Bash tool through zsh. With NOMATCH on, an unquoted glob
+# that matches nothing (grep --include=*.ts, a URL with ?) cancels that one
+# command silently while the rest of the line runs, and the agent reads the
+# empty output as "no matches". Claude sessions get bash's behaviour instead:
+# the pattern is passed through as written.
+if [[ -n $CLAUDECODE ]]; then
+  unsetopt NOMATCH
+fi
+
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
