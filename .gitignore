@@ -66,6 +66,11 @@ jspm_packages/
 .env.production.local
 .env.caldav
 
+# Every plaintext the env:* tasks can write; the age64 copies and examples stay tracked
+.env*
+!.env*.age
+!.env*.example
+
 # age64 private key for the committed *.env.age files (deno task env:*)
 .age/
 
