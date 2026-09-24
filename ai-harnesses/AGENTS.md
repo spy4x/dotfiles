@@ -151,6 +151,18 @@ removes the directory too), or `rm -rf` a literal path. Each agent keeps its
 scratch files in its own `mktemp -d`, never in a directory another agent shares.
 Never `find /`; search the directory that can hold the answer.
 
+**Cap anything that spawns processes** (tests with fake binaries, fan-out
+scripts, a lane's test run) so a runaway stops at the cap. Once cost: a fake
+`rsync` on `PATH` called `rsync` and found itself; 4,900 processes, 73 GB of RAM
+and a crashed game within minutes.
+
+```bash
+systemd-run --user --scope --quiet -p TasksMax=500 -p MemoryMax=8G timeout 120 <cmd>
+```
+
+Never `ulimit -u`: it counts every thread the user owns (over 3,000 here), so
+the first fork fails. Containers: `--pids-limit=500 --memory=8g`.
+
 **Sweep before reporting done:** `~/sync/code/dotfiles/tools/sweep-orphans.sh`.
 Empty output = clean. Read the output before killing — a sibling session's work
 can show up. It misses Docker and `systemd-run --scope` (own cgroup): clean
@@ -234,6 +246,11 @@ D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D <check co
 Never assert a path under `$HOME`; resolve through the tool
 (`import.meta.resolve`) or injected config. A test that can silently skip when
 its dependency is missing will — fail loudly.
+
+A fake binary prepended to `PATH` never calls the real tool by name: resolve
+its absolute path before changing `PATH` and pass it in an env var. Add a
+recursion guard too: the fake sets a depth variable and exits non-zero when it
+sees one already set.
 
 # Memory
 
