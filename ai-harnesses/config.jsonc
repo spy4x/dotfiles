@@ -7,7 +7,9 @@
       "home": "$CLAUDE_CONFIG_DIR|~/.claude",
       "bin": "claude",
       "merge": ["settings.json"],
-      "tiers": { "cheap": "haiku", "standard": "sonnet", "strong": "opus", "strongest": "fable" }
+      // `strongest` is `fable` while Fable is the best model. Fable 5.1 is paused: Opus 5.5
+      // matches it, faster and cheaper. Set it back to `fable` when the owner re-enables it.
+      "tiers": { "cheap": "haiku", "standard": "sonnet", "strong": "opus", "strongest": "opus" }
     },
     // No tiers: every agent runs on the default model from opencode.json.
     "opencode": {

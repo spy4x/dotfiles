@@ -262,10 +262,11 @@ lead's tier, always the most expensive. Search/inventory → `haiku`.
 `implementer` → `sonnet`; `opus` only when done can't be stated in checkable
 terms (then don't delegate). Architecture and final verdicts stay with the lead.
 Reviewer tier follows the diff: docs/config/dotfiles/deletions → `sonnet`;
-production code → `opus`; auth, crypto, SSRF, money → `fable`. `effort: high`
-for `opus` and `fable` only. A weak reviewer rubber-stamps a weak author: never
-tier down a diff that ships. Fresh subagents over forks (a fork copies the whole
-conversation).
+production code → `opus`; auth, crypto, SSRF, money → `opus` too. `fable` is
+paused: Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use it nowhere
+until I re-enable it. `effort: high` for `opus` and `fable` only. A weak
+reviewer rubber-stamps a weak author: never tier down a diff that ships. Fresh
+subagents over forks (a fork copies the whole conversation).
 
 # Language style
 
