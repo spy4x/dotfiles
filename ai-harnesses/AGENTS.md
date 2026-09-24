@@ -21,12 +21,25 @@ sensible default exists, take it and record it in the PR body. Ask only when:
 
 - the choice is mine and the options mean materially different work (SQLite
   versus Postgres, not naming);
-- a revert can't undo it: destroying data, rotating a secret, publishing to a
-  registry or customers, deleting the only copy;
+- a revert can't undo it: destroying data, rotating a secret, messaging
+  customers, deleting the only copy;
 - the reviewer gate fails twice on the same cause — the brief is wrong.
 
 A question costs my attention; a wrong reversible guess costs one revert. Prefer
 the revert.
+
+Releases are not questions. I build in public and ship often: once the gate is
+green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
+and say so in the report.
+
+**Picking work yourself** (a wave, "work through the backlog"): only open
+issues labelled `ready`. I apply that label; never add it yourself. Stuck on a
+decision → comment on the issue in the Issues and reports shape (option A and
+B, one consequence each, your pick), add `needs-decision`, and move on to other
+`ready` work. I answer in a comment and remove the label. We share one GitHub
+account, so start every comment you post with `<!-- agent -->`: a comment
+without it is mine. A usage limit is not a stop: Claude Code waits for the
+reset and continues by itself.
 
 New work with no issue written down (a feature, bug, task or idea) → the
 `start-task` skill: one batch of questions up front, about intent and the
@@ -237,6 +250,10 @@ it safe.
 - **One session = one issue/PR.** No long-lived coordinator grinding a backlog:
   context rots and overclaims pile up. Backlog lives in GitHub issues. A wave is
   one session's subagents, not a session per repo running for days.
+- **A wave's final report ends with a handoff:** the project's position (the
+  plan, how much is done, what remains before the next milestone), what the next
+  wave must not touch (open PRs, issues waiting on me), and the next wave's
+  prompt, ready to paste, with the position inside it.
 - **Waves must be file-disjoint** — that, not size, is the constraint. Start
   with 3, scale by disjoint directories. One worktree per agent, branch
   `<type>/<slug>` from latest `main`; two agents in one worktree = corruption. Parallelise reads,
@@ -253,7 +270,11 @@ it safe.
   house rules and the PR body's numbers. Pass → exact evidence, which is the
   merge authority. Fail → `needs-fix` with the cause in one line on top, in the
   Issues and reports shape. Expect ~1 in 4 rejected; send back with required
-  changes — the reviewer never fixes.
+  changes — the reviewer never fixes. Re-review after `needs-fix` → continue the
+  same reviewer (`SendMessage`) with the fix: it already read the code, and its
+  context is cached, so a second round costs a fraction of a fresh one. It
+  still reruns the checks. A new PR, or a rework that rewrote most of the diff →
+  a fresh reviewer.
 - **Verify confident claims.** The best catches are overclaims ("caught 3
   bugs" → 1, "one cast" → 8, "check passes" → it doesn't). Demand reproduction.
 
