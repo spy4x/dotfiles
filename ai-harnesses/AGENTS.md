@@ -33,9 +33,8 @@ green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
 and say so in the report.
 
 **Picking work yourself** (a wave, "work through the backlog"): only open
-issues labelled `ready`. I apply that label; never add it yourself. Order:
-`priority:1..4` label, then milestone, then lowest number; skip an issue whose
-"blocked by" issue is still open. Stuck on a decision → comment on the issue in
+issues labelled `ready`. I apply that label; never add it yourself. Stuck on a
+decision → comment on the issue in
 the Issues and reports shape (option A and B, one consequence each, your pick),
 add `needs-decision`, and move on to other `ready` work. I answer in a comment
 and remove the label. We share one GitHub account, so start every comment you
