@@ -124,6 +124,30 @@ A plain `systemctl restart systemd-zram-setup@zram0.service` fails here with "De
 busy" and leaves the machine without swap. `zramctl --reset` removes the device node as well, so
 `hot_add` recreates it (it prints the new device number, `0`) before the service can set the size.
 
+**Tasks per app.** An agent's test once put a fake `rsync` on `PATH` that found and ran itself.
+It grew to 4,900 processes, about 40,600 tasks and 77 GB of RAM inside the Claude app, and a game
+crashed. Nothing stopped it, because systemd lets each app create up to 111,895 tasks by default.
+`system/etc/systemd/user.conf.d/50-tasks-max.conf` lowers that default to 16,384 tasks for each
+app, service and scope. A task is a process or a thread. Each app keeps its own budget, so a runaway
+in the Claude app cannot use up the game's or the browser's. When this was written, the Claude app
+held about 900 tasks and no other app more than 900. The agent rules still cap each command at 500
+tasks; this file is the backstop for a command that skips that cap. When the Claude app reaches the
+limit, every session in it fails to start new processes until the runaway ends, and the kernel log
+says `fork rejected by pids controller`.
+
+```bash
+sudo mkdir -p /etc/systemd/user.conf.d
+sudo cp system/etc/systemd/user.conf.d/50-tasks-max.conf /etc/systemd/user.conf.d/50-tasks-max.conf
+systemctl --user daemon-reexec
+for u in $(systemctl --user list-units --plain --no-legend 'app-com.anthropic.Claude-*.scope' | awk '{print $1}'); do
+  systemctl --user set-property --runtime "$u" TasksMax=16384
+done
+systemctl --user show -p DefaultTasksMax
+systemctl --user show 'app-com.anthropic.Claude-*.scope' -p Id -p TasksMax
+```
+
+The loop caps the running Claude app now; other apps get the new default when they next start.
+
 **Syncthing and worktrees.** Agent worktrees are created under `~/sync/code/worktrees/`, inside a
 Syncthing folder. Syncthing indexes and watches everything it does not ignore, so without an
 ignore line it holds an inotify watch per worktree directory and replicates build output to
