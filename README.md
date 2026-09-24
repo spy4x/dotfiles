@@ -113,9 +113,16 @@ actually swapped, compressed, so a large size costs nothing while idle.
 ```bash
 sudo cp system/etc/systemd/zram-generator.conf /etc/systemd/zram-generator.conf
 sudo systemctl daemon-reload
-sudo systemctl restart systemd-zram-setup@zram0.service
+sudo swapoff /dev/zram0
+sudo zramctl --reset /dev/zram0
+sudo cat /sys/class/zram-control/hot_add
+sudo systemctl start systemd-zram-setup@zram0.service dev-zram0.swap
 zramctl
 ```
+
+A plain `systemctl restart systemd-zram-setup@zram0.service` fails here with "Device or resource
+busy" and leaves the machine without swap. `zramctl --reset` removes the device node as well, so
+`hot_add` recreates it (it prints the new device number, `0`) before the service can set the size.
 
 **Syncthing and worktrees.** Agent worktrees are created under `~/sync/code/worktrees/`, inside a
 Syncthing folder. Syncthing indexes and watches everything it does not ignore, so without an
