@@ -174,6 +174,18 @@ Global rules, skills, agents and settings for Claude Code, OpenCode and DSH live
 `ai-harnesses/`. `deno task ai` copies them into every installed harness in its own format. See
 [ai-harnesses/README.md](ai-harnesses/README.md).
 
+### Encrypted env file
+
+`ai-harnesses/.env` (the NTFY settings) is gitignored; its encrypted copy
+`ai-harnesses/.env.age` is committed in age64 format, one encrypted value per line. The private key
+is `.age/key.txt`, gitignored and synced like the rest of `~/sync/code`; back it up, because without
+it the committed file cannot be decrypted. A worktree finds the main checkout's key by itself.
+
+```bash
+deno task env:decrypt   # every .env*.age in the repo -> its plaintext sibling
+deno task env:encrypt   # every .env* in the repo -> its .env*.age sibling
+```
+
 ### Tmux plugins
 
 ```bash
