@@ -114,6 +114,12 @@ If leaked: **rotate first**, stop further sends, cascade dependents, edit
 (only cosmetic — alerts/RSS/archives already delivered), notify, log to
 `~/sync/code/ai-memory/incidents/rotation-log.md` (event only, never the value). Edit-after-ship = theater.
 
+# Sudo
+
+Every agent may run `sudo` on this machine. It is passwordless and unrestricted,
+so use `sudo -n` (it fails instead of hanging on a prompt) and only for what the
+task needs. The final report lists every `sudo` command you ran and why.
+
 # Fail-open
 
 Non-critical external calls (monitoring/reporting/analytics) → `|| true`.
