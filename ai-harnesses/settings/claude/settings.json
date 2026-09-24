@@ -5,7 +5,9 @@
     "pr": "",
     "sessionUrl": false
   },
+  "autoCompactWindow": 400000,
   "autoContinueAtUsageLimit": true,
+  "bashOutputMaxChars": 12000,
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [
