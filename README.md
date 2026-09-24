@@ -53,6 +53,16 @@ deno task install-all
 Repo holds dotfiles, home uses symlinks. AI harness config is copied, not linked — see
 [ai-harnesses/README.md](ai-harnesses/README.md).
 
+`ai-harnesses/.env` (the NTFY settings) is gitignored; its encrypted copy
+`ai-harnesses/.env.age` is committed in age64 format, one encrypted value per line. The private key
+is `.age/key.txt`, gitignored and synced like the rest of `~/sync/code`; back it up, because without
+it the committed file cannot be decrypted. A worktree finds the main checkout's key by itself.
+
+```bash
+deno task env:decrypt   # every .env*.age in the repo -> its plaintext sibling
+deno task env:encrypt   # every .env* in the repo -> its .env*.age sibling
+```
+
 ```bash
 # tmux
 mv ~/.tmux.conf ~/.tmux.conf.bak-$(date +%Y%m%d%H%M%S)

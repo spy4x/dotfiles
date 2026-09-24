@@ -66,6 +66,9 @@ jspm_packages/
 .env.production.local
 .env.caldav
 
+# age64 private key for the committed *.env.age files (deno task env:*)
+.age/
+
 # CalDAV MCP credentials (exposed to git in the past — DO NOT TRACK)
 caldav-creds.env
 
