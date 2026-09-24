@@ -5,6 +5,7 @@
     "pr": "",
     "sessionUrl": false
   },
+  "autoContinueAtUsageLimit": true,
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [
