@@ -14,6 +14,7 @@ Verification Loop (architect orchestrates this):
 Implementation -> Peer Review -> QA -> Security -> Architect sign-off.
 
 Task sequencing:
+
 - Sequential when tasks have hard dependencies (DB schema -> backend handlers -> frontend).
 - Parallel when independent (docs + tests + security review of the same change).
 

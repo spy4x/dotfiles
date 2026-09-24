@@ -12,6 +12,7 @@ Give you a concrete, executable playbook for launching and growing an open-core 
 ## When to use me
 
 Load when:
+
 - Picking license for a new project (AGPLv3 vs MIT vs BSL vs source-available)
 - Designing pricing tiers (free + pro + team math)
 - Writing the GitHub README that converts cold traffic
@@ -31,19 +32,20 @@ Do NOT load for: domain purchasing, payment processor setup, hosting basics, dep
 
 **Validated at indie scale** (solo or 2-5 people, $1K-$5M ARR):
 
-| Product | Founder | Stars | License | ARR | Wedge |
-|---|---|---|---|---|---|
-| Plausible Analytics | 2 co-founders | 20K+ | AGPLv3 | $1M+ self-funded | Privacy-first GA alternative |
-| Dub.co | Steven Tey, solo | 24K | AGPLv3 + `/ee` | $5M+ | Custom domains on free tier |
-| Cal.com | Peer Richelsen | 48K | AGPLv3 | $5M+ | Open Calendly alt |
-| Papermark | Marc Lou, solo | 9K | AGPLv3 | $20K+ MRR | #1 PH day + Twitter build-in-public |
-| Infisical | Vlad Matsiiako | 27K | MIT→AGPL | $5M+ | Cash-flow positive pre-Series A |
-| Logto | Silverhand, indie | 14.5K | MPL-2.0 + proprietary cloud | profitable | Deno-compatible auth |
-| Coolify | Andras Bacsai, solo | 30K | Apache 2.0 | 3,641 cloud subs | Self-hostable Heroku |
+| Product             | Founder             | Stars | License                     | ARR              | Wedge                               |
+| ------------------- | ------------------- | ----- | --------------------------- | ---------------- | ----------------------------------- |
+| Plausible Analytics | 2 co-founders       | 20K+  | AGPLv3                      | $1M+ self-funded | Privacy-first GA alternative        |
+| Dub.co              | Steven Tey, solo    | 24K   | AGPLv3 + `/ee`              | $5M+             | Custom domains on free tier         |
+| Cal.com             | Peer Richelsen      | 48K   | AGPLv3                      | $5M+             | Open Calendly alt                   |
+| Papermark           | Marc Lou, solo      | 9K    | AGPLv3                      | $20K+ MRR        | #1 PH day + Twitter build-in-public |
+| Infisical           | Vlad Matsiiako      | 27K   | MIT→AGPL                    | $5M+             | Cash-flow positive pre-Series A     |
+| Logto               | Silverhand, indie   | 14.5K | MPL-2.0 + proprietary cloud | profitable       | Deno-compatible auth                |
+| Coolify             | Andras Bacsai, solo | 30K   | Apache 2.0                  | 3,641 cloud subs | Self-hostable Heroku                |
 
 All use the same recipe: OSS core + commercial cloud + GitHub-first distribution + build-in-public.
 
 **Why this works for you specifically:**
+
 - You're shipping 5-10 microSaaS in 18 months. Open-core compounds across products (same marketing playbook each time).
 - YouTube dev tutorial + Twitter build-in-public = natural content for Deno ecosystem (rare stack = built-in differentiation).
 - Self-host first + cloud optional = respects infra-savvy devs (your peers).
@@ -55,12 +57,14 @@ All use the same recipe: OSS core + commercial cloud + GitHub-first distribution
 **Use AGPLv3 for the core. Don't gate features.**
 
 Why AGPL, not MIT/Apache:
+
 - MIT lets AWS/GCP fork your code and host as competitor. AGPL forces them to either open-source changes OR buy commercial license.
 - Plausible moved MIT→AGPL at $6.4K MRR. Same move as Dub, Papermark, Infisical, Cal.com.
 - Your cloud is the moat, not the code. AGPL protects cloud without limiting self-host.
 - Switching licenses later is painful (not retroactively enforceable). Start AGPL.
 
 Structure:
+
 ```
 Core code:           AGPLv3 (self-host forever, no restrictions)
 Hosted cloud:        Same code, your infra, your branding (allowed under AGPL)
@@ -69,6 +73,7 @@ JSR/npm libs:        MIT or Apache 2.0 (don't gatekeep reusable utilities)
 ```
 
 Alternative licenses if AGPL doesn't fit:
+
 - **BSL (Business Source License)**: source-available, no AGPL contagion. Saleor uses this. Risk: less contribution.
 - **Elastic License v2 / SSPL**: source-available, restricts hosted resale. Infisical evaluated these.
 - **MPL-2.0**: file-level copyleft, weaker than AGPL. Logto uses this for self-host.
@@ -87,6 +92,7 @@ Team:    $29-49/mo     — teams, custom domain, priority support, RBAC
 ```
 
 **Critical pricing rules:**
+
 - Annual toggle with 16-25% discount visible (commit discount)
 - 30-day free trial, NO credit card upfront → 33.5% trial-to-paid (Plausible's actual rate)
 - No "Contact us" wall on Team tier — show the price
@@ -94,6 +100,7 @@ Team:    $29-49/mo     — teams, custom domain, priority support, RBAC
 - Forever-free tier alternative: 2-5% conversion rate, much higher signup volume (Cal.com/Logto model)
 
 **$1K MRR math**:
+
 - 100 paid × $10/mo = $1K MRR → need 300-500 trial signups at 33.5% conversion
 - OR 2K-5K free-forever signups at 2-5% upgrade conversion
 - Self-host installs outnumber cloud 10-100× in Y1
@@ -109,37 +116,38 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 
 **Plausible's actual top 10 referrers** (Apr-Jul 2020, $64→$2,750 MRR):
 
-| Rank | Source | Visitors |
-|---|---|---|
-| 1 | Hacker News | 43.6K |
-| 2 | Twitter | 10K |
-| 3 | Facebook | 6.4K |
-| 4 | Google (SEO) | 6.3K |
-| 5 | IndieHackers | 4.8K |
-| 6 | GitHub | 2.7K |
-| 7 | Reddit | 2.2K |
-| 8 | Dev.to | 2.2K |
+| Rank | Source       | Visitors |
+| ---- | ------------ | -------- |
+| 1    | Hacker News  | 43.6K    |
+| 2    | Twitter      | 10K      |
+| 3    | Facebook     | 6.4K     |
+| 4    | Google (SEO) | 6.3K     |
+| 5    | IndieHackers | 4.8K     |
+| 6    | GitHub       | 2.7K     |
+| 7    | Reddit       | 2.2K     |
+| 8    | Dev.to       | 2.2K     |
 
 **ProductHunt is NOT in top 10** = launch-day spike, not a growth channel. Don't optimize for it.
 
 **Your channel priority** (solo, no audience, 6mo runway):
 
-| Channel | Time | Cost | When | ROI |
-|---|---|---|---|---|
-| GitHub README | 1 day | $0 | Day 1 | Always-on landing. Highest. |
-| IndieHackers profile + posts | 30 min/day | $0 | Day 1 | Plausible's #1 source of first 100 users |
-| Twitter/X build-in-public | 30 min/day | $0 | Day 1 | Marc Lou's primary channel |
-| Show HN | 1 post | $0 | Week 2 | 1-3K visitors if it hits |
-| r/selfhosted post | 1 post | $0 | Week 2-3 | 1M subs, loves self-hostable alts |
-| ProductHunt | 1 day | $0 | Day 14 | Badge + backlink. Don't expect revenue. |
-| awesome-selfhosted PR | 30 min | $0 | Week 3 | THE list for self-hostable |
-| AlternativeTo claim | 30 min | $0 | Week 3 | SEO + comparison intent |
-| Coolify catalog PR | 30 min | $0 | Week 3 | 1-click deploy for Coolify users |
-| Blog SEO content | 1 post/wk | $0 | Week 4+ | "[Open-source] alt to X" ranks forever |
-| Awesome-* niche lists | 30 min each | $0 | Week 4 | Stacks of discovery |
-| Customer interviews | 1 hr each | $0 | Week 3+ | Word-of-mouth + testimonials |
+| Channel                      | Time        | Cost | When     | ROI                                      |
+| ---------------------------- | ----------- | ---- | -------- | ---------------------------------------- |
+| GitHub README                | 1 day       | $0   | Day 1    | Always-on landing. Highest.              |
+| IndieHackers profile + posts | 30 min/day  | $0   | Day 1    | Plausible's #1 source of first 100 users |
+| Twitter/X build-in-public    | 30 min/day  | $0   | Day 1    | Marc Lou's primary channel               |
+| Show HN                      | 1 post      | $0   | Week 2   | 1-3K visitors if it hits                 |
+| r/selfhosted post            | 1 post      | $0   | Week 2-3 | 1M subs, loves self-hostable alts        |
+| ProductHunt                  | 1 day       | $0   | Day 14   | Badge + backlink. Don't expect revenue.  |
+| awesome-selfhosted PR        | 30 min      | $0   | Week 3   | THE list for self-hostable               |
+| AlternativeTo claim          | 30 min      | $0   | Week 3   | SEO + comparison intent                  |
+| Coolify catalog PR           | 30 min      | $0   | Week 3   | 1-click deploy for Coolify users         |
+| Blog SEO content             | 1 post/wk   | $0   | Week 4+  | "[Open-source] alt to X" ranks forever   |
+| Awesome-* niche lists        | 30 min each | $0   | Week 4   | Stacks of discovery                      |
+| Customer interviews          | 1 hr each   | $0   | Week 3+  | Word-of-mouth + testimonials             |
 
 **Skip for Y1** (zero ROI at $0-1K MRR):
+
 - Paid ads (Meta, Google, LinkedIn)
 - YouTube tutorials (high effort, slow payoff)
 - Podcast guest appearances (Y2+)
@@ -154,24 +162,25 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 
 ## 5. Distribution: where the code lives
 
-| Channel | Cost | Setup | Purpose |
-|---|---|---|---|
-| GitHub repo | $0 | Day 1 | Primary. Everything links here. |
-| GHCR / Docker Hub | $0 | Week 1 | `docker run yourorg/product` one-liner |
-| JSR package (if has public API) | $0 | Week 2 | TS-first registry, npm-compatible. Free backlinks per package. |
-| awesome-selfhosted | $0 PR | Week 3 | THE discovery channel for self-hostable |
-| AlternativeTo | $0 | Week 3 | SEO + comparison intent |
-| Slant | $0 | Week 3 | Long-tail comparison SEO |
-| Coolify catalog | $0 PR | Week 3 | 30K+ Coolify users get 1-click deploy |
-| Elestio | $0 PR | Week 3 | Managed deploys |
-| YunoHost | $0 PR | Week 3 | Self-host community |
-| Cloudron | $0 PR | Week 3 | Self-host community |
-| awesome-`<niche>` lists | $0 | Week 4 | Niche discovery (e.g., awesome-react, awesome-selfhosted) |
-| Backblaze B2 / S3 | $0-5/mo | Week 2 | Static binaries, demo images |
+| Channel                         | Cost    | Setup  | Purpose                                                        |
+| ------------------------------- | ------- | ------ | -------------------------------------------------------------- |
+| GitHub repo                     | $0      | Day 1  | Primary. Everything links here.                                |
+| GHCR / Docker Hub               | $0      | Week 1 | `docker run yourorg/product` one-liner                         |
+| JSR package (if has public API) | $0      | Week 2 | TS-first registry, npm-compatible. Free backlinks per package. |
+| awesome-selfhosted              | $0 PR   | Week 3 | THE discovery channel for self-hostable                        |
+| AlternativeTo                   | $0      | Week 3 | SEO + comparison intent                                        |
+| Slant                           | $0      | Week 3 | Long-tail comparison SEO                                       |
+| Coolify catalog                 | $0 PR   | Week 3 | 30K+ Coolify users get 1-click deploy                          |
+| Elestio                         | $0 PR   | Week 3 | Managed deploys                                                |
+| YunoHost                        | $0 PR   | Week 3 | Self-host community                                            |
+| Cloudron                        | $0 PR   | Week 3 | Self-host community                                            |
+| awesome-`<niche>` lists         | $0      | Week 4 | Niche discovery (e.g., awesome-react, awesome-selfhosted)      |
+| Backblaze B2 / S3               | $0-5/mo | Week 2 | Static binaries, demo images                                   |
 
 **Cloud SaaS hosting**: use Deno Deploy free tier ($0) for first 6-12 months. 1M req/mo + 20GB egress + Deno KV. Self-host demo on Hetzner BM. Don't over-engineer.
 
 **Your existing infra pattern** (per AGENTS.md Operating context):
+
 - Docker Compose per project
 - Shared Traefik with auto-discovery labels
 - Syncthing for file sync, restic for backups
@@ -209,10 +218,13 @@ The single most important page. Most devs land here first from Google/GitHub sea
 ## Quick Start (self-host, 5 min)
 
 \`\`\`bash
+
 # Option 1: Docker one-liner
+
 docker run -d --name product -p 8080:8080 yourorg/product
 
 # Option 2: docker compose
+
 curl -O https://raw.githubusercontent.com/yourorg/product/main/docker-compose.yml
 docker compose up -d
 \`\`\`
@@ -242,6 +254,7 @@ Commercial license available for hosted resale.
 ```
 
 **Why each section matters:**
+
 - **Hero screenshot/GIF**: bounce in <5s without one
 - **"Open-source alternative to X"**: SEO goldmine — exact phrase people search
 - **One-liner install**: self-hosters bounce if not 5-min simple
@@ -255,17 +268,20 @@ Commercial license available for hosted resale.
 Plausible's founder posted every milestone on IndieHackers for 2 years. First 100 users came from here.
 
 **Posting cadence:**
+
 - **Day 1**: "Building [Product] in public" intro post
 - **Every Friday**: milestone update (users, MRR, what shipped)
 - **Every interesting problem**: post-mortem / decision post (e.g., "Why I switched from MIT to AGPL")
 - **Daily**: engage on other IH threads, 30 min = ~200 followers/month
 
 **What NOT to do:**
+
 - Don't shill your product in unrelated threads
 - Don't fake your numbers (community checks Stripe dashboards)
 - Don't post only when launching — bury the launch in normal activity first
 
 **Format that works:**
+
 ```
 Week 3 update: hit $320 MRR 🎉
 
@@ -291,12 +307,14 @@ Link: [product URL]
 ## 8. Show HN format
 
 HN's official Show HN guidelines (news.ycombinator.com/showhn.html):
+
 - "On topic: things people can run on their computers or hold in their hands"
 - "The project should be non-trivial. Don't post quickly-generated one-offs"
 - "Please make it easy for users to try your thing out, ideally without barriers such as signups or emails"
 - "A Show HN needn't be complicated or look slick. The community is comfortable with work that's at an early stage"
 
 **Format that converts:**
+
 ```
 Show HN: ProductName – open-source [Competitor] alternative (self-host + cloud)
 
@@ -324,6 +342,7 @@ Would love feedback on [specific question].
 Plausible's Aug 2020 PH launch: 1,000 visitors + 15 trial signups that day, fewer than 20/day after. PH = spike of hope followed by flat line.
 
 **Use PH for**:
+
 - Social proof badge (#1 of the day)
 - Backlink to domain
 - Reddit users who look up products there
@@ -333,6 +352,7 @@ Plausible's Aug 2020 PH launch: 1,000 visitors + 15 trial signups that day, fewe
 **Hunter outreach**: PH lets you pick a "hunter" who submits your product. A hunter with 5K+ followers adds momentum. Top hunters 2026: Chris Messina, Ben Tossell, Kevin William David, Hiten Shah. DM 2 weeks before with 1-line pitch + demo link.
 
 **PH launch day checklist**:
+
 - Online all day responding to comments
 - Asset prep done 1 week ahead: tagline, description, gallery images, maker bio
 - Coordinate with hunter + co-launchers
@@ -350,6 +370,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer quotes
 
 **Your authentic angle** (per your existing frames):
+
 - "Show, don't tell" principle = perfect for screenshot-driven tweets
 - Sovereign + Evaluator frames = confident, terse, no fluff tweets
 - 15 years experience = technical authority most indie devs lack
@@ -417,6 +438,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - [ ] Start affiliate program (20% lifetime via Lemon Squeezy or Stripe)
 
 **End of month 1 target**:
+
 - 100+ GitHub stars
 - 100+ self-host installs
 - 10-50 free cloud signups
@@ -427,26 +449,28 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 
 ## 12. Y1 cost analysis
 
-| Tool | Cost | Why |
-|---|---|---|
-| Domain | $10/yr | Cloudflare Registrar (at-cost) |
-| Cloudflare proxy + DNS + Email Routing | $0 | SSL + email forwarding |
-| Deno Deploy free | $0 | Cloud SaaS hosting for first 6-12 months |
-| Resend transactional email | $0 (3K/mo) | Signup confirmations + receipts |
-| Buttondown newsletter | $0 (100 subs) | Newsletter |
-| Stripe | 2.9% + 30¢ | Payments (US) |
-| Lemon Squeezy (alt) | 5% + 50¢ | Handles EU VAT, merchant of record |
-| Plausible / Umami self-hosted | $0 | Analytics (already on Hetzner) |
-| GitHub repo | $0 | Public repos free |
-| Logo + favicon | $30 one-time | Fiverr |
-| **Total Y1** | **$50-100** | First 6 months |
+| Tool                                   | Cost          | Why                                      |
+| -------------------------------------- | ------------- | ---------------------------------------- |
+| Domain                                 | $10/yr        | Cloudflare Registrar (at-cost)           |
+| Cloudflare proxy + DNS + Email Routing | $0            | SSL + email forwarding                   |
+| Deno Deploy free                       | $0            | Cloud SaaS hosting for first 6-12 months |
+| Resend transactional email             | $0 (3K/mo)    | Signup confirmations + receipts          |
+| Buttondown newsletter                  | $0 (100 subs) | Newsletter                               |
+| Stripe                                 | 2.9% + 30¢    | Payments (US)                            |
+| Lemon Squeezy (alt)                    | 5% + 50¢      | Handles EU VAT, merchant of record       |
+| Plausible / Umami self-hosted          | $0            | Analytics (already on Hetzner)           |
+| GitHub repo                            | $0            | Public repos free                        |
+| Logo + favicon                         | $30 one-time  | Fiverr                                   |
+| **Total Y1**                           | **$50-100**   | First 6 months                           |
 
 **Upgrade at $1K MRR**:
+
 - TweetHunter / Hypefury: $49/mo
 - Cal.com Pro: $12/mo (for sales calls)
 - ConvertKit: $9/mo (newsletter automation)
 
 **Skip**:
+
 - HubSpot/Salesforce (overkill — spreadsheet + Stripe)
 - Twitter Blue / X Premium ($8/mo, algorithm not pay-to-win)
 - LinkedIn Premium (wrong audience)
@@ -457,20 +481,20 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 
 ## 13. Y1 metrics targets (first product)
 
-| Milestone | Threshold | Time |
-|---|---|---|
-| GitHub stars | 100 | Month 1 |
-| GitHub stars | 500 | Month 3 |
-| GitHub stars | 1,000 | Month 6 |
-| Self-host installs (Docker pulls) | 100 | Month 2 |
-| Self-host installs | 1,000 | Month 6 |
-| Free cloud signups | 50 | Month 2 |
-| Free cloud signups | 500 | Month 6 |
-| Paid customers | 10 | Month 3 |
-| Paid customers | 50-100 | Month 6 |
-| MRR | $100-500 | Month 3 |
-| MRR | $1,000-1,500 | Month 6 (if product hits) |
-| MRR | $2,000-3,000 | Month 12 (if hit + persist) |
+| Milestone                         | Threshold    | Time                        |
+| --------------------------------- | ------------ | --------------------------- |
+| GitHub stars                      | 100          | Month 1                     |
+| GitHub stars                      | 500          | Month 3                     |
+| GitHub stars                      | 1,000        | Month 6                     |
+| Self-host installs (Docker pulls) | 100          | Month 2                     |
+| Self-host installs                | 1,000        | Month 6                     |
+| Free cloud signups                | 50           | Month 2                     |
+| Free cloud signups                | 500          | Month 6                     |
+| Paid customers                    | 10           | Month 3                     |
+| Paid customers                    | 50-100       | Month 6                     |
+| MRR                               | $100-500     | Month 3                     |
+| MRR                               | $1,000-1,500 | Month 6 (if product hits)   |
+| MRR                               | $2,000-3,000 | Month 12 (if hit + persist) |
 
 **Kill criteria** (per Levels's 8% rule): if month 6 doesn't hit 500 stars + 50 self-hosts + $100 MRR → kill it, start product 2 with lessons.
 
@@ -479,26 +503,31 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 ## 14. Conversion math (realistic)
 
 **GitHub stars → "traction" thresholds:**
+
 - 1K stars = product works, has users, decent README
 - 5K stars = strong indie traction
 - 10K stars = category-defining for your niche
 - 24K+ stars = exceptional (Dub-level)
 
 **Trial → paid conversion:**
+
 - 25-35% (top tier): Plausible hit 33.5% with no-CC 30-day trial
 - 15-25% (typical indie open-core)
 - 5-15% (cold traffic)
 
 **Free-tier upgrade (forever-free model like Cal.com/Logto):**
+
 - 2-5% conversion
 - Volume 10x higher than trial
 
 **Self-host → cloud correlation:**
+
 - Self-host outnumbers cloud 10-100× early
 - 1-3% of self-host users convert to paid cloud within 12 months
 - Plan: 1,000 self-host installs → 10-30 cloud conversions/yr = $1-3K MRR
 
 **$1K MRR math**:
+
 - 100 paid × $10/mo (at 33.5% trial conversion: 300-500 trial signups)
 - OR 2K-5K free-forever signups (at 2-5% upgrade)
 - OR 1K self-host installs → 10-30 cloud conversions/yr
@@ -508,6 +537,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 ## 15. Deno ecosystem playbook
 
 **Where Deno devs hang out:**
+
 - Discord: discord.gg/deno (official, active)
 - JSR Discord: discord.gg/hMqvhAn9xG
 - Reddit: r/Deno (small but growing)
@@ -518,22 +548,25 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 **Tactic**: engage in Deno Discord 30 min/day for 2 weeks pre-launch. Become known. Then announce.
 
 **Deno ecosystem references for open-core model:**
+
 - **Logto** (14.5K stars, MPL-2.0 + proprietary cloud, $24/mo Pro) — closest peer
 - **Fresh** — official Deno framework, OSS + Deno Deploy free tier
 - **Deno KV-based products** — positioning opportunity, "Built on Deno KV" is a 2026 feature
 
 **JSR as distribution channel:**
+
 - Publish free utilities to jsr.io (npm-compatible, scored by activity)
 - Auto-generated docs from TSDoc
 - Every package = backlink to you
 - Examples: Sindre Sorhus, Anthony Fu, Luca Casonato patterns
 
 **Deno Deploy pricing for cloud SaaS:**
-| Plan | Price | Requests/mo | Egress |
-|---|---|---|---|
-| Free | $0 | 1M | 20GB |
-| Pro | $20/mo | 5M (+$2/M) | 200GB |
-| Builder | $200/mo | 25M | 2TB |
+
+| Plan    | Price   | Requests/mo | Egress |
+| ------- | ------- | ----------- | ------ |
+| Free    | $0      | 1M          | 20GB   |
+| Pro     | $20/mo  | 5M (+$2/M)  | 200GB  |
+| Builder | $200/mo | 25M         | 2TB    |
 
 For your $1-2K MRR SaaS at <1K paying users: Free plan covers first 6-12 months. Don't over-engineer.
 
@@ -598,6 +631,7 @@ References: plausible.io/pricing, dub.co/pricing, logto.io/pricing, cal.com/pric
 ## 19. Email capture + onboarding flow
 
 For cloud version:
+
 1. **Landing CTA**: "Get started free" → signup form (email + password, OR magic link)
 2. **Email verification**: single click, no friction
 3. **Onboarding wizard**: 3-5 steps max, ask only what's needed
@@ -626,6 +660,7 @@ Post 1 SEO-optimized blog post per week. Each targets "[competitor] alternative"
 **Week 9**: "Why we use AGPLv3 (and you should too)" (license decision post)
 
 **SEO rules**:
+
 - 1,500+ words per post
 - Title with primary keyword ("[Product] vs [Competitor]")
 - Comparison table (Google loves these)
@@ -642,6 +677,7 @@ Post 1 SEO-optimized blog post per week. Each targets "[competitor] alternative"
 **Why it works**: word-of-mouth is 20-30% of open-core growth. Affiliates convert better than ads because they have trusted audience.
 
 **Tiers**:
+
 - 20% lifetime for everyone
 - 30% for affiliates with >10 referrals (incentivize top performers)
 - Special program for newsletters + podcasts (custom rates)
@@ -652,18 +688,18 @@ Post 1 SEO-optimized blog post per week. Each targets "[competitor] alternative"
 
 ## 22. Quick reference: when stuck
 
-| Situation | Action |
-|---|---|
-| No idea what product to build | Solve your own problem first. Eat your own dogfood. |
-| Launched but no signups | Check IH + Twitter + Show HN rhythm. 1 post/week minimum on each. |
-| Show HN flopped | Normal. Most don't hit. Repost in 1 month with different angle. |
-| Free users, no paid conversion | Pricing too high, or free tier too generous. Test $9 vs $19. |
-| GitHub stars flat | Demo GIF missing or low quality. Rework README. |
-| Spinning on marketing instead of product | Marketing is 20% of time max. Product is 80%. |
-| Wanting to add features pre-launch | Don't. Ship. Plausible shipped with bugs. |
-| Comparing to GitLab/Sentry | Stop. They're $100M+ ARR. You're indie. Different game. |
-| Asking "should I do paid ads?" | No. Not until $1K MRR. |
-| Burned out from social media | Batch content creation (1 day/week), schedule the rest. |
+| Situation                                | Action                                                            |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| No idea what product to build            | Solve your own problem first. Eat your own dogfood.               |
+| Launched but no signups                  | Check IH + Twitter + Show HN rhythm. 1 post/week minimum on each. |
+| Show HN flopped                          | Normal. Most don't hit. Repost in 1 month with different angle.   |
+| Free users, no paid conversion           | Pricing too high, or free tier too generous. Test $9 vs $19.      |
+| GitHub stars flat                        | Demo GIF missing or low quality. Rework README.                   |
+| Spinning on marketing instead of product | Marketing is 20% of time max. Product is 80%.                     |
+| Wanting to add features pre-launch       | Don't. Ship. Plausible shipped with bugs.                         |
+| Comparing to GitLab/Sentry               | Stop. They're $100M+ ARR. You're indie. Different game.           |
+| Asking "should I do paid ads?"           | No. Not until $1K MRR.                                            |
+| Burned out from social media             | Batch content creation (1 day/week), schedule the rest.           |
 
 ---
 

@@ -23,7 +23,7 @@ Stack defaults:
 Cross-app sharing:
 
 - **libs/shared**: types, validators (ArkType schemas), RPC helpers, formatters, date/number utils. Shared with backend. Single source of truth.
-- **libs/* ownership**: no duplication across apps. If two apps need it, it belongs in `libs/`.
+- **`libs/*` ownership**: no duplication across apps. If two apps need it, it belongs in `libs/`.
 - **Money display**: format from int (cents) to localized string via `libs/shared/format`. Never let app code do `.toFixed(2)` directly.
 - **Enums**: import from `libs/shared` — same numeric values as backend.
 

@@ -19,7 +19,12 @@
     "infra",
     "*.lock",
     // Golden files are compared byte for byte; the formatter must not touch them.
-    "ai-harnesses/fixtures/golden"
+    "ai-harnesses/fixtures/golden",
+    // Apps rewrite these on every save; formatting them only churns.
+    ".config/nvim/lazy-lock.json",
+    ".config/nvim/lazyvim.json",
+    ".config/obs-studio/basic",
+    ".config/obs-studio/plugin_manager"
   ],
   "lint": {
     "rules": {
