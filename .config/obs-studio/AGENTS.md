@@ -21,9 +21,11 @@ Enc: AV1 VAAPI (Mesa 26.x ✓), HEVC VAAPI ✗, x264 burns CPU.
 Profile `YouTube-Coding`. F9 record, F10 pause. Output to `~/recordings/`.
 
 Mic chain (order matters):
+
 ```
 RNNoise -> Gain +12dB -> Gate (-25/-30, hold=200ms) -> Compressor (4:1, -15, +3)
 ```
+
 Gain before gate = loud phrases survive gate. Don't flip order.
 
 Crop webcam: `left=425, cx=500, cy=730` (user-tuned).
