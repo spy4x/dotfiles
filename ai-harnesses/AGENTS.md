@@ -38,8 +38,11 @@ decision → comment on the issue in the Issues and reports shape (option A and
 B, one consequence each, your pick), add `needs-decision`, and move on to other
 `ready` work. I answer in a comment and remove the label. We share one GitHub
 account, so start every comment you post with `<!-- agent -->`: a comment
-without it is mine. A usage limit is not a stop: Claude Code waits for the
-reset and continues by itself.
+without it is mine. A usage limit pauses a wave; it does not end it, so don't
+wrap up or ask me. Nothing is sure to restart it: background agents fail at the
+limit, and a weekly limit resets days later. When the session runs again, first
+resume every agent that failed with `SendMessage`. Its conversation survives a
+reboot; its `/tmp` files do not.
 
 New work with no issue written down (a feature, bug, task or idea) → the
 `start-task` skill: one batch of questions up front, about intent and the
@@ -164,9 +167,11 @@ Never `ulimit -u`: it counts every thread the user owns (over 3,000 here), so
 the first fork fails. Containers: `--pids-limit=500 --memory=8g`.
 
 **Sweep before reporting done:** `~/sync/code/dotfiles/tools/sweep-orphans.sh`.
-Empty output = clean. Read the output before killing — a sibling session's work
-can show up. It misses Docker and `systemd-run --scope` (own cgroup): clean
-those by name.
+It lists this session's orphans; a subagent adds `--under <worktree> <scratch
+dir>` and kills only what that lists. Empty output = clean. The lead's final
+sweep adds `--all`, which shows other sessions' orphans too: report those, never
+kill them. It misses Docker and `systemd-run --scope` (own cgroup): clean those
+by name.
 
 # Git Flow
 
@@ -188,12 +193,13 @@ Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR 
 `gh pr create --fill` immediately after push — never ask. Pre-push reviewer
 gate (`@reviewer`, scope: diff, secrets, conventions). Green gate → merge
 without asking. Gate failed, or a revert can't undo it → leave the PR open and
-say so. Squash one feature → `gh pr merge --squash --delete-branch`. Rebase
-independent commits → `gh pr merge --rebase --delete-branch`.
+say so. Squash one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
+--delete-branch`. Rebase independent commits → the same with `--rebase`. Always
+pass `--repo`: without it, gh tries to delete the local branch, fails while its
+worktree exists, and skips the remote delete.
 
-Post-merge cleanup always, unless told otherwise. Worktree remove,
-local branch delete, remote branch delete if `--delete-branch` missed,
-temp dir `shred -u`, untracked subtree `find <path> -delete` before worktree
+Post-merge cleanup always, unless told otherwise. `git worktree remove` first,
+then `git branch -D`, remote branch delete if `--delete-branch` missed, temp dir `shred -u`, untracked subtree `find <path> -delete` before worktree
 remove. Repo-wide: `git fetch --prune`, `git worktree prune`, `git branch -d`
 merged-locally, orphan dir `find <path> -delete`, ff-only sync to origin/main,
 orphan sweep.
@@ -274,20 +280,49 @@ memory only for facts no repo owns.
 `~/sync/code/ai-memory/experiments/skill-state.md`. Helpers in
 `~/sync/code/skill-state/` (github.com/spy4x/skill-state, private).
 
+`implementer-model` experiment: in a wave with two or more implementer lanes,
+the second lane you spawn runs with `model: opus`; the rest stay on `sonnet`.
+When each lane's PR merges or stops, add a row per lane to
+`~/sync/code/ai-memory/experiments/implementer-model.md`, as that file says.
+
 # Subagent orchestration
 
 Volume work (3+ file-disjoint units) → parallel subagents; you brief, review
-and integrate, not implement. Small or cross-cutting change → do it yourself:
+and integrate, not implement (except the small review fixes below). Small or cross-cutting change → do it yourself:
 the brief costs more than the edit, and a subagent lacks the context that makes
 it safe.
 
-- **One session = one issue/PR.** No long-lived coordinator grinding a backlog:
-  context rots and overclaims pile up. Backlog lives in GitHub issues. A wave is
-  one session's subagents, not a session per repo running for days.
+- **One session = one wave.** A wave is one coordinator session: a fixed list
+  of issues, its subagents, and a handoff at the end. The next wave starts in a
+  new session from that handoff. Never resume an old coordinator to run the next
+  wave, write its prompt or answer a small question: resuming it rewrites its
+  whole cache. The backlog lives in GitHub issues.
+- **A running session keeps the rules it started with.** Claude Code reads this
+  file when a session starts or compacts, and every subagent gets its lead's
+  copy. Before each spawn, run `git -C ~/sync/code/dotfiles log --oneline
+  --since=<wave start> -- ai-harnesses/`. If it prints anything, read that diff,
+  follow it, and put the changed rules a subagent needs into its brief.
 - **A wave's final report ends with a handoff:** the project's position (the
   plan, how much is done, what remains before the next milestone), what the next
-  wave must not touch (open PRs, issues waiting on me), and the next wave's
-  prompt, ready to paste, with the position inside it.
+  wave must not touch (open PRs, issues waiting on me), the next wave's prompt,
+  ready to paste, with the position inside it, and what this wave cost: each
+  agent's dollars, peak context and compactions
+  (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`) and
+  the weekly usage percentage. Save the prompt as `.wave<N+1>/prompt.md` too. It
+  holds only what belongs to that wave: the position, the issues, the lanes and
+  the files each owns, the acceptance checks, and what not to touch. It never
+  restates a rule from this file, such as model tiers, review limits or cleanup:
+  a copied rule overrides the live one and goes stale.
+- **Wave files live in `worktrees/<repo>/.wave<N>/`.** Briefs, rules files,
+  verdicts and anything you need after a restart go there, never in `/tmp` or
+  the session scratchpad: a reboot empties `/tmp`, and one agent's cleanup can
+  empty the shared scratchpad. Agents never delete a `.wave<N>` directory; the
+  lead deletes it once the handoff is posted.
+- **Pace against the usage limits.** Before each batch of agents, run
+  `claude -p /usage`. At 90% of the 5-hour or the weekly limit, start no new
+  agent: let the running ones finish, post the handoff and end the turn. Plan a
+  day's waves to use about a seventh of the weekly allowance. A limit that hits
+  mid-review throws that review away.
 - **Waves must be file-disjoint** — that, not size, is the constraint. Start
   with 3, scale by disjoint directories. One worktree per agent, branch
   `<type>/<slug>` from latest `main`; two agents in one worktree = corruption. Parallelise reads,
@@ -307,20 +342,28 @@ it safe.
   by mutation (break the code, the test must go red); checks scope, secrets,
   house rules and the PR body's numbers. Pass → exact evidence, which is the
   merge authority. Fail → `needs-fix` with the cause in one line on top, in the
-  Issues and reports shape. Expect ~1 in 4 rejected; send back with required
-  changes — the reviewer never fixes. Re-review after `needs-fix` → continue the
-  same reviewer (`SendMessage`) with the fix: it already read the code, and its
-  context is cached, so a second round costs a fraction of a fresh one. It
-  still reruns the checks. A new PR, or a rework that rewrote most of the diff →
+  Issues and reports shape; send back with required changes — the reviewer never
+  fixes. Re-review after `needs-fix` → continue the same reviewer (`SendMessage`)
+  with the fix: it remembers its findings, and its cache lasts an hour, so a
+  second round within the hour costs a fraction of a fresh one. It still reruns
+  the checks. A new PR, or a rework that rewrote most of the diff →
   a fresh reviewer. Never count or report rejections in a summary, PR body or
   issue: report what the review found and what changed.
+- **Count before you spawn a reviewer.** Every test the diff adds or changes
+  needs its `Mutation:` line in the PR body. A missing line goes back to the
+  implementer without spending a reviewer.
+- **At most three `needs-fix` verdicts per PR.** A wording-only fix, or one of
+  about ten lines or fewer, is yours from the first round: apply it, show the
+  test red then green, and have the same reviewer confirm. After the third
+  verdict, do the same if about ten lines remain; otherwise leave the PR open
+  with a comment on what is left, and move on.
 - **Verify confident claims.** The best catches are overclaims ("caught 3
   bugs" → 1, "one cast" → 8, "check passes" → it doesn't). Demand reproduction.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Search/inventory → `haiku`.
-`implementer` → `sonnet`; `opus` only when done can't be stated in checkable
-terms (then don't delegate). Architecture and final verdicts stay with the lead.
+`implementer` → `sonnet`, except the `implementer-model` experiment's lane;
+`opus` only when done can't be stated in checkable terms (then don't delegate). Architecture and final verdicts stay with the lead.
 Reviewer tier follows the diff: docs/config/dotfiles/deletions → `sonnet`;
 production code → `opus`; auth, crypto, SSRF, money → `opus` too. `fable` is
 paused: Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use it nowhere
