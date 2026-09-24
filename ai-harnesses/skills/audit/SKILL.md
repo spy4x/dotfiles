@@ -22,7 +22,7 @@ Scope: `$ARGUMENTS`, or the whole repo when empty. A unit = one package / top-le
 - Read repo `AGENTS.md`, `README.md`, manifest. Note the repo's own scope statement — it is the
   yardstick for "does this belong here".
 - Cold run on the default branch:
-  `D=$(mktemp -d) && trap 'rm -rf "$D"' EXIT && CI=true DENO_DIR=$D deno task check`. Record exit
+  `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D deno task check`. Record exit
   code, test count, duration. Red here is finding #1, and everything downstream is read in that light.
 
 ## 1. Inventory (cheap, parallel — search subagents on the cheapest model)

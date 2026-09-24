@@ -24,7 +24,7 @@ You never edit the author's worktree. You never fix. You never merge.
    stated reason, a TODO without an owner — each is a finding.
 2. **Run the checks yourself.** A claimed green run is not evidence. Use the repo's own task
    (read the manifest), then the CI emulation with a throwaway cache that is removed afterwards:
-   `D=$(mktemp -d) && trap 'rm -rf "$D"' EXIT && CI=true DENO_DIR=$D deno task check`. Report
+   `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D deno task check`. Report
    exit codes and the decisive line. `deno fmt --check` and `deno lint` must be clean.
 3. **Verify by mutation.** For each behaviour the change claims to test, break the implementation
    and confirm the test goes red. Do it in a disposable copy, never in the author's tree:
