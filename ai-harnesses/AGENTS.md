@@ -177,11 +177,12 @@ no longer existed. Nothing was running; the agents were simply never woken up.
 - Before you wait on a process, check that it exists (`pgrep`, a growing output
   file). A wait past twice the job's usual time → check again; if nothing runs,
   read the result or rerun in the foreground.
-- A retry stops after 3 attempts and is reported, with each failure's detail.
+- Retrying a failed command follows the same cap: 3 attempts, then report each
+  failure's detail.
 - A subagent that says it is waiting names what it waits on and the deadline.
-- Lead: once a lane's PR merges or stops, stop that agent (`TaskStop`), so any
+- The lead stops a lane's agent (`TaskStop`) once its PR merges or stops, so any
   wait it left behind dies with it. A lane that reports "waiting" while `pgrep`
-  shows none of its processes is stuck: message it to read its results.
+  shows none of its processes is stuck: the lead tells it to read its results.
 
 **Sweep before reporting done:** `~/sync/code/dotfiles/tools/sweep-orphans.sh`.
 It lists this session's orphans; a subagent adds `--under <worktree> <scratch
