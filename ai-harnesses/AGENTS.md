@@ -396,13 +396,15 @@ the reviewer by what the diff touches:
 A weak review rubber-stamps a weak author: in doubt, take the stricter one.
 A harness without these variants uses `reviewer` for every review.
 
-Implementers run at `medium` on every task: don't guess difficulty up front.
-Escalate once a task proves hard. When a PR gets its second `needs-fix` for a
-behaviour defect (not a test, a claim or wording) and the fix is more than the
-small ones you apply yourself, send it to a fresh `implementer-xhigh` instead of
-the same implementer. Its brief is the original brief, every verdict so far and
-the branch name; it reads `git diff origin/main...HEAD`. A harness without the
-variant keeps `implementer`.
+Implementers start at `medium`: don't guess difficulty up front. Escalate once a
+task proves hard. When a PR's second `needs-fix` verdict, whatever the first one
+was about, names a behaviour defect (the code does the wrong thing, not a
+missing test, a false claim or wording), and the fix is more than the small ones
+you apply yourself, send that one fix round to a fresh `implementer-xhigh`
+instead of the same implementer. Its brief is the original brief, every verdict
+so far, the branch name and the PR URL, and says the PR already exists; it reads
+`git diff origin/main...HEAD`. The three-verdict cap then applies as usual. A
+harness without the variant keeps `implementer`.
 
 # Language style
 
