@@ -91,8 +91,9 @@ or removed: to retract one, add a new entry with `supersedes: ["<id>"]`.
    subagent's whole brief is that frame plus one line: "Do `next_action`. Work in
    `inputs.worktree`. Return a report of what you did and a JSON patch; do not apply it." Its
    report becomes the next observation, and you apply its patch after checking it.
-   - Choose the subagent by phase: the `implementer` agent for implementation, the `reviewer`
-     agent for review, and a general agent for spec, design and issue.
+   - Choose the subagent by phase: the `implementer` agent for implementation, the reviewer the
+     global Reasoning effort rule picks for review, and a general agent for spec, design and
+     issue.
    - A trivial step, such as one command or reading one file, you may do yourself. It still gets an
      observation and a patch.
 4. **Repeat until `done` or `halted`.** After a context compaction, or in a new session, read

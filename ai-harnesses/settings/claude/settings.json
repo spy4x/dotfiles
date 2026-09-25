@@ -8,6 +8,7 @@
   "autoCompactWindow": 400000,
   "autoContinueAtUsageLimit": true,
   "bashOutputMaxChars": 12000,
+  "effortLevel": "medium",
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [

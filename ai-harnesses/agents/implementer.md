@@ -2,7 +2,8 @@
 name: implementer
 description: Implements one fully-briefed, file-disjoint unit of work inside a worktree the lead already created. Use for volume work split into parallel units (one package/directory each). Not for cross-cutting changes or anything that needs the lead's conversation context.
 mode: subagent
-tier: standard
+tier: strong
+effort: medium
 harness:
   claude:
     color: blue

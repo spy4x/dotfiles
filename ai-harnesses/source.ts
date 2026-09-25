@@ -104,6 +104,20 @@ export async function loadSource(root: string): Promise<Source> {
     if (`${meta.name}.md` !== rel) throw new Error(`${where}: name "${meta.name}" must match file`)
     agents.push({ meta, body })
   }
+  for (const agent of agents) {
+    const from = agent.meta[`body-from`]
+    if (from === undefined) continue
+    const where = `agents/${agent.meta.name}.md`
+    if (agent.body.trim() !== ``) {
+      throw new Error(`${where}: body-from "${from}" needs an empty body`)
+    }
+    const base = agents.find((other) => other.meta.name === from)
+    if (base === undefined) throw new Error(`${where}: body-from "${from}" names no agent`)
+    if (base.meta[`body-from`] !== undefined) {
+      throw new Error(`${where}: body-from "${from}" is itself a variant`)
+    }
+    agent.body = base.body
+  }
 
   const settings = {} as Record<HarnessName, SourceFile[]>
   for (const harness of HARNESSES) {

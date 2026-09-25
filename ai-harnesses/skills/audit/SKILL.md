@@ -34,12 +34,13 @@ and for near-duplicates of its main functions).
 The reuse test, applied to every unit: **two or more real consumers, or a stated reason it is
 platform-level.** One consumer = project code living in the wrong repo, however clean it is.
 
-## 2. Deep review (parallel `reviewer` subagents, one per unit, file-disjoint)
+## 2. Deep review (parallel reviewer subagents, one per unit, file-disjoint)
 
 Brief each with: repo path (read-only), unit directory, the inventory facts, the repo's scope
 statement, global + repo `AGENTS.md` rules that bind it, and the issues/PRs that claim to have
-delivered it. Units touching auth, crypto, SSRF/URL policy, SQL, email/DKIM, money, secrets/env
-tooling → run that reviewer on the strongest model available.
+delivered it. Pick each reviewer by the global Reasoning effort rule: units touching auth,
+crypto, SSRF/URL policy, SQL, email/DKIM, money or secrets/env tooling get `reviewer-max`, other
+code that ships gets `reviewer-xhigh`. A harness without those variants uses `reviewer`.
 
 Each reviewer answers:
 
