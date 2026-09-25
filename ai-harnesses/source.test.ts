@@ -46,6 +46,18 @@ for (
       `must match`,
     ],
     [
+      `a body-from that names no agent`,
+      `agents/variant.md`,
+      `---\nname: variant\ndescription: x\nbody-from: missing\n---\n`,
+      `names no agent`,
+    ],
+    [
+      `a body-from variant with a body of its own`,
+      `agents/variant.md`,
+      `---\nname: variant\ndescription: x\nbody-from: checker\n---\nown body\n`,
+      `needs an empty body`,
+    ],
+    [
       `frontmatter that is not valid YAML`,
       `skills/lookup/SKILL.md`,
       `---\nname: lookup\ndescription: a: b\n---\nbody\n`,
@@ -62,3 +74,34 @@ for (
     }
   })
 }
+
+Deno.test(`a body-from variant renders the body of the agent it names`, async () => {
+  const dir = await brokenSource(
+    `agents/variant.md`,
+    `---\nname: variant\ndescription: x\neffort: max\nbody-from: checker\n---\n`,
+  )
+  try {
+    const source = await loadSource(dir)
+    const body = (name: string) => source.agents.find((agent) => agent.meta.name === name)?.body
+    assertEquals(body(`variant`), body(`checker`))
+    assertEquals(source.agents.find((agent) => agent.meta.name === `variant`)?.meta.effort, `max`)
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+Deno.test(`loadSource rejects a body-from that points at another variant`, async () => {
+  const dir = await brokenSource(
+    `agents/variant.md`,
+    `---\nname: variant\ndescription: x\nbody-from: checker\n---\n`,
+  )
+  try {
+    await Deno.writeTextFile(
+      join(dir, `agents/second.md`),
+      `---\nname: second\ndescription: x\nbody-from: variant\n---\n`,
+    )
+    await assertRejects(() => loadSource(dir), Error, `is itself a variant`)
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})

@@ -68,7 +68,8 @@ harness:
 ```
 
 The body is shared: `harness` carries frontmatter only. If a body has to differ per harness, it is
-two items with two names. Write tool names neutrally ("spawn a subagent", not "use the Task tool").
+two items with two names. Two agents that differ only in frontmatter (the same reviewer at another
+effort, say) share one body: the variant sets `body-from: <agent>` and leaves its own body empty. Write tool names neutrally ("spawn a subagent", not "use the Task tool").
 
 How `invocation` renders:
 

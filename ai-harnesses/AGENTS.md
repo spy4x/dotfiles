@@ -298,12 +298,6 @@ memory only for facts no repo owns.
 `~/sync/code/ai-memory/experiments/skill-state.md`. Helpers in
 `~/sync/code/skill-state/` (github.com/spy4x/skill-state, private).
 
-`implementer-model` experiment: implementer lanes alternate models in the order
-you spawn them across a wave: the first on `sonnet`, the second on `opus`, the
-third on `sonnet`, and so on. A lane keeps its model through its fix rounds.
-When each lane's PR merges or stops, add a row per lane to
-`~/sync/code/ai-memory/experiments/implementer-model.md`, as that file says.
-
 # Subagent orchestration
 
 Volume work (3+ file-disjoint units) → parallel subagents; you brief, review
@@ -380,15 +374,26 @@ it safe.
   bugs" → 1, "one cast" → 8, "check passes" → it doesn't). Demand reproduction.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
-lead's tier, always the most expensive. Search/inventory → `haiku`.
-`implementer` → `sonnet`, except the `implementer-model` experiment's `opus` lanes;
-`opus` only when done can't be stated in checkable terms (then don't delegate). Architecture and final verdicts stay with the lead.
-Reviewer tier follows the diff: docs/config/dotfiles/deletions → `sonnet`;
-production code → `opus`; auth, crypto, SSRF, money → `opus` too. `fable` is
-paused: Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use it nowhere
-until I re-enable it. `effort: high` for `opus` and `fable` only. A weak
-reviewer rubber-stamps a weak author: never tier down a diff that ships. Fresh
-subagents over forks (a fork copies the whole conversation).
+lead's tier, always the most expensive. Implementers and reviewers → `opus`
+(Opus 5.5), whatever the diff: in the waves of 2026-09-20..25 it did the same
+work in far fewer calls than Sonnet 5, at about half the cost
+(`~/sync/code/ai-memory/experiments/model-comparison/`). Search/inventory →
+`haiku`. Architecture and final verdicts stay with the lead. `fable` is paused:
+Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use it nowhere until I
+re-enable it. Fresh subagents over forks (a fork copies the whole conversation).
+
+**Reasoning effort.** `medium` is the default for sessions, leads, implementers
+and routine reviews. Effort belongs to the agent type, not to the call, so pick
+the reviewer by what the diff touches:
+
+- `reviewer` (`medium`): docs, config, dotfiles, tests only, deletions, and
+  small internal changes.
+- `reviewer-xhigh` (`xhigh`): production code that ships to users or a
+  registry.
+- `reviewer-max` (`max`): auth, crypto, secrets, money, deploys, and anything
+  that deletes or migrates data.
+
+A weak review rubber-stamps a weak author: in doubt, take the stricter one.
 
 # Language style
 

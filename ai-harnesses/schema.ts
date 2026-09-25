@@ -36,6 +36,8 @@ export const AgentFrontmatter = type({
   /** Neutral model tier, mapped to a model per harness in `config.jsonc`. */
   "tier?": `'cheap' | 'standard' | 'strong' | 'strongest'`,
   "effort?": `'low' | 'medium' | 'high' | 'xhigh' | 'max'`,
+  /** Another agent whose body this one reuses, so variants differ only in frontmatter. */
+  "body-from?": name,
   "temperature?": `0 <= number <= 2`,
   /** Neutral capabilities. Omitted means every tool the harness offers. */
   "tools?": type(`'read' | 'search' | 'shell' | 'edit' | 'web'`).array(),
