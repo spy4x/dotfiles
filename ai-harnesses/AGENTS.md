@@ -166,6 +166,24 @@ systemd-run --user --scope --quiet -p TasksMax=500 -p MemoryMax=8G timeout 120 <
 Never `ulimit -u`: it counts every thread the user owns (over 3,000 here), so
 the first fork fails. Containers: `--pids-limit=500 --memory=8g`.
 
+**Every wait has a deadline.** Once cost: an agent sat for almost seven hours on a
+monitor for a run that had finished long before, and another waited on a run that
+no longer existed. Nothing was running; the agents were simply never woken up.
+
+- A background command (`run_in_background`) runs inside `timeout <seconds>`,
+  sized to the job with slack (a browser test suite: 900).
+- A `Monitor`, until-loop or poll gets a deadline and at most 3 attempts. When it
+  expires, read the output or log directly and decide. Never re-arm the same wait.
+- Before you wait on a process, check that it exists (`pgrep`, a growing output
+  file). A wait past twice the job's usual time → check again; if nothing runs,
+  read the result or rerun in the foreground.
+- Retrying a failed command follows the same cap: 3 attempts, then report each
+  failure's detail.
+- A subagent that says it is waiting names what it waits on and the deadline.
+- The lead stops a lane's agent (`TaskStop`) once its PR merges or stops, so any
+  wait it left behind dies with it. A lane that reports "waiting" while `pgrep`
+  shows none of its processes is stuck: the lead tells it to read its results.
+
 **Sweep before reporting done:** `~/sync/code/dotfiles/tools/sweep-orphans.sh`.
 It lists this session's orphans; a subagent adds `--under <worktree> <scratch
 dir>` and kills only what that lists. Empty output = clean. The lead's final
