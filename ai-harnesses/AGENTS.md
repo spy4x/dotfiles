@@ -16,7 +16,7 @@ harness's format; `--check` reports drift. Edit the source, never a copy.
 # Autonomy
 
 Finish the job and report the result. I don't review code before it lands; the
-`@reviewer` gate does, and a green gate is the authority to merge. Where a
+reviewer gate does, and a green gate is the authority to merge. Where a
 sensible default exists, take it and record it in the PR body. Ask only when:
 
 - the choice is mine and the options mean materially different work (SQLite
@@ -209,7 +209,7 @@ and burns inotify watches.
 
 Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR always exists; `[WIP]` prefix until done.
 `gh pr create --fill` immediately after push — never ask. Pre-push reviewer
-gate (`@reviewer`, scope: diff, secrets, conventions). Green gate → merge
+gate (the reviewer Reasoning effort picks; scope: diff, secrets, conventions). Green gate → merge
 without asking. Gate failed, or a revert can't undo it → leave the PR open and
 say so. Squash one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`. Rebase independent commits → the same with `--rebase`. Always
@@ -394,6 +394,7 @@ the reviewer by what the diff touches:
   that deletes or migrates data.
 
 A weak review rubber-stamps a weak author: in doubt, take the stricter one.
+A harness without these variants uses `reviewer` for every review.
 
 # Language style
 
