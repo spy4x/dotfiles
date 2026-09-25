@@ -298,8 +298,9 @@ memory only for facts no repo owns.
 `~/sync/code/ai-memory/experiments/skill-state.md`. Helpers in
 `~/sync/code/skill-state/` (github.com/spy4x/skill-state, private).
 
-`implementer-model` experiment: in a wave with two or more implementer lanes,
-the second lane you spawn runs with `model: opus`; the rest stay on `sonnet`.
+`implementer-model` experiment: implementer lanes alternate models in the order
+you spawn them across a wave: the first on `sonnet`, the second on `opus`, the
+third on `sonnet`, and so on. A lane keeps its model through its fix rounds.
 When each lane's PR merges or stops, add a row per lane to
 `~/sync/code/ai-memory/experiments/implementer-model.md`, as that file says.
 
@@ -380,7 +381,7 @@ it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Search/inventory → `haiku`.
-`implementer` → `sonnet`, except the `implementer-model` experiment's lane;
+`implementer` → `sonnet`, except the `implementer-model` experiment's `opus` lanes;
 `opus` only when done can't be stated in checkable terms (then don't delegate). Architecture and final verdicts stay with the lead.
 Reviewer tier follows the diff: docs/config/dotfiles/deletions → `sonnet`;
 production code → `opus`; auth, crypto, SSRF, money → `opus` too. `fable` is
