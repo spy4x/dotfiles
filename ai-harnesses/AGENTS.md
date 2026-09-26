@@ -220,7 +220,7 @@ and burns inotify watches.
 
 Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR always exists; `[WIP]` prefix until done.
 `gh pr create --fill` immediately after push — never ask. Pre-push reviewer
-gate (the reviewer Reasoning effort picks; scope: diff, secrets, conventions). Green gate → merge
+gate (`reviewer`; scope: diff, secrets, conventions). Green gate → merge
 without asking. Gate failed, or a revert can't undo it → leave the PR open and
 say so. Squash one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`. Rebase independent commits → the same with `--rebase`. Always
@@ -393,19 +393,11 @@ work in far fewer calls than Sonnet 5, at about half the cost
 Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use it nowhere until I
 re-enable it. Fresh subagents over forks (a fork copies the whole conversation).
 
-**Reasoning effort.** `medium` is the default for sessions, leads, implementers
-and routine reviews. Effort belongs to the agent type, not to the call, so pick
-the reviewer by what the diff touches:
-
-- `reviewer` (`medium`): docs, config, dotfiles, tests only, deletions, and
-  small internal changes.
-- `reviewer-xhigh` (`xhigh`): production code that ships to users or a
-  registry.
-- `reviewer-max` (`max`): auth, crypto, secrets, money, deploys, and anything
-  that deletes or migrates data.
-
-A weak review rubber-stamps a weak author: in doubt, take the stricter one.
-A harness without these variants uses `reviewer` for every review.
+**Reasoning effort.** `medium` for sessions, leads, implementers and every
+review: one `reviewer` agent reviews every diff. `xhigh` and `max` reviewers cost
+5–9 times a `medium` round and did not cut review rounds (2026-09-25..26,
+`~/sync/code/ai-memory/experiments/model-comparison/`). Effort belongs to the
+agent type, not to the call.
 
 Implementers start at `medium`: don't guess difficulty up front. Escalate once a
 task proves hard. When a PR's second `needs-fix` verdict, whatever the first one
