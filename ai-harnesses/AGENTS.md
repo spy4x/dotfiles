@@ -69,8 +69,9 @@ keyboard handling, focus.
 writing a component, helper or library, search `spy4x/ts-libs` and
 `spy4x/preact-components` for it, under any name. There → import it, extend it
 if it falls short, never add a second one. Not there but a future project could
-use it → add it to the fitting library first, then import it. The final report
-lists every addition to those repos.
+use it → add it to the fitting library first, then import it. The test is
+whether a future project could use it, never how many apps use it today. The
+final report lists every addition to those repos.
 
 - `preact-components`: Preact components, icons, design tokens, signals
   helpers.
