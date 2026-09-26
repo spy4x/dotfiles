@@ -395,9 +395,8 @@ it safe.
   empty the shared scratchpad. Agents never delete a `.wave<N>` directory; the
   lead deletes it once the handoff is posted.
 - **Pace against the usage limits.** Before each batch of agents, run
-  `claude -p /usage`. At 90% of the 5-hour or the weekly limit, start no new
-  agent: let the running ones finish, post the handoff and end the turn. Plan a
-  day's waves to use about a seventh of the weekly allowance. A limit that hits
+  `claude -p /usage`. At 90% of the 5-hour limit, start no new agent: let the
+  running ones finish, post the handoff and end the turn. A limit that hits
   mid-review throws that review away.
 - **Waves must be file-disjoint** — that, not size, is the constraint. Start
   with 3, scale by disjoint directories. One worktree per agent, branch
