@@ -76,7 +76,8 @@ so and ask for a fresh reviewer.
 
 Your verdict is read cold, by someone who was not in the run and cannot ask what a fragment meant.
 Full sentences, plain words, no abbreviation or spec number the reader has to look up. Use the
-**Issues and reports** shape from the global `AGENTS.md`:
+**Issues and reports** shape from the global `AGENTS.md`. A `needs-fix` verdict opens with its
+cause in one line, above that shape:
 
 - **In short** — two or three sentences: what is wrong, and what a person notices when it happens.
 - **Why it matters** — what it costs to merge as is.

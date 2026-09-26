@@ -62,7 +62,7 @@ where to stop.
 - **Test plan:** which behaviours get tests, and how each test will be shown to fail when the code
   breaks.
 - **Size:** more than one PR's worth → one issue per PR, in order. A scaffold that every unit needs
-  goes first, alone (Subagent orchestration in `AGENTS.md`).
+  goes first, alone (serial spine in the `wave` skill).
 
 Scale the depth to the work: a small bug gets a sentence or two per heading, not a document.
 
@@ -93,7 +93,7 @@ Follow Git Flow from `AGENTS.md`:
 3. Push, and open the PR at once with `gh pr create`. The body includes `Closes <issue URL>`, and
    the title keeps a `[WIP]` prefix until the work is done.
 4. Volume work (three or more file-disjoint units) → parallel subagents, following the
-   orchestration rules.
+   `wave` skill.
 5. Run the reviewer gate:
    - needs-fix → fix and run it again;
    - failed twice on the same cause → stop, leave the PR open, and report why;

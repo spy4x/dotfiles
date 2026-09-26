@@ -32,17 +32,10 @@ Releases are not questions. I build in public and ship often: once the gate is
 green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
 and say so in the report.
 
-**Picking work yourself** (a wave, "work through the backlog"): only open
-issues labelled `ready`. I apply that label; never add it yourself. Stuck on a
-decision → comment on the issue in the Issues and reports shape (option A and
-B, one consequence each, your pick), add `needs-decision`, and move on to other
-`ready` work. I answer in a comment and remove the label. We share one GitHub
-account, so start every comment you post with `<!-- agent -->`: a comment
-without it is mine. A usage limit pauses a wave; it does not end it, so don't
-wrap up or ask me. Nothing is sure to restart it: background agents fail at the
-limit, and a weekly limit resets days later. When the session runs again, first
-resume every agent that failed with `SendMessage`. Its conversation survives a
-reboot; its `/tmp` files do not.
+**Picking work yourself** (a wave, "work through the backlog") → the `wave`
+skill. Never add the `ready` label yourself; I apply it. We share one GitHub
+account, so start every comment you post with
+`<!-- agent -->`: a comment without it is mine.
 
 New work with no issue written down (a feature, bug, task or idea) → the
 `start-task` skill: one batch of questions up front, about intent and the
@@ -74,25 +67,21 @@ keyboard handling, focus.
 
 **Shared libs before local code.** In any `spy4x/*` TypeScript repo, before
 writing a component, helper or library, search `spy4x/ts-libs` and
-`spy4x/preact-components` for it, under any name. Already there → import it,
-and extend it if it falls short; never add a second one. Not there but reusable
-by other TypeScript projects → add it to the fitting shared repo first, then
-import it from there. The final report lists every addition to those repos.
+`spy4x/preact-components` for it, under any name. There → import it, extend it
+if it falls short, never add a second one. Not there but a future project could
+use it → add it to the fitting library first, then import it. The final report
+lists every addition to those repos.
 
-Reusable means a future project could use it, even if only one app does today:
+- `preact-components`: Preact components, icons, design tokens, signals
+  helpers.
+- `ts-libs`: code with no UI that a server or a page could use: date and time,
+  formatting, parsing, validation, security, networking, integrations.
+- Neither: business wording, one app's data model, or a renamed copy of
+  something that exists. That stays in the app.
 
-- `spy4x/preact-components` takes a Preact component, icon, design token or
-  signals helper.
-- `spy4x/ts-libs` takes code with no UI that a server or a page could use:
-  date and time, formatting, parsing, validation, security, networking,
-  integrations.
-- Business wording, one app's data model, or a renamed copy of something that
-  already exists disqualify it from both. The app keeps what only it needs, in
-  its own repo.
-
-The flow runs one way: an app feeds the libraries. New code in an app imports
-from them, but an app's existing code is never refactored to call into them.
-Each library's `AGENTS.md`, "What belongs in this library", holds the details.
+An app feeds the libraries, one way: new app code imports from them, existing
+app code is never refactored to call into them. Details: each library's
+`AGENTS.md`, "What belongs in this library".
 
 # Session bootstrap
 
@@ -128,9 +117,10 @@ RFC 5737 IPs / RFC 2606 domains for examples. Deterministic scanner before
 paste (`gitleaks detect --no-git`, `trufflehog filesystem`, `detect-secrets`).
 Reviewer gate on 🔴/🟡.
 
-If leaked: **rotate first**, stop further sends, cascade dependents, edit
-(only cosmetic — alerts/RSS/archives already delivered), notify, log to
-`~/sync/code/ai-memory/incidents/rotation-log.md` (event only, never the value). Edit-after-ship = theater.
+If leaked: **rotate first**, stop sending, put the new secret into everything
+that depends on it, edit the leak away (cosmetic only: alerts and archives
+already have it), notify me, and log the event (never the value) in
+`~/sync/code/ai-memory/incidents/rotation-log.md`.
 
 # Account tokens
 
@@ -172,8 +162,8 @@ Secret-bearing sends fail-closed (see Hard rule).
 # Leave nothing running
 
 A killed shell leaves its `&` children running, reparented to `systemd --user`;
-cleanup on the command's last line never runs. Once cost: 32 busy-loops on 11 of
-16 cores for 11.5 hours. In order of preference:
+cleanup on the command's last line never runs (once: 32 busy-loops for 11.5
+hours). In order of preference:
 
 1. Run in the foreground.
 2. Background through the harness (`run_in_background`), never bare `&`.
@@ -203,13 +193,11 @@ literal path, not `$S`. The harness scratchpad
 prompt calls it session-specific and suggests it for temporary files: the lead
 and every subagent it spawns share it. To keep your folder inside it, create the
 folder with `mktemp -d -p <scratchpad>`; never delete or empty the scratchpad
-itself. Once cost: a reviewer ran `find <scratchpad> -mindepth 1 -delete` as
-cleanup and wiped two other reviewers' worktrees mid-review.
+itself (once: a reviewer's cleanup wiped two other reviewers' worktrees).
 
 **Cap anything that spawns processes** (tests with fake binaries, fan-out
-scripts, a lane's test run) so a runaway stops at the cap. Once cost: a fake
-`rsync` on `PATH` called `rsync` and found itself; 4,900 processes, 73 GB of RAM
-and a crashed game within minutes.
+scripts, a lane's test run) so a runaway stops at the cap (once: a fake `rsync`
+called itself, 4,900 processes and 73 GB of RAM in minutes).
 
 ```bash
 systemd-run --user --scope --quiet -p TasksMax=500 -p MemoryMax=8G timeout 120 <cmd>
@@ -218,9 +206,8 @@ systemd-run --user --scope --quiet -p TasksMax=500 -p MemoryMax=8G timeout 120 <
 Never `ulimit -u`: it counts every thread the user owns (over 3,000 here), so
 the first fork fails. Containers: `--pids-limit=500 --memory=8g`.
 
-**Every wait has a deadline.** Once cost: an agent sat for almost seven hours on a
-monitor for a run that had finished long before, and another waited on a run that
-no longer existed. Nothing was running; the agents were simply never woken up.
+**Every wait has a deadline** (once: an agent waited seven hours on a run that
+had long finished).
 
 - A background command (`run_in_background`) runs inside `timeout <seconds>`,
   sized to the job with slack (a browser test suite: 900).
@@ -232,9 +219,6 @@ no longer existed. Nothing was running; the agents were simply never woken up.
 - Retrying a failed command follows the same cap: 3 attempts, then report each
   failure's detail.
 - A subagent that says it is waiting names what it waits on and the deadline.
-- The lead stops a lane's agent (`TaskStop`) once its PR merges or stops, so any
-  wait it left behind dies with it. A lane that reports "waiting" while `pgrep`
-  shows none of its processes is stuck: the lead tells it to read its results.
 
 **Sweep before reporting done:** `~/sync/code/dotfiles/tools/sweep-orphans.sh`.
 It lists this session's orphans, one per line: PID, elapsed time, CPU, command.
@@ -249,10 +233,9 @@ listed first on its line; prefer its `--kill`. Never signal PID 1, any `systemd`
 process, the desktop (kwin, plasmashell, sddm, dbus, pipewire, Xwayland), your
 own harness or the processes above it. Never run `kill -1`, `systemctl --user
 exit`, `loginctl terminate-*` or a shutdown or reboot. Before `pkill` or
-`killall`, run `pgrep -a` with the same pattern and read every match. Once cost:
-an agent read the parent-PID column of a process listing as a target and sent
-SIGTERM to the systemd user manager, which logged the desktop out and closed
-every app and agent session.
+`killall`, run `pgrep -a` with the same pattern and read every match (once: an
+agent read a listing's parent-PID column as a target, killed the systemd user
+manager and logged the desktop out).
 
 # Git Flow
 
@@ -270,20 +253,41 @@ Syncthing ignores `worktrees/` (per-machine step: `docs/host-limits.md`,
 `system/syncthing-code.stignore`): a synced worktree is broken by construction
 and burns inotify watches.
 
-Branch `<type>/<short-kebab-slug>` from latest default branch on the remote. PR always exists; `[WIP]` prefix until done.
-`gh pr create --fill` immediately after push — never ask. Pre-push reviewer
-gate (`reviewer`; scope: diff, secrets, conventions). Green gate → merge
-without asking. Gate failed, or a revert can't undo it → leave the PR open and
-say so. Squash one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
---delete-branch`. Rebase independent commits → the same with `--rebase`. Always
-pass `--repo`: without it, gh tries to delete the local branch, fails while its
+Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR
+always exists, `[WIP]` in the title until done; `gh pr create --fill` right
+after push, never ask.
+
+**Reviewer gate** before push: one separate `reviewer` agent per diff, never
+self-review. Every test the diff adds or changes needs its `Mutation:` line in
+the PR body; a missing one goes back to the implementer before any reviewer is
+spent. Pass → merge without asking. `needs-fix` → the fix goes back to the
+author with the cause the verdict names, and the same reviewer re-reviews it
+(`SendMessage`: it keeps its findings, and its cache lasts an hour); a new PR or
+a rework of most of the diff → a fresh reviewer. At most three `needs-fix`
+verdicts per PR. A wording fix, or one of about ten lines or fewer, you apply
+yourself from the first round: show
+the test red then green, and have the same reviewer confirm. After the third
+verdict, do that if about ten lines remain; otherwise leave the PR open with a
+comment on what is left, and move on. After a second `needs-fix` that names a
+behaviour defect, the `wave` skill says when to escalate to
+`implementer-xhigh`. Never count rejections in a summary, PR body or issue:
+report what the review found and what changed. Gate failed, or a revert can't
+undo it → leave the PR open and say so.
+
+Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
+--delete-branch`; independent commits → the same with `--rebase`. Always pass
+`--repo`: without it, gh tries to delete the local branch, fails while its
 worktree exists, and skips the remote delete.
 
-Post-merge cleanup always, unless told otherwise. `git worktree remove` first,
-then `git branch -D`, remote branch delete if `--delete-branch` missed, temp dir `shred -u`, untracked subtree `find <path> -delete` before worktree
-remove. Repo-wide: `git fetch --prune`, `git worktree prune`, `git branch -d`
-merged-locally, orphan dir `find <path> -delete`, ff-only sync to origin/main,
-orphan sweep.
+After merge, unless told otherwise:
+
+1. Untracked files in the worktree → `find <path> -delete`; temp files →
+   `shred -u`.
+2. `git worktree remove`, then `git branch -D`, then delete the remote branch
+   if `--delete-branch` missed it.
+3. `git fetch --prune`, `git worktree prune`, `git branch -d` branches merged
+   locally, `find <path> -delete` orphan directories, fast-forward the main
+   checkout to `origin/main`, orphan sweep.
 
 ## After worktree creation — env setup
 
@@ -354,119 +358,24 @@ sees one already set.
 Durable project knowledge → the repo (`AGENTS.md`, `docs/`). Harness-local
 memory only for facts no repo owns.
 
-# Experimental
+# Subagents
 
-`skill-state` experiment: `start-task` alternates long tasks between the
-`skill-state` skill and the normal flow, and logs both arms in
-`~/sync/code/ai-memory/experiments/skill-state.md`. Helpers in
-`~/sync/code/skill-state/` (github.com/spy4x/skill-state, private).
-
-# Subagent orchestration
-
-Volume work (3+ file-disjoint units) → parallel subagents; you brief, review
-and integrate, not implement (except the small review fixes below). Small or cross-cutting change → do it yourself:
-the brief costs more than the edit, and a subagent lacks the context that makes
-it safe.
-
-- **One session = one wave.** A wave is one coordinator session: a fixed list
-  of issues, its subagents, and a handoff at the end. The next wave starts in a
-  new session from that handoff. Never resume an old coordinator to run the next
-  wave, write its prompt or answer a small question: resuming it rewrites its
-  whole cache. The backlog lives in GitHub issues.
-- **A running session keeps the rules it started with.** Claude Code reads this
-  file when a session starts or compacts, and every subagent gets its lead's
-  copy. Before each spawn, run `git -C ~/sync/code/dotfiles log --oneline
-  --since=<wave start> -- ai-harnesses/`. If it prints anything, read that diff,
-  follow it, and put the changed rules a subagent needs into its brief.
-- **A wave's final report ends with a handoff:** the project's position (the
-  plan, how much is done, what remains before the next milestone), what the next
-  wave must not touch (open PRs, issues waiting on me), the next wave's prompt,
-  ready to paste, with the position inside it, and what this wave cost: each
-  agent's dollars, peak context and compactions
-  (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`).
-  Save the prompt as `.wave<N+1>/prompt.md` too. It holds only what belongs to
-  that wave: the position, the issues, the lanes and the files each owns, the
-  acceptance checks, and what not to touch. It never restates a rule from this
-  file, such as model tiers, review limits or cleanup: a copied rule overrides
-  the live one and goes stale. A pasted prompt that names a model or an effort
-  is stale: ignore those lines; this file decides.
-- **Wave files live in `worktrees/<repo>/.wave<N>/`.** Briefs, rules files,
-  verdicts and anything you need after a restart go there, never in `/tmp` or
-  the session scratchpad: a reboot empties `/tmp`, and one agent's cleanup can
-  empty the shared scratchpad. Agents never delete a `.wave<N>` directory; the
-  lead deletes it once the handoff is posted.
-- **Pace against the usage limits.** Before each batch of agents, run
-  `claude -p /usage`. At 90% of the 5-hour limit, start no new agent: let the
-  running ones finish, post the handoff and end the turn. A limit that hits
-  mid-review throws that review away.
-- **Waves must be file-disjoint** — that, not size, is the constraint. Start
-  with 3, scale by disjoint directories. One worktree per agent, branch
-  `<type>/<slug>` from latest `main`; two agents in one worktree = corruption. Parallelise reads,
-  serialise writes.
-- **Serial spine first.** If every unit needs one scaffold/schema/config, build
-  and merge it alone, then fan out. Prove no-contention by experiment (e.g. Deno
-  skips absent workspace members, so pre-listed members → zero shared files).
-- **The brief is all the agent sees.** Full sentences: worktree path, read-only
-  sources, output paths, house style, the issue, and what to do when stuck
-  (decide + document, don't stop). It owns its worktree, temp dirs and
-  processes, and leaves nothing running.
-- **Check this machine's CPU and RAM while running parallel work.** Rapid work
-  on several projects in parallel sessions has left zombie processes, a RAM leak
-  and similar problems. Report anything off (what, which process, how much); a
-  separate session fixes the cause, so these get eliminated one by one.
-- **Separate reviewer, never self-review.** It runs the checks itself; verifies
-  by mutation (break the code, the test must go red); checks scope, secrets,
-  house rules and the PR body's numbers. Pass → exact evidence, which is the
-  merge authority. Fail → `needs-fix` with the cause in one line on top, in the
-  Issues and reports shape; send back with required changes — the reviewer never
-  fixes. Re-review after `needs-fix` → continue the same reviewer (`SendMessage`)
-  with the fix: it remembers its findings, and its cache lasts an hour, so a
-  second round within the hour costs a fraction of a fresh one. A re-review
-  covers only the fix: the diff since the commit named in the last verdict, the
-  `Mutation:` lines for tests the fix added or changed, the earlier findings,
-  and one full run of the checks. A new PR, or a rework that rewrote most of the diff →
-  a fresh reviewer. Never count or report rejections in a summary, PR body or
-  issue: report what the review found and what changed.
-- **Count before you spawn a reviewer.** Every test the diff adds or changes
-  needs its `Mutation:` line in the PR body. A missing line goes back to the
-  implementer without spending a reviewer.
-- **At most three `needs-fix` verdicts per PR.** A wording-only fix, or one of
-  about ten lines or fewer, is yours from the first round: apply it, show the
-  test red then green, and have the same reviewer confirm. After the third
-  verdict, do the same if about ten lines remain; otherwise leave the PR open
-  with a comment on what is left, and move on.
-- **Read reports, not transcripts.** An agent's final report and its verdict
-  file are what you judge. Open a transcript only when the report is missing or
-  contradicts the diff. Your reply to an agent is a few lines: the verdict and
-  what to change.
-- **Verify confident claims.** The best catches are overclaims ("caught 3
-  bugs" → 1, "one cast" → 8, "check passes" → it doesn't). Demand reproduction.
+Volume work (3+ file-disjoint units) → parallel subagents via the `wave` skill:
+you brief, review and integrate, not implement. Small or cross-cutting change →
+do it yourself: the brief costs more than the edit, and a subagent lacks the
+context that makes it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
-whatever the task, except search/inventory → `haiku`: in the waves of
-2026-09-20..25 Opus 5.5 did the same work in far fewer calls than Sonnet 5, at
-about half the cost (`~/sync/code/ai-memory/experiments/model-comparison/`).
-Sonnet is used nowhere. Architecture and final verdicts stay with the lead.
-`fable` is paused: Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use
-it nowhere until I re-enable it. Fresh subagents over forks (a fork copies the
+whatever the task, except search/inventory → `haiku`. Opus 5.5 did the same work
+as Sonnet 5 in far fewer calls at about half the cost, and matches Fable 5.1
+faster and cheaper (`~/sync/code/ai-memory/experiments/model-comparison/`).
+Sonnet is used nowhere. `fable` is paused until I re-enable it. Architecture and
+final verdicts stay with the lead. Fresh subagents over forks (a fork copies the
 whole conversation).
 
-**Reasoning effort.** `medium` for sessions, leads, implementers and every
-review: one `reviewer` agent reviews every diff. `xhigh` and `max` reviewers cost
-5–9 times a `medium` round and did not cut review rounds (2026-09-25..26,
-`~/sync/code/ai-memory/experiments/model-comparison/`). Effort belongs to the
-agent type, not to the call.
-
-Implementers start at `medium`: don't guess difficulty up front. Escalate once a
-task proves hard. When a PR's second `needs-fix` verdict, whatever the first one
-was about, names a behaviour defect (the code does the wrong thing, not a
-missing test, a false claim or wording), and the fix is more than the small ones
-you apply yourself, send that one fix round to a fresh `implementer-xhigh`
-instead of the same implementer. Its brief is the original brief, every verdict
-so far, the branch name and the PR URL, and says the PR already exists; it reads
-`git diff origin/main...HEAD`. The three-verdict cap then applies as usual. A
-harness without the variant keeps `implementer`.
+**Effort.** `medium` for sessions, leads, implementers and every review.
+Effort belongs to the agent type, not to the call.
 
 # Language style
 
@@ -527,6 +436,6 @@ the built-in worktree features (`--worktree`, `EnterWorktree`,
 `isolation: worktree`, the desktop "worktree" option) — they nest in
 `<repo>/.claude/worktrees/`; use the Git Flow command.
 
-**OpenCode / DSH.** Agents, skills, commands and DSH presets are rendered from
-`dotfiles/ai-harnesses/` into `~/.config/opencode` and `$DSH_HOME` — never
-hand-edit a rendered file; the next `deno task ai` overwrites it.
+**OpenCode / DSH.** Agents, skills, commands and DSH presets are rendered into
+`~/.config/opencode` and `$DSH_HOME`; the next `deno task ai` overwrites a hand
+edit.
