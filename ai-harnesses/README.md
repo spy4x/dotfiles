@@ -99,21 +99,28 @@ How `invocation` renders:
   intended rendering change: `deno test -A ai-harnesses/adapters.test.ts -- --update`, then review
   the golden diff.
 
-## Claude Code hooks (`settings/claude/hooks/`) — disabled
+## Claude Code hooks (`settings/claude/hooks/`)
 
-Written, tested, **not wired up**: `settings/claude/settings.json` has no `hooks` key, so nothing
-runs and the scripts are not copied to `~/.claude/`. A `PreToolUse` hook on Bash runs before every
-shell command, which is more ceremony than the rules it guards are worth right now.
+`settings/claude/settings.json` wires only `guard-kill.ts`, and only for commands that start with
+`kill`, `pkill`, `killall` (also by `/bin` or `/usr/bin` path), `systemctl`, `loginctl`, `shutdown`,
+`reboot`, `poweroff`, `halt` or `sudo`, anywhere in a chain (the `if` field on each handler). A hook on every Bash call is more ceremony than the git
+rules are worth, so the other scripts ship to `~/.claude/hooks/` but do not run.
 
-| Hook           | Event                             | Would do                                                                                                                                                        |
-| -------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `guard-git.ts` | `PreToolUse` (Bash)               | ask before a commit on `main`/`master` and before `gh pr merge`; deny `git worktree add` inside a checkout; run gitleaks on unpushed commits and on `gh` bodies |
-| `worktree.ts`  | `WorktreeCreate`/`WorktreeRemove` | put Claude Code's built-in worktrees in the sibling `worktrees/<repo>/<type>/<slug>` layout instead of `<repo>/.claude/worktrees/`                              |
+| Hook            | Event                             | Wired | Does                                                                                                                                                                              |
+| --------------- | --------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `guard-kill.ts` | `PreToolUse` (Bash)               | yes   | deny a signal to PID 1, a systemd user manager, the agent's own ancestors or the desktop's core processes; deny `systemctl --user exit`, power actions and `loginctl terminate-*` |
+| `guard-git.ts`  | `PreToolUse` (Bash)               | no    | ask before a commit on `main`/`master` and before `gh pr merge`; deny `git worktree add` inside a checkout; run gitleaks on unpushed commits and on `gh` bodies                   |
+| `worktree.ts`   | `WorktreeCreate`/`WorktreeRemove` | no    | put Claude Code's built-in worktrees in the sibling `worktrees/<repo>/<type>/<slug>` layout instead of `<repo>/.claude/worktrees/`                                                |
 
-To enable: copy the `hooks` block from `settings/claude/hooks/settings.hooks.json` into
-`settings/claude/settings.json`, then run `deno task ai`. The command ships `hooks/` only while
-that key exists, and removes the scripts again when it goes. To run the guard less often, add
-`"if": "Bash(git *)"` to its handler (and a second handler with `"Bash(gh *)"`).
+`guard-kill` exists because an agent once sent SIGTERM to the systemd user manager, having read the
+parent-PID column of a process listing as a target; the manager logs the desktop out on SIGTERM. It
+resolves `pkill` and `killall` patterns with `pgrep`, so it judges exactly the processes that would
+die. A target it cannot resolve gets no opinion: `$pid`, `%1`, `xargs kill`, `exec kill`,
+`bash -c 'kill …'`.
+
+To wire the rest: copy the other handlers from `settings/claude/hooks/settings.hooks.json` into
+`settings/claude/settings.json`, then run `deno task ai`. The command ships `hooks/` only while the
+`hooks` key exists, and removes the scripts again when it goes.
 
 Without the worktree hook, Claude Code's built-in worktree features nest checkouts under
 `<repo>/.claude/worktrees/`, which repo tooling then walks. `AGENTS.md` tells the agent to create

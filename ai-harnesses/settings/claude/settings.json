@@ -21,5 +21,112 @@
       "Solo developer workstation: software development plus automation of the owner's own self-hosted servers",
       "Source control: github.com/spy4x and all repos under it"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(kill *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(pkill *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(killall *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(/bin/kill *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(/usr/bin/kill *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(/usr/bin/pkill *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(/usr/bin/killall *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(systemctl *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(loginctl *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(shutdown *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(reboot *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(poweroff *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(halt *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          },
+          {
+            "type": "command",
+            "if": "Bash(sudo *)",
+            "command": "deno run --no-config --no-lock --allow-read --allow-run=pgrep,ps \"$HOME/.claude/hooks/guard-kill.ts\"",
+            "timeout": 15,
+            "statusMessage": "guard-kill"
+          }
+        ]
+      }
+    ]
   }
 }
