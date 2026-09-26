@@ -166,5 +166,8 @@ Deno.test(`rejects an unknown flag`, async () => {
 })
 
 Deno.test(`refuses to kill other sessions' orphans`, async () => {
-  assertEquals((await sweep(`--all`, `--kill`)).code, 2)
+  await withOrphans(async (dir) => {
+    // An empty --under directory: if the refusal ever breaks, there is still nothing to kill.
+    assertEquals((await sweep(`--all`, `--kill`, `--under`, await dir(`empty`))).code, 2)
+  })
 })
