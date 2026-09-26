@@ -394,8 +394,8 @@ Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use it nowhere until I
 re-enable it. Fresh subagents over forks (a fork copies the whole conversation).
 
 **Reasoning effort.** `medium` for sessions, leads, implementers and every
-review: one `reviewer` agent reviews every diff. Higher-effort reviewers cost
-1.7–3 times more per round and did not cut review rounds (2026-09-25..26,
+review: one `reviewer` agent reviews every diff. `xhigh` and `max` reviewers cost
+5–9 times a `medium` round and did not cut review rounds (2026-09-25..26,
 `~/sync/code/ai-memory/experiments/model-comparison/`). Effort belongs to the
 agent type, not to the call.
 
