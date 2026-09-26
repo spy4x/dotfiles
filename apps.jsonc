@@ -153,7 +153,7 @@
     "homebrew": ["neovim"]
   },
   {
-    // Secret scanner. Used by .claude/hooks/guard-git.ts before push and gh create/edit.
+    // Secret scanner. The secrets rule in ai-harnesses/AGENTS.md has agents run it before a send.
     "name": "gitleaks",
     "dnf": ["gitleaks"],
     "homebrew": ["gitleaks"],

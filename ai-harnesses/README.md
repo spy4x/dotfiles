@@ -14,17 +14,17 @@ committed here? It prints each file that differs, and the exit code makes it usa
 for example after a merge, to confirm the apply really happened.
 
 Run it from the **main checkout, after merge**. From a linked worktree it refuses: config from an
-unmerged branch — hooks included — must not go live for every session on the machine before it is
+unmerged branch must not go live for every session on the machine before it is
 reviewed. `--check` works anywhere.
 
 ## Layout
 
-| Source                                | Claude Code (`~/.claude`)        | OpenCode (`~/.config/opencode`)              | DSH (`$DSH_HOME`, default `~/.local/share/dsh`)   |
-| ------------------------------------- | -------------------------------- | -------------------------------------------- | ------------------------------------------------- |
-| `AGENTS.md`                           | `CLAUDE.md`                      | `AGENTS.md`                                  | `AGENTS.md`                                       |
-| `skills/<name>/` (`SKILL.md` + files) | `skills/<name>/`                 | `skills/<name>/` and/or `commands/<name>.md` | `skills/<name>/`                                  |
-| `agents/<name>.md`                    | `agents/<name>.md`               | `agents/<name>.md`                           | `.agent-presets/<name>/{preset,agent.cordis}.yml` |
-| `settings/<harness>/**`               | `settings.json` merged, `hooks/` | `opencode.json`, `tui.json` merged           | `settings.yaml` merged, `profiles/web/*` copied   |
+| Source                                | Claude Code (`~/.claude`) | OpenCode (`~/.config/opencode`)              | DSH (`$DSH_HOME`, default `~/.local/share/dsh`)   |
+| ------------------------------------- | ------------------------- | -------------------------------------------- | ------------------------------------------------- |
+| `AGENTS.md`                           | `CLAUDE.md`               | `AGENTS.md`                                  | `AGENTS.md`                                       |
+| `skills/<name>/` (`SKILL.md` + files) | `skills/<name>/`          | `skills/<name>/` and/or `commands/<name>.md` | `skills/<name>/`                                  |
+| `agents/<name>.md`                    | `agents/<name>.md`        | `agents/<name>.md`                           | `.agent-presets/<name>/{preset,agent.cordis}.yml` |
+| `settings/<harness>/**`               | `settings.json` merged    | `opencode.json`, `tui.json` merged           | `settings.yaml` merged, `profiles/web/*` copied   |
 
 `config.jsonc` says where each harness lives, whether it is enabled (`auto`: its home exists or its
 binary is on `PATH`), which settings files are merged instead of copied, and which model each
@@ -99,31 +99,14 @@ How `invocation` renders:
   intended rendering change: `deno test -A ai-harnesses/adapters.test.ts -- --update`, then review
   the golden diff.
 
-## Claude Code hooks (`settings/claude/hooks/`)
+## No harness hooks
 
-`settings/claude/settings.json` wires only `guard-kill.ts`, and only for commands that start with
-`kill`, `pkill`, `killall` (also by `/bin` or `/usr/bin` path), `systemctl`, `loginctl`, `shutdown`,
-`reboot`, `poweroff`, `halt` or `sudo`, anywhere in a chain (the `if` field on each handler). A hook on every Bash call is more ceremony than the git
-rules are worth, so the other scripts ship to `~/.claude/hooks/` but do not run.
+Rules live in `AGENTS.md`, which every harness reads, not in hooks that only Claude Code runs. The
+Claude Code adapter would still ship a `settings/claude/hooks/` directory if one came back with a
+`hooks` key in `settings/claude/settings.json`.
 
-| Hook            | Event                             | Wired | Does                                                                                                                                                                              |
-| --------------- | --------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `guard-kill.ts` | `PreToolUse` (Bash)               | yes   | deny a signal to PID 1, a systemd user manager, the agent's own ancestors or the desktop's core processes; deny `systemctl --user exit`, power actions and `loginctl terminate-*` |
-| `guard-git.ts`  | `PreToolUse` (Bash)               | no    | ask before a commit on `main`/`master` and before `gh pr merge`; deny `git worktree add` inside a checkout; run gitleaks on unpushed commits and on `gh` bodies                   |
-| `worktree.ts`   | `WorktreeCreate`/`WorktreeRemove` | no    | put Claude Code's built-in worktrees in the sibling `worktrees/<repo>/<type>/<slug>` layout instead of `<repo>/.claude/worktrees/`                                                |
-
-`guard-kill` exists because an agent once sent SIGTERM to the systemd user manager, having read the
-parent-PID column of a process listing as a target; the manager logs the desktop out on SIGTERM. It
-resolves `pkill` and `killall` patterns with `pgrep`, so it judges exactly the processes that would
-die. A target it cannot resolve gets no opinion: `$pid`, `%1`, `xargs kill`, `exec kill`,
-`bash -c 'kill …'`.
-
-To wire the rest: copy the other handlers from `settings/claude/hooks/settings.hooks.json` into
-`settings/claude/settings.json`, then run `deno task ai`. The command ships `hooks/` only while the
-`hooks` key exists, and removes the scripts again when it goes.
-
-Without the worktree hook, Claude Code's built-in worktree features nest checkouts under
-`<repo>/.claude/worktrees/`, which repo tooling then walks. `AGENTS.md` tells the agent to create
-worktrees by hand instead; don't tick the worktree option when starting a desktop session.
+Claude Code's built-in worktree features nest checkouts under `<repo>/.claude/worktrees/`, which
+repo tooling then walks. `AGENTS.md` tells the agent to create worktrees by hand instead; don't tick
+the worktree option when starting a desktop session.
 
 OpenCode and DSH pick up changes on the next session start.
