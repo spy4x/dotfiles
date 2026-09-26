@@ -28,8 +28,8 @@ is applied here.
 - **One rules file, every harness.** [`ai-harnesses/AGENTS.md`](ai-harnesses/AGENTS.md) holds
   the global rules: autonomy, Git flow, secrets, cleanup, subagent orchestration. It becomes
   Claude Code's `CLAUDE.md` and OpenCode's and DSH's `AGENTS.md`, byte for byte.
-- **Agents and skills, written once.** [21 agents](ai-harnesses/agents/) and
-  [8 skills](ai-harnesses/skills/) in one harness-neutral format. Validated frontmatter picks a
+- **Agents and skills, written once.** [The agents](ai-harnesses/agents/) and
+  [skills](ai-harnesses/skills/) in one harness-neutral format. Validated frontmatter picks a
   model tier and effort per agent; each adapter renders its harness's format, covered by golden
   tests.
 - **A reviewer gate.** A separate, read-only [reviewer](ai-harnesses/agents/reviewer.md) runs
