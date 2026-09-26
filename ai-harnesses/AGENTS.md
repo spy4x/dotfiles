@@ -117,6 +117,30 @@ If leaked: **rotate first**, stop further sends, cascade dependents, edit
 (only cosmetic — alerts/RSS/archives already delivered), notify, log to
 `~/sync/code/ai-memory/incidents/rotation-log.md` (event only, never the value). Edit-after-ship = theater.
 
+# Account tokens
+
+`~/sync/code/rostok/.env.root` (gitignored; encrypted copy `.env.root.age`)
+holds account-wide tokens any project or task may use:
+
+- `CLOUDFLARE_API_TOKEN`: Cloudflare API, DNS edit on my zones.
+- `HETZNER_CLOUD_API_TOKEN`: Hetzner Cloud API and `hcloud`.
+- `UMAMI_API_TOKEN`: my self-hosted Umami analytics (rostok `stacks/umami`,
+  `stats.<domain>`).
+- `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`: Docker Hub login and push.
+- `JSR_TOKEN`: `deno publish` to JSR.
+
+They are not in the shell environment. Load only the one a command needs, in
+that command, without printing it:
+
+```bash
+export JSR_TOKEN="$(sed -n 's/^JSR_TOKEN=//p' ~/sync/code/rostok/.env.root)" && deno publish --token "$JSR_TOKEN"
+```
+
+Never source the whole file: it also holds backup and auth passwords. The hard
+rule above applies in full. A token missing from the file → ask me; don't
+search other files for one. A new account-wide token → add it here and to
+rostok's `.env.root.example`.
+
 # Sudo
 
 Every agent may run `sudo` on this machine. It is passwordless and unrestricted,
@@ -203,12 +227,15 @@ sweep adds `--all`, which shows other sessions' orphans too: report those, never
 kill them. It misses Docker and `systemd-run --scope` (own cgroup): clean those
 by name.
 
-Kill only a PID you started or one `sweep-orphans.sh` listed first on its line.
-Never type a PID copied from another column. Once cost: an agent read the parent
-PID of a `ps` listing as a target and sent SIGTERM to the systemd user manager,
-which logged the desktop out and closed every app and session. A `guard-kill`
-hook now denies signals to the session's own processes; a denial means the
-target is wrong, never that the hook needs working around.
+**Killing processes.** Kill only a PID you started, or one `sweep-orphans.sh`
+listed first on its line; prefer its `--kill`. Never signal PID 1, any `systemd`
+process, the desktop (kwin, plasmashell, sddm, dbus, pipewire, Xwayland), your
+own harness or the processes above it. Never run `kill -1`, `systemctl --user
+exit`, `loginctl terminate-*` or a shutdown or reboot. Before `pkill` or
+`killall`, run `pgrep -a` with the same pattern and read every match. Once cost:
+an agent read the parent-PID column of a process listing as a target and sent
+SIGTERM to the systemd user manager, which logged the desktop out and closed
+every app and agent session.
 
 # Git Flow
 
