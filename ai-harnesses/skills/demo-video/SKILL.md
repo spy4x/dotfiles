@@ -29,9 +29,9 @@ Copy them into the project's script. They are small and opinionated, so each pro
    never `page.setContent`: its `document.open` drops the init script's listeners, and no pointer
    appears.
 3. **Theme before first paint.** The app needs `<meta name="color-scheme" content="light dark">`
-   and an inline theme script in `<head>`; then `colorScheme` alone gives dark first paints, and
-   Chromium keeps the old page on screen until the new one paints. A white frame between pages
-   means one of those two is missing: fix the app, not the recording.
+   and an inline theme script in `<head>`; then `colorScheme` makes even the browser's blank frame
+   between pages dark. A white frame between pages means one of those two is missing: fix the app,
+   not the recording.
 4. **Drive it like a person.** `clickLike` for every click (`locator.click()` teleports),
    `typeLike` for fields (70 ms per key). Pause 600–1000 ms on each new state so it can be read.
    `page.mouse.move(x, y, { steps })` sends every step at once, so it still looks like a jump.
