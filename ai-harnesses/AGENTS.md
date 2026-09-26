@@ -371,8 +371,9 @@ it safe.
   fixes. Re-review after `needs-fix` → continue the same reviewer (`SendMessage`)
   with the fix: it remembers its findings, and its cache lasts an hour, so a
   second round within the hour costs a fraction of a fresh one. A re-review
-  covers only the fix: the lines it changed, their `Mutation:` lines, the
-  earlier findings, and one full run of the checks. A new PR, or a rework that rewrote most of the diff →
+  covers only the fix: the diff since the commit named in the last verdict, the
+  `Mutation:` lines for tests the fix added or changed, the earlier findings,
+  and one full run of the checks. A new PR, or a rework that rewrote most of the diff →
   a fresh reviewer. Never count or report rejections in a summary, PR body or
   issue: report what the review found and what changed.
 - **Count before you spawn a reviewer.** Every test the diff adds or changes
@@ -403,8 +404,7 @@ re-enable it. Fresh subagents over forks (a fork copies the whole conversation).
 review: one `reviewer` agent reviews every diff. `xhigh` and `max` reviewers cost
 5–9 times a `medium` round and did not cut review rounds (2026-09-25..26,
 `~/sync/code/ai-memory/experiments/model-comparison/`). Effort belongs to the
-agent type, not to the call. Never raise effort to pass the first review:
-about one PR in eight passes it, whatever the model.
+agent type, not to the call.
 
 Implementers start at `medium`: don't guess difficulty up front. Escalate once a
 task proves hard. When a PR's second `needs-fix` verdict, whatever the first one
