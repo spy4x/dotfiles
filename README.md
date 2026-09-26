@@ -1,357 +1,97 @@
-# Dotfiles
+<div align="center">
 
-In this repo I store config files for my development environment. It helps me to
-install quickly all software I need for work and fun.\
-Feel free to check & alter the configs as you like.
+# dotfiles
 
-## Prerequisites
+**My AI-agent setup and Linux workstation, as code.**
 
-### Install Deno
+[AI harness config](ai-harnesses/README.md) · [Global agent rules](ai-harnesses/AGENTS.md) ·
+[Apps](docs/apps.md) · [Shell](docs/shell.md) · [Sync](docs/sync.md) ·
+[Host limits](docs/host-limits.md) · [Development](docs/development.md)
 
-```bash
-curl -fsSL https://deno.land/install.sh | sh
-```
+![A terminal runs "deno task ai --check". It lists the three harness homes (Claude Code, OpenCode, DSH) and prints "All targets in sync."](docs/ai-check.gif)
 
-### Supported Platforms
+</div>
 
-- **Linux**: zypper (openSUSE), dnf (Fedora/RHEL), apt (Debian/Ubuntu)
+I run several AI coding agents at once, in Claude Code, OpenCode and DSH (a DeepSeek harness).
+Their rules, skills, agents and settings are written once, in `ai-harnesses/`, and
+`deno task ai` renders them into the format each harness reads. `deno task ai --check`, shown
+above, writes nothing: it compares what every harness on this machine reads with what is
+committed, and exits 1 if they differ.
 
-## Scripts Overview
+The rest of the repository is the workstation those agents run on: the apps, the shell, the
+config files synced into my home directory, and the kernel and systemd limits a dozen parallel
+agent sessions need. It is this machine's live config: a merged change is not done until it
+is applied here.
 
-This repository includes two main automation scripts:
+## The AI-agent setup
 
-### 1. Application Installer (`install-apps.ts`)
+- **One rules file, every harness.** [`ai-harnesses/AGENTS.md`](ai-harnesses/AGENTS.md) holds
+  the global rules: autonomy, Git flow, secrets, cleanup, subagent orchestration. It becomes
+  Claude Code's `CLAUDE.md` and OpenCode's and DSH's `AGENTS.md`, byte for byte.
+- **Agents and skills, written once.** [The agents](ai-harnesses/agents/) and
+  [skills](ai-harnesses/skills/) in one harness-neutral format. Validated frontmatter picks a
+  model tier and effort per agent; each adapter renders its harness's format, covered by golden
+  tests.
+- **A reviewer gate.** A separate, read-only [reviewer](ai-harnesses/agents/reviewer.md) runs
+  the checks itself, breaks the code to prove each test goes red, and counts every claim in the
+  PR body. Its verdict is what authorises a merge.
+- **Nothing left running.** [`tools/sweep-orphans.sh`](tools/sweep-orphans.sh) lists the
+  processes an agent session left behind, and kills exactly those on request. The rules cap
+  the processes and memory of anything that spawns processes, and give every wait a deadline.
+- **Costs you can see.** [`tools/session-cost.ts`](tools/session-cost.ts) reports each session's
+  and subagent's cost, peak context and compactions from Claude Code's transcripts.
+- **Secrets stay local.** Committed env files are age-encrypted one value per line, and
+  [`tools/env-key-copy.ts`](tools/env-key-copy.ts) gives a worktree its key without the key
+  ever being printed.
 
-Installs applications from a unified JSON configuration with cross-platform support.
-
-### 2. Shell Setup (`install-shell.ts`)
-
-Configures a complete shell environment with Zsh, Oh My Zsh, Powerlevel10k theme, and custom aliases.
-
----
-
-## 🚀 Quick Start
-
-### Install Applications
-
-````bash
-deno task install-apps
-
-### Setup Shell Environment
-```bash
-deno task install-shell
-
-### Complete Setup (Both Scripts)
-```bash
-deno task install-all
-````
-
----
-
-## 🔗 Sync Local Config
-
-Repo holds dotfiles, home uses symlinks. AI harness config is copied, not linked — see
+How the rendering works, the file layout per harness and how to write a skill or an agent:
 [ai-harnesses/README.md](ai-harnesses/README.md).
 
-```bash
-# tmux
-mv ~/.tmux.conf ~/.tmux.conf.bak-$(date +%Y%m%d%H%M%S)
-ln -s ~/sync/code/dotfiles/.tmux.conf ~/.tmux.conf
+## The workstation
 
-# nvim
-mv ~/.config/nvim ~/.config/nvim.bak-$(date +%Y%m%d%H%M%S)
-ln -s ~/sync/code/dotfiles/.config/nvim ~/.config/nvim
+- **Apps.** [`install-apps.ts`](docs/apps.md) installs everything in `apps.jsonc` with dnf, apt
+  or zypper, and falls back to Flatpak.
+- **Shell.** [`install-shell.ts`](docs/shell.md) sets up Zsh, Oh My Zsh, Powerlevel10k and the
+  aliases in `aliases.sh`.
+- **Config in home.** tmux, Neovim, Zsh and the prompt are [symlinked](docs/sync.md) from this
+  repository.
+- **Limits for many agents.** [`system/`](docs/host-limits.md) raises inotify instances and zram
+  swap, cleans `/tmp` sooner, and caps the tasks each app can start.
+- **Synced, not cloned.** The repository lives in a Syncthing folder, and agent worktrees are
+  [ignored](docs/host-limits.md) so they never replicate.
 
-# zsh
-mv ~/.zshrc ~/.zshrc.bak-$(date +%Y%m%d%H%M%S)
-ln -s ~/sync/code/dotfiles/.zshrc ~/.zshrc
+**Use it if** you want a working example of one rules source driving several AI coding agents,
+or a Linux workstation set up by script. **Skip it if** you want a framework: these are my own
+settings, not a configurable product.
 
-# p10k
-mv ~/.p10k.zsh ~/.p10k.zsh.bak-$(date +%Y%m%d%H%M%S)
-ln -s ~/sync/code/dotfiles/.p10k.zsh ~/.p10k.zsh
-```
-
-## 🧱 Host limits for a many-agent workstation (`system/`)
-
-Running a dozen or more agent sessions at once pushes two kernel and daemon limits that a
-single-user desktop never reaches. The files under `system/` are the tracked copies. Nothing
-installs them automatically — copy them by hand on a new machine.
-
-**inotify instances.** Every editor, file watcher, dev server and agent session opens its own
-inotify instance, and each one counts against `fs.inotify.max_user_instances`. On Fedora with
-Plasma, `kde-inotify-survey` notices the limit filling up, raises it a little, writes
-`/etc/sysctl.d/50-kde-inotify-survey-max_user_instances.conf`, and pops a notification. It will
-keep doing that. `system/etc/sysctl.d/90-inotify.conf` sets the limit to 1024 once; the `90-`
-prefix sorts after the KDE file, so this value wins.
+## Quick start
 
 ```bash
-sudo cp system/etc/sysctl.d/90-inotify.conf /etc/sysctl.d/90-inotify.conf
-sudo sysctl --system
+curl -fsSL https://deno.land/install.sh | sh   # install Deno
+git clone https://github.com/spy4x/dotfiles && cd dotfiles
+deno task install-all      # apps, then the shell
+deno task ai --check       # compare your harness homes with ai-harnesses/, write nothing
 ```
 
-The watch limit (`fs.inotify.max_user_watches`) is a separate number and is already generous on
-Fedora — check it before assuming it is the one being hit.
+`deno task ai` without `--check` replaces the global rules, skills and agents of every installed
+harness with mine, and merges my settings into theirs. Read
+[ai-harnesses/README.md](ai-harnesses/README.md) first.
 
-**`/tmp` on tmpfs.** Fedora mounts `/tmp` as tmpfs and cleans it at an age of 10 days. Throwaway
-Deno caches from CI-emulation runs accumulate far faster than that, and because tmpfs is RAM
-they cost memory the whole time. `system/etc/tmpfiles.d/tmp.conf` shortens the age to 2 days;
-the agent instructions tell every run to delete its own cache, and this is the backstop for the
-ones that get killed. It keeps the upstream basename on purpose — a drop-in under a different
-name would also win, by sort order, but systemd then logs a duplicate-line warning on every
-cleanup run.
+## Development
 
 ```bash
-sudo cp system/etc/tmpfiles.d/tmp.conf /etc/tmpfiles.d/tmp.conf
-sudo systemd-tmpfiles --clean
+deno task test             # adapter golden files, engine, tools
+deno task ai --check       # exit 1 if any harness differs from ai-harnesses/
 ```
 
-**zram swap.** Fedora sizes zram at the smaller of RAM and 8 GB. Many parallel sessions fill
-that quickly, and the kernel then falls back to disk swap or the OOM killer.
-`system/etc/systemd/zram-generator.conf` raises it to 64 GB. zram only takes RAM for pages
-actually swapped, compressed, so a large size costs nothing while idle.
+File layout, adding apps and the encrypted env file: [development.md](docs/development.md).
 
-```bash
-sudo cp system/etc/systemd/zram-generator.conf /etc/systemd/zram-generator.conf
-sudo systemctl daemon-reload
-sudo swapoff /dev/zram0
-sudo zramctl --reset /dev/zram0
-sudo cat /sys/class/zram-control/hot_add
-sudo systemctl start systemd-zram-setup@zram0.service dev-zram0.swap
-zramctl
-```
+## Built by
 
-A plain `systemctl restart systemd-zram-setup@zram0.service` fails here with "Device or resource
-busy" and leaves the machine without swap. `zramctl --reset` removes the device node as well, so
-`hot_add` recreates it (it prints the new device number, `0`) before the service can set the size.
-
-**Tasks per app.** An agent's test once put a fake `rsync` on `PATH` that found and ran itself.
-It grew to 4,900 processes, about 40,600 tasks and 77 GB of RAM inside the Claude app, and a game
-crashed. Nothing stopped it, because systemd lets each app create up to 111,895 tasks by default.
-`system/etc/systemd/user.conf.d/50-tasks-max.conf` lowers that default to 16,384 tasks for each
-app, service and scope. A task is a process or a thread. Each app keeps its own budget, so a runaway
-in the Claude app cannot use up the game's or the browser's. When this was written, the Claude app
-held about 900 tasks and no other app more than 900. The agent rules still cap each command at 500
-tasks; this file is the backstop for a command that skips that cap. When the Claude app reaches the
-limit, every session in it fails to start new processes until the runaway ends, and the kernel log
-says `fork rejected by pids controller`.
-
-```bash
-sudo mkdir -p /etc/systemd/user.conf.d
-sudo cp system/etc/systemd/user.conf.d/50-tasks-max.conf /etc/systemd/user.conf.d/50-tasks-max.conf
-systemctl --user daemon-reexec
-for u in $(systemctl --user list-units --plain --no-legend 'app-com.anthropic.Claude-*.scope' | awk '{print $1}'); do
-  systemctl --user set-property --runtime "$u" TasksMax=16384
-done
-systemctl --user show -p DefaultTasksMax
-systemctl --user show 'app-com.anthropic.Claude-*.scope' -p Id -p TasksMax
-```
-
-The loop caps the running Claude app now; other apps get the new default when they next start.
-
-**Syncthing and worktrees.** Agent worktrees are created under `~/sync/code/worktrees/`, inside a
-Syncthing folder. Syncthing indexes and watches everything it does not ignore, so without an
-ignore line it holds an inotify watch per worktree directory and replicates build output to
-every other machine. A worktree is not worth syncing: it is rebuilt from `origin` on demand, and
-its `.git` file names an absolute path in the main checkout, so the copy is broken anyway.
-`system/syncthing-code.stignore` is the tracked copy of the ignore list for the `code` folder.
-
-```bash
-cp system/syncthing-code.stignore ~/sync/code/.stignore
-```
-
-Syncthing re-reads the file on the next scan. To confirm it took effect, open the web UI and
-rescan the folder, then check that the Syncthing process is holding far fewer inotify watches:
-
-```bash
-for p in $(pgrep -x syncthing); do echo "$p $(cat /proc/$p/fdinfo/* 2>/dev/null | grep -c '^inotify ')"; done
-```
+I'm [Anton Shubin](https://antonshubin.com), a senior full-stack engineer and tech lead. This is
+how I run AI agents on real work, on my own machine. Need something like it built for your
+product? [That's my day job →](https://antonshubin.com)
 
 ---
 
-## 📜 AI harness config (`ai-harnesses/`)
-
-Global rules, skills, agents and settings for Claude Code, OpenCode and DSH live once in
-`ai-harnesses/`. `deno task ai` copies them into every installed harness in its own format. See
-[ai-harnesses/README.md](ai-harnesses/README.md).
-
-### Encrypted env file
-
-`ai-harnesses/.env` (the NTFY settings) is gitignored; its encrypted copy
-`ai-harnesses/.env.age` is committed in age64 format, one encrypted value per line. The private key
-is `.age/key.txt`, gitignored and synced like the rest of `~/sync/code`; back it up, because without
-it the committed file cannot be decrypted. A worktree finds the main checkout's key by itself.
-
-```bash
-deno task env:decrypt   # every .env*.age in the repo -> its plaintext sibling
-deno task env:encrypt   # every .env* in the repo -> its .env*.age sibling
-```
-
-### Tmux plugins
-
-```bash
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-```
-
-In tmux: `prefix + I` to install plugins.
-
----
-
-## 📱 Application Installer (`install-apps.ts`)
-
-### Features
-
-- **Cross-Platform**: Automatically detects package manager (apt, dnf, zypper, winget, homebrew)
-- **Fallback Support**: Tries Flatpak if native package installation fails (Linux)
-- **Repository Management**: Handles adding repositories with GPG key support
-- **Architecture Filtering**: Skips apps incompatible with current architecture
-- **Pre/Post Commands**: Executes custom commands before/after installation
-- **Smart Recovery**: Continues with Flatpak if native packages fail
-- **Installation Summary**: Reports successful, failed, and skipped installations
-
-### Configuration (`apps.jsonc`)
-
-Edit `apps.jsonc` to customize applications. Supports comments via `//`. Each app supports:
-
-- **Package Managers**: `dnf`, `apt`, `zypper`, `winget`, `homebrew` arrays
-- **Flatpak**: `flatpak` ID (Linux only, preferred for GUI apps)
-- **Repositories**: `repoUrl` and `repoGpgKey` for adding repositories
-- **Commands**: `preInstallCommands` and `postInstallCommands` arrays
-- **System**: `requiresReboot` boolean flag
-- **Platform**: `architectures` array to limit supported architectures
-
-#### Example App Entry
-
-```json
-{
-  "name": "VS Code",
-  "repoUrl": "https://packages.microsoft.com/yumrepos/vscode",
-  "repoGpgKey": "https://packages.microsoft.com/keys/microsoft.asc",
-  "dnf": ["code"],
-  "apt": ["code"],
-  "zypper": ["code"],
-  "winget": ["Microsoft.VisualStudioCode"],
-  "homebrew": ["visual-studio-code"],
-  "flatpak": "com.visualstudio.code",
-  "architectures": ["x86_64", "aarch64"]
-}
-```
-
-#### App Configuration Options
-
-| Field                 | Type       | Description                                     |
-| --------------------- | ---------- | ----------------------------------------------- |
-| `name`                | `string`   | Display name of the application                 |
-| `dnf`                 | `string[]` | Package names for DNF (Fedora/RHEL)             |
-| `apt`                 | `string[]` | Package names for APT (Debian/Ubuntu)           |
-| `zypper`              | `string[]` | Package names for Zypper (openSUSE)             |
-| `winget`              | `string[]` | Package IDs for Winget (Windows)                |
-| `homebrew`            | `string[]` | Formula names for Homebrew (macOS)              |
-| `flatpak`             | `string`   | Flatpak application ID (Linux only)             |
-| `repoUrl`             | `string`   | Repository URL to add before installation       |
-| `repoGpgKey`          | `string`   | GPG key URL for repository verification         |
-| `preInstallCommands`  | `string[]` | Commands to run before installation             |
-| `postInstallCommands` | `string[]` | Commands to run after installation              |
-| `requiresReboot`      | `boolean`  | Whether installation requires system reboot     |
-| `architectures`       | `string[]` | Supported architectures (x86_64, aarch64, etc.) |
-| `winget`              | `string[]` | Package IDs for Winget (Windows)                |
-| `homebrew`            | `string[]` | Formula names for Homebrew (macOS)              |
-| `flatpak`             | `string`   | Flatpak application ID (Linux only)             |
-| `repoUrl`             | `string`   | Repository URL to add before installation       |
-| `repoGpgKey`          | `string`   | GPG key URL for repository verification         |
-| `preInstallCommands`  | `string[]` | Commands to run before installation             |
-| `postInstallCommands` | `string[]` | Commands to run after installation              |
-| `requiresReboot`      | `boolean`  | Whether installation requires system reboot     |
-| `architectures`       | `string[]` | Supported architectures (x86_64, aarch64, etc.) |
-
-#### Command Variables
-
-Commands support environment variable expansion:
-
-- `$USER` - Current username
-- `$HOME` - User home directory
-
----
-
-## 🐚 Shell Setup (`install-shell.ts`)
-
-### What It Installs & Configures
-
-1. **Zsh Shell**: Modern shell with advanced features
-2. **Oh My Zsh**: Popular Zsh framework with plugins and themes
-3. **Powerlevel10k**: Fast, customizable prompt theme
-4. **Custom Aliases**: Automatically integrates `aliases.sh` from this repository
-5. **Default Shell**: Sets Zsh as your default shell automatically
-
-### Features
-
-- **Cross-Platform**: Automatically detects package manager (apt, dnf, zypper, etc.)
-- **Smart Installation**: Skips already installed components
-- **Sequential Execution**: Steps depend on previous steps - stops on first failure
-- **Aliases Integration**: Sources `aliases.sh` directly (no manual setup needed)
-- **Automatic Configuration**: Sets up Powerlevel10k theme automatically
-- **Error Handling**: Reports success/failure for each step
-- **Shell Integration**: Automatically sets Zsh as default shell
-
-### Installation Process
-
-The script executes these steps in order:
-
-1. **Package Manager Update**: Updates package lists
-2. **Install Zsh**: Installs Zsh shell via system package manager
-3. **Install Oh My Zsh**: Downloads and installs Oh My Zsh framework
-4. **Install Powerlevel10k**: Clones Powerlevel10k theme
-5. **Configure Theme**: Updates `.zshrc` to use Powerlevel10k
-6. **Setup Aliases**: Configures `.zshrc` to source custom aliases
-7. **Set Default Shell**: Changes default shell to Zsh
-8. **Verification**: Verifies shell change took effect
-
-### Post-Installation
-
-After installation completes:
-
-- **New Terminal Sessions**: Open a new terminal to use Zsh with the new configuration
-- **Powerlevel10k Setup**: On first run, you'll be prompted to configure the theme with `p10k configure`
-- **Custom Aliases**: All aliases from `aliases.sh` are automatically available
-- **Manual Theme Config**: Run `p10k configure` anytime to reconfigure the theme
-
-### Important Notes
-
-- **Shell Change**: The script automatically attempts to set Zsh as your default shell
-- **Session Reload**: Changes take effect in new terminal sessions or by running `exec zsh`
-- **Theme Configuration**: Powerlevel10k will prompt for configuration on first use
-- **Aliases Integration**: No manual copying needed - aliases are sourced directly
-
----
-
-## 🛠️ Development
-
-### File Structure
-
-```
-dotfiles/
-├── .tmux.conf          # tmux config (tpm, resurrect, continuum)
-├── .zshrc              # zsh config
-├── .p10k.zsh           # powerlevel10k theme config
-├── ai-harnesses/       # AI harness rules, skills, agents, settings (deno task ai)
-├── .config/
-│   └── nvim/           # neovim config
-├── install-apps.ts      # Application installer
-├── install-shell.ts     # Shell environment setup  
-├── shared.ts           # Common utilities
-├── apps.jsonc          # Application configurations (with comments)
-├── aliases.sh          # Custom shell aliases
-├── deno.jsonc          # Deno configuration
-└── README.md           # This file
-```
-
-### Adding New Applications
-
-1. Edit `apps.jsonc`
-2. Add your application with appropriate package manager entries
-3. Test with `deno task install-apps`
-
-### Customizing Shell Setup
-
-- **Aliases**: Edit `aliases.sh` to add custom aliases
-- **Theme**: Modify the Powerlevel10k configuration in the script
-- **Additional Steps**: Add new setup steps to the `setupSteps()` method
+Made by Anton Shubin · [antonshubin.com/tools](https://antonshubin.com/tools)

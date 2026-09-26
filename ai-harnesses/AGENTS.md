@@ -266,7 +266,7 @@ WT="$(dirname "$MAIN")/worktrees/$(basename "$MAIN")/<type>/<slug>"
 git fetch origin && mkdir -p "$(dirname "$WT")" && git worktree add -b <type>/<slug> "$WT" origin/main
 ```
 
-Syncthing ignores `worktrees/` (per-machine step: README,
+Syncthing ignores `worktrees/` (per-machine step: `docs/host-limits.md`,
 `system/syncthing-code.stignore`): a synced worktree is broken by construction
 and burns inotify watches.
 

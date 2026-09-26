@@ -13,7 +13,7 @@ here. After every merge, from the main checkout (never a worktree):
    directories, never symlinks into this repo.
 4. Touched `system/syncthing-code.stignore` → `cp system/syncthing-code.stignore
    ~/sync/code/.stignore`.
-5. Touched `system/etc/` → apply it with the README's commands, using `sudo -n`, and
-   list those commands in the report.
+5. Touched `system/etc/` → apply it with the commands in `docs/host-limits.md`, using
+   `sudo -n`, and list those commands in the report.
 
 Report what was applied and what is left for me.
