@@ -73,11 +73,27 @@ dependency. Owning a component means owning its accessibility: roles, labels,
 keyboard handling, focus.
 
 **Shared libs before local code.** In any `spy4x/*` TypeScript repo, before
-writing a component, helper or library, check `spy4x/ts-libs` and
-`spy4x/preact-components`. Already there → import it, never duplicate it. Not
-there but reusable by other TypeScript projects → add it to the fitting shared
-repo first, then import it from there. The final report lists every addition to
-those repos.
+writing a component, helper or library, search `spy4x/ts-libs` and
+`spy4x/preact-components` for it, under any name. Already there → import it,
+and extend it if it falls short; never add a second one. Not there but reusable
+by other TypeScript projects → add it to the fitting shared repo first, then
+import it from there. The final report lists every addition to those repos.
+
+Reusable means a future project could use it, even if only one app does today:
+
+- `spy4x/preact-components` takes a Preact component, icon, design token or
+  signals helper.
+- `spy4x/ts-libs` takes code with no UI that a server or a page could use:
+  date and time, formatting, parsing, validation, security, networking,
+  integrations.
+- Business wording, one app's data model, or a renamed copy of something that
+  already exists disqualify it from both. The app keeps what only it needs, in
+  its own repo.
+
+The flow runs one way: an app feeds the libraries. New code in an app imports
+from them, but an app's existing code is never refactored just to call into
+them. Each library's `AGENTS.md`, "What belongs in this
+library", holds the details.
 
 # Session bootstrap
 
