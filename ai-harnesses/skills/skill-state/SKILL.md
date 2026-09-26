@@ -1,9 +1,9 @@
 ---
 name: skill-state
-description: "Experiment: run a long task through an explicit state file (.skill-state/state.json) and fresh per-step subagents, instead of one growing conversation. Load when the start-task skill picks the skill-state arm, or when asked to use skill-state."
+description: "Run a long task through an explicit state file (.skill-state/state.json) and fresh per-step subagents, instead of one growing conversation. The experiment is stopped; load only when explicitly asked to use skill-state."
 ---
 
-# SKILL.state (experiment)
+# SKILL.state
 
 **The idea.** SKILL.state (arXiv:2608.26263; Badhe, Tiwari and Chung, 2026) replaces the growing
 chat history with an explicit, mutable execution state. At each step the model gets only three
@@ -18,9 +18,8 @@ DSH always keep the full chat history, so this skill approximates the idea in th
   and latest observation. It gets no conversation.
 - The state survives context compaction and a new session. Resume from the files, not from memory.
 
-The experiment asks one question: does this make long tasks cheaper and more reliable than the
-normal flow? Every run, in either arm, is logged in
-`~/sync/code/ai-memory/experiments/skill-state.md`.
+The experiment that compared this with the normal flow stopped on 2026-09-27; its log and outcome
+are in `~/sync/code/ai-memory/experiments/skill-state.md`. Runs are no longer logged.
 
 ## Files
 
@@ -33,8 +32,8 @@ Inside the worktree, never committed:
 └── observations/obs-NNNN-<slug>.json
 ```
 
-Keep them out of git without touching the repo's `.gitignore`, because the experiment must not
-leave a diff:
+Keep them out of git without touching the repo's `.gitignore`, because a run must not leave a
+diff:
 
 ```bash
 echo .skill-state/ >> "$(git rev-parse --git-common-dir)/info/exclude"
@@ -105,8 +104,8 @@ Only the way the work is carried and handed over changes.
 Keep `state.json` under 20 KB. Past that, move the oldest half of `phase_history` to
 `phase_history_archived.json`.
 
-## Chat and the log
+## Chat and cleanup
 
 Chat status stays as the global rules describe. The state files are the record, so do not paste
-them into chat. When the task reaches `done` or `halted`, add a row to the experiment log as that
-file instructs, then delete `.skill-state/` together with the worktree.
+them into chat. When the task reaches `done` or `halted`, delete `.skill-state/` together with the
+worktree.
