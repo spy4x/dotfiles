@@ -74,6 +74,11 @@ while ((p > 1)); do
   p=${p// /}
 done
 
+if ((ALL && KILL)); then
+  echo "sweep-orphans.sh: --all lists other sessions' orphans; report those, never --kill them" >&2
+  exit 2
+fi
+
 CG=$(cut -d: -f3 /proc/self/cgroup)
 ORPHANS=$(ps -o pid=,ppid=,etime=,pcpu=,args= -p "$(paste -sd, "/sys/fs/cgroup$CG/cgroup.procs")" |
   awk -v mgr="$MGR" '
@@ -83,7 +88,10 @@ ORPHANS=$(ps -o pid=,ppid=,etime=,pcpu=,args= -p "$(paste -sd, "/sys/fs/cgroup$C
       if (argv[1] == "/opt/claude-desktop/claude-desktop") next
       if (argv[1] ~ /\/chrome_crashpad_handler$/) next
       printf "%s %s %s %s\n", $1, $3, $4, cmd
-    }')
+    }') || {
+  echo "sweep-orphans.sh: could not read the process list; this is not a clean result" >&2
+  exit 1
+}
 
 LISTED=()
 while IFS= read -r line; do

@@ -164,3 +164,7 @@ Deno.test(`never lists its own ancestors, even when they are orphans`, async () 
 Deno.test(`rejects an unknown flag`, async () => {
   assertEquals((await sweep(`--bogus`)).code, 2)
 })
+
+Deno.test(`refuses to kill other sessions' orphans`, async () => {
+  assertEquals((await sweep(`--all`, `--kill`)).code, 2)
+})

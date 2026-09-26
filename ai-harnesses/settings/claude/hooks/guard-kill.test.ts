@@ -71,6 +71,8 @@ Deno.test(`sees through sudo`, async () => {
   assertEquals(await verdict(`sudo -n kill 15226`), `deny`)
   assertEquals(await verdict(`sudo -u root -n kill -9 1`), `deny`)
   assertEquals(await verdict(`sudo -n kill 925428`), null)
+  assertEquals(await verdict(`timeout -s KILL 5 kill 15226`), `deny`)
+  assertEquals(await verdict(`sudo -n timeout --signal=KILL 5 /usr/bin/kill 15226`), `deny`)
 })
 
 Deno.test(`gives no opinion on a target it cannot resolve`, async () => {
@@ -95,6 +97,7 @@ Deno.test(`killall is judged per name`, async () => {
     `deno`,
   ]])
   assertEquals(await verdict(`killall plasmashell`, fake({ [`-x plasmashell`]: [15844] })), `deny`)
+  assertEquals(await verdict(`killall -u me`, fake({ [`-u me`]: [15226, 925430] })), `deny`)
 })
 
 Deno.test(`parseKill reads signal forms and --`, () => {
@@ -140,6 +143,8 @@ Deno.test(`the hook works with the permissions settings.json grants`, async () =
     return new TextDecoder().decode(stdout)
   }
   assertStringIncludes(await hook(`kill -TERM 1`), `"permissionDecision":"deny"`)
+  assertStringIncludes(await hook(`cd /tmp && kill -TERM 1`), `"permissionDecision":"deny"`)
+  assertStringIncludes(await hook(`kill -TERM 1; cd ~/x`), `"permissionDecision":"deny"`)
   assertEquals(await hook(`kill -TERM 999999999`), ``)
 })
 

@@ -18,11 +18,12 @@
 // Protected: PID 1, every systemd user manager, this hook's ancestors (the agent,
 // the desktop app hosting it), and the desktop's core processes by name.
 //
-// A target the hook cannot resolve (`$pid`, `$(pgrep …)`, `%1`) gets no opinion:
+// A target the hook cannot resolve (`$pid`, `$(pgrep …)`, `%1`, `xargs kill`,
+// `bash -c 'kill …'`) gets no opinion:
 // like guard-git, a bug or a blind spot here must never brick a session.
 
 import { basename } from "node:path"
-import { type Finding, toSegments } from "./guard-git.ts"
+import { type Finding, splitCommands, stripWrappers } from "./guard-git.ts"
 
 /** Process names whose death ends or cripples the desktop session. */
 const CRITICAL = new Set([
@@ -162,6 +163,8 @@ export function killallToPgrep(args: string[]): string[][] {
     else if ([`-s`, `--signal`, `-o`, `-y`, `--older-than`, `--younger-than`].includes(arg)) i++
     else if (!arg.startsWith(`-`)) names.push(arg)
   }
+  // `killall -u <user>` with no name kills everything that user owns.
+  if (names.length === 0) return flags.length ? [flags] : []
   return names.map((name) => [...flags, ...(regex ? [] : [`-x`]), name])
 }
 
@@ -200,25 +203,42 @@ function deny(reason: string): Finding {
   return { verdict: `deny`, reason: `guard-kill: ${reason}` }
 }
 
-/** Drops a leading `sudo` and its options: agents here have passwordless sudo. */
-export function unwrapSudo(argv: string[]): string[] {
-  if (basename(argv[0] ?? ``) !== `sudo`) return argv
-  let i = 1
-  while (i < argv.length && argv[i].startsWith(`-`)) {
-    if (argv[i] === `--`) {
-      i++
-      break
+/**
+ * Drops leading `sudo` and `timeout` with their options (agents here have passwordless sudo, and
+ * `timeout -s KILL 5` hides its duration behind an option value), then guard-git's wrappers.
+ */
+export function unwrap(argv: string[]): string[] {
+  let rest = argv
+  for (;;) {
+    const name = basename(rest[0] ?? ``)
+    const valued = name === `sudo` ? /^-[ugCDhprtU]$/ : name === `timeout` ? /^-[sk]$/ : null
+    if (!valued) {
+      const stripped = stripWrappers(rest)
+      if (stripped.length === rest.length) return rest
+      rest = stripped
+      continue
     }
-    if (/^-[ugCDhprtU]$/.test(argv[i])) i++
-    i++
+    let i = 1
+    while (i < rest.length && rest[i].startsWith(`-`)) {
+      if (rest[i] === `--`) {
+        i++
+        break
+      }
+      if (valued.test(rest[i]) || [`--signal`, `--kill-after`].includes(rest[i])) i++
+      i++
+    }
+    if (name === `timeout`) i++ // the duration
+    rest = rest.slice(i)
   }
-  return argv.slice(i)
 }
 
 /** Returns the first deny for a Bash command line, or null. */
 export async function evaluate(line: string, sys: System): Promise<Finding | null> {
-  for (const segment of toSegments(line, `/`)) {
-    const [program, ...args] = unwrapSudo(segment.argv)
+  // splitCommands, not toSegments: the working directory is irrelevant here, and resolving a `cd`
+  // reads HOME, which the hook's permissions do not grant.
+  for (const raw of splitCommands(line)) {
+    const [program, ...args] = unwrap(raw)
+    if (!program) continue
     const name = basename(program)
     let finding: Finding | null = null
     if (name === `kill`) finding = await checkKill(args, sys)

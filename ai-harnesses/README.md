@@ -102,8 +102,8 @@ How `invocation` renders:
 ## Claude Code hooks (`settings/claude/hooks/`)
 
 `settings/claude/settings.json` wires only `guard-kill.ts`, and only for commands that start with
-`kill`, `pkill`, `killall`, `systemctl`, `loginctl`, `shutdown`, `reboot`, `poweroff`, `halt` or
-`sudo` (the `if` field on each handler). A hook on every Bash call is more ceremony than the git
+`kill`, `pkill`, `killall` (also by `/bin` or `/usr/bin` path), `systemctl`, `loginctl`, `shutdown`,
+`reboot`, `poweroff`, `halt` or `sudo`, anywhere in a chain (the `if` field on each handler). A hook on every Bash call is more ceremony than the git
 rules are worth, so the other scripts ship to `~/.claude/hooks/` but do not run.
 
 | Hook            | Event                             | Wired | Does                                                                                                                                                                              |
@@ -115,7 +115,8 @@ rules are worth, so the other scripts ship to `~/.claude/hooks/` but do not run.
 `guard-kill` exists because an agent once sent SIGTERM to the systemd user manager, having read the
 parent-PID column of a process listing as a target; the manager logs the desktop out on SIGTERM. It
 resolves `pkill` and `killall` patterns with `pgrep`, so it judges exactly the processes that would
-die. A target it cannot resolve, such as `$pid` or `%1`, gets no opinion.
+die. A target it cannot resolve gets no opinion: `$pid`, `%1`, `xargs kill`, `exec kill`,
+`bash -c 'kill …'`.
 
 To wire the rest: copy the other handlers from `settings/claude/hooks/settings.hooks.json` into
 `settings/claude/settings.json`, then run `deno task ai`. The command ships `hooks/` only while the
