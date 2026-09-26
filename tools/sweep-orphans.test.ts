@@ -23,6 +23,15 @@ async function orphan(cwd: string, session: string): Promise<number> {
   return Number((await Deno.readTextFile(pidFile)).trim())
 }
 
+async function exists(path: string): Promise<boolean> {
+  try {
+    await Deno.stat(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Runs the sweep as session `ME` and returns the PIDs it lists and its exit code. */
 async function sweep(...args: string[]): Promise<{ pids: number[]; code: number }> {
   const { code, stdout } = await new Deno.Command(`bash`, {
@@ -88,6 +97,67 @@ Deno.test(`--under keeps only orphans inside the given directories`, async () =>
     const { pids } = await sweep(`--under`, mine)
     assert(pids.includes(inside))
     assert(!pids.includes(outside))
+  })
+})
+
+Deno.test(`prints only one PID per line, in the first column`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const pid = await orphan(await dir(`lane`), ME)
+    spawned.push(pid)
+    const { stdout } = await new Deno.Command(`bash`, {
+      args: [SCRIPT],
+      env: { CLAUDE_CODE_SESSION_ID: ME },
+      stdout: `piped`,
+    }).output()
+    const line = new TextDecoder().decode(stdout).split(`\n`).find((l) => l.startsWith(`${pid} `))
+    assert(line, `the orphan is not listed`)
+    // PID, elapsed time, CPU percent, then the command: no parent PID to mistake for a target.
+    assert(/^\d+ [\d:-]+ [\d.]+ sleep 120$/.test(line), line)
+  })
+})
+
+Deno.test(`--kill stops the listed orphans and nothing outside --under`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const mine = await dir(`mine`)
+    const inside = await orphan(mine, ME)
+    const outside = await orphan(await dir(`theirs`), ME)
+    spawned.push(inside, outside)
+    const { pids, code } = await sweep(`--kill`, `--under`, mine)
+    assertEquals(code, 0)
+    assertEquals(pids, [inside])
+    await new Promise((r) => setTimeout(r, 200))
+    assert(!(await exists(`/proc/${inside}`)), `the listed orphan still runs`)
+    assert(await exists(`/proc/${outside}`), `an orphan outside --under was killed`)
+  })
+})
+
+Deno.test(`never lists its own ancestors, even when they are orphans`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const lane = await dir(`lane`)
+    const out = join(lane, `out`)
+    // The outer sh exits at once, so the inner sh (the sweep's parent) is itself an orphan.
+    const { success } = await new Deno.Command(`setsid`, {
+      args: [
+        `sh`,
+        `-c`,
+        `sh -c 'sleep 0.3; bash "$1" --under "$2" > "$3.tmp"; mv "$3.tmp" "$3"' sh "$1" "$2" "$3" & echo $! > "$2/pid"`,
+        `sh`,
+        SCRIPT,
+        lane,
+        out,
+      ],
+      cwd: lane,
+      env: { CLAUDE_CODE_SESSION_ID: ME },
+    }).output()
+    assert(success)
+    const parent = Number((await Deno.readTextFile(join(lane, `pid`))).trim())
+    spawned.push(parent)
+    for (let i = 0; i < 50 && !(await exists(out)); i++) {
+      await new Promise((r) => setTimeout(r, 100))
+    }
+    const listed = (await Deno.readTextFile(out)).split(`\n`).filter(Boolean)
+      .map((line) => Number(line.split(` `)[0]))
+    assert(!listed.includes(parent), `the sweep listed its own parent`)
   })
 })
 

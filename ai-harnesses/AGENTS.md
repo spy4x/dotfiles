@@ -196,11 +196,19 @@ no longer existed. Nothing was running; the agents were simply never woken up.
   shows none of its processes is stuck: the lead tells it to read its results.
 
 **Sweep before reporting done:** `~/sync/code/dotfiles/tools/sweep-orphans.sh`.
-It lists this session's orphans; a subagent adds `--under <worktree> <scratch
-dir>` and kills only what that lists. Empty output = clean. The lead's final
+It lists this session's orphans, one per line: PID, elapsed time, CPU, command.
+A subagent adds `--under <worktree> <scratch dir>`, reads the list, then reruns
+it with `--kill` to stop exactly those. Empty output = clean. The lead's final
 sweep adds `--all`, which shows other sessions' orphans too: report those, never
 kill them. It misses Docker and `systemd-run --scope` (own cgroup): clean those
 by name.
+
+Kill only a PID you started or one `sweep-orphans.sh` listed first on its line.
+Never type a PID copied from another column. Once cost: an agent read the parent
+PID of a `ps` listing as a target and sent SIGTERM to the systemd user manager,
+which logged the desktop out and closed every app and session. A `guard-kill`
+hook now denies signals to the session's own processes; a denial means the
+target is wrong, never that the hook needs working around.
 
 # Git Flow
 
