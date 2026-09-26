@@ -150,9 +150,20 @@ path. A failed lane that leaks a browser is worse than a failed lane.
 Never `rm -rf` a variable path from a command line, guarded or not: the harness
 stops for approval on it even in bypass mode, which stalls unattended work, and
 an empty variable deletes from `/`. Delete with `find "$D" -delete` (it
-removes the directory too), or `rm -rf` a literal path. Each agent keeps its
-scratch files in its own `mktemp -d`, never in a directory another agent shares.
-Never `find /`; search the directory that can hold the answer.
+removes the directory too), or `rm -rf` a literal path. Never `find /`; search
+the directory that can hold the answer.
+
+**Delete only what you created.** Each agent keeps its scratch files in its own
+`mktemp -d` folder, records the path it prints, and deletes only paths it
+created, by that exact name, never a directory's contents by pattern or
+`-mindepth 1`. Shell variables do not survive between tool calls, so reuse the
+literal path, not `$S`. The harness scratchpad
+(`/tmp/claude-<uid>/<project>/<session>/scratchpad`) is not yours, although the
+prompt calls it session-specific and suggests it for temporary files: the lead
+and every subagent it spawns share it. To keep your folder inside it, create the
+folder with `mktemp -d -p <scratchpad>`; never delete or empty the scratchpad
+itself. Once cost: a reviewer ran `find <scratchpad> -mindepth 1 -delete` as
+cleanup and wiped two other reviewers' worktrees mid-review.
 
 **Cap anything that spawns processes** (tests with fake binaries, fan-out
 scripts, a lane's test run) so a runaway stops at the cap. Once cost: a fake

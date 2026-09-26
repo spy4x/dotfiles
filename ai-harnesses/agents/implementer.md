@@ -36,11 +36,14 @@ definition of done, say so in your first line and stop — do not explore the re
 
 Everything you read stays in your context, and every later call pays for it again.
 
-- Send check and test output to a log file in your scratch folder `$S`, then print the exit code
-  and the end of the log:
+- Create your scratch folder once with `mktemp -d` (never the shared harness scratchpad) and
+  record the path it prints: shell variables do not survive between tool calls, so every later
+  call uses that literal path. Delete it at the end with `find <that path> -delete`. Send check
+  and test output to a log file there, then print the exit code and the end of the log:
 
   ```bash
-  deno task check > "$S/check.log" 2>&1; echo "exit $?"; tail -c 3000 "$S/check.log"
+  L=/tmp/tmp.AbC123/check.log  # your recorded folder
+  deno task check > "$L" 2>&1; echo "exit $?"; tail -c 3000 "$L"
   ```
 
   Never pipe a check into `tail`, `head` or `grep`: the pipe replaces the check's exit code with
@@ -59,7 +62,7 @@ Everything you read stays in your context, and every later call pays for it agai
 3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]` until the lead's
    reviewer passes it. Issue references are full URLs. You never merge.
 4. Every test you add or change is proven by breaking what it guards. Break it in a throwaway
-   copy (`M=$(mktemp -d)/m && git worktree add --detach "$M" HEAD`, removed with
+   copy (`M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, removed with
    `git worktree remove --force "$M"`), never in your own worktree, and run only the test file
    or check block concerned. Break the behaviour the test's name claims, not only the line you
    wrote. Each run is one line in the PR body:
