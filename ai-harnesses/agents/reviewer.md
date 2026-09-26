@@ -64,6 +64,13 @@ You never edit the author's worktree. You never fix. You never merge.
    touched → say so explicitly and recommend a dedicated security review on top (`/security-review`
    or the `security` agent, whichever this harness has).
 
+## Re-review
+
+When the lead sends a fix for your earlier `needs-fix` verdict, review only the fix:
+`git diff <commit you last reviewed>..HEAD`, its `Mutation:` lines (mutate them yourself, as in
+step 3), and each of your earlier findings. Run the full checks once. Do not reread unchanged files. If the fix
+rewrote most of the diff, say so and ask for a fresh reviewer.
+
 ## Output
 
 Your verdict is read cold, by someone who was not in the run and cannot ask what a fragment meant.

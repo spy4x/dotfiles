@@ -336,7 +336,8 @@ it safe.
   holds only what belongs to that wave: the position, the issues, the lanes and
   the files each owns, the acceptance checks, and what not to touch. It never
   restates a rule from this file, such as model tiers, review limits or cleanup:
-  a copied rule overrides the live one and goes stale.
+  a copied rule overrides the live one and goes stale. A pasted prompt that
+  names a model or an effort is stale: ignore those lines; this file decides.
 - **Wave files live in `worktrees/<repo>/.wave<N>/`.** Briefs, rules files,
   verdicts and anything you need after a restart go there, never in `/tmp` or
   the session scratchpad: a reboot empties `/tmp`, and one agent's cleanup can
@@ -369,8 +370,9 @@ it safe.
   Issues and reports shape; send back with required changes — the reviewer never
   fixes. Re-review after `needs-fix` → continue the same reviewer (`SendMessage`)
   with the fix: it remembers its findings, and its cache lasts an hour, so a
-  second round within the hour costs a fraction of a fresh one. It still reruns
-  the checks. A new PR, or a rework that rewrote most of the diff →
+  second round within the hour costs a fraction of a fresh one. A re-review
+  covers only the fix: the lines it changed, their `Mutation:` lines, the
+  earlier findings, and one full run of the checks. A new PR, or a rework that rewrote most of the diff →
   a fresh reviewer. Never count or report rejections in a summary, PR body or
   issue: report what the review found and what changed.
 - **Count before you spawn a reviewer.** Every test the diff adds or changes
@@ -381,6 +383,10 @@ it safe.
   test red then green, and have the same reviewer confirm. After the third
   verdict, do the same if about ten lines remain; otherwise leave the PR open
   with a comment on what is left, and move on.
+- **Read reports, not transcripts.** An agent's final report and its verdict
+  file are what you judge. Open a transcript only when the report is missing or
+  contradicts the diff. Your reply to an agent is a few lines: the verdict and
+  what to change.
 - **Verify confident claims.** The best catches are overclaims ("caught 3
   bugs" → 1, "one cast" → 8, "check passes" → it doesn't). Demand reproduction.
 
@@ -397,7 +403,8 @@ re-enable it. Fresh subagents over forks (a fork copies the whole conversation).
 review: one `reviewer` agent reviews every diff. `xhigh` and `max` reviewers cost
 5–9 times a `medium` round and did not cut review rounds (2026-09-25..26,
 `~/sync/code/ai-memory/experiments/model-comparison/`). Effort belongs to the
-agent type, not to the call.
+agent type, not to the call. Never raise effort to pass the first review:
+about one PR in eight passes it, whatever the model.
 
 Implementers start at `medium`: don't guess difficulty up front. Escalate once a
 task proves hard. When a PR's second `needs-fix` verdict, whatever the first one

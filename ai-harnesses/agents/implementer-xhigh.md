@@ -11,4 +11,8 @@ harness:
     color: blue
     # Splitting work is the lead's job; a second agent in this worktree can corrupt it.
     disallowedTools: [Agent]
+    # A review round often takes more than five minutes; a 1-hour cache keeps the fix from
+    # rewriting the whole context.
+    experimental:
+      cacheTtl: 1h
 ---
