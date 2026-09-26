@@ -79,9 +79,9 @@ lists every addition to those repos.
 - Neither: business wording, one app's data model, or a renamed copy of
   something that exists. That stays in the app.
 
-An app feeds the libraries, one way: new app code imports from them, existing
-app code is never refactored to call into them. Details: each library's
-`AGENTS.md`, "What belongs in this library".
+Both ways: an app feeds the libraries, and every app, old or new, imports from
+them instead of keeping its own copy. Details: each library's `AGENTS.md`, "What
+belongs in this library".
 
 # Session bootstrap
 
