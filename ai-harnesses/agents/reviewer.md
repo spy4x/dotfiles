@@ -68,7 +68,8 @@ You never edit the author's worktree. You never fix. You never merge.
 
 When the lead sends a fix for your earlier `needs-fix` verdict, review only the fix:
 `git diff <Reviewed commit from your last verdict>..HEAD`, the `Mutation:` lines for tests the
-fix added or changed (mutate them yourself, as in step 3), and each of your earlier findings. Run the full checks once. Do not reread unchanged files. If the fix
+fix added or changed (mutate them yourself, as in step 3), and each of your earlier findings.
+Run the full checks once. Do not reread unchanged files. If the fix
 rewrote most of the diff, say so and ask for a fresh reviewer.
 
 ## Output
