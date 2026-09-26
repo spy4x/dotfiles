@@ -38,9 +38,8 @@ platform-level.** One consumer = project code living in the wrong repo, however 
 
 Brief each with: repo path (read-only), unit directory, the inventory facts, the repo's scope
 statement, global + repo `AGENTS.md` rules that bind it, and the issues/PRs that claim to have
-delivered it. Pick each reviewer by the global Reasoning effort rule: units touching auth,
-crypto, SSRF/URL policy, SQL, email/DKIM, money or secrets/env tooling get `reviewer-max`, other
-code that ships gets `reviewer-xhigh`. A harness without those variants uses `reviewer`.
+delivered it. Units touching auth, crypto, SSRF/URL policy, SQL, email/DKIM, money or
+secrets/env tooling say so in their brief, so the reviewer checks those risks first.
 
 Each reviewer answers:
 
