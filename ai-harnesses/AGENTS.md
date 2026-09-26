@@ -161,7 +161,8 @@ rostok's `.env.root.example`.
 
 Every agent may run `sudo` on this machine. It is passwordless and unrestricted,
 so use `sudo -n` (it fails instead of hanging on a prompt) and only for what the
-task needs. The final report lists every `sudo` command you ran and why.
+task needs. The final report lists every `sudo` command you ran and why; with
+none run, it says nothing about `sudo`.
 
 # Fail-open
 
@@ -382,13 +383,13 @@ it safe.
   wave must not touch (open PRs, issues waiting on me), the next wave's prompt,
   ready to paste, with the position inside it, and what this wave cost: each
   agent's dollars, peak context and compactions
-  (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`) and
-  the weekly usage percentage. Save the prompt as `.wave<N+1>/prompt.md` too. It
-  holds only what belongs to that wave: the position, the issues, the lanes and
-  the files each owns, the acceptance checks, and what not to touch. It never
-  restates a rule from this file, such as model tiers, review limits or cleanup:
-  a copied rule overrides the live one and goes stale. A pasted prompt that
-  names a model or an effort is stale: ignore those lines; this file decides.
+  (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`).
+  Save the prompt as `.wave<N+1>/prompt.md` too. It holds only what belongs to
+  that wave: the position, the issues, the lanes and the files each owns, the
+  acceptance checks, and what not to touch. It never restates a rule from this
+  file, such as model tiers, review limits or cleanup: a copied rule overrides
+  the live one and goes stale. A pasted prompt that names a model or an effort
+  is stale: ignore those lines; this file decides.
 - **Wave files live in `worktrees/<repo>/.wave<N>/`.** Briefs, rules files,
   verdicts and anything you need after a restart go there, never in `/tmp` or
   the session scratchpad: a reboot empties `/tmp`, and one agent's cleanup can
