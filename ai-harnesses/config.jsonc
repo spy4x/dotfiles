@@ -9,7 +9,8 @@
       "merge": ["settings.json"],
       // `strongest` is `fable` while Fable is the best model. Fable 5.1 is paused: Opus 5.5
       // matches it, faster and cheaper. Set it back to `fable` when the owner re-enables it.
-      "tiers": { "cheap": "haiku", "standard": "sonnet", "strong": "opus", "strongest": "opus" }
+      // `standard` is `opus` too: Opus 5.5 costs about half what Sonnet 5 does per changed line.
+      "tiers": { "cheap": "haiku", "standard": "opus", "strong": "opus", "strongest": "opus" }
     },
     // No tiers: every agent runs on the default model from opencode.json.
     "opencode": {

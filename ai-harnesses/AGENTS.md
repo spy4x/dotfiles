@@ -396,9 +396,10 @@ lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
 whatever the task, except search/inventory → `haiku`: in the waves of
 2026-09-20..25 Opus 5.5 did the same work in far fewer calls than Sonnet 5, at
 about half the cost (`~/sync/code/ai-memory/experiments/model-comparison/`).
-Sonnet is used nowhere. Architecture and final verdicts stay with the lead. `fable` is paused:
-Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use it nowhere until I
-re-enable it. Fresh subagents over forks (a fork copies the whole conversation).
+Sonnet is used nowhere. Architecture and final verdicts stay with the lead.
+`fable` is paused: Opus 5.5 matches Fable 5.1 and is faster and cheaper, so use
+it nowhere until I re-enable it. Fresh subagents over forks (a fork copies the
+whole conversation).
 
 **Reasoning effort.** `medium` for sessions, leads, implementers and every
 review: one `reviewer` agent reviews every diff. `xhigh` and `max` reviewers cost
