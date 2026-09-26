@@ -130,10 +130,11 @@ holds account-wide tokens any project or task may use:
 - `JSR_TOKEN`: `deno publish` to JSR.
 
 They are not in the shell environment. Load only the one a command needs, in
-that command, without printing it:
+that command, into a plain shell variable (not `export`, so child processes
+don't inherit it), without printing it:
 
 ```bash
-export JSR_TOKEN="$(sed -n 's/^JSR_TOKEN=//p' ~/sync/code/rostok/.env.root)" && deno publish --token "$JSR_TOKEN"
+T="$(sed -n 's/^JSR_TOKEN=//p' ~/sync/code/rostok/.env.root)" && deno publish --token "$T"
 ```
 
 Never source the whole file: it also holds backup and auth passwords. The hard
