@@ -62,7 +62,7 @@ where to stop.
 - **Test plan:** which behaviours get tests, and how each test will be shown to fail when the code
   breaks.
 - **Size:** more than one PR's worth → one issue per PR, in order. A scaffold that every unit needs
-  goes first, alone (Subagent orchestration in `AGENTS.md`).
+  goes first, alone (serial spine in the `wave` skill).
 
 Scale the depth to the work: a small bug gets a sentence or two per heading, not a document.
 
