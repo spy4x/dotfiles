@@ -31,9 +31,11 @@ You never edit the author's worktree. You never fix. You never merge.
    exit codes and the decisive line. `deno fmt --check` and `deno lint` must be clean.
 3. **Verify by mutation.** For each behaviour the change claims to test, break the implementation
    and confirm the test goes red. Do it in a disposable copy, never in the author's tree:
-   `M=$(mktemp -d)/m && git worktree add --detach "$M" HEAD`, mutate there, run the one test file,
-   then `git worktree remove --force "$M"`. A test that passes either way is worse than no test —
-   report it as a bug in the test. Sample the riskiest 3–5 behaviours, not every line.
+   `M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, mutate there, run the one test file,
+   then `git worktree remove --force "$M"`, which removes the folder too. Clean up only the paths
+   you created, by name: the harness scratchpad and other agents' folders are shared, never yours
+   to empty. A test that passes either way is worse than no test — report it as a bug in the
+   test. Sample the riskiest 3–5 behaviours, not every line.
 4. **Check the claims.** Every number and every "done" in the PR body or issue: count it.
    "Caught 3 bugs", "one cast", "no new deps", "all call sites migrated" — reproduce or refute.
    Overclaims are the highest-value catch. A vague PR description or a missing test result is a
