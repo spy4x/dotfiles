@@ -93,7 +93,7 @@ Follow Git Flow from `AGENTS.md`:
 3. Push, and open the PR at once with `gh pr create`. The body includes `Closes <issue URL>`, and
    the title keeps a `[WIP]` prefix until the work is done.
 4. Volume work (three or more file-disjoint units) → parallel subagents, following the
-   orchestration rules.
+   `wave` skill.
 5. Run the reviewer gate:
    - needs-fix → fix and run it again;
    - failed twice on the same cause → stop, leave the PR open, and report why;

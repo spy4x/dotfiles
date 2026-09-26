@@ -33,7 +33,8 @@ green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
 and say so in the report.
 
 **Picking work yourself** (a wave, "work through the backlog") → the `wave`
-skill. We share one GitHub account, so start every comment you post with
+skill. Never add the `ready` label yourself; I apply it. We share one GitHub
+account, so start every comment you post with
 `<!-- agent -->`: a comment without it is mine.
 
 New work with no issue written down (a feature, bug, task or idea) → the
@@ -116,10 +117,10 @@ RFC 5737 IPs / RFC 2606 domains for examples. Deterministic scanner before
 paste (`gitleaks detect --no-git`, `trufflehog filesystem`, `detect-secrets`).
 Reviewer gate on 🔴/🟡.
 
-If leaked: **rotate first**, stop sending, rotate dependents, then notify me and
-log the event (never the value) in
-`~/sync/code/ai-memory/incidents/rotation-log.md`. Editing the leak away
-afterwards is cosmetic: alerts and archives already have it.
+If leaked: **rotate first**, stop sending, put the new secret into everything
+that depends on it, edit the leak away (cosmetic only: alerts and archives
+already have it), notify me, and log the event (never the value) in
+`~/sync/code/ai-memory/incidents/rotation-log.md`.
 
 # Account tokens
 
@@ -233,8 +234,8 @@ process, the desktop (kwin, plasmashell, sddm, dbus, pipewire, Xwayland), your
 own harness or the processes above it. Never run `kill -1`, `systemctl --user
 exit`, `loginctl terminate-*` or a shutdown or reboot. Before `pkill` or
 `killall`, run `pgrep -a` with the same pattern and read every match (once: an
-agent killed a parent-PID column entry, the systemd user manager, and logged
-the desktop out).
+agent read a listing's parent-PID column as a target, killed the systemd user
+manager and logged the desktop out).
 
 # Git Flow
 
@@ -256,17 +257,19 @@ Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR
 always exists, `[WIP]` in the title until done; `gh pr create --fill` right
 after push, never ask.
 
-**Reviewer gate** before merge: a separate `reviewer` agent, never
+**Reviewer gate** before push: one separate `reviewer` agent per diff, never
 self-review. Every test the diff adds or changes needs its `Mutation:` line in
 the PR body; a missing one goes back to the implementer before any reviewer is
 spent. Pass → merge without asking. `needs-fix` → the fix goes back to the
-author, and the same reviewer re-reviews it (`SendMessage`: it keeps its
-findings, and its cache lasts an hour); a new PR or a rework of most of the diff
-→ a fresh reviewer. At most three `needs-fix` verdicts per PR. A wording fix, or
+author with the cause the verdict names, and the same reviewer re-reviews it
+(`SendMessage`: it keeps its findings, and its cache lasts an hour); a new PR or
+a rework of most of the diff → a fresh reviewer. At most three `needs-fix` verdicts per PR. A wording fix, or
 one of about ten lines or fewer, you apply yourself from the first round: show
 the test red then green, and have the same reviewer confirm. After the third
 verdict, do that if about ten lines remain; otherwise leave the PR open with a
-comment on what is left. Never count rejections in a summary, PR body or issue:
+comment on what is left, and move on. After a second `needs-fix` that names a
+behaviour defect, the `wave` skill says when to escalate to
+`implementer-xhigh`. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
 undo it → leave the PR open and say so.
 
@@ -282,7 +285,8 @@ After merge, unless told otherwise:
 2. `git worktree remove`, then `git branch -D`, then delete the remote branch
    if `--delete-branch` missed it.
 3. `git fetch --prune`, `git worktree prune`, `git branch -d` branches merged
-   locally, fast-forward the main checkout to `origin/main`, orphan sweep.
+   locally, `find <path> -delete` orphan directories, fast-forward the main
+   checkout to `origin/main`, orphan sweep.
 
 ## After worktree creation — env setup
 
@@ -365,11 +369,12 @@ lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
 whatever the task, except search/inventory → `haiku`. Opus 5.5 did the same work
 as Sonnet 5 in far fewer calls at about half the cost, and matches Fable 5.1
 faster and cheaper (`~/sync/code/ai-memory/experiments/model-comparison/`).
-Sonnet and `fable` are used nowhere until I re-enable them. Architecture and
+Sonnet is used nowhere. `fable` is paused until I re-enable it. Architecture and
 final verdicts stay with the lead. Fresh subagents over forks (a fork copies the
 whole conversation).
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
+Effort belongs to the agent type, not to the call.
 
 # Language style
 
@@ -430,5 +435,6 @@ the built-in worktree features (`--worktree`, `EnterWorktree`,
 `isolation: worktree`, the desktop "worktree" option) — they nest in
 `<repo>/.claude/worktrees/`; use the Git Flow command.
 
-**OpenCode / DSH.** Rendered into `~/.config/opencode` and `$DSH_HOME` (see
-Layering).
+**OpenCode / DSH.** Agents, skills, commands and DSH presets are rendered into
+`~/.config/opencode` and `$DSH_HOME`; the next `deno task ai` overwrites a hand
+edit.

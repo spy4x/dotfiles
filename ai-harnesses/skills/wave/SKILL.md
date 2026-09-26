@@ -21,18 +21,18 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   an old coordinator to run the next wave, write its prompt or answer a small question: resuming it
   rewrites its whole cache.
 
-## Before each spawn
+## Before spawning
 
 - **Rules drift.** A running session keeps the rules it started with: Claude Code reads
   `AGENTS.md` when a session starts or compacts, and every subagent gets its lead's copy. Run
   `git -C ~/sync/code/dotfiles log --oneline --since=<wave start> -- ai-harnesses/`. If it prints
   anything, read that diff, follow it, and put the changed rules a subagent needs into its brief.
-- **Usage.** Run `claude -p /usage`. At 90% of the 5-hour limit, start no new agent: let the
-  running ones finish, post the handoff and end the turn. A limit that hits mid-review throws that
-  review away.
-- **Machine health.** Check CPU and RAM. Parallel sessions have left zombie processes and a RAM
-  leak before. Report anything off (what, which process, how much); a separate session fixes the
-  cause.
+- **Usage.** Before each batch of agents, run `claude -p /usage`. At 90% of the 5-hour limit,
+  start no new agent: let the running ones finish, post the handoff and end the turn. A limit that
+  hits mid-review throws that review away.
+- **Machine health.** Check CPU and RAM, and keep checking while lanes run. Parallel sessions have
+  left zombie processes and a RAM leak before. Report anything off (what, which process, how much);
+  a separate session fixes the cause.
 
 ## Splitting the work
 
@@ -55,9 +55,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   `implementer-xhigh`. Its brief is the original brief, every verdict so far, the branch name and
   the PR URL, and says the PR already exists; it reads `git diff origin/main...HEAD`. The
   three-verdict cap then applies as usual. A harness without the variant keeps `implementer`.
-- Effort belongs to the agent type, not the call. `xhigh` and `max` reviewers cost 5–9 times a
-  `medium` round and did not cut review rounds (2026-09-25..26,
-  `~/sync/code/ai-memory/experiments/model-comparison/`).
+- Reviewers stay at `medium`: `xhigh` and `max` rounds cost 5–9 times as much and did not cut
+  review rounds (2026-09-25..26, `~/sync/code/ai-memory/experiments/model-comparison/`).
 
 ## Judging the work
 
