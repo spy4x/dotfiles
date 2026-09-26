@@ -91,9 +91,8 @@ Reusable means a future project could use it, even if only one app does today:
   its own repo.
 
 The flow runs one way: an app feeds the libraries. New code in an app imports
-from them, but an app's existing code is never refactored just to call into
-them. Each library's `AGENTS.md`, "What belongs in this
-library", holds the details.
+from them, but an app's existing code is never refactored to call into them.
+Each library's `AGENTS.md`, "What belongs in this library", holds the details.
 
 # Session bootstrap
 
