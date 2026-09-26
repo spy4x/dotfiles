@@ -104,16 +104,3 @@ Follow Git Flow from `AGENTS.md`:
 
 Keep it to the chat register: the PR URL, what shipped, the decisions taken, and what is left for
 me.
-
-## While the skill-state experiment runs
-
-`~/sync/code/ai-memory/experiments/skill-state.md` holds the experiment log. While its status line
-says `running`:
-
-- **Before step 1, pick the arm.** This applies only to tasks expected to take ten or more tool
-  calls and end in a PR.
-  - The request says "with skill-state" or "without skill-state" → that decides.
-  - Otherwise, take the opposite of the last row in the log. With no rows yet, take skill-state.
-  - The skill-state arm → load the `skill-state` skill and run steps 1–6 through it.
-- **After step 7, add one row to the log** for either arm, following the instructions at the top of
-  that file.
