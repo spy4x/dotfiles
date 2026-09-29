@@ -378,7 +378,8 @@ subagents over forks (a fork copies the whole conversation).
 **Sonnet 5.5 trial** (from 2026-09-30, while
 `~/sync/code/ai-memory/experiments/sonnet55-implementer.md` says `running`): an
 implementer lane's model comes from its issue number: odd → `model: sonnet`,
-even → `model: opus`. A lane keeps its model for every fix round, including
+even → `model: opus`; several issues → the lowest number; no issue → `opus`,
+outside the trial. A lane keeps its model for every fix round, including
 `implementer-xhigh`. Reviewers stay on `opus`, so both arms face the same judge.
 Never pick a lane's model by its difficulty.
 
