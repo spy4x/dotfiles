@@ -368,12 +368,20 @@ context that makes it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
-whatever the task, except search/inventory → `haiku`. Opus 5.5 did the same work
-as Sonnet 5 in far fewer calls at about half the cost, and matches Fable 5.1
-faster and cheaper (`~/sync/code/ai-memory/experiments/model-comparison/`).
-Sonnet is used nowhere. `fable` is paused until I re-enable it. Architecture and
-final verdicts stay with the lead. Fresh subagents over forks (a fork copies the
-whole conversation).
+whatever the task, except search/inventory → `haiku`, and except the Sonnet 5.5
+trial below. Opus 5.5 did the same work as Sonnet 5 in far fewer calls at about
+half the cost, and matches Fable 5.1 faster and cheaper
+(`~/sync/code/ai-memory/experiments/model-comparison/`). `fable` is paused until
+I re-enable it. Architecture and final verdicts stay with the lead. Fresh
+subagents over forks (a fork copies the whole conversation).
+
+**Sonnet 5.5 trial** (from 2026-09-30, while
+`~/sync/code/ai-memory/experiments/sonnet55-implementer.md` says `running`): an
+implementer lane's model comes from its issue number: odd → `model: sonnet`,
+even → `model: opus`; several issues → the lowest number; no issue → `opus`,
+outside the trial. A lane keeps its model for every fix round, including
+`implementer-xhigh`. Reviewers stay on `opus`, so both arms face the same judge.
+Never pick a lane's model by its difficulty.
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
 Effort belongs to the agent type, not to the call.
