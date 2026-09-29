@@ -375,13 +375,12 @@ half the cost, and matches Fable 5.1 faster and cheaper
 I re-enable it. Architecture and final verdicts stay with the lead. Fresh
 subagents over forks (a fork copies the whole conversation).
 
-**Sonnet 5.5 trial** (while
-`~/sync/code/ai-memory/experiments/sonnet55-implementer.md` says `running`):
-implementer lanes alternate `model: sonnet` and `model: opus` in the order you
-spawn them, starting each wave with `sonnet`. A lane keeps its model for every
-fix round, including `implementer-xhigh`. Reviewers stay on `opus`, so both arms
-face the same judge. The lead never picks the model for a lane by its
-difficulty.
+**Sonnet 5.5 trial** (from 2026-09-30, while
+`~/sync/code/ai-memory/experiments/sonnet55-implementer.md` says `running`): an
+implementer lane's model comes from its issue number: odd → `model: sonnet`,
+even → `model: opus`. A lane keeps its model for every fix round, including
+`implementer-xhigh`. Reviewers stay on `opus`, so both arms face the same judge.
+Never pick a lane's model by its difficulty.
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
 Effort belongs to the agent type, not to the call.

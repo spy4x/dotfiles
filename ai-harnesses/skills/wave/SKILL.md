@@ -50,7 +50,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 
 - Implementers start at `implementer` (`medium`): don't guess difficulty up front.
 - While the Sonnet 5.5 trial runs (global `AGENTS.md`, "Sonnet 5.5 trial"), each implementer
-  lane's `model` comes from the alternation there, never from the task. Pass the same `model` on
+  lane's `model` comes from its issue number as that paragraph says, never from the task. Pass the same `model` on
   every fix round of that lane, `implementer-xhigh` included. Reviewers stay on `opus`.
 - Escalate once. When a PR's second `needs-fix` verdict, whatever the first was about, names a
   behaviour defect (the code does the wrong thing, not a missing test, a false claim or wording),
