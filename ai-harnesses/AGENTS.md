@@ -87,7 +87,13 @@ writing a component, helper or library, search `spy4x/ts-libs` and
 if it falls short, never add a second one. Not there but a future project could
 use it → add it to the fitting library first, then import it. The test is
 whether a future project could use it, never how many apps use it today. The
-final report lists every addition to those repos.
+final report lists every addition to those repos. To search, read both export
+lists first,
+<https://raw.githubusercontent.com/spy4x/preact-components/main/llms.txt> and
+<https://raw.githubusercontent.com/spy4x/ts-libs/main/llms.txt>. For an
+export's exact signature, open the JSR docs of the package in its import
+specifier, `https://jsr.io/@spy4x/<name>/doc` (`deno doc` can lag a day behind
+a new release).
 
 - `preact-components`: Preact components, icons, design tokens, signals
   helpers.
