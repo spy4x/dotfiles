@@ -90,8 +90,10 @@ whether a future project could use it, never how many apps use it today. The
 final report lists every addition to those repos. To search, read both export
 lists first,
 <https://raw.githubusercontent.com/spy4x/preact-components/main/llms.txt> and
-<https://raw.githubusercontent.com/spy4x/ts-libs/main/llms.txt>, then run
-`deno doc jsr:@spy4x/<package>` for an export's exact signature.
+<https://raw.githubusercontent.com/spy4x/ts-libs/main/llms.txt>. For an
+export's exact signature, open the JSR docs of the package in its import
+specifier, `https://jsr.io/@spy4x/<name>/doc` (`deno doc` can lag a day behind
+a new release).
 
 - `preact-components`: Preact components, icons, design tokens, signals
   helpers.
