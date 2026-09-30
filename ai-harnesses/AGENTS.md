@@ -393,7 +393,7 @@ subagents over forks (a fork copies the whole conversation).
 
 **Implementers → `sonnet` (Sonnet 5.5)** by default. In the 2026-09-30 trial it
 cost about 0.57 times as much as Opus 5.5 per merged line, reviews included,
-though it passed its first review less often
+though it passed its first review less often (13% against 33%)
 (`~/sync/code/ai-memory/experiments/sonnet55-implementer.md`). Use `opus`
 instead for UI component libraries (`preact-components`: there Sonnet cost as
 much as Opus and passed 0 of 8 first reviews), for auth, crypto, payments and
