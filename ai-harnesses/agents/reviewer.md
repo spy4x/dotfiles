@@ -51,10 +51,11 @@ You never edit the author's worktree. You never fix. You never merge.
    3. Data integrity — money as integer minor units, enum values start at 1 and match the DB,
       transaction boundaries, foreign-key constraints, optimistic locking where writes race,
       idempotency on retried writes
-   4. Architecture — code, options or abstractions the issue did not ask for, code that the
-      platform, `@std/*` or a dependency the global deps rule keeps already provides, layer
-      boundaries, CQRS separation, duplication of something `libs/*` owns, cross-app types outside
-      `libs/shared`, project-specific code leaking into a reusable package
+   4. Architecture — code, options or abstractions that neither the issue nor the global rules ask
+      for (shared-library additions are asked for), code that the platform, `@std/*` or a
+      dependency the global deps rule keeps already provides, layer boundaries, CQRS separation,
+      duplication of something `libs/*` owns, cross-app types outside `libs/shared`,
+      project-specific code leaking into a reusable package
    5. Performance — N+1, missing index on FK/filter, unbounded loops or reads, missing pagination,
       a blocking call on an async path
    6. House rules — global + repo `AGENTS.md`: deps policy (own the small, keep the huge, platform

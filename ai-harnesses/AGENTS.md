@@ -58,8 +58,8 @@ prepaid caps (DeepSeek API). No wallet-attack risk like serverless functions.
 at the first step that holds:
 
 1. Does it need building at all? Nothing speculative: no option, flag, layer or
-   abstraction that neither the task nor these rules ask for. Moving code into a
-   shared library, as the rule below asks, is not speculative.
+   abstraction that neither the task nor these rules ask for. Adding or moving
+   code into a shared library, as the rule below asks, is not speculative.
 2. Does it exist already, in this repo or in the shared libraries below? Reuse
    it.
 3. Does the platform, `@std/*` or an installed dependency that the deps rule
