@@ -54,18 +54,21 @@ NTFY, Gatus, Authelia.
 Cost-aware: fixed price per month (Hetzner BM/VM) or usage-based with hard or
 prepaid caps (DeepSeek API). No wallet-attack risk like serverless functions.
 
-**Build less.** Before writing code, stop at the first step that holds:
+**Build less.** First understand the problem. Then, before writing code, stop
+at the first step that holds:
 
 1. Does it need building at all? Nothing speculative: no option, flag, layer or
-   abstraction the task did not ask for.
+   abstraction that neither the task nor these rules ask for. Moving code into a
+   shared library, as the rule below asks, is not speculative.
 2. Does it exist already, in this repo or in the shared libraries below? Reuse
    it.
-3. Does the platform, `@std/*` or an installed dependency do it? Use it (the
-   deps rule below).
+3. Does the platform, `@std/*` or an installed dependency that the deps rule
+   below keeps do it? Use it.
 4. Only then write the least code that works. Deleting beats adding.
 
-Never trim input validation at trust boundaries, error handling that prevents
-data loss, security, accessibility or tests.
+Never trim what the task or these rules require: input validation at trust
+boundaries, error handling that prevents data loss, security, accessibility,
+tests, docs and cleanup.
 
 **Deps: own the small, keep the huge.** Platform primitives first (`<dialog>`,
 `<details>`, `Intl`, `crypto`, `URL`, `structuredClone`), then `@std/*`. Write
