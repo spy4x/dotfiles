@@ -384,20 +384,23 @@ context that makes it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
-whatever the task, except search/inventory → `haiku`, and except the Sonnet 5.5
-trial below. Opus 5.5 did the same work as Sonnet 5 in far fewer calls at about
-half the cost, and matches Fable 5.1 faster and cheaper
+whatever the task, except search/inventory → `haiku` and implementers (below).
+Opus 5.5 did the same work as Sonnet 5 in far fewer calls at about half the
+cost, and it matches Fable 5.1 faster and cheaper
 (`~/sync/code/ai-memory/experiments/model-comparison/`). `fable` is paused until
 I re-enable it. Architecture and final verdicts stay with the lead. Fresh
 subagents over forks (a fork copies the whole conversation).
 
-**Sonnet 5.5 trial** (from 2026-09-30, while
-`~/sync/code/ai-memory/experiments/sonnet55-implementer.md` says `running`): an
-implementer lane's model comes from its issue number: odd → `model: sonnet`,
-even → `model: opus`; several issues → the lowest number; no issue → `opus`,
-outside the trial. A lane keeps its model for every fix round, including
-`implementer-xhigh`. Reviewers stay on `opus`, so both arms face the same judge.
-Never pick a lane's model by its difficulty.
+**Implementers → `sonnet` (Sonnet 5.5)** by default. In the 2026-09-30 trial it
+cost about 0.57 times as much as Opus 5.5 per merged line, reviews included,
+though it passed its first review less often (13% against 33%)
+(`~/sync/code/ai-memory/experiments/sonnet55-implementer.md`). Use `opus`
+instead for UI component libraries (`preact-components`: there Sonnet cost as
+much as Opus and passed 0 of 8 first reviews), for auth, crypto, payments and
+other security-sensitive work (a miss costs too much, and the trial had too few
+such tasks to judge), and for every `implementer-xhigh` fix round. Decide the
+model from the repo and the kind of work before the lane starts, and keep it for
+the lane's fix rounds; only the `implementer-xhigh` round switches to `opus`.
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
 Effort belongs to the agent type, not to the call.
