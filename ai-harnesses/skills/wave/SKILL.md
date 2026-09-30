@@ -49,9 +49,10 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 ## Models and effort
 
 - Implementers start at `implementer` (`medium`): don't guess difficulty up front.
-- While the Sonnet 5.5 trial runs (global `AGENTS.md`, "Sonnet 5.5 trial"), each implementer lane's
-  `model` comes from its issue number as that paragraph says, never from the task. Pass the same
-  `model` on every fix round of that lane, `implementer-xhigh` included. Reviewers stay on `opus`.
+- Each implementer lane's `model` follows the global `AGENTS.md` ("Implementers → `sonnet`"):
+  `sonnet` by default, `opus` for UI component libraries and security-sensitive work. Write it in
+  the lane's brief file. Fix rounds keep it; the `implementer-xhigh` round runs on `opus`. Reviewers
+  stay on `opus`.
 - Escalate once. When a PR's second `needs-fix` verdict, whatever the first was about, names a
   behaviour defect (the code does the wrong thing, not a missing test, a false claim or wording),
   and the fix is bigger than the ones you apply yourself, send that one fix round to a fresh
