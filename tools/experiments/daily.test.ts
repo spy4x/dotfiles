@@ -146,14 +146,57 @@ t(`takes the median of the implementers' peak contexts, one peak per transcript`
   assertEquals(renderRow(day, 0).split(` | `)[6], `300K`)
 })
 
-t(`skips a call on a model with no price and reports it`, () => {
-  const lines = [
-    assistant(`a`, `claude-future-9`, `2026-10-01T01:00:00.000Z`, MILLION),
-    assistant(`b`, OPUS, `2026-10-01T01:00:00.000Z`, MILLION),
-  ]
-  const { days, unpriced } = scanDays([{ role: `lead`, lines }])
-  assertEquals(unpriced, { "claude-future-9": 1 })
-  assertEquals(days.get(`2026-10-01`)!.cost.lead, 4)
+t(
+  `stops and names the model when a call in the range has no price, and ignores one outside it`,
+  async () => {
+    const lines = [
+      assistant(`a`, `claude-future-9`, `2026-10-01T01:00:00.000Z`, MILLION),
+      assistant(`b`, OPUS, `2026-10-02T01:00:00.000Z`, MILLION),
+    ]
+    let asked = 0
+    const exec: Exec = () => {
+      asked++
+      return Promise.resolve(`1`)
+    }
+    await assertRejects(
+      () => renderDaily([{ role: `lead`, lines }], `2026-10-01`, `2026-10-02`, exec),
+      Error,
+      `1 on claude-future-9`,
+    )
+    assertEquals(asked, 0)
+    const table = await renderDaily([{ role: `lead`, lines }], `2026-10-02`, `2026-10-02`, exec)
+    assertStringIncludes(table, `| 2026-10-02 | $4 |`)
+  },
+)
+
+t(`exits 1 and names the model when a call in the range has no price`, async () => {
+  const dir = await Deno.makeTempDir({ prefix: `experiment-kit-test-` })
+  try {
+    await Deno.mkdir(join(dir, `proj`), { recursive: true })
+    await Deno.writeTextFile(
+      join(dir, `proj`, `s1.jsonl`),
+      assistant(`a`, `claude-future-9`, `2026-10-01T01:00:00.000Z`, MILLION) + `\n`,
+    )
+    const r = await new Deno.Command(Deno.execPath(), {
+      args: [
+        `run`,
+        `-A`,
+        DAILY,
+        `--since`,
+        `2026-10-01`,
+        `--until`,
+        `2026-10-01`,
+        `--projects`,
+        dir,
+      ],
+      stdout: `piped`,
+      stderr: `piped`,
+    }).output()
+    assertEquals(r.code, 1)
+    assertStringIncludes(new TextDecoder().decode(r.stderr), `claude-future-9`)
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
 })
 
 t(
@@ -166,7 +209,7 @@ t(
       const q = args.find((a) => a.startsWith(`q=`))!
       return Promise.resolve(q.endsWith(`merged:2026-10-02`) ? `2` : `0`)
     }
-    const { table } = await renderDaily(inputs, `2026-10-01`, `2026-10-02`, exec)
+    const table = await renderDaily(inputs, `2026-10-01`, `2026-10-02`, exec)
     const rows = table.split(`\n`).slice(2)
     assertEquals(rows.length, 2)
     assertEquals(rows[0], `| 2026-10-01 | $0 | – / – / – / – | – | – | 0 / 0 / 0 | 0K | 0 | – |`)

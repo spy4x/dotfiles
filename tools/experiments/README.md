@@ -84,8 +84,9 @@ One row per UTC day: spend, each role's share (lead / implementer including `imp
 reviewer / other), Sonnet's share of implementer and reviewer calls, compactions per role, the
 median implementer peak context and spend per merged PR. It reads lead sessions too, so it scans
 the transcripts itself instead of reading `lanes.jsonl`. Without flags it shows the last 7 days.
-A date that is not a real `YYYY-MM-DD` stops the command with exit 2; a failed `gh` search stops
-it with exit 1. Calls on a model with no price are left out and counted on stderr.
+A date that is not a real `YYYY-MM-DD` stops the command with exit 2. A failed `gh` search, or a
+call inside the requested days on a model with no price, stops it with exit 1 and names the model:
+add the price to `tools/session-cost.ts`.
 
 ## 6. Reviewer-trial view
 

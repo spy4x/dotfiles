@@ -33,6 +33,8 @@ export interface DayStats {
   readonly compactions: Record<Role, number>
   /** Peak single-call context of each implementer transcript that has calls on this day. */
   readonly implementerPeaks: number[]
+  /** Calls on this day whose model has no price, by model. They are in no other figure. */
+  readonly unpriced: Record<string, number>
 }
 
 /** Maps a subagent's `agentType` to a role: both implementers are one role, the rest are other. */
@@ -52,6 +54,7 @@ const emptyDay = (day: string): DayStats => ({
   opusCalls: zero(),
   compactions: zero(),
   implementerPeaks: [],
+  unpriced: {},
 })
 
 const family = (model: string) =>
@@ -59,13 +62,11 @@ const family = (model: string) =>
 
 /**
  * Buckets transcripts by UTC day. A call or compaction counts on the day of its own timestamp.
- * Calls whose model has no price are skipped and returned by model, so the caller can say so.
+ * A call whose model has no price is counted in its day's `unpriced` and nowhere else, so the
+ * caller can stop when one falls in the days it shows.
  */
-export function scanDays(
-  inputs: readonly TranscriptInput[],
-): { days: Map<string, DayStats>; unpriced: Record<string, number> } {
+export function scanDays(inputs: readonly TranscriptInput[]): { days: Map<string, DayStats> } {
   const days = new Map<string, DayStats>()
-  const unpriced: Record<string, number> = {}
   const get = (day: string) => {
     let d = days.get(day)
     if (!d) days.set(day, d = emptyDay(day))
@@ -75,13 +76,13 @@ export function scanDays(
     const { calls, compactionTimestamps } = parseTranscript(input.lines)
     const peaks = new Map<string, number>()
     for (const call of calls) {
-      const priced = costOf(call)
-      if (!priced.priced) {
-        unpriced[call.model] = (unpriced[call.model] ?? 0) + 1
-        continue
-      }
       const day = call.timestamp.slice(0, 10)
       const d = get(day)
+      const priced = costOf(call)
+      if (!priced.priced) {
+        d.unpriced[call.model] = (d.unpriced[call.model] ?? 0) + 1
+        continue
+      }
       d.cost[input.role] += totalOf(priced.cost)
       const f = family(call.model)
       if (f === `sonnet`) d.sonnetCalls[input.role]++
@@ -93,7 +94,7 @@ export function scanDays(
     }
     for (const ts of compactionTimestamps) get(ts.slice(0, 10)).compactions[input.role]++
   }
-  return { days, unpriced }
+  return { days }
 }
 
 /** Every UTC day from `since` to `until` inclusive, as `YYYY-MM-DD`. */
@@ -224,19 +225,36 @@ export async function readTranscripts(
   return out
 }
 
-/** Renders the table for `since` to `until`; the merged-PR counts come from `exec`. */
+/**
+ * Renders the table for `since` to `until`; the merged-PR counts come from `exec`. Throws, before
+ * asking `gh` anything, when a call in those days has no price: the spend would read too low.
+ */
 export async function renderDaily(
   inputs: readonly TranscriptInput[],
   since: string,
   until: string,
   exec: Exec,
-): Promise<{ table: string; unpriced: Record<string, number> }> {
-  const { days, unpriced } = scanDays(inputs)
+): Promise<string> {
+  const { days } = scanDays(inputs)
+  const range = daysBetween(since, until)
+  const unpriced: Record<string, number> = {}
+  for (const day of range) {
+    for (const [model, n] of Object.entries(days.get(day)?.unpriced ?? {})) {
+      unpriced[model] = (unpriced[model] ?? 0) + n
+    }
+  }
+  if (Object.keys(unpriced).length > 0) {
+    const list = Object.entries(unpriced).map(([model, n]) => `${n} on ${model}`).join(`, `)
+    throw new Error(
+      `calls from ${since} to ${until} have no price (${list}); add the model to ` +
+        `tools/session-cost.ts instead of counting it as $0`,
+    )
+  }
   const rows = [...HEADER]
-  for (const day of daysBetween(since, until)) {
+  for (const day of range) {
     rows.push(renderRow(days.get(day) ?? emptyDay(day), await mergedPrs(day, exec)))
   }
-  return { table: rows.join(`\n`), unpriced }
+  return rows.join(`\n`)
 }
 
 if (import.meta.main) {
@@ -252,11 +270,7 @@ if (import.meta.main) {
     const projects = cli.projects ?? (home ? join(home, `.claude`, `projects`) : undefined)
     if (!projects) throw new Error(`no --projects given and $HOME is not set`)
     const inputs = await readTranscripts(projects, cli.since)
-    const { table, unpriced } = await renderDaily(inputs, cli.since, cli.until, denoExec)
-    console.log(table)
-    for (const [model, n] of Object.entries(unpriced)) {
-      console.error(`warning: ${n} calls on ${model} have no price and are left out`)
-    }
+    console.log(await renderDaily(inputs, cli.since, cli.until, denoExec))
   } catch (error) {
     console.error(`daily failed: ${error instanceof Error ? error.message : error}`)
     Deno.exit(1)
