@@ -19,4 +19,10 @@ ln -s ~/sync/code/dotfiles/.zshrc ~/.zshrc
 # p10k
 mv ~/.p10k.zsh ~/.p10k.zsh.bak-$(date +%Y%m%d%H%M%S)
 ln -s ~/sync/code/dotfiles/.p10k.zsh ~/.p10k.zsh
+
+# global git ignore (git reads ~/.config/git/ignore when core.excludesFile is unset)
+mkdir -p ~/.config/git
+B=~/.config/git/ignore.bak-$(date +%Y%m%d%H%M%S)
+[ -e ~/.config/git/ignore ] && mv ~/.config/git/ignore "$B"
+ln -s ~/sync/code/dotfiles/.config/git/ignore ~/.config/git/ignore
 ```

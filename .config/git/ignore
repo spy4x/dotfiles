@@ -1,0 +1,3 @@
+# Global git ignore, symlinked to ~/.config/git/ignore (docs/sync.md).
+# Playwright MCP writes screenshots and traces here in whatever repo it runs in.
+.playwright-mcp/
