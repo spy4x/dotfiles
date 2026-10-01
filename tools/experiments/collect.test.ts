@@ -5,7 +5,9 @@ import {
   collect,
   commitAt,
   type DotfilesCommit,
+  isoDateError,
   readDotfilesCommits,
+  referencedIssues,
   toJsonl,
   UnpricedError,
 } from "./collect.ts"
@@ -500,4 +502,165 @@ t(`takes a lane's closing reference from its first PR in sorted order`, async ()
   } finally {
     await Deno.remove(dir, { recursive: true })
   }
+})
+
+t(`records issues a PR body names only when GitHub lists no closing issue`, async () => {
+  const dir = await tempProjects()
+  try {
+    const start = `2026-09-30T01:00:00.000Z`
+    const create = (id: string, url: string) => [
+      assistant(id, `claude-sonnet-5-5`, start, { input_tokens: 10 }, [
+        {
+          type: `tool_use`,
+          id: `t-${id}`,
+          name: `Bash`,
+          input: { command: `gh pr create --fill` },
+        },
+      ]),
+      user(start, [{ type: `tool_result`, tool_use_id: `t-${id}`, content: url }]),
+    ]
+    await writeLane(dir, {
+      id: `impl`,
+      meta: { agentType: `implementer`, description: `Implement table` },
+      lines: [
+        user(start, `Implement the table.`),
+        ...create(`m1`, `https://github.com/spy4x/zeta/pull/5`),
+        ...create(`m2`, `https://github.com/spy4x/example/pull/12`),
+      ],
+    })
+    const base = fakeExec()
+    const exec: Exec = (command, args) => {
+      const cmd = [command, ...args].join(` `)
+      const withBody = (json: string, body: string) =>
+        Promise.resolve(JSON.stringify({ ...JSON.parse(json), body }))
+      if (cmd.startsWith(`gh pr view 5 -R spy4x/zeta`)) {
+        return withBody(ZETA_PR_JSON, `Part of #9. Refs spy4x/other#4.`)
+      }
+      if (cmd.startsWith(`gh pr view 12 -R spy4x/example`)) {
+        return withBody(PR_JSON, `Closes #12. Also see #7.`)
+      }
+      return base(command, args)
+    }
+    const [row] = await collect({ projectsDir: dir, exec })
+    assertEquals(row.prInfo[`spy4x/zeta#5`].referencedIssues, [`spy4x/other#4`, `spy4x/zeta#9`])
+    assertEquals(row.prInfo[`spy4x/zeta#5`].closingIssues, [])
+    assertEquals(row.prInfo[`spy4x/example#12`].closingIssues, [12])
+    assertEquals(row.prInfo[`spy4x/example#12`].referencedIssues, [])
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(`referencedIssues reads bare, qualified and URL references, once each`, () => {
+  const body = [
+    `Part of #93, Refs #93.`,
+    `See spy4x/ts-libs#7 and https://github.com/spy4x/zond/issues/12.`,
+    `Not a PR link: https://github.com/spy4x/zond/pull/13.`,
+  ].join(`\n`)
+  assertEquals(referencedIssues(body, `spy4x/dotfiles`, 104), [
+    `spy4x/dotfiles#93`,
+    `spy4x/ts-libs#7`,
+    `spy4x/zond#12`,
+  ])
+})
+
+t(`referencedIssues leaves out the PR itself, hex colours, C# and HTML entities`, () => {
+  const body = `This is #104. Colour #1a2b3c and #000000. C#12 and &#39; and see #5.`
+  assertEquals(referencedIssues(body, `spy4x/dotfiles`, 104), [`spy4x/dotfiles#5`])
+  assertEquals(referencedIssues(`spy4x/dotfiles#104`, `spy4x/dotfiles`, 104), [])
+})
+
+/** Runs the collector command with `extra` flags and a `--projects` dir that does not exist. */
+async function runCollect(extra: string[]): Promise<{ code: number; stderr: string }> {
+  const dir = await tempProjects()
+  try {
+    const result = await new Deno.Command(Deno.execPath(), {
+      args: [`run`, `-A`, COLLECT, `--out`, join(dir, `lanes.jsonl`), `--projects`, dir, ...extra],
+      env: { PATH: `/usr/bin:/bin` },
+      stdout: `piped`,
+      stderr: `piped`,
+    }).output()
+    return { code: result.code, stderr: new TextDecoder().decode(result.stderr) }
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+}
+
+for (const name of [`--since`, `--until`]) {
+  t(`${name} with a non-ISO value exits 2 with a one-line error`, async () => {
+    const { code, stderr } = await runCollect([name, `yesterday`])
+    assertEquals(code, 2)
+    assertEquals(
+      stderr.trim(),
+      `${name} must be YYYY-MM-DD or a full ISO timestamp with a zone, got \`yesterday\``,
+    )
+  })
+
+  t(`${name} with an impossible date exits 2`, async () => {
+    const { code, stderr } = await runCollect([name, `2026-02-30`])
+    assertEquals(code, 2)
+    assertStringIncludes(stderr, `got \`2026-02-30\``)
+  })
+
+  t(`${name} with a valid date is accepted`, async () => {
+    const { code, stderr } = await runCollect([name, `2026-09-30`])
+    assertEquals([code, stderr.includes(`must be`)], [0, false])
+  })
+
+  t(`${name} with no value exits 2`, async () => {
+    const { code } = await runCollect([name])
+    assertEquals(code, 2)
+  })
+}
+
+t(`isoDateError accepts dates and zoned timestamps and refuses the rest`, () => {
+  for (const ok of [`2026-09-30`, `2026-09-30T01:02:03Z`, `2026-09-30T01:02:03.500+02:00`]) {
+    assertEquals(isoDateError(`--since`, ok), null, ok)
+  }
+  for (
+    const bad of [
+      `2026-9-30`,
+      `2026-09-30T01:02:03`, // no zone
+      `2026-09-30 01:02:03Z`,
+      `2026-13-01`,
+      `2026-02-30`,
+      `2026-09-30T25:00:00Z`,
+      `2026-09-30T24:00:00Z`, // Date.parse reads this as the next midnight
+      `2026-09-30T01:60:00Z`,
+      `2026-09-30T01:00:60Z`,
+      ``,
+    ]
+  ) {
+    assertEquals(isoDateError(`--since`, bad) === null, false, bad)
+  }
+})
+
+t(`referencedIssues ignores fenced code, inline code, file anchors and colours`, () => {
+  const body = [
+    "Real: Part of #5 and bar/qux#6.",
+    "```",
+    "#12 and bar/baz#13",
+    "```",
+    "~~~sh",
+    "echo #15",
+    "~~~",
+    "Inline `#14` and ``#16``.",
+    "See docs/guide.md#3-setup and docs/guide.md#4.",
+    "Anchor #7-intro and bar/qux#8-intro.",
+    "style: color: #123; background:#456;",
+  ].join(`\n`)
+  assertEquals(referencedIssues(body, `o/r`, 99), [`bar/qux#6`, `o/r#5`])
+})
+
+t(`referencedIssues still reads closing keywords and a number right after a colon`, () => {
+  assertEquals(referencedIssues(`Closes #8. Fixes: #9. Resolves o/z#10`, `o/r`, 99), [
+    `o/r#8`,
+    `o/r#9`,
+    `o/z#10`,
+  ])
+})
+
+t(`referencedIssues reads a real reference after a word like border or fill`, () => {
+  assertEquals(referencedIssues(`Closes the border: #16`, `o/r`, 99), [`o/r#16`])
+  assertEquals(referencedIssues(`The fill: #17 is done.`, `o/r`, 99), [`o/r#17`])
 })

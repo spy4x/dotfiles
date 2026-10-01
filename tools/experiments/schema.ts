@@ -23,6 +23,12 @@ export interface PrInfo {
   readonly title: string
   readonly headRefName: string
   readonly closingIssues: number[]
+  /**
+   * Issues the PR body names (`owner/repo#number`), read only when `closingIssues` is empty, else
+   * empty. These are mentions ("Part of #93"), not closes. Absent in rows collected before this
+   * field existed.
+   */
+  readonly referencedIssues?: string[]
 }
 
 /** One review round: a reviewer's verdict on a PR and what the round cost. */
