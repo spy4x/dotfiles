@@ -315,6 +315,35 @@ t(`takes a unit's issue from its first PR in sorted order when no brief names on
   assertEquals([unit.issue, unit.issueSource], [66, `closing ref`])
 })
 
+t(`puts a unit in the baseline or the trial by the plan's start times`, () => {
+  // The fixture plan: baseline from 2026-09-26T00:00Z, trial from 2026-09-29T00:00Z.
+  const at = (n: number, start: string) => unitRow(n, OPUS, 1, 100, [`pass`], { start })
+  const periods = buildUnits([
+    at(2, `2026-09-25T23:59:00.000Z`),
+    at(4, `2026-09-26T00:00:00.000Z`),
+    at(6, `2026-09-28T23:59:00.000Z`),
+    at(8, `2026-09-29T00:00:00.000Z`),
+  ], plan).map((u) => [u.prs[0], u.period])
+  assertEquals(periods, [
+    [`spy4x/example#2`, `A`],
+    [`spy4x/example#4`, `B`],
+    [`spy4x/example#6`, `B`],
+    [`spy4x/example#8`, `C`],
+  ])
+})
+
+t(`the baseline column holds only arm A's units from before the trial`, () => {
+  const before = (n: number, model: string) =>
+    unitRow(n, model, 1, 100, [`pass`], { start: `2026-09-27T00:00:00.000Z` })
+  const report = renderReport(
+    [...OPUS_ROWS, ...SONNET_ROWS, before(20, OPUS), before(21, SONNET), before(23, SONNET)],
+    plan,
+    { seed: 1, iterations: 100 },
+  )
+  const table1 = report.slice(report.indexOf(`## Table 1`), report.indexOf(`## Table 2`))
+  assertEquals(lineOf(table1, `| Units of work`), `| Units of work (PRs) | 1 | 5 | 5 |`)
+})
+
 t(`reads flags before the folder, so --seed 7 <folder> takes the folder`, () => {
   assertEquals(parseCli([`--seed`, `7`, `/runs/a`]), {
     folder: `/runs/a`,
