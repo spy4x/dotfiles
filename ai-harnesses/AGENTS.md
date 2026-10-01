@@ -390,9 +390,9 @@ context that makes it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
-whatever the task, except search/inventory → `haiku` and implementers (below).
-Opus 5.5 did the same work as Sonnet 5 in far fewer calls at about half the
-cost, and it matches Fable 5.1 faster and cheaper
+whatever the task, except search/inventory → `haiku`, implementers and the
+reviewer trial (below). Opus 5.5 did the same work as Sonnet 5 in far fewer
+calls at about half the cost, and it matches Fable 5.1 faster and cheaper
 (`~/sync/code/ai-memory/experiments/model-comparison/`). `fable` is paused until
 I re-enable it. Architecture and final verdicts stay with the lead. Fresh
 subagents over forks (a fork copies the whole conversation).
@@ -407,6 +407,19 @@ other security-sensitive work (a miss costs too much, and the trial had too few
 such tasks to judge), and for every `implementer-xhigh` fix round. Decide the
 model from the repo and the kind of work before the lane starts, and keep it for
 the lane's fix rounds; only the `implementer-xhigh` round switches to `opus`.
+
+**Sonnet 5.5 reviewer trial** (from 2026-10-01, while
+`~/sync/code/ai-memory/experiments/sonnet55-reviewer.md` says `running`): a PR's
+reviewer model comes from its issue number: odd → `model: sonnet`, even →
+`model: opus`; several issues → the lowest; no issue, `preact-components`, or
+auth, crypto, payments and other security-sensitive work → `opus`, outside the
+trial. Write the reviewer model into the lane's brief file before the first
+review, and never pick it by difficulty. Re-reviews continue the same reviewer.
+When a `sonnet` reviewer passes a PR whose issue number is divisible by 3, a
+fresh `opus` reviewer reviews the same commit before the merge: its verdict
+decides the merge, and its findings are what Sonnet missed. Record each such
+pair (issue, both verdicts, Opus findings with severity) in the experiment
+file's log.
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
 Effort belongs to the agent type, not to the call.

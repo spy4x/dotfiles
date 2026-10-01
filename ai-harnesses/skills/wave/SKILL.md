@@ -51,8 +51,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - Implementers start at `implementer` (`medium`): don't guess difficulty up front.
 - Each implementer lane's `model` follows the global `AGENTS.md` ("Implementers → `sonnet`"):
   `sonnet` by default, `opus` for UI component libraries and security-sensitive work. Write it in
-  the lane's brief file. Fix rounds keep it; the `implementer-xhigh` round runs on `opus`. Reviewers
-  stay on `opus`.
+  the lane's brief file. Fix rounds keep it; the `implementer-xhigh` round runs on `opus`. The
+  reviewer's model follows the "Sonnet 5.5 reviewer trial" paragraph there while it runs, including
+  the Opus double-check on every Sonnet pass whose issue number is divisible by 3.
 - Escalate once. When a PR's second `needs-fix` verdict, whatever the first was about, names a
   behaviour defect (the code does the wrong thing, not a missing test, a false claim or wording),
   and the fix is bigger than the ones you apply yourself, send that one fix round to a fresh
