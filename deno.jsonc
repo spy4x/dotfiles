@@ -15,6 +15,8 @@
     "experiment:collect": "deno run -A tools/experiments/collect.ts",
     "experiment:analyse": "deno run -A tools/experiments/analyse.ts",
     "experiment:report": "deno run -A tools/experiments/report.ts",
+    "experiment:daily": "deno run -A tools/experiments/daily.ts",
+    "experiment:trial": "deno run -A tools/experiments/trial.ts",
     // age64 env files: every .env* in the repo <-> its committed .env*.age, key in .age/key.txt.
     "env:encrypt": "deno run --no-prompt -R -W=. jsr:@spy4x/server@1.2.0/env-age64/cli encrypt",
     "env:decrypt": "deno run --no-prompt -R -W=. jsr:@spy4x/server@1.2.0/env-age64/cli decrypt",

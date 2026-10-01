@@ -74,11 +74,54 @@ unit with the highest total cost, described from row numbers only) and a method 
 are the ones `analyse` prints for the same seed. The chart is plain SVG: a dot per arm for the
 median and a whisker for the interval, readable on light and dark pages. Its dark rule follows the operating system's colour scheme, not a site's theme toggle, so a page that forces a light theme over a dark system shows light text on light.
 
+## 5. Daily view
+
+```bash
+deno task experiment:daily [--since 2026-09-29] [--until 2026-10-02] [--projects <dir>]
+```
+
+One row per UTC day: spend, each role's share (lead / implementer including `implementer-xhigh` /
+reviewer / other), Sonnet's share of implementer and reviewer calls, compactions per role, the
+median implementer peak context and spend per merged PR. It reads lead sessions too, so it scans
+the transcripts itself instead of reading `lanes.jsonl`. Without flags it shows the last 7 days.
+A date that is not a real `YYYY-MM-DD` stops the command with exit 2. A failed `gh` search, or a
+call inside the requested days on a model with no price, stops it with exit 1 and names the model:
+add the price to `tools/session-cost.ts`.
+
+## 6. Reviewer-trial view
+
+```bash
+deno task experiment:trial <run folder> --log <sonnet55-reviewer.md> \
+  [--since ISO] [--projects <dir>]
+```
+
+For the reviewer trial's decision. Reads the run's `lanes.jsonl` and the double-check table of the
+log file. An odd issue number assigns the Sonnet reviewer, an even one the Opus reviewer; PRs with
+no issue, in `preact-components`, on auth or crypto work, or reviewed by the other model print as
+left out. A PR's issue is the first of: the log's Issue column, the PR's closing references, the
+implementer lane's issue, an issue named by a "Part of", "Refs", "Closes" or similar sentence in
+the PR body (read with `gh` for each PR still without one). A PR with no issue belongs to Opus, so
+a Sonnet-reviewed PR whose issue is not found prints on its own line instead of under "no issue".
+The trial starts when its rule merged, 2026-10-01T14:48:43Z (`--since` moves it); a PR with a
+review round before the start was reviewed under the old rule and is left out.
+
+Per arm: review cost per PR, review rounds to pass, needs-fix rate per round (bootstrap 95%
+intervals over PRs; only the arm's own reviewer's rounds up to its first pass count; cost and
+rounds use PRs it has passed, the needs-fix rate also PRs still waiting for a pass). With
+`--projects`, what the implementer spent fixing: from the arm reviewer's first needs-fix to its
+pass, or to the other model's first round if that came sooner. What it spent after the double-check
+asked for fixes prints on a line of its own, and a lane that started after the arm reviewer's part
+ended is not counted among the arm's lanes.
+
+Then the double-check pairs and the bar (🔴 in at most 1 in 10 Sonnet passes; review cost at least
+30% lower), which prints "Not enough pairs (n<10)" until ten pairs exist. A 🔴 in a security path
+(security, auth, crypto or secret wording in the note's 🔴 part, or a PR the collector classed
+auth/crypto) prints as a trial-stopping line and makes the command exit 3 (the report is still
+printed; 1 is a failure, 2 a bad command line such as a `--since` that is not ISO).
+
 ## Not here yet
 
-The 14 and 30 day follow-up pass, paired runs, and the daily view
-(`ai-memory/experiments/week-2026-10-01/daily.py`, which reads lead sessions too, not only
-subagent lanes).
+The 14 and 30 day follow-up pass and paired runs.
 
 ## Ported, not rewritten
 
