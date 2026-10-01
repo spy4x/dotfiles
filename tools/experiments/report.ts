@@ -277,7 +277,12 @@ export function parseFollowups(text: string): FollowupRow[] {
   const rows: FollowupRow[] = []
   for (const [i, line] of text.split(`\n`).entries()) {
     if (line.trim() === ``) continue
-    const row = JSON.parse(line) as FollowupRow
+    let row: FollowupRow
+    try {
+      row = JSON.parse(line) as FollowupRow
+    } catch {
+      throw new PlanError(`followups.jsonl line ${i + 1} is not valid JSON`)
+    }
     if (row.schema !== FOLLOWUP_SCHEMA_VERSION) {
       throw new PlanError(
         `followups.jsonl line ${i + 1} has schema ${row.schema}; this report reads ` +
@@ -354,8 +359,8 @@ export function followupSection(
     )
   }
   out.push(
-    `"Touched" is noisy: most PRs are touched by a later one, mostly where documentation ` +
-      `overlaps, so read it last and do not treat it as a defect count.`,
+    `"Touched" is noisy: a later PR can overlap the same lines for reasons that are not ` +
+      `defects, documentation above all, so read it last and do not treat it as a defect count.`,
   )
   const missing = arms.map((x) => x.missing.length)
   if (missing[0] + missing[1] > 0) {

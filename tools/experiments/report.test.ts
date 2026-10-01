@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.19"
+import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19"
 import { join } from "jsr:@std/path@1.1.6"
 import { laneRow } from "./_fixtures.ts"
 import { parsePlan } from "./analyse.ts"
@@ -480,4 +480,43 @@ t(`reads followups.jsonl from the run folder and refuses another schema version`
   } catch (error) {
     assertStringIncludes((error as Error).message, `schema 0`)
   }
+})
+
+t(
+  `writeReport stops on a followups.jsonl of another schema instead of saying the pass has not run`,
+  async () => {
+    const dir = await Deno.makeTempDir({ prefix: `experiment-report-test-` })
+    try {
+      await Deno.writeTextFile(join(dir, `plan.md`), PLAN)
+      await Deno.writeTextFile(
+        join(dir, `lanes.jsonl`),
+        FLAT.map((r) => JSON.stringify(r)).join(`\n`),
+      )
+      await Deno.writeTextFile(
+        join(dir, `followups.jsonl`),
+        JSON.stringify({ ...followup(1, NONE, NONE), schema: 0 }),
+      )
+      const error = await assertRejects(() => writeReport(dir))
+      assertStringIncludes((error as Error).message, `schema 0`)
+      assertEquals([...Deno.readDirSync(dir)].some((e) => e.name === `report.md`), false)
+    } finally {
+      await Deno.remove(dir, { recursive: true })
+    }
+  },
+)
+
+t(`a malformed followups.jsonl line is reported with its line number`, () => {
+  const good = JSON.stringify(followup(1, NONE, NONE))
+  try {
+    parseFollowups(`${good}\n{not json`)
+    throw new Error(`should have refused`)
+  } catch (error) {
+    assertStringIncludes((error as Error).message, `line 2 is not valid JSON`)
+  }
+})
+
+t(`the touched note does not claim how many PRs were touched`, () => {
+  const section = follow([2, 4, 6, 1, 3, 5].map((n) => followup(n, NONE, NONE)))
+  assertStringIncludes(section, `"Touched" is noisy`)
+  assertEquals(section.includes(`most PRs`), false)
 })
