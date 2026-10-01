@@ -12,11 +12,14 @@
 // The trial's rules (ai-memory/experiments/sonnet55-reviewer.md): an odd issue number assigns the
 // Sonnet reviewer, an even one the Opus reviewer. A PR with no issue, in `preact-components`, or
 // on auth or crypto work stays on Opus, outside the arms. Re-reviews continue the same reviewer.
+// A PR's issue comes from the log, then the rows, then the PR body, which the view reads with
+// `gh` for every reviewed PR still without one.
 
 import { parseArgs } from "jsr:@std/cli@1.0.32/parse-args"
 import { join } from "jsr:@std/path@1.1.6"
 import { costOf, parseTranscript, totalOf } from "../session-cost.ts"
 import { parseRows } from "./analyse.ts"
+import { denoExec, type Exec } from "./exec.ts"
 import { taskClassOf } from "./lane.ts"
 import type { LaneRow, ReviewRound } from "./schema.ts"
 import {
@@ -152,11 +155,16 @@ export function parseLog(text: string): LogPair[] {
 
 // ===== Reviews per PR =====
 
+/** Where a reviewed PR's issue number came from, in the order the view tries them. */
+export const ISSUE_SOURCES = [`log`, `closing reference`, `implementer lane`, `PR body`] as const
+export type IssueSource = typeof ISSUE_SOURCES[number]
+
 /** Everything the trial knows about one reviewed PR. */
 export interface PrReview {
   readonly pr: string
   readonly repo: string
   readonly issue: number | null
+  readonly issueSource: IssueSource | null
   readonly taskClass: LaneRow[`taskClass`]
   /** Every review round on the PR since the trial began, oldest first. */
   readonly rounds: ReviewRound[]
@@ -164,8 +172,35 @@ export interface PrReview {
   readonly implementers: LaneRow[]
 }
 
-/** Review rounds per PR since `since`, with the issue and task class of the PR's implementers. */
-export function reviewedPrs(rows: readonly LaneRow[], since: string): PrReview[] {
+/** Issue numbers the rows do not carry, per PR (`owner/repo#n`). */
+export interface ExtraIssues {
+  /** From the double-check log's Issue column: the lead's own record of the PR's issue. */
+  readonly log?: ReadonlyMap<string, number>
+  /** From issue references in the PR's body (see `issueInBody`). */
+  readonly body?: ReadonlyMap<string, number>
+}
+
+/** The lowest issue the log names for each PR it lists. */
+export function logIssues(pairs: readonly LogPair[]): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const pair of pairs) {
+    if (pair.issue === null) continue
+    for (const pr of pair.prs) out.set(pr, Math.min(pair.issue, out.get(pr) ?? Infinity))
+  }
+  return out
+}
+
+/**
+ * Review rounds per PR since `since`, with the PR's issue and the task class of its implementers.
+ * The issue is the first of: the log's Issue column, the PR's closing references, the
+ * implementer lane's issue (the collector reads it from the brief), issue references in the PR
+ * body. Several numbers from one source: the lowest, as the trial's rule says.
+ */
+export function reviewedPrs(
+  rows: readonly LaneRow[],
+  since: string,
+  extra: ExtraIssues = {},
+): PrReview[] {
   const sinceMs = Date.parse(since)
   const byPr = new Map<string, ReviewRound[]>()
   for (const row of rows) {
@@ -178,13 +213,19 @@ export function reviewedPrs(rows: readonly LaneRow[], since: string): PrReview[]
   const out: PrReview[] = []
   for (const [pr, rounds] of byPr) {
     const implementers = rows.filter((r) => r.role === `implementer` && r.prs.includes(pr))
-    const closing = rows.flatMap((r) => r.prInfo[pr]?.closingIssues ?? [])
-    const fromLanes = implementers.flatMap((r) => r.issue === null ? [] : [r.issue])
-    const issues = closing.length > 0 ? closing : fromLanes
+    const one = (n: number | undefined) => n === undefined ? [] : [n]
+    const candidates: Record<IssueSource, number[]> = {
+      log: one(extra.log?.get(pr)),
+      "closing reference": rows.flatMap((r) => r.prInfo[pr]?.closingIssues ?? []),
+      "implementer lane": implementers.flatMap((r) => r.issue === null ? [] : [r.issue]),
+      "PR body": one(extra.body?.get(pr)),
+    }
+    const source = ISSUE_SOURCES.find((s) => candidates[s].length > 0) ?? null
     out.push({
       pr,
       repo: pr.split(`#`)[0],
-      issue: issues.length > 0 ? Math.min(...issues) : null,
+      issue: source === null ? null : Math.min(...candidates[source]),
+      issueSource: source,
       taskClass: implementers.some((r) => r.taskClass === `auth/crypto`)
         ? `auth/crypto`
         : implementers[0]?.taskClass ?? null,
@@ -195,12 +236,59 @@ export function reviewedPrs(rows: readonly LaneRow[], since: string): PrReview[]
   return out.toSorted((a, b) => a.pr < b.pr ? -1 : 1)
 }
 
-/** Why a reviewed PR is in neither arm, or its arm. */
-export type Placement = Arm | `no issue` | `preact-components` | `auth/crypto` | `other model`
+/** A sentence that opens with an issue keyword, up to the next full stop or line end. */
+const BODY_REF_SENTENCE = new RegExp(
+  String.raw`\b(?:part of|addresses|refs?|references|closes|fixes|resolves|issue)\b` +
+    String.raw`([^\n]*?)(?:\.(?=\s)|\n|$)`,
+  `gi`,
+)
 
-/** Arm by issue number; the exclusions the trial's file names; a PR reviewed by the wrong model. */
+/**
+ * The lowest issue a PR body points at: issue URLs and `#n` refs in a sentence that opens with
+ * "Part of", "Addresses", "Refs", "References", "Closes", "Fixes", "Resolves" or "Issue"; null
+ * when there is none. Refs in other sentences (follow-ups, related PRs) do not count.
+ */
+export function issueInBody(body: string): number | null {
+  const nums: number[] = []
+  for (const sentence of body.matchAll(BODY_REF_SENTENCE)) {
+    for (const m of sentence[1].matchAll(/(?:\/issues\/|#)(\d+)/g)) nums.push(Number(m[1]))
+  }
+  return nums.length > 0 ? Math.min(...nums) : null
+}
+
+/** The issue each PR's body points at (see `issueInBody`), read with `gh`; a failed read throws. */
+export async function bodyIssues(prs: readonly string[], exec: Exec): Promise<Map<string, number>> {
+  const out = new Map<string, number>()
+  for (const pr of prs) {
+    const [repo, n] = pr.split(`#`)
+    const issue = issueInBody(
+      await exec(`gh`, [`pr`, `view`, n, `-R`, repo, `--json`, `body`, `-q`, `.body`]),
+    )
+    if (issue !== null) out.set(pr, issue)
+  }
+  return out
+}
+
+/** Why a reviewed PR is in neither arm, or its arm. */
+export type Placement =
+  | Arm
+  | `no issue`
+  | `Sonnet reviewed, issue not found`
+  | `preact-components`
+  | `auth/crypto`
+  | `other model`
+
+/**
+ * Arm by issue number; the exclusions the trial's file names; a PR reviewed by the wrong model.
+ * A PR with no issue belongs to Opus by the trial's rule, so a Sonnet first round on one means the
+ * issue was not found, not that the PR is outside the trial: it gets a line of its own.
+ */
 export function placeOf(review: PrReview): Placement {
-  if (review.issue === null) return `no issue`
+  if (review.issue === null) {
+    return armOfModel(review.rounds[0].reviewerModel) === `sonnet`
+      ? `Sonnet reviewed, issue not found`
+      : `no issue`
+  }
   if (review.repo.endsWith(`/preact-components`)) return `preact-components`
   if (review.taskClass === `auth/crypto`) return `auth/crypto`
   const assigned = armOfIssue(review.issue)
@@ -379,6 +467,8 @@ export interface TrialInput {
   readonly rows: readonly LaneRow[]
   readonly pairs: readonly LogPair[]
   readonly since: string
+  /** Issues read from PR bodies (see `bodyIssues`); the log's issues come from `pairs`. */
+  readonly bodyIssues?: ReadonlyMap<string, number>
   /** Implementer fix cost per lane (agent id to dollars), when transcripts were available. */
   readonly fixCost?: ReadonlyMap<string, number>
   readonly options?: BootstrapOptions
@@ -413,7 +503,10 @@ export function isSecurityRed(pair: LogPair, rows: readonly LaneRow[]): boolean 
 /** Renders the report as Markdown. */
 export function renderTrial(input: TrialInput): string {
   const options = input.options ?? {}
-  const reviews = reviewedPrs(input.rows, input.since)
+  const reviews = reviewedPrs(input.rows, input.since, {
+    log: logIssues(input.pairs),
+    body: input.bodyIssues,
+  })
   const places = new Map<Placement, PrReview[]>()
   for (const review of reviews) {
     const p = placeOf(review)
@@ -433,11 +526,28 @@ export function renderTrial(input: TrialInput): string {
   }
 
   const left = [`no issue`, `preact-components`, `auth/crypto`, `other model`] as const
+  const bySource = (s: IssueSource | null) => reviews.filter((r) => r.issueSource === s).length
+  const lost = places.get(`Sonnet reviewed, issue not found`) ?? []
   out.push(
     `Reviewed PRs since ${input.since}: ${reviews.length}. In the arms: ${sonnet.length} Sonnet, ` +
       `${opus.length} Opus (an odd issue number assigns Sonnet, an even one Opus). Left out: ` +
       left.map((p) => `${places.get(p)?.length ?? 0} ${p}`).join(`, `) + `.`,
     ``,
+    `Issue taken from: ` +
+      ISSUE_SOURCES.map((s) => `${bySource(s)} the ${s}`).join(`, `) +
+      `; ${bySource(null)} found none.`,
+    ``,
+  )
+  if (lost.length > 0) {
+    out.push(
+      `**Sonnet reviewed, issue not found: ${lost.length}** (${
+        lost.map((r) => r.pr).join(`, `)
+      }). A PR with no issue belongs to Opus, so these lost their issue on the way here; they ` +
+        `are in neither arm until their issue is found.`,
+      ``,
+    )
+  }
+  out.push(
     `## Per arm`,
     ``,
     `Medians and rates with a bootstrap 95% interval, resampling PRs. Only the arm's own ` +
@@ -625,16 +735,23 @@ export function parseCli(args: string[]): {
   }
 }
 
-/** Reads the run folder and the log and renders the report. */
+/**
+ * Reads the run folder and the log, reads the body of every reviewed PR that still has no issue
+ * (with `exec`, which runs `gh`), and renders the report.
+ */
 export async function trialReport(
   cli: ReturnType<typeof parseCli>,
+  exec: Exec = denoExec,
 ): Promise<{ text: string; stopping: boolean }> {
   const rows = parseRows(await Deno.readTextFile(join(cli.folder, `lanes.jsonl`)))
   const pairs = parseLog(await Deno.readTextFile(cli.log))
+  const log = logIssues(pairs)
+  const missing = reviewedPrs(rows, cli.since, { log }).filter((r) => r.issue === null)
+  const body = await bodyIssues(missing.map((r) => r.pr), exec)
   let fixCost: Map<string, number> | undefined
   if (cli.projects !== undefined) {
     fixCost = new Map()
-    const { lanes } = fixLanes(reviewedPrs(rows, cli.since))
+    const { lanes } = fixLanes(reviewedPrs(rows, cli.since, { log, body }))
     for (const l of lanes) {
       if (l.from !== null) {
         fixCost.set(l.lane.agentId, await costAfter(cli.projects, l.lane, l.from))
@@ -642,7 +759,14 @@ export async function trialReport(
     }
   }
   return {
-    text: renderTrial({ rows, pairs, since: cli.since, fixCost, options: cli.options }),
+    text: renderTrial({
+      rows,
+      pairs,
+      since: cli.since,
+      bodyIssues: body,
+      fixCost,
+      options: cli.options,
+    }),
     stopping: pairs.some((p) => isSecurityRed(p, rows)),
   }
 }

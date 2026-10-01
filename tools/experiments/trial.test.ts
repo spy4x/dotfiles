@@ -8,12 +8,14 @@ import {
 import { dirname, fromFileUrl, join } from "jsr:@std/path@1.1.6"
 import { assistant, laneRow, writeLane } from "./_fixtures.ts"
 import type { LaneRow, ReviewRound } from "./schema.ts"
+import { CommandError, type Exec } from "./exec.ts"
 import {
   armOfIssue,
   armPr,
   costAfter,
   fixLanes,
   isSecurityRed,
+  issueInBody,
   type LogPair,
   parseCli,
   parseLog,
@@ -217,6 +219,72 @@ t(`takes the lowest closing issue of the PR, else the implementer's issue`, () =
   ]
   assertEquals(reviewedPrs(rows, SINCE).map((r) => r.issue), [41, 63])
 })
+
+t(
+  `takes a PR's issue from the log first, then its closing references, its implementer lane, its body`,
+  () => {
+    const rows = [
+      reviewer([1, 2, 3, 4, 5].map((n) => round(`spy4x/a#${n}`, SONNET, `pass`, 1))),
+      implementer(`spy4x/a#1`, 10),
+      implementer(`spy4x/a#2`, 12, { issue: 30 }),
+      implementer(`spy4x/a#3`, null, { issue: 14 }),
+      implementer(`spy4x/a#4`, null),
+      implementer(`spy4x/a#5`, null),
+    ]
+    const extra = {
+      log: new Map([[`spy4x/a#1`, 21]]),
+      body: new Map([[`spy4x/a#2`, 40], [`spy4x/a#3`, 40], [`spy4x/a#4`, 16]]),
+    }
+    assertEquals(reviewedPrs(rows, SINCE, extra).map((r) => [r.issue, r.issueSource]), [
+      [21, `log`],
+      [12, `closing reference`],
+      [14, `implementer lane`],
+      [16, `PR body`],
+      [null, null],
+    ])
+  },
+)
+
+t(
+  `places every PR a log row names by the log's issue, and prints a Sonnet-reviewed PR with no issue on its own line`,
+  () => {
+    const rows = [
+      reviewer([
+        round(`spy4x/a#1`, SONNET, `pass`, 1),
+        round(`spy4x/a#3`, SONNET, `pass`, 1),
+        round(`spy4x/a#5`, SONNET, `pass`, 1),
+        round(`spy4x/a#6`, OPUS, `pass`, 1),
+      ]),
+      ...[1, 3, 5, 6].map((n) => implementer(`spy4x/a#${n}`, null)),
+    ]
+    const text = render(rows, [pair({ prs: [`spy4x/a#1`, `spy4x/a#3`], issue: 7 })])
+    assertStringIncludes(text, `In the arms: 2 Sonnet, 0 Opus`)
+    assertStringIncludes(text, `Left out: 1 no issue,`)
+    assertStringIncludes(text, `**Sonnet reviewed, issue not found: 1** (spy4x/a#5)`)
+    assertStringIncludes(
+      text,
+      `Issue taken from: 2 the log, 0 the closing reference, 0 the implementer lane, 0 the PR body; 2 found none.`,
+    )
+  },
+)
+
+t(
+  `reads a PR body's issue from Part of, Addresses, Refs and Closes sentences, and ignores other refs`,
+  () => {
+    assertEquals(issueInBody(`Part of https://github.com/spy4x/dotfiles/issues/93 (step 2).`), 93)
+    assertEquals(
+      issueInBody(
+        `Partly addresses https://github.com/spy4x/r/issues/283 (this half) and ` +
+          `https://github.com/spy4x/r/issues/239 (mirotalk).`,
+      ),
+      239,
+    )
+    assertEquals(issueInBody(`Uses spy4x/ts-libs#345. Follow-up: spy4x/t#191.\n\nRefs #155`), 155)
+    assertEquals(issueInBody(`Closes spy4x/site#369`), 369)
+    assertEquals(issueInBody(`Names #12 but no keyword.`), null)
+    assertEquals(issueInBody(`This issue is about speed. See #3.`), null)
+  },
+)
 
 t(`counts a PR as auth or crypto work when any of its implementers is, not only the first`, () => {
   const rows = [
@@ -464,7 +532,12 @@ t(`reads lanes.jsonl and the log from disk and prints the report`, async () => {
       rows.map((r) => JSON.stringify(r)).join(`\n`),
     )
     await Deno.writeTextFile(join(dir, `log.md`), LOG)
-    const { text, stopping } = await trialReport(parseCli([dir, `--log`, join(dir, `log.md`)]))
+    // Every reviewed PR has an issue, so gh is not asked.
+    const noGh: Exec = (c, a) => Promise.reject(new CommandError(c, a, `not expected`))
+    const { text, stopping } = await trialReport(
+      parseCli([dir, `--log`, join(dir, `log.md`)]),
+      noGh,
+    )
     assertEquals(stopping, false)
     assertStringIncludes(text, `| PRs (passed) | 1 (1) | 0 (0) |`)
     assertStringIncludes(text, `Pairs: 3.`)
@@ -531,6 +604,39 @@ t(
       assertEquals(stopping.code, 3)
       assertStringIncludes(stopping.out, `TRIAL STOPPING`)
       assertEquals((await run(LOG)).code, 0)
+    } finally {
+      await Deno.remove(dir, { recursive: true })
+    }
+  },
+)
+
+t(
+  `reads the PR body with gh for each reviewed PR still without an issue, and stops when gh fails`,
+  async () => {
+    const dir = await Deno.makeTempDir({ prefix: `experiment-kit-test-` })
+    try {
+      const rows = [
+        reviewer([round(`spy4x/a#1`, SONNET, `pass`, 1), round(`spy4x/a#3`, SONNET, `pass`, 1)]),
+        implementer(`spy4x/a#1`, 1),
+        implementer(`spy4x/a#3`, null),
+      ]
+      await Deno.writeTextFile(
+        join(dir, `lanes.jsonl`),
+        rows.map((r) => JSON.stringify(r)).join(`\n`),
+      )
+      await Deno.writeTextFile(join(dir, `log.md`), LOG)
+      const cli = parseCli([dir, `--log`, join(dir, `log.md`)])
+      const asked: string[] = []
+      const gh: Exec = (c, a) => {
+        asked.push([c, ...a].join(` `))
+        return Promise.resolve(`Some text.\n\nPart of https://github.com/spy4x/a/issues/9.`)
+      }
+      const { text } = await trialReport(cli, gh)
+      assertEquals(asked, [`gh pr view 3 -R spy4x/a --json body -q .body`])
+      assertStringIncludes(text, `In the arms: 2 Sonnet, 0 Opus`)
+      assertStringIncludes(text, `0 the implementer lane, 1 the PR body; 0 found none.`)
+      const failing: Exec = (c, a) => Promise.reject(new CommandError(c, a, `exit 1: not found`))
+      await assertRejects(() => trialReport(cli, failing), CommandError)
     } finally {
       await Deno.remove(dir, { recursive: true })
     }
