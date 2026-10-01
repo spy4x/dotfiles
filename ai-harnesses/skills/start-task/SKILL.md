@@ -75,7 +75,9 @@ Create it with `gh issue create`, in the **Issues and reports** shape from `AGEN
 - **Done when** holds the acceptance criteria.
 - **Evidence** holds the reproduction and the `file:line` pointers.
 
-Scrub secrets before sending (the hard rule). If the repo has no GitHub remote, keep the same text
+Label it with its priority (`p1-critical` to `p5-someday`, defined in `AGENTS.md`), and with
+`manual` or `needs-decision` when it needs the owner's hands or answer. Scrub secrets before
+sending (the hard rule). If the repo has no GitHub remote, keep the same text
 for the PR body and say so in the report.
 
 ## 5. Stop or continue
