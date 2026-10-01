@@ -13,9 +13,12 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 
 ## Picking the work
 
-- Take only open issues labelled `ready`. The owner applies that label; never add it yourself.
+- Take open issues by priority, `p1-critical` first; no priority label counts as `p3-medium`;
+  oldest first within a level. Skip issues labelled `manual` or `needs-decision`, and issues with
+  an open PR. List them with
+  `gh issue list --state open --limit 200 -S '-label:manual -label:needs-decision sort:created-asc'`.
 - Stuck on a decision → comment on the issue in the Issues and reports shape (option A and B, one
-  consequence each, your pick), add `needs-decision`, and move on to other `ready` work. The owner
+  consequence each, your pick), add `needs-decision`, and move on to the next issue. The owner
   answers in a comment and removes the label.
 - One session runs one wave. The next wave starts in a new session from the handoff. Never resume
   an old coordinator to run the next wave, write its prompt or answer a small question: resuming it

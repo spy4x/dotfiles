@@ -33,7 +33,18 @@ green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
 and say so in the report.
 
 **Picking work yourself** (a wave, "work through the backlog") → the `wave`
-skill. Never add the `ready` label yourself; I apply it. We share one GitHub
+skill. Any open issue is yours to take, highest priority first, unless it
+carries `manual` (work only I can do) or `needs-decision` (waits on my answer):
+skip those until I remove the label. Priority labels, five levels:
+
+- `p1-critical`: urgent tasks and critical bugs.
+- `p2-high`: work a project or consumer app needs.
+- `p3-medium`: the default. An issue with no priority label is `p3-medium`.
+- `p4-low`: worth doing when nothing above is open.
+- `p5-someday`: ideas and nice-to-haves.
+
+Every issue you file gets a priority label, and `manual` or `needs-decision` too
+when it needs my hands or my answer. We share one GitHub
 account, so start every comment you post with
 `<!-- agent -->`: a comment without it is mine.
 
