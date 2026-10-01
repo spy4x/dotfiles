@@ -60,9 +60,23 @@ iteration count that is not a whole number stops the command with exit 2.
   lines under the headline: how many there are, how many were reviewed, and the median total cost
   per reviewed PR.
 
+## 4. Report and chart
+
+```bash
+deno task experiment:report <run folder> [--seed 1] [--iterations 10000]
+```
+
+Writes `report.md` and `chart.svg` into the run folder. The report opens with one sentence
+giving the cost difference per PR and its 95% interval, then the chart, the comparison table, "What
+would change my mind" (an interval that crosses zero, an arm under 20 reviewed units, unbalanced
+arms, units left out, and the plan's own `bar:` line if it has one), "The weirdest lane" (the trial
+unit with the highest total cost, described from row numbers only) and a method note. The figures
+are the ones `analyse` prints for the same seed. The chart is plain SVG: a dot per arm for the
+median and a whisker for the interval, readable on light and dark pages. Its dark rule follows the operating system's colour scheme, not a site's theme toggle, so a page that forces a light theme over a dark system shows light text on light.
+
 ## Not here yet
 
-The 14 and 30 day follow-up pass, the playful report, the chart, paired runs, and the daily view
+The 14 and 30 day follow-up pass, paired runs, and the daily view
 (`ai-memory/experiments/week-2026-10-01/daily.py`, which reads lead sessions too, not only
 subagent lanes).
 
