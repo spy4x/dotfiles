@@ -49,6 +49,9 @@ function fakeExec(calls: string[] = [], fail?: (cmd: string) => boolean): Exec {
     if (command === `git`) return Promise.resolve(GIT_LOG)
     if (cmd.startsWith(`gh pr view 12 -R spy4x/example`)) return Promise.resolve(PR_JSON)
     if (cmd.startsWith(`gh pr view 5 -R spy4x/zeta`)) return Promise.resolve(ZETA_PR_JSON)
+    if (cmd === `gh pr list -R spy4x/example --head feat/add-table --state all --json number`) {
+      return Promise.resolve(`[{"number":12}]`)
+    }
     return Promise.reject(new CommandError(command, args, `unexpected call in test`))
   }
 }
@@ -358,6 +361,51 @@ t(`the command warns on stderr when --dotfiles is not given`, async () => {
   }
 })
 
+t(`leaves out lanes that start at or after --until`, async () => {
+  const dir = await tempProjects()
+  try {
+    for (
+      const [id, start] of [[`before`, `2026-09-30T01:59:59.000Z`], [
+        `at`,
+        `2026-09-30T02:00:00.000Z`,
+      ]]
+    ) {
+      await writeLane(dir, {
+        id,
+        meta: { agentType: `implementer`, description: id },
+        lines: implementerLines(start),
+      })
+    }
+    const rows = await collect({
+      projectsDir: dir,
+      until: `2026-09-30T02:00:00Z`,
+      exec: fakeExec(),
+    })
+    assertEquals(rows.map((r) => r.description), [`before`])
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(`leaves out reviewer lanes that audit instead of reviewing a PR`, async () => {
+  const dir = await tempProjects()
+  try {
+    await writeLane(dir, {
+      id: `audit`,
+      meta: { agentType: `reviewer`, description: `Audit the experiment kit` },
+      lines: reviewerLines(`2026-09-30T02:00:00.000Z`, `2026-09-30T02:05:00.000Z`),
+    })
+    await writeLane(dir, {
+      id: `rev`,
+      meta: { agentType: `reviewer`, description: `Review PR 12` },
+      lines: reviewerLines(`2026-09-30T02:00:00.000Z`, `2026-09-30T02:05:00.000Z`),
+    })
+    const rows = await collect({ projectsDir: dir, exec: fakeExec() })
+    assertEquals(rows.map((r) => r.description), [`Review PR 12`])
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
 
 t(`stops on a call to a model with no price instead of counting it as $0`, async () => {
   // An implementer answered only by an unknown model, and a reviewer with one unknown call
@@ -395,6 +443,31 @@ t(`stops on a call to a model with no price instead of counting it as $0`, async
     }
   }
 })
+
+t(`finds a lane's PR by the branch its brief names when it never printed a PR URL`, async () => {
+  const dir = await tempProjects()
+  try {
+    const start = `2026-09-30T01:00:00.000Z`
+    await writeLane(dir, {
+      id: `impl`,
+      meta: { agentType: `implementer`, description: `Implement table` },
+      lines: [
+        user(start, `Worktree: /w/worktrees/example/feat/add-table. Closes #99.`),
+        assistant(`m1`, `claude-sonnet-5-5`, start, { input_tokens: 10 }),
+      ],
+    })
+    const calls: string[] = []
+    const [row] = await collect({ projectsDir: dir, exec: fakeExec(calls) })
+    assertEquals([row.prs, row.prSource], [[`spy4x/example#12`], `branch`])
+    assertEquals(
+      calls[0],
+      `gh pr list -R spy4x/example --head feat/add-table --state all --json number`,
+    )
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
 t(`takes a lane's closing reference from its first PR in sorted order`, async () => {
   const dir = await tempProjects()
   try {
