@@ -15,8 +15,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 
 - Take open issues by priority, `p1-critical` first; no priority label counts as `p3-medium`;
   oldest first within a level. Skip issues labelled `manual` or `needs-decision`, and issues with
-  an open PR. List them with
-  `gh issue list --state open --limit 200 -S '-label:manual -label:needs-decision sort:created-asc'`.
+  an open PR. This lists the candidates oldest first; group them by priority label yourself:
+  `gh issue list --state open --limit 500 -S '-label:manual -label:needs-decision sort:created-asc'`.
 - Stuck on a decision → comment on the issue in the Issues and reports shape (option A and B, one
   consequence each, your pick), add `needs-decision`, and move on to the next issue. The owner
   answers in a comment and removes the label.

@@ -44,8 +44,9 @@ skip those until I remove the label. Priority labels, five levels:
 - `p5-someday`: ideas and nice-to-haves.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
-when it needs my hands or my answer. We share one GitHub
-account, so start every comment you post with
+when it needs my hands or my answer. A repo without these labels → create
+them first, copying names, colours and descriptions from `spy4x/dotfiles`.
+We share one GitHub account, so start every comment you post with
 `<!-- agent -->`: a comment without it is mine.
 
 New work with no issue written down (a feature, bug, task or idea) → the
