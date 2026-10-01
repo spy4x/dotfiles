@@ -226,3 +226,41 @@ t(`formats model ids for people`, () => {
   assertEquals(modelName(`claude-opus-5`), `Opus 5`)
   assertEquals(modelName(`claude-weird`), `weird`)
 })
+
+/** An Opus or Sonnet unit that no review looked at, so no cost figure counts it. */
+const unreviewed = (n: number, model: string) => unit(n, model, 4, 0.5, { reviews: {} })
+
+t(`the weirdest lane's arm median is the table's, not every unit of that model`, () => {
+  // A cheap Sonnet unit with no issue: it joins "all Sonnet trial units" (median 4.50) but not
+  // the comparison, whose Sonnet median stays $5.00.
+  const noIssue = unit(11, SONNET, 0.5, 0.5, {
+    issue: null,
+    issueSource: null,
+    prInfo: {
+      "spy4x/example#11": { ...SPREAD[5].prInfo[`spy4x/example#1`], closingIssues: [] },
+    },
+  })
+  const { markdown } = renderReport([...SPREAD, noIssue], plan)
+  assertStringIncludes(markdown, `4.0 times the Sonnet 5.5 median of $5.00`)
+})
+
+t(`warns about unbalanced arms by reviewed units, the count behind the cost figures`, () => {
+  const note = `The arms are unbalanced`
+  const flat = (rows: LaneRow[]) => renderReport(rows, plan).markdown
+  // 3 against 4 reviewed: ratio 1.33, no warning.
+  assertEquals(flat([...FLAT, unit(7, SONNET, 4.5, 0.5)]).includes(note), false)
+  // 3 against 5: ratio 1.67.
+  assertStringIncludes(
+    flat([...FLAT, unit(7, SONNET, 4.5, 0.5), unit(9, SONNET, 4.5, 0.5)]),
+    `${note} (3 against 5 reviewed units)`,
+  )
+  // 4 units each, but Opus has only 2 reviewed against 4: balanced by units, not by reviews.
+  const rows = [
+    unit(2, OPUS, 6, 0.5),
+    unit(4, OPUS, 6, 0.5),
+    unreviewed(6, OPUS),
+    unreviewed(8, OPUS),
+    ...[1, 3, 5, 7].map((n) => unit(n, SONNET, 4.5, 0.5)),
+  ]
+  assertStringIncludes(flat(rows), `${note} (2 against 4 reviewed units)`)
+})

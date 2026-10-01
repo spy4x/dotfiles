@@ -165,11 +165,11 @@ export function renderReport(
       )
     }
   }
-  const big = Math.max(ruleA.length, ruleB.length)
-  const small = Math.min(ruleA.length, ruleB.length)
+  const big = Math.max(cost.A.length, cost.B.length)
+  const small = Math.min(cost.A.length, cost.B.length)
   if (small > 0 && big / small > 1.5) {
     doubts.push(
-      `The arms are unbalanced (${ruleA.length} against ${ruleB.length}). The larger one ` +
+      `The arms are unbalanced (${cost.A.length} against ${cost.B.length} reviewed units). The larger one ` +
         `averages out luck better than the smaller one.`,
     )
   }
@@ -200,8 +200,8 @@ export function renderReport(
   if (!odd) {
     out.push(`No trial unit to pick from.`)
   } else {
-    const arm = trial.filter((u) => u.model === odd.model)
-    const armMedian = median(arm.map(total))!
+    // The same population as the table and the chart: reviewed units whose issue assigned them.
+    const armMedian = median(odd.model === A ? cost.A : cost.B)!
     const ratio = armMedian > 0 ? total(odd) / armMedian : NaN
     out.push(
       `Every run has one. The rule: the trial unit with the highest total cost, in either arm.`,

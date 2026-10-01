@@ -72,7 +72,7 @@ would change my mind" (an interval that crosses zero, an arm under 20 reviewed u
 arms, units left out, and the plan's own `bar:` line if it has one), "The weirdest lane" (the trial
 unit with the highest total cost, described from row numbers only) and a method note. The figures
 are the ones `analyse` prints for the same seed. The chart is plain SVG: a dot per arm for the
-median and a whisker for the interval, readable on light and dark pages.
+median and a whisker for the interval, readable on light and dark pages. Its dark rule follows the operating system's colour scheme, not a site's theme toggle, so a page that forces a light theme over a dark system shows light text on light.
 
 ## Not here yet
 
