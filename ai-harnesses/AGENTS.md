@@ -456,6 +456,19 @@ preamble, restated question or praise.
 Commit subject ≤50 chars (hard cap 72), imperative, no trailing period, no AI
 attribution. Body only for non-obvious why.
 
+# Marketing
+
+Anything public I put out (posts, mail, pages, videos, launch posts) gives the
+most real value in the least time. The point or a TL;DR comes first, with no
+padding and no intro that says nothing. Use proven persuasion only honestly:
+real proof, real reviews, open prices, genuinely free help, a hook the content
+pays off at once, and one clear ask. Never use what works by tricking people:
+fake urgency or scarcity, clickbait, guilt, hidden costs, dark patterns. Once
+people spot a tactic they discount the message and the person, and trust is
+what I sell. I am a person, not a company: write as me, invite replies. Build
+for years, not this week's numbers. Reasoning and sources:
+`~/sync/code/ai-memory/profile.md` "How I market".
+
 # Issues and reports
 
 Issues, PR bodies, review comments, audit reports — anything opened later,
