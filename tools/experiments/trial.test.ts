@@ -218,6 +218,16 @@ t(`takes the lowest closing issue of the PR, else the implementer's issue`, () =
   assertEquals(reviewedPrs(rows, SINCE).map((r) => r.issue), [41, 63])
 })
 
+t(`counts a PR as auth or crypto work when any of its implementers is, not only the first`, () => {
+  const rows = [
+    reviewer([round(`spy4x/a#1`, SONNET, `pass`, 1)]),
+    implementer(`spy4x/a#1`, 1, { agentId: `first`, taskClass: `code` }),
+    implementer(`spy4x/a#1`, 1, { agentId: `fix`, taskClass: `auth/crypto` }),
+  ]
+  const [review] = reviewedPrs(rows, SINCE)
+  assertEquals(placeOf(review), `auth/crypto`)
+})
+
 t(`ignores review rounds from before the trial began`, () => {
   const rows = [
     reviewer([
