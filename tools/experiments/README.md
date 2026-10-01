@@ -102,13 +102,16 @@ left out. A PR's issue is the first of: the log's Issue column, the PR's closing
 implementer lane's issue, an issue named by a "Part of", "Refs", "Closes" or similar sentence in
 the PR body (read with `gh` for each PR still without one). A PR with no issue belongs to Opus, so
 a Sonnet-reviewed PR whose issue is not found prints on its own line instead of under "no issue".
+The trial starts when its rule merged, 2026-10-01T14:48:43Z (`--since` moves it); a PR with a
+review round before the start was reviewed under the old rule and is left out.
 
 Per arm: review cost per PR, review rounds to pass, needs-fix rate per round (bootstrap 95%
 intervals over PRs; only the arm's own reviewer's rounds up to its first pass count; cost and
 rounds use PRs it has passed, the needs-fix rate also PRs still waiting for a pass). With
 `--projects`, what the implementer spent fixing: from the arm reviewer's first needs-fix to its
 pass, or to the other model's first round if that came sooner. What it spent after the double-check
-asked for fixes prints on a line of its own.
+asked for fixes prints on a line of its own, and a lane that started after the arm reviewer's part
+ended is not counted among the arm's lanes.
 
 Then the double-check pairs and the bar (🔴 in at most 1 in 10 Sonnet passes; review cost at least
 30% lower), which prints "Not enough pairs (n<10)" until ten pairs exist. A 🔴 in a security path

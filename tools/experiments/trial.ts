@@ -32,8 +32,8 @@ import {
   seededRandom,
 } from "./stats.ts"
 
-/** The trial began on 1 October 2026 (UTC). */
-export const TRIAL_START = `2026-10-01T00:00:00Z`
+/** The trial began when its rule merged (spy4x/dotfiles#94); before that every reviewer was Opus. */
+export const TRIAL_START = `2026-10-01T14:48:43Z`
 /** The bar the trial's file suggests. */
 export const BAR = { minPairs: 10, maxRedShare: 0.1, minCostReduction: 0.3 }
 
@@ -191,7 +191,8 @@ export function logIssues(pairs: readonly LogPair[]): Map<string, number> {
 }
 
 /**
- * Review rounds per PR since `since`, with the PR's issue and the task class of its implementers.
+ * Review rounds of every PR first reviewed at or after `since` (a PR with an earlier round was
+ * reviewed under the old rule and is left out), with the PR's issue and the task class of its implementers.
  * The issue is the first of: the log's Issue column, the PR's closing references, the
  * implementer lane's issue (the collector reads it from the brief), issue references in the PR
  * body. Several numbers from one source: the lowest, as the trial's rule says.
@@ -206,12 +207,13 @@ export function reviewedPrs(
   for (const row of rows) {
     if (row.role !== `reviewer`) continue
     for (const round of row.rounds) {
-      if (round.pr === null || Date.parse(round.ts) < sinceMs) continue
+      if (round.pr === null) continue
       byPr.set(round.pr, [...(byPr.get(round.pr) ?? []), round])
     }
   }
   const out: PrReview[] = []
   for (const [pr, rounds] of byPr) {
+    if (rounds.some((r) => Date.parse(r.ts) < sinceMs)) continue
     const implementers = rows.filter((r) => r.role === `implementer` && r.prs.includes(pr))
     const one = (n: number | undefined) => n === undefined ? [] : [n]
     const candidates: Record<IssueSource, number[]> = {
@@ -339,13 +341,15 @@ export interface Window {
  * first pass or the other model's first round, whichever comes first. Fixing after that answers
  * the double-check, not the arm's reviewer.
  *
+ * `armEnd`: where the arm reviewer's part ends (the `fix` window's end), null while it is open.
+ *
  * `afterDoubleCheck`: from the other model's first needs-fix to that model's next pass (open
  * while it has not passed). That is the work the double-check caused.
  */
 export function fixWindows(
   review: PrReview,
   arm: Arm,
-): { fix: Window | null; afterDoubleCheck: Window | null } {
+): { fix: Window | null; afterDoubleCheck: Window | null; armEnd: string | null } {
   const { armRounds, passed } = armPr(review, arm)
   const other = review.rounds.filter((r) => armOfModel(r.reviewerModel) !== arm)
   const from = armRounds.find((r) => r.verdict === `needs-fix`)?.ts
@@ -358,6 +362,7 @@ export function fixWindows(
     afterDoubleCheck: otherFix === -1
       ? null
       : { from: other[otherFix].ts, to: otherPass?.ts ?? null },
+    armEnd: to,
   }
 }
 
@@ -371,7 +376,11 @@ export interface FixLane {
   readonly afterDoubleCheck: Window[]
 }
 
-/** Lanes whose arm PRs all sit in one arm, and how many were left out as mixed. */
+/**
+ * Lanes whose arm PRs all sit in one arm, and how many were left out as mixed. A lane that started
+ * after the arm reviewer's part of every one of its PRs had ended is no arm lane: it answers the
+ * double-check, whose cost prints on its own line.
+ */
 export function fixLanes(
   reviews: readonly PrReview[],
 ): { lanes: FixLane[]; mixed: number } {
@@ -389,6 +398,7 @@ export function fixLanes(
   const lanes: FixLane[] = []
   let mixed = 0
   for (const [lane, parts] of byLane) {
+    if (parts.every((p) => p.windows.armEnd !== null && lane.start >= p.windows.armEnd)) continue
     if (new Set(parts.map((p) => p.arm)).size > 1) {
       mixed++
       continue

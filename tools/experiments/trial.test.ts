@@ -25,6 +25,7 @@ import {
   reductionInterval,
   renderTrial,
   reviewedPrs,
+  TRIAL_START,
   trialReport,
   UsageError,
 } from "./trial.ts"
@@ -42,7 +43,7 @@ function round(
   model: string,
   verdict: `pass` | `needs-fix`,
   cost: number,
-  ts = `2026-10-01T10:00:00.000Z`,
+  ts = `2026-10-01T16:00:00.000Z`,
 ): ReviewRound {
   return { ts, verdict, pr, reviewerModel: model, cost, calls: 5 }
 }
@@ -299,15 +300,15 @@ t(`counts a PR as auth or crypto work when any of its implementers is, not only 
   assertEquals(placeOf(review), `auth/crypto`)
 })
 
-t(`ignores review rounds from before the trial began`, () => {
+t(`leaves out a PR whose first review came before the trial began`, () => {
   const rows = [
     reviewer([
       round(`spy4x/a#1`, SONNET, `needs-fix`, 9, `2026-09-30T23:59:59.000Z`),
       round(`spy4x/a#1`, SONNET, `pass`, 1, `2026-10-01T00:00:00.000Z`),
+      round(`spy4x/a#3`, SONNET, `pass`, 1, `2026-10-01T00:00:00.000Z`),
     ]),
   ]
-  const [review] = reviewedPrs(rows, SINCE)
-  assertEquals(review.rounds.map((r) => r.cost), [1])
+  assertEquals(reviewedPrs(rows, SINCE).map((r) => r.pr), [`spy4x/a#3`])
 })
 
 t(
@@ -491,8 +492,12 @@ t(
         // Sonnet passes at once; the double-check fails.
         round(`spy4x/a#5`, SONNET, `pass`, 1, at(10)),
         round(`spy4x/a#5`, OPUS, `needs-fix`, 1, at(11)),
+        // Sonnet fails, Opus reviews, then Sonnet passes: Opus's round ends the window.
+        round(`spy4x/a#7`, SONNET, `needs-fix`, 1, at(10)),
+        round(`spy4x/a#7`, OPUS, `pass`, 1, at(11)),
+        round(`spy4x/a#7`, SONNET, `pass`, 1, at(12)),
       ]),
-      ...[1, 3, 5].map((n) => implementer(`spy4x/a#${n}`, n)),
+      ...[1, 3, 5, 7].map((n) => implementer(`spy4x/a#${n}`, n)),
     ]
     const windows = Object.fromEntries(
       reviewedPrs(rows, SINCE).map((r) => [r.pr, fixWindows(r, `sonnet`)]),
@@ -500,14 +505,49 @@ t(
     assertEquals(windows[`spy4x/a#1`], {
       fix: { from: at(10), to: at(12) },
       afterDoubleCheck: { from: at(13), to: at(15) },
+      armEnd: at(12),
     })
     assertEquals(windows[`spy4x/a#3`], {
       fix: { from: at(10), to: at(11) },
       afterDoubleCheck: { from: at(11), to: null },
+      armEnd: at(11),
     })
-    assertEquals(windows[`spy4x/a#5`], { fix: null, afterDoubleCheck: { from: at(11), to: null } })
+    assertEquals(windows[`spy4x/a#5`], {
+      fix: null,
+      afterDoubleCheck: { from: at(11), to: null },
+      armEnd: at(10),
+    })
+    assertEquals(windows[`spy4x/a#7`].fix, { from: at(10), to: at(11) })
   },
 )
+
+t(`starts the trial when its rule merged and leaves out PRs first reviewed before that`, () => {
+  assertEquals(TRIAL_START, `2026-10-01T14:48:43Z`)
+  const rows = [
+    reviewer([
+      // Opus reviewed #2 under the old rule, then again after the rule merged.
+      round(`spy4x/a#2`, OPUS, `needs-fix`, 1, `2026-10-01T10:00:00.000Z`),
+      round(`spy4x/a#2`, OPUS, `pass`, 1, `2026-10-01T16:00:00.000Z`),
+      round(`spy4x/a#4`, OPUS, `pass`, 1, `2026-10-01T16:00:00.000Z`),
+    ]),
+    implementer(`spy4x/a#2`, 2),
+    implementer(`spy4x/a#4`, 4),
+  ]
+  assertEquals(reviewedPrs(rows, TRIAL_START).map((r) => r.pr), [`spy4x/a#4`])
+})
+
+t(`does not count a lane that started after its arm reviewer's part ended as an arm lane`, () => {
+  const rows = [
+    reviewer([
+      round(`spy4x/a#5`, SONNET, `pass`, 1, `2026-10-01T10:00:00.000Z`),
+      round(`spy4x/a#5`, OPUS, `needs-fix`, 1, `2026-10-01T11:00:00.000Z`),
+    ]),
+    implementer(`spy4x/a#5`, 5, { agentId: `original`, start: `2026-10-01T09:00:00.000Z` }),
+    implementer(`spy4x/a#5`, 5, { agentId: `double-check-fix`, start: `2026-10-01T11:01:00.000Z` }),
+  ]
+  const { lanes } = fixLanes(reviewedPrs(rows, SINCE))
+  assertEquals(lanes.map((l) => l.lane.agentId), [`original`])
+})
 
 t(
   `collects each implementer's fix windows over its arm PRs and leaves out lanes with PRs in both arms`,
@@ -540,7 +580,7 @@ t(
   () => {
     const rows = [
       reviewer([
-        round(`spy4x/a#1`, SONNET, `needs-fix`, 1),
+        round(`spy4x/a#1`, SONNET, `needs-fix`, 1, `2026-10-01T10:00:00.000Z`),
         round(`spy4x/a#1`, SONNET, `pass`, 1, `2026-10-01T11:00:00.000Z`),
         round(`spy4x/a#1`, OPUS, `needs-fix`, 1, `2026-10-01T12:00:00.000Z`),
         round(`spy4x/a#3`, SONNET, `pass`, 1),
@@ -571,7 +611,7 @@ t(
 t(`rejects a command line without a run folder or without --log`, () => {
   assertThrows(() => parseCli([`--log`, `x.md`]), UsageError, `exactly one run folder`)
   assertThrows(() => parseCli([`run`]), UsageError, `--log`)
-  assertEquals(parseCli([`run`, `--log`, `x.md`]).since, `2026-10-01T00:00:00Z`)
+  assertEquals(parseCli([`run`, `--log`, `x.md`]).since, TRIAL_START)
 })
 
 t(`rejects a --since that is not an ISO date or a time with its zone`, () => {
@@ -732,7 +772,17 @@ t(
         ],
       })
       const { text } = await trialReport(
-        parseCli([dir, `--log`, join(dir, `log.md`), `--projects`, dir, `--iterations`, `50`]),
+        parseCli([
+          dir,
+          `--log`,
+          join(dir, `log.md`),
+          `--projects`,
+          dir,
+          `--iterations`,
+          `50`,
+          `--since`,
+          SINCE,
+        ]),
       )
       assertStringIncludes(text, `Sonnet reviewer: 1 lanes, 1 needed a fix; mean per lane $4.00`)
       assertStringIncludes(text, `left out above: Sonnet arm 1 lanes, $2.00 in total;`)
