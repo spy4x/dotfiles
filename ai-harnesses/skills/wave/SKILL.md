@@ -94,10 +94,12 @@ The wave's final report ends with:
 
 - the project's position: the plan, how much is done, what remains before the next milestone;
 - what the next wave must not touch: open PRs, issues waiting on the owner;
-- the next wave's prompt, ready to paste, with the position inside it, also saved as
-  `.wave<N+1>/prompt.md`;
 - what this wave cost: each agent's dollars, peak context and compactions
-  (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`).
+  (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`);
+- a chip that starts the next wave in its own session: the background-task suggestion tool
+  (`spawn_task` in the Claude desktop app), with the next wave's prompt as its prompt and the
+  position inside it. The owner starts it with one click, so write no prompt file. A harness
+  without such a tool ends the report with the prompt instead, ready to paste.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
