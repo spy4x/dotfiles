@@ -48,6 +48,8 @@ export interface Plan {
   readonly oddIssues: `arm_a` | `arm_b`
   /** The plan's first heading, shown above the tables. */
   readonly title: string
+  /** The plan's own words for what would settle the question, from an optional `bar:` line. */
+  readonly bar: string | null
 }
 
 const REQUIRED_KEYS = [`arm_a`, `arm_b`, `baseline_start`, `trial_start`]
@@ -81,6 +83,7 @@ export function parsePlan(text: string): Plan {
     trialStart: kv.get(`trial_start`)!,
     oddIssues: odd,
     title: text.match(/^#\s+(.+)$/m)?.[1] ?? `Experiment`,
+    bar: kv.get(`bar`) ?? null,
   }
 }
 
@@ -244,14 +247,14 @@ export function assignedArm(issue: number | null, plan: Plan): string | null {
 
 // ===== Formatting =====
 
-type Format = (x: number) => string
+export type Format = (x: number) => string
 
-const num = (digits: number): Format => (x) =>
+export const num = (digits: number): Format => (x) =>
   x.toLocaleString(`en-US`, { minimumFractionDigits: digits, maximumFractionDigits: digits })
-const usd = (digits = 2): Format => (x) => `$${num(digits)(x)}`
-const pct: Format = (x) => `${(x * 100).toFixed(0)}%`
+export const usd = (digits = 2): Format => (x) => `$${num(digits)(x)}`
+export const pct: Format = (x) => `${(x * 100).toFixed(0)}%`
 
-function cell(
+export function cell(
   values: number[],
   stat: (v: readonly number[]) => number | undefined,
   fmt: Format,
@@ -278,12 +281,12 @@ interface Metric {
 }
 
 const withLines = (us: Unit[]) => us.filter((u) => u.lines > 0)
-const reviewedOf = (us: Unit[]) => us.filter((u) => u.reviewed)
+export const reviewedOf = (us: Unit[]) => us.filter((u) => u.reviewed)
 const hours = (u: Unit) =>
   u.mergedAt ? (Date.parse(u.mergedAt) - Date.parse(u.start)) / 3_600_000 : undefined
 const defined = (xs: (number | undefined)[]) => xs.filter((x): x is number => x !== undefined)
 /** Implementer plus review cost of each reviewed unit. */
-const totalPerPr = (us: Unit[]) => reviewedOf(us).map((u) => u.cost + u.reviewCost)
+export const totalPerPr = (us: Unit[]) => reviewedOf(us).map((u) => u.cost + u.reviewCost)
 
 const METRICS: Metric[] = [
   {
@@ -497,7 +500,7 @@ function differences(
 
 // ===== Report =====
 
-const strip = (model: string) => model.replace(`claude-`, ``)
+export const strip = (model: string) => model.replace(`claude-`, ``)
 
 /** Renders the full Markdown report for a plan and its lanes. */
 export function renderReport(
