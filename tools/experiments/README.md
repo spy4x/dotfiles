@@ -74,11 +74,37 @@ unit with the highest total cost, described from row numbers only) and a method 
 are the ones `analyse` prints for the same seed. The chart is plain SVG: a dot per arm for the
 median and a whisker for the interval, readable on light and dark pages. Its dark rule follows the operating system's colour scheme, not a site's theme toggle, so a page that forces a light theme over a dark system shows light text on light.
 
+## 5. Daily view
+
+```bash
+deno task experiment:daily [--since 2026-09-29] [--until 2026-10-02] [--projects <dir>]
+```
+
+One row per UTC day: spend, each role's share (lead / implementer including `implementer-xhigh` /
+reviewer / other), Sonnet's share of implementer and reviewer calls, compactions per role, the
+median implementer peak context and spend per merged PR. It reads lead sessions too, so it scans
+the transcripts itself instead of reading `lanes.jsonl`. Without flags it shows the last 7 days.
+A date that is not a real `YYYY-MM-DD` stops the command with exit 2; a failed `gh` search stops
+it with exit 1. Calls on a model with no price are left out and counted on stderr.
+
+## 6. Reviewer-trial view
+
+```bash
+deno task experiment:trial <run folder> --log <sonnet55-reviewer.md> [--projects <dir>]
+```
+
+For the reviewer trial's decision. Reads the run's `lanes.jsonl` and the double-check table of the
+log file. An odd issue number assigns the Sonnet reviewer, an even one the Opus reviewer; PRs with
+no issue, in `preact-components`, on auth or crypto work, or reviewed by the other model print as
+left out. Per arm: review cost per PR, review rounds to pass, needs-fix rate per round (bootstrap
+95% intervals over PRs), and, with `--projects`, what the implementer spent after its first
+needs-fix verdict. Then the double-check pairs and the bar (🔴 in at most 1 in 10 Sonnet passes;
+review cost at least 30% lower), which prints "Not enough pairs (n<10)" until ten pairs exist. A 🔴
+in a security path prints as a trial-stopping line.
+
 ## Not here yet
 
-The 14 and 30 day follow-up pass, paired runs, and the daily view
-(`ai-memory/experiments/week-2026-10-01/daily.py`, which reads lead sessions too, not only
-subagent lanes).
+The 14 and 30 day follow-up pass and paired runs.
 
 ## Ported, not rewritten
 
