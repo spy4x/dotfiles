@@ -284,18 +284,23 @@ t(
       prInfo: { [`spy4x/example#60`]: info(100) },
     })
     const wrong = unitRow(61, OPUS, 200, 100, [`pass`])
-    const report = renderReport([...OPUS_ROWS, ...SONNET_ROWS, noIssue, wrong], plan, {
+    // Unreviewed: counted on its line, but outside the cost median.
+    const wrongUnreviewed = unitRow(63, OPUS, 300, 100, [])
+    const rows = [...OPUS_ROWS, ...SONNET_ROWS, noIssue, wrong, wrongUnreviewed]
+    const report = renderReport(rows, plan, {
       seed: 1,
       iterations: 2000,
     })
     assertEquals(lineOf(report, `| Total cost per PR (median`), PINNED_COST_LINE)
     assertStringIncludes(
       lineOf(report, `- No issue, model chosen by the lead:`),
-      `opus-5-5 1 unit, median total cost per PR $100.50 (95% $100.50 to $100.50); sonnet-5-5 0 units`,
+      `opus-5-5 1 unit, 1 reviewed: median total cost per reviewed PR $100.50 (95% $100.50 to ` +
+        `$100.50); sonnet-5-5 0 units, 0 reviewed`,
     )
     assertStringIncludes(
       lineOf(report, `- Issue assigned the other model:`),
-      `opus-5-5 1 unit, median total cost per PR $200.50 (95% $200.50 to $200.50); sonnet-5-5 0 units`,
+      `opus-5-5 2 units, 1 reviewed: median total cost per reviewed PR $200.50 (95% $200.50 to ` +
+        `$200.50); sonnet-5-5 0 units, 0 reviewed`,
     )
   },
 )

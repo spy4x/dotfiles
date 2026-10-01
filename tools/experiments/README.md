@@ -57,7 +57,8 @@ iteration count that is not a whole number stops the command with exit 2.
 - Table 1 holds every unit of each period, whatever assigned its model.
 - The headline and Table 2 compare only trial units whose issue number assigned the model they ran
   on. The units left out (no issue, or an issue that assigned the other model) print on their own
-  lines under the headline, with their count and median total cost per PR.
+  lines under the headline: how many there are, how many were reviewed, and the median total cost
+  per reviewed PR.
 
 ## Not here yet
 

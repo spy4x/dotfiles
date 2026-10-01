@@ -523,9 +523,11 @@ export function renderReport(
   const leftOut = (us: Unit[]) =>
     [A, B].map((m) => {
       const mine = us.filter((u) => u.model === m)
-      return `${strip(m)} ${mine.length} ${
-        mine.length === 1 ? `unit` : `units`
-      }, median total cost per PR ${cell(totalPerPr(mine), median, usd(), options)}`
+      return `${strip(m)} ${mine.length} ${mine.length === 1 ? `unit` : `units`}, ${
+        reviewedOf(mine).length
+      } reviewed: median total cost per reviewed PR ${
+        cell(totalPerPr(mine), median, usd(), options)
+      }`
     }).join(`; `)
 
   out.push(`# ${plan.title}`, ``)
