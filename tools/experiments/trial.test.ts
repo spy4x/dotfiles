@@ -226,28 +226,30 @@ t(
 t(`prints review cost, rounds to pass and needs-fix rate for each arm`, () => {
   const rows = [
     reviewer([
-      // Sonnet arm (odd issues): costs $1 / $1 / $1; rounds 1 / 1 / 2; one needs-fix in 4 rounds.
+      // Sonnet arm (odd issues): costs $1 / $1 / $1; rounds 1 / 1 / 2; two needs-fix in 5 rounds, one PR unfinished.
       round(`spy4x/a#1`, SONNET, `pass`, 1),
       round(`spy4x/a#3`, SONNET, `pass`, 1),
       round(`spy4x/a#5`, SONNET, `needs-fix`, 0.5, `2026-10-01T09:00:00.000Z`),
       round(`spy4x/a#5`, SONNET, `pass`, 0.5, `2026-10-01T11:00:00.000Z`),
+      // Still in review: one needs-fix round, no pass yet.
+      round(`spy4x/a#7`, SONNET, `needs-fix`, 9),
       // Opus arm (even issues): $4 / $4; rounds 1 / 3; two needs-fix in 4 rounds.
       round(`spy4x/a#2`, OPUS, `pass`, 4),
       round(`spy4x/a#4`, OPUS, `needs-fix`, 1, `2026-10-01T08:00:00.000Z`),
       round(`spy4x/a#4`, OPUS, `needs-fix`, 1, `2026-10-01T09:00:00.000Z`),
       round(`spy4x/a#4`, OPUS, `pass`, 2, `2026-10-01T10:00:00.000Z`),
     ]),
-    ...[1, 3, 5, 2, 4].map((n) => implementer(`spy4x/a#${n}`, n)),
+    ...[1, 3, 5, 7, 2, 4].map((n) => implementer(`spy4x/a#${n}`, n)),
   ]
   const text = render(rows)
-  assertStringIncludes(text, `In the arms: 3 Sonnet, 2 Opus`)
-  assertStringIncludes(text, `| PRs (passed) | 3 (3) | 2 (2) |`)
+  assertStringIncludes(text, `In the arms: 4 Sonnet, 2 Opus`)
+  assertStringIncludes(text, `| PRs (passed) | 4 (3) | 2 (2) |`)
   assertStringIncludes(text, `| Review cost per PR, median | $1.00 ($1.00 to $1.00) | $4.00 (`)
   // Sonnet rounds to pass: (1 + 1 + 2) / 3; Opus: (1 + 3) / 2.
   assertStringIncludes(text, `| Review rounds to pass, mean | 1.33 (`)
   assertStringIncludes(text, ` | 2.00 (`)
-  // Sonnet: 1 needs-fix in 4 rounds; Opus: 2 in 4.
-  assertStringIncludes(text, `| Needs-fix rate per round | 25% (`)
+  // Sonnet: 2 needs-fix in 5 rounds (the unfinished PR counts); Opus: 2 in 4.
+  assertStringIncludes(text, `| Needs-fix rate per round | 40% (`)
   assertStringIncludes(text, ` | 50% (`)
   assertStringIncludes(text, `Review cost per PR, Sonnet against Opus: 75% lower`)
 })
@@ -258,6 +260,11 @@ t(`reports how much lower one group's median is, 50% when it halves`, () => {
   assertAlmostEquals(iv.lo, 0.5, 1e-12)
   assertAlmostEquals(iv.hi, 0.5, 1e-12)
   assertEquals(reductionInterval([], [2]), undefined)
+  // Medians of four values resample to 1, 5 or 9 against a flat 10: the interval has width.
+  const spread = reductionInterval([1, 9, 1, 9], [10, 10, 10, 10], { iterations: 500 })!
+  assertAlmostEquals(spread.value, 0.5, 1e-12)
+  assertAlmostEquals(spread.lo, 0.1, 1e-12)
+  assertAlmostEquals(spread.hi, 0.9, 1e-12)
 })
 
 t(`says there are not enough pairs below ten, and gives no verdict on the bar`, () => {
