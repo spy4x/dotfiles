@@ -97,10 +97,12 @@ For the reviewer trial's decision. Reads the run's `lanes.jsonl` and the double-
 log file. An odd issue number assigns the Sonnet reviewer, an even one the Opus reviewer; PRs with
 no issue, in `preact-components`, on auth or crypto work, or reviewed by the other model print as
 left out. Per arm: review cost per PR, review rounds to pass, needs-fix rate per round (bootstrap
-95% intervals over PRs), and, with `--projects`, what the implementer spent after its first
+95% intervals over PRs; only the arm's own reviewer's rounds up to its first pass count; cost and
+rounds use PRs it has passed, the needs-fix rate also PRs still waiting for a pass), and, with `--projects`, what the implementer spent after its first
 needs-fix verdict. Then the double-check pairs and the bar (🔴 in at most 1 in 10 Sonnet passes;
 review cost at least 30% lower), which prints "Not enough pairs (n<10)" until ten pairs exist. A 🔴
-in a security path prints as a trial-stopping line.
+in a security path prints as a trial-stopping line and makes the command exit 3 (the report is
+still printed; 1 is a failure, 2 a bad command line).
 
 ## Not here yet
 

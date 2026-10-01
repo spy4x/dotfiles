@@ -412,7 +412,8 @@ t(`reads lanes.jsonl and the log from disk and prints the report`, async () => {
       rows.map((r) => JSON.stringify(r)).join(`\n`),
     )
     await Deno.writeTextFile(join(dir, `log.md`), LOG)
-    const text = await trialReport(parseCli([dir, `--log`, join(dir, `log.md`)]))
+    const { text, stopping } = await trialReport(parseCli([dir, `--log`, join(dir, `log.md`)]))
+    assertEquals(stopping, false)
     assertStringIncludes(text, `| PRs (passed) | 1 (1) | 0 (0) |`)
     assertStringIncludes(text, `Pairs: 2.`)
     const r = await new Deno.Command(Deno.execPath(), {
@@ -426,3 +427,60 @@ t(`reads lanes.jsonl and the log from disk and prints the report`, async () => {
     await Deno.remove(dir, { recursive: true })
   }
 })
+
+t(`stops instead of pricing an implementer's call on an unknown model as $0`, async () => {
+  const dir = await Deno.makeTempDir({ prefix: `experiment-kit-test-` })
+  try {
+    await writeLane(dir, {
+      project: `proj`,
+      session: `s1`,
+      id: `i1`,
+      meta: { agentType: `implementer` },
+      lines: [assistant(`a`, `claude-future-9`, `2026-10-01T13:00:00.000Z`, { input_tokens: 1 })],
+    })
+    await assertRejects(
+      () => costAfter(dir, laneRow({ agentId: `i1`, project: `proj`, session: `s1` }), ``),
+      Error,
+      `claude-future-9`,
+    )
+    // A call before the verdict is not priced, so its model does not matter.
+    assertEquals(
+      await costAfter(
+        dir,
+        laneRow({ agentId: `i1`, project: `proj`, session: `s1` }),
+        `2026-10-02T00:00:00.000Z`,
+      ),
+      0,
+    )
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(
+  `exits 3 after printing the report when a 🔴 sits in a security path, and 0 otherwise`,
+  async () => {
+    const dir = await Deno.makeTempDir({ prefix: `experiment-kit-test-` })
+    try {
+      await Deno.writeTextFile(
+        join(dir, `lanes.jsonl`),
+        JSON.stringify(implementer(`spy4x/a#1`, 1)),
+      )
+      const run = async (log: string) => {
+        await Deno.writeTextFile(join(dir, `log.md`), log)
+        const r = await new Deno.Command(Deno.execPath(), {
+          args: [`run`, `-A`, TRIAL, dir, `--log`, join(dir, `log.md`)],
+          stdout: `piped`,
+          stderr: `piped`,
+        }).output()
+        return { code: r.code, out: new TextDecoder().decode(r.stdout) }
+      }
+      const stopping = await run(LOG.replace(`a red \\| with a pipe`, `a security hole`))
+      assertEquals(stopping.code, 3)
+      assertStringIncludes(stopping.out, `TRIAL STOPPING`)
+      assertEquals((await run(LOG)).code, 0)
+    } finally {
+      await Deno.remove(dir, { recursive: true })
+    }
+  },
+)

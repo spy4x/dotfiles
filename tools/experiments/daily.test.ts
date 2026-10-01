@@ -118,17 +118,26 @@ t(`counts compactions per role on the day of the compact_boundary event`, () => 
 
 t(`takes the median of the implementers' peak contexts, one peak per transcript`, () => {
   const at = `2026-10-01T01:00:00.000Z`
-  const peakOf = (tokens: number, tokensLater: number): TranscriptInput => ({
+  // A call's context is input + cache read + 5-minute write + 1-hour write tokens.
+  const peakOf = (read: number, write5m: number, write1h: number): TranscriptInput => ({
     role: `implementer`,
     lines: [
-      assistant(`x${tokens}`, OPUS, at, { input_tokens: tokens }),
-      assistant(`y${tokens}`, OPUS, at, { input_tokens: tokensLater }),
+      assistant(`small${read}`, OPUS, at, { input_tokens: 1000 }),
+      assistant(`big${read}`, OPUS, at, {
+        input_tokens: 1000,
+        cache_read_input_tokens: read,
+        cache_creation_input_tokens: write5m + write1h,
+        cache_creation: {
+          ephemeral_5m_input_tokens: write5m,
+          ephemeral_1h_input_tokens: write1h,
+        },
+      }),
     ],
   })
   const inputs = [
-    peakOf(100_000, 200_000),
-    peakOf(50_000, 300_000),
-    peakOf(10_000, 400_000),
+    peakOf(100_000, 60_000, 39_000),
+    peakOf(150_000, 100_000, 49_000),
+    peakOf(200_000, 100_000, 99_000),
     // A reviewer's larger context is not an implementer peak.
     { role: `reviewer` as const, lines: [assistant(`r`, OPUS, at, { input_tokens: 900_000 })] },
   ]

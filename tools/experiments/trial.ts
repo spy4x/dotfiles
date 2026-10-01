@@ -270,7 +270,15 @@ export async function costAfter(projects: string, lane: LaneRow, from: string): 
   }
   let cost = 0
   for (const call of parseTranscript(text.split(`\n`)).calls) {
-    if (call.timestamp > from) cost += totalOf(costOf(call).cost)
+    if (call.timestamp <= from) continue
+    const priced = costOf(call)
+    if (!priced.priced) {
+      throw new Error(
+        `implementer ${lane.agentId} has a call on ${call.model}, which has no price; add it to ` +
+          `tools/session-cost.ts instead of counting it as $0`,
+      )
+    }
+    cost += totalOf(priced.cost)
   }
   return cost
 }
@@ -383,9 +391,10 @@ export function renderTrial(input: TrialInput): string {
     ``,
     `## Per arm`,
     ``,
-    `Medians and rates with a bootstrap 95% interval, resampling PRs. Cost and rounds count the ` +
-      `arm's own reviewer up to its first pass, on PRs it passed; the needs-fix rate counts every ` +
-      `round of the arm's reviewer.`,
+    `Medians and rates with a bootstrap 95% interval, resampling PRs. Only the arm's own ` +
+      `reviewer counts, and only its rounds up to its first pass. Cost and rounds use PRs that ` +
+      `reviewer has passed, so a PR still waiting for its pass drops out of them; the needs-fix ` +
+      `rate uses every PR of the arm, waiting ones included.`,
     ``,
     `| | Sonnet reviewer | Opus reviewer |`,
     `| --- | --- | --- |`,
@@ -498,6 +507,8 @@ export function renderTrial(input: TrialInput): string {
 
 // ===== CLI =====
 
+// Exit codes: 0 report printed, 1 failure, 2 bad command line, 3 report printed and it holds a
+// trial-stopping line.
 const USAGE =
   `usage: trial.ts <run folder> --log <markdown file> [--since ISO] [--projects <dir>] [--seed N] [--iterations N]`
 
@@ -548,7 +559,9 @@ export function parseCli(args: string[]): {
 }
 
 /** Reads the run folder and the log and renders the report. */
-export async function trialReport(cli: ReturnType<typeof parseCli>): Promise<string> {
+export async function trialReport(
+  cli: ReturnType<typeof parseCli>,
+): Promise<{ text: string; stopping: boolean }> {
   const rows = parseRows(await Deno.readTextFile(join(cli.folder, `lanes.jsonl`)))
   const pairs = parseLog(await Deno.readTextFile(cli.log))
   let fixCost: Map<string, number> | undefined
@@ -561,8 +574,14 @@ export async function trialReport(cli: ReturnType<typeof parseCli>): Promise<str
       }
     }
   }
-  return renderTrial({ rows, pairs, since: cli.since, fixCost, options: cli.options })
+  return {
+    text: renderTrial({ rows, pairs, since: cli.since, fixCost, options: cli.options }),
+    stopping: pairs.some((p) => isSecurityRed(p, rows)),
+  }
 }
+
+/** Exit code when the report holds a trial-stopping line, so a scheduled run cannot miss it. */
+export const EXIT_TRIAL_STOPPING = 3
 
 if (import.meta.main) {
   let cli: ReturnType<typeof parseCli>
@@ -573,7 +592,9 @@ if (import.meta.main) {
     Deno.exit(2)
   }
   try {
-    console.log(await trialReport(cli))
+    const { text, stopping } = await trialReport(cli)
+    console.log(text)
+    if (stopping) Deno.exit(EXIT_TRIAL_STOPPING)
   } catch (error) {
     console.error(`trial failed: ${error instanceof Error ? error.message : error}`)
     Deno.exit(1)
