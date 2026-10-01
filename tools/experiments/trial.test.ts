@@ -18,6 +18,7 @@ import {
   parseCli,
   parseLog,
   placeOf,
+  prsInCell,
   reductionInterval,
   renderTrial,
   reviewedPrs,
@@ -96,6 +97,7 @@ Some text with | a pipe.
 | ---- | -- | ----- | -------------- | ------------ | ---------------------------- | ---- |
 | 2026-10-01 | spy4x/a#357 | #195 | pass | needs-fix | 0 / 2 / 3 | two yellow |
 | 2026-10-02 | spy4x/b#9, c#11 | other#369 | pass (after one needs-fix round) | pass | 1 / 0 / 1 | a red \\| with a pipe |
+| 2026-10-02 | spy4x/d#360 → #362 | #117 (+#123) | pass | needs-fix | 0 / 1 / 0 | arrow |
 
 Text after the table.
 `
@@ -104,7 +106,7 @@ t(
   `reads each row of the double-check log: date, PRs, issue, verdicts, finding counts, note`,
   () => {
     const pairs = parseLog(LOG)
-    assertEquals(pairs.length, 2)
+    assertEquals(pairs.length, 3)
     assertEquals(pairs[0], {
       date: `2026-10-01`,
       prCell: `spy4x/a#357`,
@@ -117,17 +119,43 @@ t(
       blue: 3,
       note: `two yellow`,
     })
-    assertEquals(pairs[1].prs, [`spy4x/b#9`])
+    assertEquals(pairs[1].prs, [`spy4x/b#9`, `spy4x/c#11`])
     assertEquals(pairs[1].issue, 369)
     assertEquals([pairs[1].red, pairs[1].yellow, pairs[1].blue], [1, 0, 1])
     assertEquals(pairs[1].note, `a red \\| with a pipe`)
+    assertEquals(pairs[2].prs, [`spy4x/d#360`, `spy4x/d#362`])
+    assertEquals(pairs[2].issue, 117)
   },
 )
+
+t(`reads every PR a log cell names: a list without owners, and a bare #n after an arrow`, () => {
+  assertEquals(
+    prsInCell(
+      `spy4x/zond#9, caldav-mcp#11, rostok#330, financy#68, template#195, caldav-tasks-web#18`,
+    ),
+    [
+      `spy4x/zond#9`,
+      `spy4x/caldav-mcp#11`,
+      `spy4x/rostok#330`,
+      `spy4x/financy#68`,
+      `spy4x/template#195`,
+      `spy4x/caldav-tasks-web#18`,
+    ],
+  )
+  assertEquals(prsInCell(`spy4x/antonshubin.com#360 → #362`), [
+    `spy4x/antonshubin.com#360`,
+    `spy4x/antonshubin.com#362`,
+  ])
+  assertEquals(prsInCell(`other/x#1, y#2`), [`other/x#1`, `other/y#2`])
+  assertThrows(() => prsInCell(`#5`), Error, `names no repo`)
+})
 
 t(`stops on a log without the table or with a row it cannot read`, () => {
   assertThrows(() => parseLog(`# nothing here`), Error, `no table`)
   const bad = LOG.replace(`0 / 2 / 3`, `none`)
   assertThrows(() => parseLog(bad), Error, `cannot read log row`)
+  assertThrows(() => parseLog(LOG.replace(`spy4x/a#357`, `#357`)), Error, `names no repo`)
+  assertThrows(() => parseLog(LOG.replace(`spy4x/a#357`, `the first one`)), Error, `no PR`)
 })
 
 t(`assigns the Sonnet reviewer to odd issue numbers and the Opus reviewer to even ones`, () => {
@@ -415,7 +443,7 @@ t(`reads lanes.jsonl and the log from disk and prints the report`, async () => {
     const { text, stopping } = await trialReport(parseCli([dir, `--log`, join(dir, `log.md`)]))
     assertEquals(stopping, false)
     assertStringIncludes(text, `| PRs (passed) | 1 (1) | 0 (0) |`)
-    assertStringIncludes(text, `Pairs: 2.`)
+    assertStringIncludes(text, `Pairs: 3.`)
     const r = await new Deno.Command(Deno.execPath(), {
       args: [`run`, `-A`, TRIAL, dir],
       stdout: `piped`,

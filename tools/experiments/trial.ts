@@ -52,8 +52,9 @@ function armOfModel(model: string): Arm | null {
 export interface LogPair {
   readonly date: string
   readonly prCell: string
-  /** Every `spy4x/repo#n` the PR cell names. */
+  /** Every PR the PR cell names, as `owner/repo#n` (see `prsInCell`). */
   readonly prs: string[]
+  /** The lowest issue number the Issue cell names. */
   readonly issue: number | null
   readonly sonnetVerdict: string
   readonly opusVerdict: string
@@ -65,6 +66,30 @@ export interface LogPair {
 
 const splitRow = (row: string) =>
   row.trim().replace(/^\|/, ``).replace(/\|$/, ``).split(/(?<!\\)\|/).map((c) => c.trim())
+
+const PR_IN_CELL = /(?:([\w.-]+)\/)?([\w.-]+)?#(\d+)/g
+
+/**
+ * Every PR a log cell names, as `owner/repo#n`: `spy4x/zond#9, caldav-mcp#11` and
+ * `spy4x/site#360 → #362` each name two. A ref without an owner takes the previous ref's owner
+ * (`spy4x` when none came before); a bare `#n` takes the previous ref's repo, and throws when
+ * there is none.
+ */
+export function prsInCell(cell: string): string[] {
+  const out: string[] = []
+  let owner = `spy4x`
+  let repo: string | null = null
+  for (const m of cell.matchAll(PR_IN_CELL)) {
+    if (m[2]) {
+      owner = m[1] ?? owner
+      repo = m[2]
+    } else if (repo === null) {
+      throw new Error(`"#${m[3]}" names no repo and no repo comes before it`)
+    }
+    out.push(`${owner}/${repo}#${m[3]}`)
+  }
+  return out
+}
 
 /**
  * Reads the double-check table out of a markdown file: the table whose header names a
@@ -96,16 +121,23 @@ export function parseLog(text: string): LogPair[] {
   for (let i = headerAt + 1; i < lines.length && lines[i].trim().startsWith(`|`); i++) {
     const cells = splitRow(lines[i])
     if (cells.every((c) => /^:?-+:?$/.test(c))) continue
+    const unreadable = (why: string) =>
+      new Error(`cannot read log row ${i + 1} (${why}): ${lines[i].slice(0, 80)}`)
     const findings = cells[cFind]?.match(/(\d+)\s*\/\s*(\d+)\s*\/\s*(\d+)/)
-    if (cells.length < header.length || !findings) {
-      throw new Error(`cannot read log row ${i + 1}: ${lines[i].slice(0, 80)}`)
+    if (cells.length < header.length || !findings) throw unreadable(`no findings count`)
+    let prs: string[]
+    try {
+      prs = prsInCell(cells[cPr])
+    } catch (error) {
+      throw unreadable(error instanceof Error ? error.message : String(error))
     }
-    const issue = cells[cIssue].match(/#(\d+)/)
+    if (prs.length === 0) throw unreadable(`no PR`)
+    const issues = [...cells[cIssue].matchAll(/#(\d+)/g)].map((m) => Number(m[1]))
     pairs.push({
       date: cells[cDate],
       prCell: cells[cPr],
-      prs: [...cells[cPr].matchAll(/(spy4x\/[\w.-]+)#(\d+)/g)].map((m) => `${m[1]}#${m[2]}`),
-      issue: issue ? Number(issue[1]) : null,
+      prs,
+      issue: issues.length > 0 ? Math.min(...issues) : null,
       sonnetVerdict: cells[cSonnet],
       opusVerdict: cells[cOpus],
       red: Number(findings[1]),
