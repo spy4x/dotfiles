@@ -1,4 +1,9 @@
-import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19"
+import {
+  assertEquals,
+  assertRejects,
+  assertStringIncludes,
+  assertThrows,
+} from "jsr:@std/assert@1.0.19"
 import { join } from "jsr:@std/path@1.1.6"
 import { laneRow } from "./_fixtures.ts"
 import { parsePlan } from "./analyse.ts"
@@ -386,8 +391,8 @@ function followup(
 }
 
 /** Opus (2, 4, 6) and Sonnet (1, 3, 5) from FLAT. */
-function follow(rows: FollowupRow[] | null) {
-  return renderReport(FLAT, plan, {}, rows).markdown.split(`## After the merge`)[1]
+function follow(rows: FollowupRow[] | null, lanes: LaneRow[] = FLAT) {
+  return renderReport(lanes, plan, {}, rows).markdown.split(`## After the merge`)[1]
     .split(`## What would change`)[0]
 }
 
@@ -417,8 +422,8 @@ t(`counts reverts, fix-titled PRs, reopened issues and touched PRs per arm and w
   assertStringIncludes(d14, `| PRs reverted | 1 of 3 | 0 of 3 |`)
   assertStringIncludes(d14, `| Later PR titled as a fix on the same lines | 1 of 3 | 0 of 3 |`)
   assertStringIncludes(d14, `| Closing issue reopened | 0 of 3 | 1 of 3 |`)
-  assertStringIncludes(d14, `| Touched by any later PR (noisy) | 2 of 3 | 0 of 3 |`)
-  assertStringIncludes(d30, `| Touched by any later PR (noisy) | 1 of 3 | 0 of 3 |`)
+  assertStringIncludes(d14, `| Touched by a later non-revert PR (noisy) | 2 of 3 | 0 of 3 |`)
+  assertStringIncludes(d30, `| Touched by a later non-revert PR (noisy) | 1 of 3 | 0 of 3 |`)
   assertStringIncludes(section, `"Touched" is noisy`)
 })
 
@@ -427,7 +432,7 @@ t(`lists reverts and fixes before the noisy touched row`, () => {
   const at = (label: string) => section.indexOf(label)
   assertEquals(at(`PRs reverted`) < at(`titled as a fix`), true)
   assertEquals(at(`titled as a fix`) < at(`reopened`), true)
-  assertEquals(at(`reopened`) < at(`Touched by any`), true)
+  assertEquals(at(`reopened`) < at(`Touched by a later`), true)
 })
 
 t(`prints a pending window as pending, never as zero`, () => {
@@ -474,12 +479,11 @@ t(`reads followups.jsonl from the run folder and refuses another schema version`
   } finally {
     await Deno.remove(dir, { recursive: true })
   }
-  try {
-    parseFollowups(JSON.stringify({ ...followup(1, NONE, NONE), schema: 0 }))
-    throw new Error(`should have refused`)
-  } catch (error) {
-    assertStringIncludes((error as Error).message, `schema 0`)
-  }
+  assertThrows(
+    () => parseFollowups(JSON.stringify({ ...followup(1, NONE, NONE), schema: 0 })),
+    Error,
+    `schema 0`,
+  )
 })
 
 t(
@@ -507,16 +511,53 @@ t(
 
 t(`a malformed followups.jsonl line is reported with its line number`, () => {
   const good = JSON.stringify(followup(1, NONE, NONE))
-  try {
-    parseFollowups(`${good}\n{not json`)
-    throw new Error(`should have refused`)
-  } catch (error) {
-    assertStringIncludes((error as Error).message, `line 2 is not valid JSON`)
-  }
+  assertThrows(
+    () =>
+      parseFollowups(`${good}
+{not json`),
+    Error,
+    `line 2 is not valid JSON`,
+  )
+  assertThrows(
+    () =>
+      parseFollowups(`${good}
+null`),
+    Error,
+    `line 2 is not a JSON object`,
+  )
 })
 
 t(`the touched note does not claim how many PRs were touched`, () => {
   const section = follow([2, 4, 6, 1, 3, 5].map((n) => followup(n, NONE, NONE)))
-  assertStringIncludes(section, `"Touched" is noisy`)
-  assertEquals(section.includes(`most PRs`), false)
+  assertStringIncludes(
+    section,
+    `"Touched" is noisy: a later PR can overlap the same lines for reasons that are not ` +
+      `defects, documentation above all, so read it last and do not treat it as a defect count.`,
+  )
+})
+
+t(`counts only the units that followed the issue-number rule, not every unit of a model`, () => {
+  const prOf = (n: number) => `spy4x/example#${n}`
+  const noIssue = (n: number, model: string) =>
+    unit(n, model, 4, 0.5, {
+      issue: null,
+      issueSource: null,
+      prInfo: { [prOf(n)]: { ...FLAT[0].prInfo[prOf(2)], closingIssues: [] } },
+    })
+  const lanes = [
+    ...FLAT,
+    noIssue(8, SONNET),
+    noIssue(12, OPUS),
+    unit(10, SONNET, 4, 0.5), // even issue assigns Opus, ran on Sonnet
+    unit(7, OPUS, 4, 0.5), // odd issue assigns Sonnet, ran on Opus
+  ]
+  const reverted = { ...NONE, reverts: [revert] }
+  const section = follow(
+    [2, 4, 6, 1, 3, 5].map((n) => followup(n, NONE, NONE)).concat(
+      [8, 12, 10, 7].map((n) => followup(n, reverted, reverted)),
+    ),
+    lanes,
+  )
+  assertStringIncludes(section, `| PRs reverted | 0 of 3 | 0 of 3 |`)
+  assertEquals(section.includes(`Not in`), false)
 })

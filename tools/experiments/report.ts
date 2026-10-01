@@ -283,6 +283,9 @@ export function parseFollowups(text: string): FollowupRow[] {
     } catch {
       throw new PlanError(`followups.jsonl line ${i + 1} is not valid JSON`)
     }
+    if (typeof row !== `object` || row === null) {
+      throw new PlanError(`followups.jsonl line ${i + 1} is not a JSON object`)
+    }
     if (row.schema !== FOLLOWUP_SCHEMA_VERSION) {
       throw new PlanError(
         `followups.jsonl line ${i + 1} has schema ${row.schema}; this report reads ` +
@@ -352,7 +355,7 @@ export function followupSection(
       `| Closing issue reopened | ${
         cells.map((c) => count(c, (w) => w.reopened.length > 0)).join(` | `)
       } |`,
-      `| Touched by any later PR (noisy) | ${
+      `| Touched by a later non-revert PR (noisy) | ${
         cells.map((c) => count(c, (w) => w.fixes.length > 0)).join(` | `)
       } |`,
       ``,
