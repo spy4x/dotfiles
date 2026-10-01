@@ -91,19 +91,30 @@ add the price to `tools/session-cost.ts`.
 ## 6. Reviewer-trial view
 
 ```bash
-deno task experiment:trial <run folder> --log <sonnet55-reviewer.md> [--projects <dir>]
+deno task experiment:trial <run folder> --log <sonnet55-reviewer.md> \
+  [--since ISO] [--projects <dir>]
 ```
 
 For the reviewer trial's decision. Reads the run's `lanes.jsonl` and the double-check table of the
 log file. An odd issue number assigns the Sonnet reviewer, an even one the Opus reviewer; PRs with
 no issue, in `preact-components`, on auth or crypto work, or reviewed by the other model print as
-left out. Per arm: review cost per PR, review rounds to pass, needs-fix rate per round (bootstrap
-95% intervals over PRs; only the arm's own reviewer's rounds up to its first pass count; cost and
-rounds use PRs it has passed, the needs-fix rate also PRs still waiting for a pass), and, with `--projects`, what the implementer spent after its first
-needs-fix verdict. Then the double-check pairs and the bar (🔴 in at most 1 in 10 Sonnet passes;
-review cost at least 30% lower), which prints "Not enough pairs (n<10)" until ten pairs exist. A 🔴
-in a security path prints as a trial-stopping line and makes the command exit 3 (the report is
-still printed; 1 is a failure, 2 a bad command line).
+left out. A PR's issue is the first of: the log's Issue column, the PR's closing references, the
+implementer lane's issue, an issue named by a "Part of", "Refs", "Closes" or similar sentence in
+the PR body (read with `gh` for each PR still without one). A PR with no issue belongs to Opus, so
+a Sonnet-reviewed PR whose issue is not found prints on its own line instead of under "no issue".
+
+Per arm: review cost per PR, review rounds to pass, needs-fix rate per round (bootstrap 95%
+intervals over PRs; only the arm's own reviewer's rounds up to its first pass count; cost and
+rounds use PRs it has passed, the needs-fix rate also PRs still waiting for a pass). With
+`--projects`, what the implementer spent fixing: from the arm reviewer's first needs-fix to its
+pass, or to the other model's first round if that came sooner. What it spent after the double-check
+asked for fixes prints on a line of its own.
+
+Then the double-check pairs and the bar (🔴 in at most 1 in 10 Sonnet passes; review cost at least
+30% lower), which prints "Not enough pairs (n<10)" until ten pairs exist. A 🔴 in a security path
+(security, auth, crypto or secret wording in the note's 🔴 part, or a PR the collector classed
+auth/crypto) prints as a trial-stopping line and makes the command exit 3 (the report is still
+printed; 1 is a failure, 2 a bad command line such as a `--since` that is not ISO).
 
 ## Not here yet
 
