@@ -23,6 +23,15 @@ priced once (the last usage line sharing its message id). `--dotfiles` tags ever
 dotfiles commit live when it spawned. A failed `gh` or `git` call stops the run with exit 1, and so
 does a call to a model with no price in `tools/session-cost.ts`, which would otherwise count as $0.
 
+`--since` and `--until` take `YYYY-MM-DD` or a full ISO timestamp with a zone; anything else (or an
+impossible date such as 2026-02-30) exits 2.
+
+Each PR in `prInfo` has `closingIssues` (what GitHub says the PR closes) and `referencedIssues`
+(`owner/repo#number`, read from the PR body: `owner/repo#N`, a bare `#N` of up to five digits, and
+`github.com/.../issues/N` links, never the PR itself). `referencedIssues` is filled only when
+`closingIssues` is empty, else it is `[]`, so a reader can tell "closes" from "mentions". Rows
+collected before the field existed lack it.
+
 `baseCommit` is always `null`: neither the transcripts nor `gh` record it.
 
 ## 2. Write `plan.md` before looking at results
@@ -119,9 +128,45 @@ Then the double-check pairs and the bar (🔴 in at most 1 in 10 Sonnet passes; 
 auth/crypto) prints as a trial-stopping line and makes the command exit 3 (the report is still
 printed; 1 is a failure, 2 a bad command line such as a `--since` that is not ISO).
 
+## 7. Follow up after 14 and 30 days
+
+```sh
+deno task experiment:followup <run folder> [--now <ISO>]
+```
+
+Reads the run's `lanes.jsonl` and writes `followups.jsonl` beside it: one row per merged PR
+(`schema` 1), with `d14` and `d30`. Each is `"pending"` when the window has not elapsed at `--now`
+(default: the current time), else `{ reverts, fixes, reopened }`. A pending window is not zero:
+count only elapsed windows. Any failing `gh` call stops the command with exit 1 and writes nothing.
+
+- **Reverts:** a later merged PR or commit on the repo's default branch (as it is named now) with the title
+  `Revert "<title>"`, a body `This reverts commit <sha>` (a prefix of the PR's merge commit), or a
+  body `Reverts #<n>` / `Reverts <owner/repo>#<n>`.
+  A PR merged with a rebase merge has several commits on the branch, and only the last one is its
+  merge commit: a revert of an earlier commit of such a PR is not found. Squash merges, which
+  these runs use, are not affected.
+- **Fixes:** a later merged PR on the default branch (any type; `fixType` marks titles starting
+  `fix`) that touches lines the PR changed. "Touches" is: the same file (renames followed), and an
+  old-side changed range of the later diff overlaps a line the original changed, inclusive. The
+  original's lines are tracked through every PR merged in between, in merge order: an insertion
+  above moves them down, a deletion above moves them up, and lines a PR removed or rewrote leave
+  the set and count as touched by that PR, not by the ones after it. A pure insertion or deletion
+  counts as the two lines around it. Commits pushed straight to the branch do not move the lines
+  (they are in no PR's patch), and a PR branched before the original merged was diffed against an
+  older file, so a result can be a few lines off. A file with no patch (binary, or too large for
+  GitHub to show) counts as touched whole, with `exact: false`, and its tracking ends. Lockfiles
+  and generated files are left out on both sides: the `GENERATED_FILES` list in `followup.ts`
+  (`deno.lock`, `package-lock.json`, `pnpm-lock.yaml`, `*.lock`, `llms.txt`, `llms-full.txt`,
+  `golden/`, `goldens/` and `__snapshots__/` directories).
+- **Reopened:** `reopened` events on the PR's closing issues after the merge.
+
+Events count in a window when they fall after the merge and no later than 14 (30) days after it;
+the 30 day window includes the first 14 days. A repo with 1000 or more merged PRs since the first
+PR of the run stops the command, because one `gh pr list` call cannot return more.
+
 ## Not here yet
 
-The 14 and 30 day follow-up pass and paired runs.
+Paired runs.
 
 ## Ported, not rewritten
 

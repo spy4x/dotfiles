@@ -138,7 +138,47 @@ export function commitAt(commits: readonly DotfilesCommit[], ts: string): string
 }
 
 const PR_FIELDS =
-  `additions,deletions,state,mergedAt,createdAt,title,changedFiles,headRefName,closingIssuesReferences`
+  `additions,deletions,state,mergedAt,createdAt,title,changedFiles,headRefName,closingIssuesReferences,body`
+
+const FILE_EXTENSION = /\.(md|mdx|ts|tsx|js|jsx|json|jsonc|txt|yml|yaml|html|css|toml|lock)$/i
+const COLOUR_CONTEXT =
+  /(color|background|fill|stroke|border|shadow|bg|rgba?|hsla?)[\w-]*["']?\s*[:=(]\s*["']?$/i
+
+/**
+ * The issues a PR body names, as `owner/repo#number` (a bare `#N` is in the PR's own repo), sorted
+ * and without repeats: `owner/repo#N`, a bare `#N` of at most five digits, and an
+ * `https://github.com/owner/repo/issues/N` link. The PR itself is left out. Not references:
+ * anything inside a fenced code block or an inline code span; a `#` that follows a word character
+ * or a path (`C#12`, `&#39;`, `docs/guide.md#3`); a number that continues into an anchor
+ * (`#3-setup`); and a CSS-like colour declaration, that is a colour property, the number, then
+ * `;` or `}` (`color: #123;`). A bare hex-looking `#123` elsewhere, or a colour declaration with
+ * no closing `;`, is still read as an issue. Whether the PR closes the issue or only mentions it
+ * is not decided here: the collector uses this only when GitHub lists no closing issue.
+ */
+export function referencedIssues(body: string, repo: string, own: number): string[] {
+  const text = body.replace(/(```|~~~)[\s\S]*?(\1|$)/g, ` `).replace(/(`{1,2})[^\n]*?\1/g, ` `)
+  const found = new Set<string>()
+  const add = (r: string, n: string) => {
+    if (r === repo && Number(n) === own) return
+    found.add(`${r}#${Number(n)}`)
+  }
+  for (
+    const m of text.matchAll(/https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/issues\/(\d{1,5})(?!\w)/g)
+  ) {
+    add(m[1], m[2])
+  }
+  for (
+    const m of text.matchAll(/(?<![\w.\/-])([\w-]+\/[\w.-]+)#(\d{1,5})(?!\w|-\w)/g)
+  ) {
+    if (!FILE_EXTENSION.test(m[1])) add(m[1], m[2])
+  }
+  for (const m of text.matchAll(/(?<![\w.\/#&-])#(\d{1,5})(?!\w|-\w)/g)) {
+    const before = text.slice(Math.max(0, m.index - 40), m.index)
+    const after = text.slice(m.index + m[0].length)
+    if (!(COLOUR_CONTEXT.test(before) && /^\s*[;}]/.test(after))) add(repo, m[1])
+  }
+  return [...found].sort()
+}
 
 /** Runs `tasks` with at most `limit` in flight, keeping the results in order. */
 async function pool<T, R>(items: T[], limit: number, task: (item: T) => Promise<R>): Promise<R[]> {
@@ -253,6 +293,9 @@ export async function collect(options: CollectOptions): Promise<LaneRow[]> {
     const [repo, n] = pr.split(`#`)
     const out = await gh([`pr`, `view`, n, `-R`, repo, `--json`, PR_FIELDS])
     const j = JSON.parse(out) as Record<string, unknown>
+    const closingIssues = ((j.closingIssuesReferences ?? []) as { number: number }[]).map((x) =>
+      x.number
+    )
     prInfo.set(pr, {
       additions: Number(j.additions),
       deletions: Number(j.deletions),
@@ -261,9 +304,10 @@ export async function collect(options: CollectOptions): Promise<LaneRow[]> {
       createdAt: String(j.createdAt),
       title: String(j.title),
       headRefName: String(j.headRefName),
-      closingIssues: ((j.closingIssuesReferences ?? []) as { number: number }[]).map((x) =>
-        x.number
-      ),
+      closingIssues,
+      referencedIssues: closingIssues.length > 0
+        ? []
+        : referencedIssues(String(j.body ?? ``), repo, Number(n)),
     })
   })
 
@@ -353,6 +397,28 @@ export function toJsonl(rows: readonly LaneRow[]): string {
 
 // ===== CLI =====
 
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
+const TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
+
+/**
+ * Why `value` is not an ISO date, or null when it is one: `YYYY-MM-DD`, or a full timestamp
+ * `YYYY-MM-DDTHH:MM:SS[.fff]` with `Z` or a `+hh:mm` offset. Impossible dates such as 2026-02-30
+ * are refused too, because `Date.parse` would silently roll them into March.
+ */
+export function isoDateError(flag: string, value: string | undefined): string | null {
+  const wrong = `${flag} must be YYYY-MM-DD or a full ISO timestamp with a zone, got \`${value}\``
+  if (value === undefined) return wrong
+  const match = DATE_ONLY.exec(value) ?? TIMESTAMP.exec(value)
+  if (!match) return wrong
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
+  const calendar = new Date(Date.UTC(year, month - 1, day))
+  if (calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) return wrong
+  if (match[4] !== undefined) {
+    if (Number(match[4]) > 23 || Number(match[5]) > 59 || Number(match[6]) > 59) return wrong
+  }
+  return Number.isNaN(Date.parse(value)) ? wrong : null
+}
+
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(name)
   return i === -1 ? undefined : args[i + 1]
@@ -366,6 +432,14 @@ if (import.meta.main) {
       `usage: collect.ts --out <lanes.jsonl> [--since ISO] [--until ISO] [--projects dir] [--dotfiles dir] [--dotfiles-ref ref]`,
     )
     Deno.exit(2)
+  }
+  for (const name of [`--since`, `--until`]) {
+    if (!args.includes(name)) continue
+    const error = isoDateError(name, flag(args, name))
+    if (error) {
+      console.error(error)
+      Deno.exit(2)
+    }
   }
   const home = Deno.env.get(`HOME`)
   const projectsDir = flag(args, `--projects`) ??
