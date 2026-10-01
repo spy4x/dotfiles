@@ -21,6 +21,8 @@
 // usage, not what a Claude subscription actually bills.
 
 import { join } from "jsr:@std/path@^1.0.0"
+import { denoFileSystem } from "@spy4x/platform/server"
+import { readJsonFile } from "@spy4x/platform/server/atomic-json"
 
 // ===== Pricing =====
 
@@ -403,12 +405,9 @@ export interface AgentMeta {
 }
 
 async function readMeta(metaPath: string): Promise<AgentMeta | undefined> {
-  try {
-    return JSON.parse(await Deno.readTextFile(metaPath))
-  } catch {
-    // Missing or malformed meta: the subagent is still reported, just without a rich label.
-    return undefined
-  }
+  // Missing or malformed meta: the subagent is still reported, just without a rich label.
+  const result = await readJsonFile<AgentMeta>(denoFileSystem, metaPath)
+  return result.kind === `ok` ? result.value : undefined
 }
 
 async function readLines(path: string): Promise<string[]> {

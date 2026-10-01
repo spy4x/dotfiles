@@ -1,6 +1,7 @@
 // Reads the harness-neutral source tree: `AGENTS.md`, `skills/<name>/SKILL.md` plus any files
 // beside it, `agents/<name>.md`, and `settings/<harness>/**`.
 
+import type { Type } from "arktype"
 import { join, relative } from "jsr:@std/path@^1.0.0"
 import { extract } from "jsr:@std/front-matter@1.0.9/yaml"
 import {
@@ -53,7 +54,7 @@ export async function listFiles(dir: string): Promise<string[]> {
 /** Splits a Markdown file into validated frontmatter and a body without leading blank lines. */
 function parse<T>(
   text: string,
-  schema: (data: unknown) => unknown,
+  schema: Type,
   where: string,
 ): { meta: T; body: string } {
   let attrs: unknown
@@ -64,7 +65,7 @@ function parse<T>(
     throw new Error(`${where}: frontmatter is not valid YAML (${(error as Error).message})`)
   }
   return {
-    meta: validate(schema as (data: unknown) => T, attrs, where),
+    meta: validate(schema, attrs, where) as T,
     body: body.replace(/^\n+/, ``),
   }
 }

@@ -1,4 +1,9 @@
 {
+  "imports": {
+    "@spy4x/platform": "jsr:@spy4x/platform@1.9.0",
+    "@spy4x/validation": "jsr:@spy4x/validation@1.9.0",
+    "arktype": "npm:arktype@2.2.3"
+  },
   "tasks": {
     "install-all": "deno task install-apps && deno task install-shell",
     "install-apps": "deno run -A install-apps.ts",

@@ -209,6 +209,8 @@ Deno.test(`the CLI applies from a main checkout, refuses in a linked worktree, a
       await copy(join(import.meta.dirname!, file), join(dir, file))
     }
     await copy(join(import.meta.dirname!, `adapters`), join(dir, `adapters`))
+    // The scripts import the shared libraries through the import map of the repo root.
+    await copy(join(import.meta.dirname!, `..`, `deno.jsonc`), join(repo, `deno.jsonc`))
 
     const run = async (...flags: string[]) => {
       const { code } = await new Deno.Command(Deno.execPath(), {

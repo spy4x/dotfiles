@@ -8,6 +8,7 @@ import type { Adapter, RenderedFile } from "./adapters/shared.ts"
 import { claude } from "./adapters/claude.ts"
 import { dsh } from "./adapters/dsh.ts"
 import { opencode } from "./adapters/opencode.ts"
+import { denoFileSystem } from "@spy4x/platform/server"
 import { Config, type HarnessConfig, HARNESSES, type HarnessName, validate } from "./schema.ts"
 import type { Source } from "./source.ts"
 
@@ -87,15 +88,6 @@ export async function detect(config: Config, env: Env): Promise<Target[]> {
   return found
 }
 
-async function readOrNull(path: string): Promise<string | null> {
-  try {
-    return await Deno.readTextFile(path)
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return null
-    throw error
-  }
-}
-
 /** Plans a plain copy of `content` to `path`. */
 async function planCopy(label: string, path: string, content: string): Promise<Op> {
   const lstat = await Deno.lstat(path).catch(() => null)
@@ -103,7 +95,9 @@ async function planCopy(label: string, path: string, content: string): Promise<O
   if (lstat.isSymlink) {
     return { label, path, action: `write`, reason: `symlink → real file`, content }
   }
-  if (await readOrNull(path) === content) return { label, path, action: `skip`, reason: `in sync` }
+  if (await denoFileSystem.readText(path) === content) {
+    return { label, path, action: `skip`, reason: `in sync` }
+  }
   return { label, path, action: `write`, reason: `content drift`, content }
 }
 
@@ -146,7 +140,7 @@ async function planMerge(label: string, path: string, file: RenderedFile): Promi
     : [JSON.parse, (data: Json) => JSON.stringify(data, null, 2) + `\n`]
   const tracked = decode(file.content)
   if (!isObject(tracked)) throw new Error(`tracked ${file.path} is not a mapping`)
-  const liveText = await readOrNull(path)
+  const liveText = await denoFileSystem.readText(path)
   let live: unknown = {}
   try {
     live = liveText === null ? {} : decode(liveText) ?? {}
@@ -171,7 +165,8 @@ async function planMerge(label: string, path: string, file: RenderedFile): Promi
  */
 export async function planTarget(target: Target, rendered: RenderedFile[]): Promise<Op[]> {
   const manifestPath = join(target.home, MANIFEST)
-  const previous: string[] = JSON.parse(await readOrNull(manifestPath) ?? `{}`).files ?? []
+  const previous: string[] =
+    JSON.parse(await denoFileSystem.readText(manifestPath) ?? `{}`).files ?? []
   const ops: Op[] = []
   const copied: string[] = []
   const seen = new Set<string>()
