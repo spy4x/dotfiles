@@ -71,7 +71,8 @@ export interface LaneRow {
   readonly calls: number
   readonly toolCalls: number
   readonly tokens: TokenCounts
-  /** API-equivalent dollars, each response priced once. */
+  /** API-equivalent dollars, each response priced once. Every call has a price: the collector
+   * stops on a model the price table does not know. */
   readonly cost: number
   /** Largest single-call context: input + cache read + cache writes. */
   readonly peakContext: number

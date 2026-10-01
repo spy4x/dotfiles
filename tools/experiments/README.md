@@ -20,7 +20,8 @@ One JSON row per implementer or reviewer lane (`schema.ts` lists the fields). La
 the timestamps of their messages, never by file modification time. The model is the one that
 answered (`message.model`); the alias the Agent call asked for is kept apart. Each API response is
 priced once (the last usage line sharing its message id). `--dotfiles` tags every lane with the
-dotfiles commit live when it spawned. A failed `gh` or `git` call stops the run with exit 1.
+dotfiles commit live when it spawned. A failed `gh` or `git` call stops the run with exit 1, and so
+does a call to a model with no price in `tools/session-cost.ts`, which would otherwise count as $0.
 
 `baseCommit` is always `null`: neither the transcripts nor `gh` record it.
 

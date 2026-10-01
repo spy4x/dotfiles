@@ -7,7 +7,8 @@
 //
 // Lanes are dated by the timestamps of their own messages, never by file modification time.
 // A `gh` or `git` call that fails stops the run with a non-zero exit: carrying on would report
-// zero merged PRs instead of an error.
+// zero merged PRs instead of an error. So does a call on a model with no price, which would
+// otherwise count as $0.
 
 import { join } from "jsr:@std/path@1.1.6"
 import { denoExec, type Exec } from "./exec.ts"
@@ -27,6 +28,14 @@ import {
   worktreeBranches,
 } from "./lane.ts"
 import { type LaneRow, type PrInfo, type ReviewRound, SCHEMA_VERSION } from "./schema.ts"
+
+/** Lanes made calls on a model the price table does not know. */
+export class UnpricedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = `UnpricedError`
+  }
+}
 
 const IMPLEMENTERS = new Set([`implementer`, `implementer-xhigh`])
 const REVIEWERS = new Set([`reviewer`, `reviewer-xhigh`, `reviewer-max`])
@@ -146,8 +155,8 @@ async function pool<T, R>(items: T[], limit: number, task: (item: T) => Promise<
 }
 
 /**
- * Collects lanes. Every failed `gh` or `git` call rejects with a `CommandError`, so a caller
- * never gets a partial result.
+ * Collects lanes. Every failed `gh` or `git` call rejects with a `CommandError`, and a call on a
+ * model with no price rejects with an `UnpricedError`, so a caller never gets a partial result.
  */
 export async function collect(options: CollectOptions): Promise<LaneRow[]> {
   const { exec } = options
@@ -180,9 +189,24 @@ export async function collect(options: CollectOptions): Promise<LaneRow[]> {
     if (options.since && Date.parse(start) < Date.parse(options.since)) continue
     if (options.until && Date.parse(start) >= Date.parse(options.until)) continue
     const models = modelCounts(scan.calls)
-    const model = dominantModel(models)
-    if (IMPLEMENTERS.has(c.agentType) && !isPriced(model)) continue
-    lanes.push({ c, scan, model, models, start, end: stamps[stamps.length - 1] })
+    lanes.push({ c, scan, model: dominantModel(models), models, start, end: stamps.at(-1)! })
+  }
+
+  // A call on a model with no price would count as $0 and make its arm look cheap: stop instead.
+  const unpriced = new Map<string, { calls: number; lanes: number }>()
+  for (const l of lanes) {
+    for (const [model, n] of Object.entries(l.models)) {
+      if (isPriced(model)) continue
+      const seen = unpriced.get(model) ?? { calls: 0, lanes: 0 }
+      unpriced.set(model, { calls: seen.calls + n, lanes: seen.lanes + 1 })
+    }
+  }
+  if (unpriced.size > 0) {
+    const list = [...unpriced].map(([m, u]) => `${m} (calls: ${u.calls}, lanes: ${u.lanes})`)
+    throw new UnpricedError(
+      `calls on models with no price: ${list.join(`, `)}. Their cost would read as $0. Add ` +
+        `the price to PRICES in tools/session-cost.ts, or narrow the window with --since/--until.`,
+    )
   }
 
   // 2. Implementer PRs: opened, else reported, else found by the branch the brief names.

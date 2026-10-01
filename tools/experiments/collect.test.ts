@@ -1,7 +1,14 @@
 import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19"
 import { dirname, fromFileUrl, join } from "jsr:@std/path@1.1.6"
 import { assistant, user, writeLane } from "./_fixtures.ts"
-import { collect, commitAt, type DotfilesCommit, readDotfilesCommits, toJsonl } from "./collect.ts"
+import {
+  collect,
+  commitAt,
+  type DotfilesCommit,
+  readDotfilesCommits,
+  toJsonl,
+  UnpricedError,
+} from "./collect.ts"
 import { CommandError, denoExec, type Exec } from "./exec.ts"
 import { SCHEMA_VERSION } from "./schema.ts"
 
@@ -351,6 +358,43 @@ t(`the command warns on stderr when --dotfiles is not given`, async () => {
   }
 })
 
+
+t(`stops on a call to a model with no price instead of counting it as $0`, async () => {
+  // An implementer answered only by an unknown model, and a reviewer with one unknown call
+  // among priced ones: both must stop the run.
+  const cases: { agentType: string; lines: string[] }[] = [
+    {
+      agentType: `implementer`,
+      lines: implementerLines(`2026-09-30T01:00:00.000Z`).map((l) =>
+        l.replaceAll(`claude-sonnet-5-5`, `claude-unknown-9`)
+      ),
+    },
+    {
+      agentType: `reviewer`,
+      lines: [
+        ...reviewerLines(`2026-09-30T02:00:00.000Z`, `2026-09-30T02:05:00.000Z`),
+        assistant(`r2`, `claude-opus-5-5`, `2026-09-30T02:06:00.000Z`, { input_tokens: 10 }),
+        assistant(`r3`, `claude-unknown-9`, `2026-09-30T02:07:00.000Z`, { input_tokens: 10 }),
+      ],
+    },
+  ]
+  for (const { agentType, lines } of cases) {
+    const dir = await tempProjects()
+    try {
+      await writeLane(dir, { id: `x`, meta: { agentType, description: `work` }, lines })
+      const calls: string[] = []
+      const error = await assertRejects(
+        () => collect({ projectsDir: dir, exec: fakeExec(calls) }),
+        UnpricedError,
+      )
+      assertStringIncludes(error.message, `claude-unknown-9 (calls: 1, lanes: 1)`)
+      // It stops before asking gh anything.
+      assertEquals(calls, [])
+    } finally {
+      await Deno.remove(dir, { recursive: true })
+    }
+  }
+})
 t(`takes a lane's closing reference from its first PR in sorted order`, async () => {
   const dir = await tempProjects()
   try {
