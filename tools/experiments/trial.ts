@@ -17,6 +17,7 @@ import { parseArgs } from "jsr:@std/cli@1.0.32/parse-args"
 import { join } from "jsr:@std/path@1.1.6"
 import { costOf, parseTranscript, totalOf } from "../session-cost.ts"
 import { parseRows } from "./analyse.ts"
+import { taskClassOf } from "./lane.ts"
 import type { LaneRow, ReviewRound } from "./schema.ts"
 import {
   bootstrap,
@@ -383,10 +384,25 @@ export interface TrialInput {
   readonly options?: BootstrapOptions
 }
 
-/** True when a log row's red finding sits in a security path: its note says so, or its PR is auth or crypto work. */
+/** Words that put a 🔴 in a security path, besides the collector's auth/crypto words. */
+const SECURITY_WORDS = /credential|leak|inject|xss|csrf|bypass|privilege|vulnerab|exploit/i
+
+/** The text of a note's 🔴 findings: each 🔴 up to the next marker; the whole note if none. */
+function redText(note: string): string {
+  const parts = [...note.matchAll(/🔴([^🔴🟡🔵]*)/gu)].map((m) => m[1])
+  return parts.length > 0 ? parts.join(` `) : note
+}
+
+/**
+ * True when a log row's 🔴 finding sits in a security path: the 🔴 part of its note uses
+ * security, auth, crypto or secret wording (the collector's auth/crypto words, plus
+ * `SECURITY_WORDS`), or one of its PRs is auth or crypto work. Wording in a 🟡 or 🔵 part does
+ * not count.
+ */
 export function isSecurityRed(pair: LogPair, rows: readonly LaneRow[]): boolean {
   if (pair.red === 0) return false
-  if (/security/i.test(pair.note)) return true
+  const red = redText(pair.note)
+  if (taskClassOf(red) === `auth/crypto` || SECURITY_WORDS.test(red)) return true
   return pair.prs.some((pr) =>
     rows.some((r) =>
       r.role === `implementer` && r.prs.includes(pr) && r.taskClass === `auth/crypto`
@@ -410,7 +426,8 @@ export function renderTrial(input: TrialInput): string {
 
   for (const pair of input.pairs.filter((p) => isSecurityRed(p, input.rows))) {
     out.push(
-      `**TRIAL STOPPING: a 🔴 finding in a security path** (${pair.date}, ${pair.prCell}): ${pair.note}`,
+      `**TRIAL STOPPING: a 🔴 finding in a security path** (${pair.date}, ${pair.prCell}): ` +
+        pair.note,
       ``,
     )
   }

@@ -347,6 +347,11 @@ t(
       [bySecurityNote, byClass, plain, noRed].map((p) => isSecurityRed(p, rows)),
       [true, true, false, false],
     )
+    // Auth, crypto or secret wording in the 🔴 part counts; the same wording in a 🟡 part does not.
+    const red = (note: string) => isSecurityRed(pair({ red: 1, note }), rows)
+    assertEquals(red(`🔴 a password is compared with ===; 🟡 a slow query`), true)
+    assertEquals(red(`🔴 the token leaks into the CI log`), true)
+    assertEquals(red(`🔴 a wrong total; 🟡 the security stop keys on one word`), false)
     const text = render(rows, [bySecurityNote, plain])
     assertEquals(text.split(`\n`).filter((l) => l.includes(`TRIAL STOPPING`)).length, 1)
     assertStringIncludes(text, `TRIAL STOPPING`)
