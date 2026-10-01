@@ -127,6 +127,16 @@ Deno.test(`counts compactions`, () => {
   assertEquals(parsed.compactionTimestamps.length, 3)
 })
 
+Deno.test(`counts only compact_boundary system lines as compactions`, () => {
+  const lines = [
+    compactionLine(`2026-01-01T00:00:00.000Z`),
+    line({ type: `system`, subtype: `api_error`, timestamp: `2026-01-01T00:01:00.000Z` }),
+    line({ type: `system`, subtype: `informational`, timestamp: `2026-01-01T00:02:00.000Z` }),
+    line({ type: `system`, timestamp: `2026-01-01T00:03:00.000Z` }),
+  ]
+  assertEquals(parseTranscript(lines).compactionTimestamps, [`2026-01-01T00:00:00.000Z`])
+})
+
 Deno.test(`filters calls and compactions by --since/--until`, () => {
   const lines = [
     assistantLine(`before`, `claude-sonnet-5`, `2026-01-01T10:00:00.000Z`),
