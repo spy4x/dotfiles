@@ -39,8 +39,9 @@ does a call to a model with no price in `tools/session-cost.ts`, which would oth
 - odd_issues: arm_b
 ```
 
-Arms are assigned by issue number (odd to `odd_issues`, even to the other, no issue to arm A),
-because a rule the lead cannot bend keeps the arms comparable.
+The issue number assigns the arm: odd to `odd_issues`, even to the other. A rule the lead cannot
+bend keeps the arms comparable. A unit with no issue gets no arm: the lead chose its model, so it
+stays out of the arm-to-arm comparison.
 
 ## 3. Analyse
 
@@ -51,6 +52,11 @@ deno task experiment:analyse <run folder> [--seed 1] [--iterations 10000]
 Prints Markdown. Medians and rates carry a seeded percentile bootstrap 95% interval; each
 arm-to-arm difference says whether its interval crosses zero. Cost is judged per PR; per-100-line
 rows are kept to match the published trial tables.
+
+- Table 1 holds every unit of each period, whatever assigned its model.
+- The headline and Table 2 compare only trial units whose issue number assigned the model they ran
+  on. The units left out (no issue, or an issue that assigned the other model) print on their own
+  lines under the headline, with their count and median total cost per PR.
 
 ## Not here yet
 

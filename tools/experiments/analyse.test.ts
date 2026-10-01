@@ -125,10 +125,10 @@ t(`refuses lane rows of another schema version`, () => {
   }
 })
 
-t(`assigns odd issues to arm B by default and no issue to arm A`, () => {
+t(`assigns odd issues to arm B by default, and no arm to a unit without an issue`, () => {
   assertEquals(assignedArm(7, plan), SONNET)
   assertEquals(assignedArm(8, plan), OPUS)
-  assertEquals(assignedArm(null, plan), OPUS)
+  assertEquals(assignedArm(null, plan), null)
   assertEquals(assignedArm(7, { ...plan, oddIssues: `arm_a` }), OPUS)
 })
 
@@ -263,6 +263,40 @@ t(`a unit with no issue is left out of Table 2 and counted as no issue in the ar
   assertStringIncludes(units(table2), `| 5 | 5 |`)
   assertStringIncludes(report, `- opus-5-5, issue from none: no issue \u2014 1`)
 })
+
+/** The report's line that starts with `prefix`. */
+function lineOf(report: string, prefix: string): string {
+  const found = report.split(`\n`).find((l) => l.startsWith(prefix))
+  if (found === undefined) throw new Error(`no line starts with ${prefix}`)
+  return found
+}
+
+t(
+  `the headline compares only units whose issue assigned their model and lists the rest apart`,
+  () => {
+    // Expensive units that would move the headline if it counted them: one with no issue (the
+    // lead chose Opus) and one whose odd issue assigned Sonnet but ran on Opus.
+    const noIssue = unitRow(60, OPUS, 100, 100, [`pass`], {
+      issue: null,
+      issueSource: null,
+      prInfo: { [`spy4x/example#60`]: info(100) },
+    })
+    const wrong = unitRow(61, OPUS, 200, 100, [`pass`])
+    const report = renderReport([...OPUS_ROWS, ...SONNET_ROWS, noIssue, wrong], plan, {
+      seed: 1,
+      iterations: 2000,
+    })
+    assertEquals(lineOf(report, `| Total cost per PR (median`), PINNED_COST_LINE)
+    assertStringIncludes(
+      lineOf(report, `- No issue, model chosen by the lead:`),
+      `opus-5-5 1 unit, median total cost per PR $100.50 (95% $100.50 to $100.50); sonnet-5-5 0 units`,
+    )
+    assertStringIncludes(
+      lineOf(report, `- Issue assigned the other model:`),
+      `opus-5-5 1 unit, median total cost per PR $200.50 (95% $200.50 to $200.50); sonnet-5-5 0 units`,
+    )
+  },
+)
 
 t(`takes a unit's issue from its first PR in sorted order when no brief names one`, () => {
   // Opened in this order; only the PR that sorts first closes an issue.

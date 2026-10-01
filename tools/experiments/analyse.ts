@@ -231,9 +231,12 @@ export function buildUnits(rows: readonly LaneRow[], plan: Plan): Unit[] {
   return units.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))
 }
 
-/** The arm the plan's issue-number rule assigns to `issue`; arm A when there is no issue. */
-export function assignedArm(issue: number | null, plan: Plan): string {
-  if (issue === null) return plan.armA
+/**
+ * The arm the plan's issue-number rule assigns to `issue`. A unit with no issue has no arm: the
+ * lead chose its model, so it cannot stand for either arm.
+ */
+export function assignedArm(issue: number | null, plan: Plan): string | null {
+  if (issue === null) return null
   const odd = issue % 2 === 1
   return odd === (plan.oddIssues === `arm_b`) ? plan.armB : plan.armA
 }
@@ -278,6 +281,8 @@ const reviewedOf = (us: Unit[]) => us.filter((u) => u.reviewed)
 const hours = (u: Unit) =>
   u.mergedAt ? (Date.parse(u.mergedAt) - Date.parse(u.start)) / 3_600_000 : undefined
 const defined = (xs: (number | undefined)[]) => xs.filter((x): x is number => x !== undefined)
+/** Implementer plus review cost of each reviewed unit. */
+const totalPerPr = (us: Unit[]) => reviewedOf(us).map((u) => u.cost + u.reviewCost)
 
 const METRICS: Metric[] = [
   {
@@ -312,7 +317,7 @@ const METRICS: Metric[] = [
   },
   {
     label: `Median total cost per PR`,
-    pick: (us) => reviewedOf(us).map((u) => u.cost + u.reviewCost),
+    pick: totalPerPr,
     stat: median,
     fmt: usd(),
   },
@@ -407,14 +412,14 @@ interface DiffMetric {
 const DIFFS: DiffMetric[] = [
   {
     label: `Total cost per PR (median, impl + review)`,
-    pick: (us) => reviewedOf(us).map((u) => u.cost + u.reviewCost),
+    pick: totalPerPr,
     stat: median,
     fmt: usd(),
     lowerIsBetter: true,
   },
   {
     label: `Total cost per PR (mean, impl + review)`,
-    pick: (us) => reviewedOf(us).map((u) => u.cost + u.reviewCost),
+    pick: totalPerPr,
     stat: mean,
     fmt: usd(),
     lowerIsBetter: true,
@@ -506,12 +511,21 @@ export function renderReport(
   const trial = units.filter((u) => u.period === `C` && (u.model === A || u.model === B))
   const trialA = trial.filter((u) => u.model === A)
   const trialB = trial.filter((u) => u.model === B)
-  const followed = (u: Unit) => u.issue !== null && assignedArm(u.issue, plan) === u.model
+  const followed = (u: Unit) => assignedArm(u.issue, plan) === u.model
+  const ruleA = trialA.filter(followed)
+  const ruleB = trialB.filter(followed)
   const nameA = strip(A)
   const nameB = strip(B)
   const out: string[] = []
   const seed = options.seed ?? 1
   const iterations = options.iterations ?? 10_000
+  const leftOut = (us: Unit[]) =>
+    [A, B].map((m) => {
+      const mine = us.filter((u) => u.model === m)
+      return `${strip(m)} ${mine.length} ${
+        mine.length === 1 ? `unit` : `units`
+      }, median total cost per PR ${cell(totalPerPr(mine), median, usd(), options)}`
+    }).join(`; `)
 
   out.push(`# ${plan.title}`, ``)
   out.push(
@@ -520,13 +534,30 @@ export function renderReport(
       `zero is not a difference.`,
     ``,
   )
-  out.push(`## Headline: cost and quality per PR, ${nameB} minus ${nameA}, trial units`, ``)
   out.push(
-    `Cost is judged per PR. A per-line figure rewards fewer lines, which penalises the "build ` +
-      `less" rule, so the per-line row is printed only to match the published trial tables.`,
+    `## Headline: cost and quality per PR, ${nameB} minus ${nameA}, units whose issue number ` +
+      `assigned their model`,
     ``,
   )
-  out.push(...differences(trialA, trialB, nameA, nameB, options), ``)
+  out.push(
+    `These are Table 2's units. A unit with no issue had its model chosen by the lead, and a ` +
+      `unit on the model its issue did not assign broke the rule, so neither stands for an arm; ` +
+      `both are listed below the table. Cost is judged per PR. A per-line figure rewards fewer ` +
+      `lines, which penalises the "build less" rule, so the per-line row is printed only to ` +
+      `match the published trial tables.`,
+    ``,
+  )
+  out.push(...differences(ruleA, ruleB, nameA, nameB, options), ``)
+  out.push(`Left out of the headline:`, ``)
+  out.push(
+    `- No issue, model chosen by the lead: ${leftOut(trial.filter((u) => u.issue === null))}`,
+  )
+  out.push(
+    `- Issue assigned the other model: ${
+      leftOut(trial.filter((u) => u.issue !== null && !followed(u)))
+    }`,
+    ``,
+  )
 
   out.push(`## Table 1: every trial unit`, ``)
   out.push(
@@ -541,8 +572,8 @@ export function renderReport(
   out.push(`## Table 2: only units whose model followed the issue-number rule`, ``)
   out.push(
     ...table({
-      [`${nameA}, trial, rule followed`]: column(trialA.filter(followed), options),
-      [`${nameB}, trial, rule followed`]: column(trialB.filter(followed), options),
+      [`${nameA}, trial, rule followed`]: column(ruleA, options),
+      [`${nameB}, trial, rule followed`]: column(ruleB, options),
     }),
     ``,
   )
