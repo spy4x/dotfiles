@@ -7,7 +7,7 @@
 //
 // The run folder holds `lanes.jsonl` (see `collect.ts`). `--log` is the markdown file whose table
 // lists the double-checked passes. `--projects` is the transcripts directory; with it the view
-// also prices what each implementer spent after its first needs-fix verdict.
+// also prices what each implementer spent fixing after a needs-fix verdict.
 //
 // The trial's rules (ai-memory/experiments/sonnet55-reviewer.md): an odd issue number assigns the
 // Sonnet reviewer, an even one the Opus reviewer. A PR with no issue, in `preact-components`, or
@@ -326,32 +326,63 @@ export function armPr(review: PrReview, arm: Arm): ArmPr {
 
 // ===== Implementer fix cost =====
 
-/** The first needs-fix verdict timestamp of an arm PR, or null. */
-function firstNeedsFix(review: PrReview, arm: Arm): string | null {
-  const own = review.rounds.filter((r) => armOfModel(r.reviewerModel) === arm)
-  return own.find((r) => r.verdict === `needs-fix`)?.ts ?? null
+/** A stretch of time: after `from`, and before `to` when `to` is set. */
+export interface Window {
+  readonly from: string
+  readonly to: string | null
 }
 
-/** One implementer lane of an arm and the moment its fixing began. */
+/**
+ * When an implementer fixed what a reviewer of an arm PR asked for.
+ *
+ * `fix`: from the arm reviewer's first needs-fix (among its rounds up to its first pass) to its
+ * first pass or the other model's first round, whichever comes first. Fixing after that answers
+ * the double-check, not the arm's reviewer.
+ *
+ * `afterDoubleCheck`: from the other model's first needs-fix to that model's next pass (open
+ * while it has not passed). That is the work the double-check caused.
+ */
+export function fixWindows(
+  review: PrReview,
+  arm: Arm,
+): { fix: Window | null; afterDoubleCheck: Window | null } {
+  const { armRounds, passed } = armPr(review, arm)
+  const other = review.rounds.filter((r) => armOfModel(r.reviewerModel) !== arm)
+  const from = armRounds.find((r) => r.verdict === `needs-fix`)?.ts
+  const ends = [...(passed ? [armRounds.at(-1)!.ts] : []), ...(other[0] ? [other[0].ts] : [])]
+  const to = ends.length > 0 ? ends.sort()[0] : null
+  const otherFix = other.findIndex((r) => r.verdict === `needs-fix`)
+  const otherPass = other.slice(otherFix + 1).find((r) => r.verdict === `pass`)
+  return {
+    fix: from !== undefined && (to === null || from < to) ? { from, to } : null,
+    afterDoubleCheck: otherFix === -1
+      ? null
+      : { from: other[otherFix].ts, to: otherPass?.ts ?? null },
+  }
+}
+
+/** One implementer lane of an arm and when it was fixing. */
 export interface FixLane {
   readonly lane: LaneRow
   readonly arm: Arm
-  /** Earliest needs-fix verdict on any of the lane's arm PRs; null when none. */
-  readonly from: string | null
+  /** The `fix` windows of the lane's arm PRs (see `fixWindows`); empty when none needed a fix. */
+  readonly fix: Window[]
+  /** The `afterDoubleCheck` windows of the lane's arm PRs. */
+  readonly afterDoubleCheck: Window[]
 }
 
-/** Lanes whose arm PRs all sit in one arm. Returns the lanes and how many were left out as mixed. */
+/** Lanes whose arm PRs all sit in one arm, and how many were left out as mixed. */
 export function fixLanes(
   reviews: readonly PrReview[],
 ): { lanes: FixLane[]; mixed: number } {
-  const byLane = new Map<LaneRow, { arm: Arm; from: string | null }[]>()
+  const byLane = new Map<LaneRow, { arm: Arm; windows: ReturnType<typeof fixWindows> }[]>()
   for (const review of reviews) {
     const place = placeOf(review)
     if (place !== `sonnet` && place !== `opus`) continue
     for (const lane of review.implementers) {
       byLane.set(lane, [...(byLane.get(lane) ?? []), {
         arm: place,
-        from: firstNeedsFix(review, place),
+        windows: fixWindows(review, place),
       }])
     }
   }
@@ -362,18 +393,28 @@ export function fixLanes(
       mixed++
       continue
     }
-    const froms = parts.flatMap((p) => p.from === null ? [] : [p.from]).sort()
-    lanes.push({ lane, arm: parts[0].arm, from: froms[0] ?? null })
+    lanes.push({
+      lane,
+      arm: parts[0].arm,
+      fix: parts.flatMap((p) => p.windows.fix ?? []),
+      afterDoubleCheck: parts.flatMap((p) => p.windows.afterDoubleCheck ?? []),
+    })
   }
   return { lanes, mixed }
 }
 
 /**
- * Dollars an implementer spent after `from`: its calls dated later than the first needs-fix
- * verdict. Reads the lane's own transcript; a missing transcript throws, since a lane priced as
- * $0 would pass for one that never had to fix anything.
+ * Dollars an implementer spent inside `windows`: its calls dated after a window's `from` and
+ * before its `to`, each call once. Calls after the lane's `end` are left out, so a lane still
+ * running when the run was collected is priced as the run saw it. Reads the lane's own
+ * transcript; a missing transcript throws, since a lane priced as $0 would pass for one that never
+ * had to fix anything.
  */
-export async function costAfter(projects: string, lane: LaneRow, from: string): Promise<number> {
+export async function costIn(
+  projects: string,
+  lane: LaneRow,
+  windows: readonly Window[],
+): Promise<number> {
   const path = join(
     projects,
     lane.project,
@@ -390,8 +431,10 @@ export async function costAfter(projects: string, lane: LaneRow, from: string): 
     )
   }
   let cost = 0
+  const inside = (ts: string) =>
+    ts <= lane.end && windows.some((w) => w.from < ts && (w.to === null || ts < w.to))
   for (const call of parseTranscript(text.split(`\n`)).calls) {
-    if (call.timestamp <= from) continue
+    if (!inside(call.timestamp)) continue
     const priced = costOf(call)
     if (!priced.priced) {
       throw new Error(
@@ -471,6 +514,8 @@ export interface TrialInput {
   readonly bodyIssues?: ReadonlyMap<string, number>
   /** Implementer fix cost per lane (agent id to dollars), when transcripts were available. */
   readonly fixCost?: ReadonlyMap<string, number>
+  /** What each lane spent fixing after a double-check's needs-fix (agent id to dollars). */
+  readonly doubleCheckFixCost?: ReadonlyMap<string, number>
   readonly options?: BootstrapOptions
 }
 
@@ -611,17 +656,28 @@ export function renderTrial(input: TrialInput): string {
     const { lanes, mixed } = fixLanes(reviews)
     const cells = (arm: Arm) => {
       const ls = lanes.filter((l) => l.arm === arm)
-      const fixed = ls.filter((l) => l.from !== null)
+      const fixed = ls.filter((l) => l.fix.length > 0)
       const cost = (l: FixLane) => input.fixCost!.get(l.lane.agentId) ?? 0
       return `${ls.length} lanes, ${fixed.length} needed a fix; mean per lane ${
         show(ls.map(cost), mean, usd, options)
       }; median per lane that needed a fix ${show(fixed.map(cost), median, usd, options)}`
     }
+    const afterDoubleCheck = (arm: Arm) => {
+      const ls = lanes.filter((l) => l.arm === arm && l.afterDoubleCheck.length > 0)
+      const total = ls.reduce((s, l) => s + (input.doubleCheckFixCost?.get(l.lane.agentId) ?? 0), 0)
+      return `${ls.length} lanes, ${usd(total)} in total`
+    }
     out.push(
-      `Dollars an implementer spent after its first needs-fix verdict; a lane with none counts $0.`,
+      `Dollars an implementer spent from the arm reviewer's first needs-fix verdict to its pass, ` +
+        `or to the other model's first round if that came sooner; a lane with no needs-fix ` +
+        `counts $0.`,
       ``,
       `- Sonnet reviewer: ${cells(`sonnet`)}`,
       `- Opus reviewer: ${cells(`opus`)}`,
+      `- Fixes after the other model's needs-fix (the double-check), up to that model's pass; ` +
+        `left out above: Sonnet arm ${afterDoubleCheck(`sonnet`)}; Opus arm ${
+          afterDoubleCheck(`opus`)
+        }.`,
       `- ${mixed} lanes with PRs in both arms are left out.`,
     )
   }
@@ -749,12 +805,20 @@ export async function trialReport(
   const missing = reviewedPrs(rows, cli.since, { log }).filter((r) => r.issue === null)
   const body = await bodyIssues(missing.map((r) => r.pr), exec)
   let fixCost: Map<string, number> | undefined
+  let doubleCheckFixCost: Map<string, number> | undefined
   if (cli.projects !== undefined) {
     fixCost = new Map()
+    doubleCheckFixCost = new Map()
     const { lanes } = fixLanes(reviewedPrs(rows, cli.since, { log, body }))
     for (const l of lanes) {
-      if (l.from !== null) {
-        fixCost.set(l.lane.agentId, await costAfter(cli.projects, l.lane, l.from))
+      if (l.fix.length > 0) {
+        fixCost.set(l.lane.agentId, await costIn(cli.projects, l.lane, l.fix))
+      }
+      if (l.afterDoubleCheck.length > 0) {
+        doubleCheckFixCost.set(
+          l.lane.agentId,
+          await costIn(cli.projects, l.lane, l.afterDoubleCheck),
+        )
       }
     }
   }
@@ -765,6 +829,7 @@ export async function trialReport(
       since: cli.since,
       bodyIssues: body,
       fixCost,
+      doubleCheckFixCost,
       options: cli.options,
     }),
     stopping: pairs.some((p) => isSecurityRed(p, rows)),

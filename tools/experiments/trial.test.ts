@@ -12,8 +12,9 @@ import { CommandError, type Exec } from "./exec.ts"
 import {
   armOfIssue,
   armPr,
-  costAfter,
+  costIn,
   fixLanes,
+  fixWindows,
   isSecurityRed,
   issueInBody,
   type LogPair,
@@ -33,6 +34,8 @@ const TRIAL = join(dirname(fromFileUrl(import.meta.url)), `trial.ts`)
 const SONNET = `claude-sonnet-5-5`
 const OPUS = `claude-opus-5-5`
 const SINCE = `2026-10-01T00:00:00Z`
+/** A lane end after every call in these tests. */
+const LATER = `2026-10-09T00:00:00.000Z`
 
 function round(
   pr: string,
@@ -427,10 +430,10 @@ t(
   },
 )
 
-t(`prices an implementer only for calls after the first needs-fix verdict`, async () => {
+t(`prices an implementer only for calls inside its fix windows, each call once`, async () => {
   const dir = await Deno.makeTempDir({ prefix: `experiment-kit-test-` })
   try {
-    const lane = laneRow({ agentId: `i1`, project: `proj`, session: `s1` })
+    const lane = laneRow({ agentId: `i1`, project: `proj`, session: `s1`, end: LATER })
     await writeLane(dir, {
       project: `proj`,
       session: `s1`,
@@ -443,9 +446,26 @@ t(`prices an implementer only for calls after the first needs-fix verdict`, asyn
       ],
     })
     // Opus $4 and Sonnet $2 per million input tokens: the first call is before the verdict.
-    assertEquals(await costAfter(dir, lane, `2026-10-01T12:00:00.000Z`), 6)
+    const open = (from: string) => ({ from, to: null })
+    assertEquals(await costIn(dir, lane, [open(`2026-10-01T12:00:00.000Z`)]), 6)
+    // The window ends before the Sonnet call.
+    assertEquals(
+      await costIn(dir, lane, [{
+        from: `2026-10-01T12:00:00.000Z`,
+        to: `2026-10-01T12:30:00.000Z`,
+      }]),
+      4,
+    )
+    // Overlapping windows price each call once.
+    assertEquals(
+      await costIn(dir, lane, [open(`2026-10-01T09:00:00.000Z`), open(`2026-10-01T12:00:00.000Z`)]),
+      10,
+    )
+    // A call after the lane's collected end was made after the run was collected.
+    const collected = { ...lane, end: `2026-10-01T12:30:00.000Z` }
+    assertEquals(await costIn(dir, collected, [open(`2026-10-01T12:00:00.000Z`)]), 4)
     await assertRejects(
-      () => costAfter(dir, laneRow({ agentId: `missing`, project: `proj`, session: `s1` }), ``),
+      () => costIn(dir, laneRow({ agentId: `missing`, project: `proj`, session: `s1` }), []),
       Error,
       `cannot read the transcript of implementer missing`,
     )
@@ -455,7 +475,42 @@ t(`prices an implementer only for calls after the first needs-fix verdict`, asyn
 })
 
 t(
-  `starts an implementer's fix at its earliest needs-fix and leaves out lanes with PRs in both arms`,
+  `ends an arm's fix window at its reviewer's pass or the other model's first round, whichever comes first`,
+  () => {
+    const at = (h: number) => `2026-10-01T${String(h).padStart(2, `0`)}:00:00.000Z`
+    const rows = [
+      reviewer([
+        // Sonnet fails and passes; then the Opus double-check fails and passes.
+        round(`spy4x/a#1`, SONNET, `needs-fix`, 1, at(10)),
+        round(`spy4x/a#1`, SONNET, `pass`, 1, at(12)),
+        round(`spy4x/a#1`, OPUS, `needs-fix`, 1, at(13)),
+        round(`spy4x/a#1`, OPUS, `pass`, 1, at(15)),
+        // Sonnet fails; Opus takes over before Sonnet passes and has not passed yet.
+        round(`spy4x/a#3`, SONNET, `needs-fix`, 1, at(10)),
+        round(`spy4x/a#3`, OPUS, `needs-fix`, 1, at(11)),
+        // Sonnet passes at once; the double-check fails.
+        round(`spy4x/a#5`, SONNET, `pass`, 1, at(10)),
+        round(`spy4x/a#5`, OPUS, `needs-fix`, 1, at(11)),
+      ]),
+      ...[1, 3, 5].map((n) => implementer(`spy4x/a#${n}`, n)),
+    ]
+    const windows = Object.fromEntries(
+      reviewedPrs(rows, SINCE).map((r) => [r.pr, fixWindows(r, `sonnet`)]),
+    )
+    assertEquals(windows[`spy4x/a#1`], {
+      fix: { from: at(10), to: at(12) },
+      afterDoubleCheck: { from: at(13), to: at(15) },
+    })
+    assertEquals(windows[`spy4x/a#3`], {
+      fix: { from: at(10), to: at(11) },
+      afterDoubleCheck: { from: at(11), to: null },
+    })
+    assertEquals(windows[`spy4x/a#5`], { fix: null, afterDoubleCheck: { from: at(11), to: null } })
+  },
+)
+
+t(
+  `collects each implementer's fix windows over its arm PRs and leaves out lanes with PRs in both arms`,
   () => {
     const rows = [
       reviewer([
@@ -471,19 +526,23 @@ t(
     ]
     const { lanes, mixed } = fixLanes(reviewedPrs(rows, SINCE))
     assertEquals(mixed, 1)
-    const byId = Object.fromEntries(lanes.map((l) => [l.lane.agentId, l.from]))
-    assertEquals(byId[`two-prs`], `2026-10-01T10:00:00.000Z`)
-    assertEquals(byId[`clean`], null)
+    const byId = Object.fromEntries(lanes.map((l) => [l.lane.agentId, l.fix]))
+    assertEquals(byId[`two-prs`], [
+      { from: `2026-10-01T12:00:00.000Z`, to: null },
+      { from: `2026-10-01T10:00:00.000Z`, to: null },
+    ])
+    assertEquals(byId[`clean`], [])
   },
 )
 
 t(
-  `prints the implementer fix cost per arm when it is given, and says how to get it when not`,
+  `prints the implementer fix cost per arm and the double-check's fixes apart, and says how to get them`,
   () => {
     const rows = [
       reviewer([
         round(`spy4x/a#1`, SONNET, `needs-fix`, 1),
         round(`spy4x/a#1`, SONNET, `pass`, 1, `2026-10-01T11:00:00.000Z`),
+        round(`spy4x/a#1`, OPUS, `needs-fix`, 1, `2026-10-01T12:00:00.000Z`),
         round(`spy4x/a#3`, SONNET, `pass`, 1),
       ]),
       implementer(`spy4x/a#1`, 1, { agentId: `fixed` }),
@@ -495,11 +554,16 @@ t(
       pairs: [],
       since: SINCE,
       fixCost: new Map([[`fixed`, 3]]),
+      doubleCheckFixCost: new Map([[`fixed`, 17]]),
       options: { iterations: 200 },
     })
     assertStringIncludes(
       text,
       `Sonnet reviewer: 2 lanes, 1 needed a fix; mean per lane $1.50 ($0.00 to $3.00); median per lane that needed a fix $3.00 ($3.00 to $3.00)`,
+    )
+    assertStringIncludes(
+      text,
+      `left out above: Sonnet arm 1 lanes, $17.00 in total; Opus arm 0 lanes, $0.00 in total.`,
     )
   },
 )
@@ -563,20 +627,14 @@ t(`stops instead of pricing an implementer's call on an unknown model as $0`, as
       meta: { agentType: `implementer` },
       lines: [assistant(`a`, `claude-future-9`, `2026-10-01T13:00:00.000Z`, { input_tokens: 1 })],
     })
+    const lane = laneRow({ agentId: `i1`, project: `proj`, session: `s1`, end: LATER })
     await assertRejects(
-      () => costAfter(dir, laneRow({ agentId: `i1`, project: `proj`, session: `s1` }), ``),
+      () => costIn(dir, lane, [{ from: ``, to: null }]),
       Error,
       `claude-future-9`,
     )
-    // A call before the verdict is not priced, so its model does not matter.
-    assertEquals(
-      await costAfter(
-        dir,
-        laneRow({ agentId: `i1`, project: `proj`, session: `s1` }),
-        `2026-10-02T00:00:00.000Z`,
-      ),
-      0,
-    )
+    // A call outside the windows is not priced, so its model does not matter.
+    assertEquals(await costIn(dir, lane, [{ from: `2026-10-02T00:00:00.000Z`, to: null }]), 0)
   } finally {
     await Deno.remove(dir, { recursive: true })
   }
@@ -637,6 +695,47 @@ t(
       assertStringIncludes(text, `0 the implementer lane, 1 the PR body; 0 found none.`)
       const failing: Exec = (c, a) => Promise.reject(new CommandError(c, a, `exit 1: not found`))
       await assertRejects(() => trialReport(cli, failing), CommandError)
+    } finally {
+      await Deno.remove(dir, { recursive: true })
+    }
+  },
+)
+
+t(
+  `prices fixes made after the double-check's needs-fix on their own line, not in the arm's fix cost`,
+  async () => {
+    const dir = await Deno.makeTempDir({ prefix: `experiment-kit-test-` })
+    try {
+      const at = (h: number) => `2026-10-01T${h}:00:00.000Z`
+      const rows = [
+        reviewer([
+          round(`spy4x/a#1`, SONNET, `needs-fix`, 1, at(10)),
+          round(`spy4x/a#1`, SONNET, `pass`, 1, at(12)),
+          round(`spy4x/a#1`, OPUS, `needs-fix`, 1, at(13)),
+        ]),
+        implementer(`spy4x/a#1`, 1, { agentId: `i1`, project: `proj`, session: `s1`, end: LATER }),
+      ]
+      await Deno.writeTextFile(
+        join(dir, `lanes.jsonl`),
+        rows.map((r) => JSON.stringify(r)).join(`\n`),
+      )
+      await Deno.writeTextFile(join(dir, `log.md`), LOG)
+      await writeLane(dir, {
+        project: `proj`,
+        session: `s1`,
+        id: `i1`,
+        meta: { agentType: `implementer` },
+        lines: [
+          // $4 fixing what Sonnet asked for, then $2 fixing what the double-check asked for.
+          assistant(`a`, OPUS, at(11), { input_tokens: 1_000_000 }),
+          assistant(`b`, SONNET, at(14), { input_tokens: 1_000_000 }),
+        ],
+      })
+      const { text } = await trialReport(
+        parseCli([dir, `--log`, join(dir, `log.md`), `--projects`, dir, `--iterations`, `50`]),
+      )
+      assertStringIncludes(text, `Sonnet reviewer: 1 lanes, 1 needed a fix; mean per lane $4.00`)
+      assertStringIncludes(text, `left out above: Sonnet arm 1 lanes, $2.00 in total;`)
     } finally {
       await Deno.remove(dir, { recursive: true })
     }
