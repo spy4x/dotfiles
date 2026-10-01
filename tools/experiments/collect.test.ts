@@ -2,7 +2,7 @@ import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/asse
 import { dirname, fromFileUrl, join } from "jsr:@std/path@^1.0.0"
 import { assistant, user, writeLane } from "./_fixtures.ts"
 import { collect, commitAt, type DotfilesCommit, readDotfilesCommits, toJsonl } from "./collect.ts"
-import { CommandError, type Exec } from "./exec.ts"
+import { CommandError, denoExec, type Exec } from "./exec.ts"
 import { SCHEMA_VERSION } from "./schema.ts"
 
 const t = Deno.test
@@ -256,7 +256,7 @@ t(`the command exits non-zero and writes no file when gh fails`, async () => {
     await Deno.mkdir(bin)
     await Deno.writeTextFile(
       join(bin, `gh`),
-      `#!/bin/sh\necho "gh: simulated outage" >&2\nexit 1\n`,
+      `#!/bin/sh\necho "[]"\necho "gh: simulated outage" >&2\nexit 1\n`,
     )
     await Deno.chmod(join(bin, `gh`), 0o755)
     const out = join(dir, `lanes.jsonl`)
@@ -270,6 +270,74 @@ t(`the command exits non-zero and writes no file when gh fails`, async () => {
     assertEquals(result.code, 1)
     assertStringIncludes(new TextDecoder().decode(result.stderr), `collect failed`)
     assertEquals(await Deno.stat(out).then(() => true, () => false), false)
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(`records the commit live at the lane's first call, not at its last`, async () => {
+  const dir = await tempProjects()
+  try {
+    // First call 00:45 (before ccc3333 at 02:00), last call 02:30 (after it).
+    const lines = [
+      ...implementerLines(`2026-09-30T00:45:00.000Z`),
+      assistant(`m9`, `claude-sonnet-5-5`, `2026-09-30T02:30:00.000Z`, { input_tokens: 10 }),
+    ]
+    await writeLane(dir, {
+      id: `long`,
+      meta: { agentType: `implementer`, description: `long` },
+      lines,
+    })
+    const [row] = await collect({ projectsDir: dir, dotfilesDir: `/fake`, exec: fakeExec() })
+    assertEquals([row.start, row.end], [`2026-09-30T00:45:00.000Z`, `2026-09-30T02:30:00.000Z`])
+    assertEquals(row.dotfilesCommit, `bbb2222`)
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(`collects implementer-xhigh lanes as implementers and keeps the agent type`, async () => {
+  const dir = await tempProjects()
+  try {
+    await writeLane(dir, {
+      id: `xh`,
+      meta: { agentType: `implementer-xhigh`, description: `fix round` },
+      lines: implementerLines(`2026-09-30T01:00:00.000Z`),
+    })
+    const [row] = await collect({ projectsDir: dir, exec: fakeExec() })
+    assertEquals([row.role, row.agentType], [`implementer`, `implementer-xhigh`])
+    assertEquals(row.prs, [`spy4x/example#12`])
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(
+  `denoExec rejects with CommandError when the command exits non-zero, even with stdout`,
+  async () => {
+    const error = await assertRejects(
+      () => denoExec(`sh`, [`-c`, `echo '[]'; echo oops >&2; exit 1`]),
+      CommandError,
+    )
+    assertStringIncludes(error.message, `exit 1`)
+    assertStringIncludes(error.message, `oops`)
+    assertEquals(await denoExec(`sh`, [`-c`, `echo hi`]), `hi\n`)
+  },
+)
+
+t(`the command warns on stderr when --dotfiles is not given`, async () => {
+  const dir = await tempProjects()
+  try {
+    const out = join(dir, `lanes.jsonl`)
+    const run = async (extra: string[]) => {
+      const r = await new Deno.Command(Deno.execPath(), {
+        args: [`run`, `-A`, COLLECT, `--out`, out, `--projects`, dir, ...extra],
+        stdout: `piped`,
+        stderr: `piped`,
+      }).output()
+      return new TextDecoder().decode(r.stderr)
+    }
+    assertStringIncludes(await run([]), `no --dotfiles given`)
   } finally {
     await Deno.remove(dir, { recursive: true })
   }

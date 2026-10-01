@@ -244,3 +244,18 @@ t(`says which arm is better when the interval excludes zero`, () => {
   const cost = report.split(`\n`).find((l) => l.startsWith(`| Total cost per PR (median`))!
   assertStringIncludes(cost, `sonnet-5-5 better, interval excludes zero`)
 })
+
+t(`a unit with no issue is left out of Table 2 and counted as no issue in the arm balance`, () => {
+  const noIssue = unitRow(50, OPUS, 5, 100, [`pass`], { issue: null, issueSource: null })
+  const report = renderReport([...OPUS_ROWS, ...SONNET_ROWS, noIssue], plan, {
+    seed: 1,
+    iterations: 100,
+  })
+  const table1 = report.slice(report.indexOf(`## Table 1`), report.indexOf(`## Table 2`))
+  const table2 = report.slice(report.indexOf(`## Table 2`), report.indexOf(`## Arm balance`))
+  const units = (table: string) => table.split(`\n`).find((l) => l.startsWith(`| Units of work`))!
+  // Opus trial: 5 with an issue plus the unit without one; Table 2 keeps only the 5.
+  assertStringIncludes(units(table1), `| 6 | 5 |`)
+  assertStringIncludes(units(table2), `| 5 | 5 |`)
+  assertStringIncludes(report, `- opus-5-5, issue from none: no issue \u2014 1`)
+})
