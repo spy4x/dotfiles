@@ -4,6 +4,9 @@
 
 **My AI-agent setup and Linux workstation, as code.**
 
+[![CI](https://ci.antonshubin.com/api/badges/spy4x/dotfiles/status.svg)](https://ci.antonshubin.com/repos/spy4x/dotfiles)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 [AI harness config](ai-harnesses/README.md) · [Global agent rules](ai-harnesses/AGENTS.md) ·
 [Apps](docs/apps.md) · [Shell](docs/shell.md) · [Sync](docs/sync.md) ·
 [Host limits](docs/host-limits.md) · [Development](docs/development.md)
@@ -85,6 +88,10 @@ deno task ai --check       # exit 1 if any harness differs from ai-harnesses/
 ```
 
 File layout, adding apps and the encrypted env file: [development.md](docs/development.md).
+
+## Licence
+
+[MIT](LICENSE).
 
 ## Built by
 
