@@ -89,7 +89,7 @@ export interface ParsedTranscript {
   readonly compactionTimestamps: string[]
 }
 
-interface RawUsage {
+export interface RawUsage {
   input_tokens?: number
   output_tokens?: number
   cache_read_input_tokens?: number
@@ -100,7 +100,8 @@ interface RawUsage {
   }
 }
 
-function toCall(timestamp: string, model: string, usage: RawUsage): Call {
+/** Builds a `Call` from one transcript line's raw usage object. */
+export function toCall(timestamp: string, model: string, usage: RawUsage): Call {
   const split = usage.cache_creation
   const cache5mTokens = split
     ? split.ephemeral_5m_input_tokens ?? 0
@@ -184,7 +185,8 @@ function addCost(a: CostBreakdown, b: CostBreakdown): CostBreakdown {
   }
 }
 
-function totalOf(cost: CostBreakdown): number {
+/** Sum of every part of a cost breakdown. */
+export function totalOf(cost: CostBreakdown): number {
   return cost.cacheRead + cost.cacheWrite + cost.output + cost.input
 }
 
@@ -193,7 +195,7 @@ function totalOf(cost: CostBreakdown): number {
  * the caller must report that model as unpriced rather than folding its zero into the total as
  * if the call were free.
  */
-function costOf(call: Call): { cost: CostBreakdown; priced: boolean } {
+export function costOf(call: Call): { cost: CostBreakdown; priced: boolean } {
   const price = priceFor(call.model)
   if (!price) return { cost: ZERO_COST, priced: false }
   const cost: CostBreakdown = {
