@@ -22,6 +22,7 @@ import {
   usd,
 } from "./analyse.ts"
 import { type ChartArm, renderChart } from "./chart.ts"
+import { FOLLOWUP_SCHEMA_VERSION, type FollowupRow, WINDOW_DAYS } from "./followup.ts"
 import type { LaneRow } from "./schema.ts"
 import {
   bootstrap,
@@ -96,6 +97,7 @@ export function renderReport(
   rows: readonly LaneRow[],
   plan: ReturnType<typeof parsePlan>,
   options: BootstrapOptions = {},
+  followups: readonly FollowupRow[] | null = null,
 ): Report {
   const units = buildUnits(rows, plan)
   const A = plan.armA
@@ -148,6 +150,8 @@ export function renderReport(
 
   out.push(`## The comparison`, ``)
   out.push(...comparisonTable(ruleA, ruleB, nameA, nameB, options), ``)
+
+  out.push(...followupSection(ruleA, ruleB, nameA, nameB, followups), ``)
 
   out.push(`## What would change my mind`, ``)
   const doubts: string[] = []
@@ -268,6 +272,102 @@ export function renderReport(
   return { markdown: out.join(`\n`) + `\n`, chart }
 }
 
+/** Reads `followups.jsonl`, refusing another schema version. */
+export function parseFollowups(text: string): FollowupRow[] {
+  const rows: FollowupRow[] = []
+  for (const [i, line] of text.split(`\n`).entries()) {
+    if (line.trim() === ``) continue
+    const row = JSON.parse(line) as FollowupRow
+    if (row.schema !== FOLLOWUP_SCHEMA_VERSION) {
+      throw new PlanError(
+        `followups.jsonl line ${i + 1} has schema ${row.schema}; this report reads ` +
+          `${FOLLOWUP_SCHEMA_VERSION}`,
+      )
+    }
+    rows.push(row)
+  }
+  return rows
+}
+
+/**
+ * What happened to each arm's merged PRs after the merge, per window. Counts are plain "x of n":
+ * with a few dozen PRs and mostly zero events, an interval would say less than the counts do. A
+ * window that has not elapsed is reported as pending, never counted as zero.
+ */
+export function followupSection(
+  a: Unit[],
+  b: Unit[],
+  nameA: string,
+  nameB: string,
+  followups: readonly FollowupRow[] | null,
+): string[] {
+  const out = [`## After the merge`, ``]
+  if (followups === null) {
+    out.push(
+      `The follow-up pass has not run for this run, so there is nothing yet on reverts, fixes ` +
+        `or reopened issues. Run \`deno task experiment:followup <run folder>\` and then this ` +
+        `report again.`,
+    )
+    return out
+  }
+  const byPr = new Map(followups.map((f) => [f.pr, f]))
+  const arms = [a, b].map((us) => {
+    const prs = us.flatMap((u) => u.prs)
+    return { rows: prs.flatMap((p) => byPr.get(p) ?? []), missing: prs.filter((p) => !byPr.has(p)) }
+  })
+  out.push(
+    `What happened to the comparison's PRs after they merged. Reverts and fix-titled PRs come ` +
+      `first. Counts are plain, out of the PRs whose window has elapsed: a pending window is ` +
+      `not a clean one.`,
+    ``,
+  )
+  for (const days of WINDOW_DAYS) {
+    const key = days === 14 ? `d14` : `d30`
+    const cells = arms.map(({ rows }) => {
+      const done = rows.flatMap((r) => r[key] === `pending` ? [] : r[key])
+      return { total: rows.length, done, pending: rows.length - done.length }
+    })
+    const count = (c: typeof cells[number], pick: (w: typeof c.done[number]) => boolean) =>
+      c.total === 0
+        ? `–`
+        : c.done.length === 0
+        ? `window has not elapsed yet (${c.pending} pending)`
+        : `${c.done.filter(pick).length} of ${c.done.length}${
+          c.pending > 0 ? ` (${c.pending} more pending)` : ``
+        }`
+    out.push(
+      `### ${days} days after the merge`,
+      ``,
+      `| | ${nameA} | ${nameB} |`,
+      `|---|---|---|`,
+      `| PRs reverted | ${cells.map((c) => count(c, (w) => w.reverts.length > 0)).join(` | `)} |`,
+      `| Later PR titled as a fix on the same lines | ${
+        cells.map((c) => count(c, (w) => w.fixes.some((f) => f.fixType))).join(` | `)
+      } |`,
+      `| Closing issue reopened | ${
+        cells.map((c) => count(c, (w) => w.reopened.length > 0)).join(` | `)
+      } |`,
+      `| Touched by any later PR (noisy) | ${
+        cells.map((c) => count(c, (w) => w.fixes.length > 0)).join(` | `)
+      } |`,
+      ``,
+    )
+  }
+  out.push(
+    `"Touched" is noisy: most PRs are touched by a later one, mostly where documentation ` +
+      `overlaps, so read it last and do not treat it as a defect count.`,
+  )
+  const missing = arms.map((x) => x.missing.length)
+  if (missing[0] + missing[1] > 0) {
+    out.push(
+      ``,
+      `Not in \`followups.jsonl\` (unmerged, or the pass ran before they merged): ${nameA} ` +
+        `${missing[0]}, ${nameB} ${missing[1]}.`,
+    )
+  }
+  return out
+}
+
 function comparisonTable(
   a: Unit[],
   b: Unit[],
@@ -357,7 +457,13 @@ export async function writeReport(folder: string, options: BootstrapOptions = {}
   }
   const plan = parsePlan(planText)
   const rows = parseRows(await Deno.readTextFile(join(folder, `lanes.jsonl`)))
-  const report = renderReport(rows, plan, options)
+  let followups: FollowupRow[] | null = null
+  try {
+    followups = parseFollowups(await Deno.readTextFile(join(folder, `followups.jsonl`)))
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) throw error
+  }
+  const report = renderReport(rows, plan, options, followups)
   await Deno.writeTextFile(join(folder, `report.md`), report.markdown)
   if (report.chart) {
     await Deno.writeTextFile(join(folder, `chart.svg`), report.chart)

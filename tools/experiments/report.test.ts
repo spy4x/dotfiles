@@ -3,8 +3,16 @@ import { join } from "jsr:@std/path@1.1.6"
 import { laneRow } from "./_fixtures.ts"
 import { parsePlan } from "./analyse.ts"
 import { niceStep, placeArms, PLOT, renderChart } from "./chart.ts"
-import { headline, modelName, renderReport, weirdestUnit, writeReport } from "./report.ts"
+import {
+  headline,
+  modelName,
+  parseFollowups,
+  renderReport,
+  weirdestUnit,
+  writeReport,
+} from "./report.ts"
 import type { LaneRow, PrInfo } from "./schema.ts"
+import type { FollowupRow, WindowResult } from "./followup.ts"
 import { buildUnits } from "./analyse.ts"
 
 const t = Deno.test
@@ -347,5 +355,129 @@ t(`removes a stale chart.svg when the report has no chart`, async () => {
     assertEquals(names, [`lanes.jsonl`, `plan.md`, `report.md`])
   } finally {
     await Deno.remove(dir, { recursive: true })
+  }
+})
+
+const NONE: WindowResult = { reverts: [], fixes: [], reopened: [] }
+const fix = (fixType: boolean) => ({
+  pr: 99,
+  title: `x`,
+  at: `2026-10-01T00:00:00Z`,
+  fixType,
+  files: [`a.ts`],
+  exact: true,
+})
+const revert = { pr: 98, sha: null, title: `Revert "x"`, at: `2026-10-01T00:00:00Z` }
+
+function followup(
+  n: number,
+  d14: WindowResult | `pending`,
+  d30: WindowResult | `pending`,
+): FollowupRow {
+  return {
+    schema: 1,
+    pr: `spy4x/example#${n}`,
+    title: `t`,
+    mergedAt: `2026-09-30T06:00:00Z`,
+    mergeCommit: null,
+    d14,
+    d30,
+  }
+}
+
+/** Opus (2, 4, 6) and Sonnet (1, 3, 5) from FLAT. */
+function follow(rows: FollowupRow[] | null) {
+  return renderReport(FLAT, plan, {}, rows).markdown.split(`## After the merge`)[1]
+    .split(`## What would change`)[0]
+}
+
+t(`tells the reader the follow-up pass has not run and names the command`, () => {
+  const section = follow(null)
+  assertStringIncludes(section, `The follow-up pass has not run for this run`)
+  assertStringIncludes(section, `deno task experiment:followup <run folder>`)
+  assertEquals(section.includes(`days after the merge`), false)
+})
+
+t(`counts reverts, fix-titled PRs, reopened issues and touched PRs per arm and window`, () => {
+  const section = follow([
+    // Opus: #2 reverted, #4 fix-titled, #6 only touched by a non-fix PR.
+    followup(2, { ...NONE, reverts: [revert] }, { ...NONE, reverts: [revert] }),
+    followup(4, { ...NONE, fixes: [fix(true)] }, { ...NONE, fixes: [fix(true)] }),
+    followup(6, { ...NONE, fixes: [fix(false)] }, NONE),
+    // Sonnet: #1 reopened, #3 and #5 clean.
+    followup(
+      1,
+      { ...NONE, reopened: [{ issue: `spy4x/example#1`, at: `2026-10-01T00:00:00Z` }] },
+      NONE,
+    ),
+    followup(3, NONE, NONE),
+    followup(5, NONE, NONE),
+  ])
+  const [d14, d30] = section.split(`### 30 days after the merge`)
+  assertStringIncludes(d14, `| PRs reverted | 1 of 3 | 0 of 3 |`)
+  assertStringIncludes(d14, `| Later PR titled as a fix on the same lines | 1 of 3 | 0 of 3 |`)
+  assertStringIncludes(d14, `| Closing issue reopened | 0 of 3 | 1 of 3 |`)
+  assertStringIncludes(d14, `| Touched by any later PR (noisy) | 2 of 3 | 0 of 3 |`)
+  assertStringIncludes(d30, `| Touched by any later PR (noisy) | 1 of 3 | 0 of 3 |`)
+  assertStringIncludes(section, `"Touched" is noisy`)
+})
+
+t(`lists reverts and fixes before the noisy touched row`, () => {
+  const section = follow([1, 2, 3, 4, 5, 6].map((n) => followup(n, NONE, NONE)))
+  const at = (label: string) => section.indexOf(label)
+  assertEquals(at(`PRs reverted`) < at(`titled as a fix`), true)
+  assertEquals(at(`titled as a fix`) < at(`reopened`), true)
+  assertEquals(at(`reopened`) < at(`Touched by any`), true)
+})
+
+t(`prints a pending window as pending, never as zero`, () => {
+  const section = follow([
+    followup(2, NONE, `pending`),
+    followup(4, NONE, `pending`),
+    followup(6, `pending`, `pending`),
+    followup(1, NONE, `pending`),
+    followup(3, NONE, `pending`),
+    followup(5, NONE, `pending`),
+  ])
+  const [d14, d30] = section.split(`### 30 days after the merge`)
+  // 14 days: Opus has one pending PR among three, counted apart.
+  assertStringIncludes(d14, `| PRs reverted | 0 of 2 (1 more pending) | 0 of 3 |`)
+  // 30 days: every PR of both arms is pending.
+  assertStringIncludes(
+    d30,
+    `| PRs reverted | window has not elapsed yet (3 pending) | window has not elapsed yet (3 pending) |`,
+  )
+})
+
+t(`shows an arm with no events as 0 of n, and an arm with no PRs in the file as a dash`, () => {
+  const section = follow([2, 4, 6].map((n) => followup(n, NONE, NONE)))
+  assertStringIncludes(section, `| PRs reverted | 0 of 3 | – |`)
+  assertStringIncludes(section, `Not in \`followups.jsonl\``)
+  assertStringIncludes(section, `Sonnet 5.5 3.`)
+})
+
+t(`reads followups.jsonl from the run folder and refuses another schema version`, async () => {
+  const dir = await Deno.makeTempDir({ prefix: `experiment-report-test-` })
+  try {
+    await Deno.writeTextFile(join(dir, `plan.md`), PLAN)
+    await Deno.writeTextFile(
+      join(dir, `lanes.jsonl`),
+      FLAT.map((r) => JSON.stringify(r)).join(`\n`),
+    )
+    assertStringIncludes((await writeReport(dir)).markdown, `follow-up pass has not run`)
+    const rows = [2, 4, 6, 1, 3, 5].map((n) => followup(n, NONE, NONE))
+    await Deno.writeTextFile(
+      join(dir, `followups.jsonl`),
+      rows.map((r) => JSON.stringify(r)).join(`\n`),
+    )
+    assertStringIncludes((await writeReport(dir)).markdown, `| PRs reverted | 0 of 3 | 0 of 3 |`)
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+  try {
+    parseFollowups(JSON.stringify({ ...followup(1, NONE, NONE), schema: 0 }))
+    throw new Error(`should have refused`)
+  } catch (error) {
+    assertStringIncludes((error as Error).message, `schema 0`)
   }
 })
