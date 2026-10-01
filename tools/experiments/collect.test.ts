@@ -20,6 +20,13 @@ const PR_JSON = JSON.stringify({
   closingIssuesReferences: [{ number: 12 }],
 })
 
+/** A second PR, in another repo, that closes no issue. */
+const ZETA_PR_JSON = JSON.stringify({
+  ...JSON.parse(PR_JSON),
+  headRefName: `feat/zeta`,
+  closingIssuesReferences: [],
+})
+
 const GIT_LOG = [
   `ccc3333\t2026-09-30T02:00:00+00:00`,
   `bbb2222\t2026-09-30T00:30:00+00:00`,
@@ -34,6 +41,7 @@ function fakeExec(calls: string[] = [], fail?: (cmd: string) => boolean): Exec {
     if (fail?.(cmd)) return Promise.reject(new CommandError(command, args, `exit 1: boom`))
     if (command === `git`) return Promise.resolve(GIT_LOG)
     if (cmd.startsWith(`gh pr view 12 -R spy4x/example`)) return Promise.resolve(PR_JSON)
+    if (cmd.startsWith(`gh pr view 5 -R spy4x/zeta`)) return Promise.resolve(ZETA_PR_JSON)
     return Promise.reject(new CommandError(command, args, `unexpected call in test`))
   }
 }
@@ -338,6 +346,40 @@ t(`the command warns on stderr when --dotfiles is not given`, async () => {
       return new TextDecoder().decode(r.stderr)
     }
     assertStringIncludes(await run([]), `no --dotfiles given`)
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(`takes a lane's closing reference from its first PR in sorted order`, async () => {
+  const dir = await tempProjects()
+  try {
+    const start = `2026-09-30T01:00:00.000Z`
+    // Opens spy4x/zeta#5 (closes nothing) before spy4x/example#12 (closes #12); the brief
+    // names no issue.
+    const create = (id: string, url: string) => [
+      assistant(id, `claude-sonnet-5-5`, start, { input_tokens: 10 }, [
+        {
+          type: `tool_use`,
+          id: `t-${id}`,
+          name: `Bash`,
+          input: { command: `gh pr create --fill` },
+        },
+      ]),
+      user(start, [{ type: `tool_result`, tool_use_id: `t-${id}`, content: url }]),
+    ]
+    await writeLane(dir, {
+      id: `impl`,
+      meta: { agentType: `implementer`, description: `Implement table` },
+      lines: [
+        user(start, `Implement the table.`),
+        ...create(`m1`, `https://github.com/spy4x/zeta/pull/5`),
+        ...create(`m2`, `https://github.com/spy4x/example/pull/12`),
+      ],
+    })
+    const [row] = await collect({ projectsDir: dir, exec: fakeExec() })
+    assertEquals(row.prs, [`spy4x/zeta#5`, `spy4x/example#12`])
+    assertEquals([row.issue, row.issueSource], [12, `closing-ref`])
   } finally {
     await Deno.remove(dir, { recursive: true })
   }

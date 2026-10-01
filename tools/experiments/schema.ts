@@ -56,6 +56,8 @@ export interface LaneRow {
   readonly requestedModel: string | null
   readonly effort: string | null
   readonly repo: string | null
+  /** The lowest issue the brief names, else the lowest closing reference of the lane's first PR
+   * in sorted order (the reference pipeline's rule). */
   readonly issue: number | null
   readonly issueSource: `brief` | `closing-ref` | null
   /** Not recorded in transcripts or by `gh` today; always null. */

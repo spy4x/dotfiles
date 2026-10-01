@@ -179,9 +179,15 @@ export function buildUnits(rows: readonly LaneRow[], plan: Plan): Unit[] {
     })
     const reviewed = per.every((p) => p !== null)
     const start = group.map((l) => l.start).sort()[0]
+    // The issue: the lowest one any lane's brief names, else the lowest closing reference of the
+    // unit's first PR in sorted order (the reference pipeline's rule, kept for reproduction).
     const briefIssues = group.filter((l) => l.issueSource === `brief`).map((l) => l.issue!)
-    const closing = group.find((l) => l.issueSource === `closing-ref`)
-    const issue = briefIssues.length > 0 ? Math.min(...briefIssues) : closing?.issue ?? null
+    const closing = info.get(prs[0])!.closingIssues
+    const issue = briefIssues.length > 0
+      ? Math.min(...briefIssues)
+      : closing.length > 0
+      ? Math.min(...closing)
+      : null
     const infos = [...info.values()]
 
     units.push({
@@ -219,7 +225,7 @@ export function buildUnits(rows: readonly LaneRow[], plan: Plan): Unit[] {
         ? Math.max(...per.map((p) => p!.passRound!))
         : null,
       issue,
-      issueSource: briefIssues.length > 0 ? `brief` : closing ? `closing ref` : `none`,
+      issueSource: briefIssues.length > 0 ? `brief` : closing.length > 0 ? `closing ref` : `none`,
     })
   }
   return units.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))

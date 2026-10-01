@@ -266,7 +266,8 @@ export async function collect(options: CollectOptions): Promise<LaneRow[]> {
     const worktrees = worktreeBranches(l.scan.prompt)
     const repo = prs[0]?.split(`#`)[0] ?? (worktrees[0] ? `spy4x/${worktrees[0].repo}` : null)
     const briefIssues = implementer ? issuesInBrief(l.scan.prompt, repo) : []
-    const closing = prs[0] ? prInfo.get(prs[0])?.closingIssues ?? [] : []
+    // Closing references of the first PR in sorted order, as the reference pipeline read them.
+    const closing = prs.length > 0 ? prInfo.get([...prs].sort()[0])!.closingIssues : []
     const issue = briefIssues.length > 0
       ? Math.min(...briefIssues)
       : closing.length > 0

@@ -31,20 +31,20 @@ function round(verdict: ReviewRound[`verdict`], pr: string, cost = 0.5): ReviewR
   return { ts: `2026-09-30T05:00:00Z`, verdict, pr, reviewerModel: OPUS, cost, calls: 10 }
 }
 
-function info(lines: number, state = `MERGED`): PrInfo {
+function info(lines: number, closingIssues: number[] = []): PrInfo {
   return {
     additions: lines,
     deletions: 0,
-    state,
+    state: `MERGED`,
     mergedAt: `2026-09-30T06:00:00Z`,
     createdAt: `2026-09-30T04:00:00Z`,
     title: `Add thing`,
     headRefName: `feat/thing`,
-    closingIssues: [],
+    closingIssues,
   }
 }
 
-/** One trial lane with one PR: `cost` for the build, `review` for the review, first verdict. */
+/** One trial lane with one PR that closes issue `n`: `cost` for the build, then the verdicts. */
 function unitRow(
   n: number,
   model: string,
@@ -61,7 +61,7 @@ function unitRow(
     cost,
     calls: 10,
     prs: [pr],
-    prInfo: { [pr]: info(lines) },
+    prInfo: { [pr]: info(lines, [n]) },
     reviews: { [pr]: verdicts.map((v) => round(v, pr)) },
     issue: n,
     issueSource: `closing-ref`,
@@ -246,7 +246,11 @@ t(`says which arm is better when the interval excludes zero`, () => {
 })
 
 t(`a unit with no issue is left out of Table 2 and counted as no issue in the arm balance`, () => {
-  const noIssue = unitRow(50, OPUS, 5, 100, [`pass`], { issue: null, issueSource: null })
+  const noIssue = unitRow(50, OPUS, 5, 100, [`pass`], {
+    issue: null,
+    issueSource: null,
+    prInfo: { [`spy4x/example#50`]: info(100) },
+  })
   const report = renderReport([...OPUS_ROWS, ...SONNET_ROWS, noIssue], plan, {
     seed: 1,
     iterations: 100,
@@ -258,4 +262,19 @@ t(`a unit with no issue is left out of Table 2 and counted as no issue in the ar
   assertStringIncludes(units(table1), `| 6 | 5 |`)
   assertStringIncludes(units(table2), `| 5 | 5 |`)
   assertStringIncludes(report, `- opus-5-5, issue from none: no issue \u2014 1`)
+})
+
+t(`takes a unit's issue from its first PR in sorted order when no brief names one`, () => {
+  // Opened in this order; only the PR that sorts first closes an issue.
+  const late = `spy4x/ts-libs#283`
+  const early = `spy4x/template#69`
+  const lane = unitRow(1, OPUS, 1, 100, [`pass`], {
+    issue: null,
+    issueSource: null,
+    prs: [late, early],
+    prInfo: { [late]: info(50), [early]: info(50, [66]) },
+    reviews: { [late]: [round(`pass`, late)], [early]: [round(`pass`, early)] },
+  })
+  const [unit] = buildUnits([lane], plan)
+  assertEquals([unit.issue, unit.issueSource], [66, `closing ref`])
 })
