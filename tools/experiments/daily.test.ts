@@ -260,7 +260,7 @@ t(`defaults to the last seven days up to today`, () => {
 })
 
 t(
-  `reads lead sessions and subagents with their roles, and skips files last written before --since`,
+  `reads lead sessions and subagents with their roles, other without a meta file, and skips old files`,
   async () => {
     const dir = await Deno.makeTempDir({ prefix: `experiment-kit-test-` })
     try {
@@ -289,8 +289,13 @@ t(
         new Date(`2026-09-01T00:00:00Z`),
         new Date(`2026-09-01T00:00:00Z`),
       )
+      // A subagent whose meta file cannot be read is "other", not a lead session.
+      await Deno.writeTextFile(
+        join(dir, `proj`, `s1`, `subagents`, `agent-nometa.jsonl`),
+        assistant(`x1`, OPUS, at, MILLION) + `\n`,
+      )
       const inputs = await readTranscripts(dir, `2026-10-01`)
-      assertEquals(inputs.map((i) => i.role).sort(), [`implementer`, `lead`])
+      assertEquals(inputs.map((i) => i.role).sort(), [`implementer`, `lead`, `other`])
     } finally {
       await Deno.remove(dir, { recursive: true })
     }
