@@ -65,60 +65,6 @@ export async function log(message: string, level: LogLevel = "INFO"): Promise<vo
 // ===== UTILITY FUNCTIONS =====
 
 /**
- * Format bytes to human-readable string
- */
-export function formatBytes(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB", "TB", "PB"]
-  let value = bytes
-  let unitIndex = 0
-
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024
-    unitIndex++
-  }
-
-  return `${value.toFixed(1)}${units[unitIndex]}`
-}
-
-/**
- * Get system memory size in bytes
- */
-export async function getSystemMemoryBytes(): Promise<number> {
-  const result = await runShellCommand("free -b | grep '^Mem:' | awk '{print $2}'")
-  if (!result.success) {
-    throw new Error(`Failed to get system memory: ${result.stderr}`)
-  }
-
-  const memBytes = parseInt(result.stdout.trim())
-  if (isNaN(memBytes)) {
-    throw new Error("Could not parse memory size")
-  }
-
-  return memBytes
-}
-
-/**
- * Get disk usage information for a path
- */
-export async function getDiskUsage(
-  path: string,
-): Promise<{ total: number; used: number; available: number }> {
-  const result = await runShellCommand(
-    `df -B1 "${path}" | tail -1 | awk '{print $2 " " $3 " " $4}'`,
-  )
-  if (!result.success) {
-    throw new Error(`Failed to get disk usage for ${path}: ${result.stderr}`)
-  }
-
-  const [total, used, available] = result.stdout.trim().split(" ").map((s) => parseInt(s))
-  if (total === undefined || used === undefined || available === undefined) {
-    throw new Error("Could not parse disk usage information")
-  }
-
-  return { total, used, available }
-}
-
-/**
  * Run a command and return the result
  */
 export async function runCommand(command: string[]): Promise<CommandResult> {
@@ -175,18 +121,6 @@ export async function detectPackageManager(): Promise<PackageManager | null> {
   }
 
   return null
-}
-
-/**
- * Check if a file exists
- */
-export async function fileExists(path: string): Promise<boolean> {
-  try {
-    await Deno.stat(path)
-    return true
-  } catch {
-    return false
-  }
 }
 
 /**

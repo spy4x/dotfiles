@@ -8,11 +8,11 @@
  * - Custom aliases integration
  */
 
+import { denoFileSystem } from "@spy4x/platform/server"
 import {
   commandExists,
   detectPackageManager,
   directoryExists,
-  fileExists,
   type PackageManager,
 } from "./shared.ts"
 
@@ -88,7 +88,7 @@ export class InstallShell {
 
     try {
       // Check if the source command already exists in .zshrc
-      if (await fileExists(this.zshrcPath)) {
+      if (await denoFileSystem.exists(this.zshrcPath)) {
         const zshrcContent = await Deno.readTextFile(this.zshrcPath)
         if (zshrcContent.includes(`source "${aliasesPath}"`)) {
           console.log("✅ Aliases integration already configured")
@@ -111,7 +111,7 @@ export class InstallShell {
     // Deno PATH is sourced via ~/.zshenv (not ~/.zshrc) so it works in
     // non-interactive shells too. If .zshenv already exists (e.g. managed
     // via dotfiles symlink), skip — let the tracked version win.
-    if (await fileExists(this.zshenvPath)) {
+    if (await denoFileSystem.exists(this.zshenvPath)) {
       console.log("✅ ~/.zshenv already exists, skipping (dotfiles may manage it)")
       return true
     }
@@ -189,7 +189,7 @@ export class InstallShell {
     console.log("🔄 Configuring Powerlevel10k theme in .zshrc...")
 
     try {
-      if (!(await fileExists(this.zshrcPath))) {
+      if (!(await denoFileSystem.exists(this.zshrcPath))) {
         console.error("❌ .zshrc file not found")
         return false
       }

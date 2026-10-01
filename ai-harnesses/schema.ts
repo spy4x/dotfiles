@@ -1,7 +1,8 @@
 // Frontmatter and config schemas. Every key is declared, and an undeclared key is an error, so a
 // typo fails `--check` instead of quietly rendering an agent that ignores it.
 
-import { type } from "npm:arktype@2.2.3"
+import { type Type, type } from "arktype"
+import { validate as validateWithSchema } from "@spy4x/validation"
 
 export type HarnessName = `claude` | `opencode` | `dsh`
 export const HARNESSES: readonly HarnessName[] = [`claude`, `opencode`, `dsh`]
@@ -69,12 +70,8 @@ export const Config = type({
 export type Config = typeof Config.infer
 
 /** Validates `data` against `schema`, or throws with `where` and every problem found. */
-export function validate<T>(
-  schema: (data: unknown) => T | InstanceType<typeof type.errors>,
-  data: unknown,
-  where: string,
-): T {
-  const result = schema(data)
-  if (result instanceof type.errors) throw new Error(`${where}: ${result.summary}`)
-  return result as T
+export function validate<T extends Type>(schema: T, data: unknown, where: string): T["infer"] {
+  const { error, data: parsed } = validateWithSchema(schema, data)
+  if (error) throw new Error(`${where}: ${error.description}`)
+  return parsed
 }
