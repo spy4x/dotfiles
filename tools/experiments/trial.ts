@@ -374,13 +374,14 @@ export interface FixLane {
   readonly fix: Window[]
   /** The `afterDoubleCheck` windows of the lane's arm PRs. */
   readonly afterDoubleCheck: Window[]
+  /**
+   * The lane started after the arm reviewer's part of every one of its PRs had ended: it answers
+   * the double-check, so it counts on that line only, not among the arm's lanes.
+   */
+  readonly afterArm: boolean
 }
 
-/**
- * Lanes whose arm PRs all sit in one arm, and how many were left out as mixed. A lane that started
- * after the arm reviewer's part of every one of its PRs had ended is no arm lane: it answers the
- * double-check, whose cost prints on its own line.
- */
+/** Lanes whose arm PRs all sit in one arm, and how many were left out as mixed. */
 export function fixLanes(
   reviews: readonly PrReview[],
 ): { lanes: FixLane[]; mixed: number } {
@@ -398,7 +399,6 @@ export function fixLanes(
   const lanes: FixLane[] = []
   let mixed = 0
   for (const [lane, parts] of byLane) {
-    if (parts.every((p) => p.windows.armEnd !== null && lane.start >= p.windows.armEnd)) continue
     if (new Set(parts.map((p) => p.arm)).size > 1) {
       mixed++
       continue
@@ -408,6 +408,7 @@ export function fixLanes(
       arm: parts[0].arm,
       fix: parts.flatMap((p) => p.windows.fix ?? []),
       afterDoubleCheck: parts.flatMap((p) => p.windows.afterDoubleCheck ?? []),
+      afterArm: parts.every((p) => p.windows.armEnd !== null && lane.start >= p.windows.armEnd),
     })
   }
   return { lanes, mixed }
@@ -665,7 +666,7 @@ export function renderTrial(input: TrialInput): string {
   } else {
     const { lanes, mixed } = fixLanes(reviews)
     const cells = (arm: Arm) => {
-      const ls = lanes.filter((l) => l.arm === arm)
+      const ls = lanes.filter((l) => l.arm === arm && !l.afterArm)
       const fixed = ls.filter((l) => l.fix.length > 0)
       const cost = (l: FixLane) => input.fixCost!.get(l.lane.agentId) ?? 0
       return `${ls.length} lanes, ${fixed.length} needed a fix; mean per lane ${

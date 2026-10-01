@@ -546,7 +546,20 @@ t(`does not count a lane that started after its arm reviewer's part ended as an 
     implementer(`spy4x/a#5`, 5, { agentId: `double-check-fix`, start: `2026-10-01T11:01:00.000Z` }),
   ]
   const { lanes } = fixLanes(reviewedPrs(rows, SINCE))
-  assertEquals(lanes.map((l) => l.lane.agentId), [`original`])
+  assertEquals(lanes.map((l) => [l.lane.agentId, l.afterArm]), [
+    [`original`, false],
+    [`double-check-fix`, true],
+  ])
+  const text = renderTrial({
+    rows,
+    pairs: [],
+    since: SINCE,
+    fixCost: new Map(),
+    doubleCheckFixCost: new Map([[`double-check-fix`, 5]]),
+    options: { iterations: 50 },
+  })
+  assertStringIncludes(text, `Sonnet reviewer: 1 lanes, 0 needed a fix`)
+  assertStringIncludes(text, `left out above: Sonnet arm 2 lanes, $5.00 in total;`)
 })
 
 t(
