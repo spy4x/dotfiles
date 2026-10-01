@@ -1,7 +1,7 @@
 // Hand-written synthetic transcripts for the experiment kit's tests. Nothing here comes from a
 // real transcript: real ones can carry environment values.
 
-import { join } from "jsr:@std/path@^1.0.0"
+import { join } from "jsr:@std/path@1.1.6"
 import type { LaneRow } from "./schema.ts"
 
 /** One transcript line as `JSON.stringify` writes it. */

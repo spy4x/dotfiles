@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19"
-import { dirname, fromFileUrl, join } from "jsr:@std/path@^1.0.0"
+import { dirname, fromFileUrl, join } from "jsr:@std/path@1.1.6"
 import { assistant, user, writeLane } from "./_fixtures.ts"
 import { collect, commitAt, type DotfilesCommit, readDotfilesCommits, toJsonl } from "./collect.ts"
 import { CommandError, denoExec, type Exec } from "./exec.ts"

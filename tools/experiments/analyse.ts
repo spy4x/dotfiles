@@ -13,7 +13,7 @@
 // Ported from the 29-30 September trial's `units2.py` and `compare4.py`; the grouping and the
 // column definitions are the same so its published tables can be reproduced.
 
-import { join } from "jsr:@std/path@^1.0.0"
+import { join } from "jsr:@std/path@1.1.6"
 import { type PrInfo, type ReviewRound, SCHEMA_VERSION } from "./schema.ts"
 import type { LaneRow } from "./schema.ts"
 import {

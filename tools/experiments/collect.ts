@@ -9,7 +9,7 @@
 // A `gh` or `git` call that fails stops the run with a non-zero exit: carrying on would report
 // zero merged PRs instead of an error.
 
-import { join } from "jsr:@std/path@^1.0.0"
+import { join } from "jsr:@std/path@1.1.6"
 import { denoExec, type Exec } from "./exec.ts"
 import {
   dominantModel,
