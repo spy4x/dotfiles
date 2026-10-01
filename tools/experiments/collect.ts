@@ -349,6 +349,11 @@ if (import.meta.main) {
     console.error(`no --projects given and $HOME is not set`)
     Deno.exit(2)
   }
+  if (!flag(args, `--dotfiles`)) {
+    console.error(
+      `warning: no --dotfiles given, so every row gets dotfilesCommit null and rule changes cannot split the data`,
+    )
+  }
   try {
     const rows = await collect({
       projectsDir,
