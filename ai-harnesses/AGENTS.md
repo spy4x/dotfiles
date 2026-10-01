@@ -156,6 +156,9 @@ holds account-wide tokens any project or task may use:
   `stats.<domain>`).
 - `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`: Docker Hub login and push.
 - `JSR_TOKEN`: `deno publish` to JSR.
+- `WOODPECKER_CI_TOKEN`: API of my Woodpecker CI (`https://ci.antonshubin.com`):
+  pipelines, build logs, restarts. Send it as `Authorization: Bearer`, or give it
+  to `woodpecker-cli` as `WOODPECKER_TOKEN` with `WOODPECKER_SERVER` set.
 
 They are not in the shell environment. Load only the one a command needs, in
 that command, into a plain shell variable (not `export`, so child processes
@@ -167,8 +170,9 @@ T="$(sed -n 's/^JSR_TOKEN=//p' ~/sync/code/rostok/.env.root)" && deno publish --
 
 Never source the whole file: it also holds backup and auth passwords. The hard
 rule above applies in full. A token missing from the file → ask me; don't
-search other files for one. A new account-wide token → add it here and to
-rostok's `.env.root.example`.
+search other files for one. A new account-wide token → add it here. The file is
+due to move to the private `spy4x/homelab` repo: move the whole current file
+(every token above goes with it), then update the paths in this section.
 
 # Sudo
 
