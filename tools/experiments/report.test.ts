@@ -140,6 +140,7 @@ t(`names the highest-cost trial unit as the weirdest lane, from row fields only`
 t(`lists what would change my mind: small arms, crossing zero, the plan's bar`, () => {
   const { markdown } = renderReport(SPREAD, plan, { seed: 1, iterations: 1000 })
   const section = markdown.split(`## What would change my mind`)[1].split(`## The weirdest`)[0]
+  assertStringIncludes(section, `The headline interval crosses zero`)
   assertStringIncludes(section, `Opus 5.5 has 5 reviewed units`)
   assertStringIncludes(section, `Sonnet 5.5 has 5 reviewed units`)
   assertStringIncludes(section, `The plan set this bar before the data came in: Sonnet must`)
@@ -148,12 +149,17 @@ t(`lists what would change my mind: small arms, crossing zero, the plan's bar`, 
 t(`counts units outside the comparison and says why`, () => {
   const rows = [
     ...FLAT,
-    unit(8, SONNET, 4, 0.5, { issue: null, issueSource: null, prInfo: {}, prs: [] }),
+    // A real unit (it has a PR) whose PR closes no issue, so the lead chose its model.
+    unit(8, SONNET, 4, 0.5, {
+      issue: null,
+      issueSource: null,
+      prInfo: { "spy4x/example#8": { ...FLAT[0].prInfo[`spy4x/example#2`], closingIssues: [] } },
+    }),
     unit(10, SONNET, 4, 0.5), // even issue assigns Opus, ran on Sonnet
   ]
   const { markdown } = renderReport(rows, plan)
-  assertStringIncludes(markdown, `1 of 7 trial units are not in the comparison`)
-  assertStringIncludes(markdown, `0 had no issue, so the lead chose their model, and 1 ran on`)
+  assertStringIncludes(markdown, `2 of 8 trial units are not in the comparison`)
+  assertStringIncludes(markdown, `1 had no issue, so the lead chose their model, and 1 ran on`)
 })
 
 t(`places each arm at its slot centre with y scaled from dollars`, () => {
@@ -263,4 +269,83 @@ t(`warns about unbalanced arms by reviewed units, the count behind the cost figu
     ...[1, 3, 5, 7].map((n) => unit(n, SONNET, 4.5, 0.5)),
   ]
   assertStringIncludes(flat(rows), `${note} (2 against 4 reviewed units)`)
+})
+
+/** Flat fixture where Sonnet is cheaper but needs two review rounds to Opus's one. */
+const ROUNDS = [
+  ...[2, 4, 6].map((n) => unit(n, OPUS, 6, 0.5)),
+  ...[1, 3, 5].map((n) => {
+    const pr = `spy4x/example#${n}`
+    const base = unit(n, SONNET, 4.5, 0.25)
+    const pass = base.reviews[pr][0]
+    return {
+      ...base,
+      reviews: { [pr]: [{ ...pass, verdict: `needs-fix` as const }, pass] },
+    }
+  }),
+]
+
+t(`the table says better, worse or no difference shown from each interval`, () => {
+  const { markdown } = renderReport(ROUNDS, plan)
+  assertStringIncludes(
+    markdown,
+    `| Total cost per PR (median) | $6.50 ($6.50 to $6.50) | $5.00 ($5.00 to $5.00) | ` +
+      `-$1.50 (-$1.50 to -$1.50) | Sonnet 5.5 better |`,
+  )
+  assertStringIncludes(
+    markdown,
+    `| Review rounds to pass (mean) | 1.00 (1.00 to 1.00) | 2.00 (2.00 to 2.00) | ` +
+      `1.00 (1.00 to 1.00) | Sonnet 5.5 worse |`,
+  )
+  assertStringIncludes(
+    markdown,
+    `| Review cost per PR (median) | $0.50 ($0.50 to $0.50) | $0.50 ($0.50 to $0.50) | ` +
+      `$0.00 ($0.00 to $0.00) | no difference shown |`,
+  )
+})
+
+t(`says the cost winner needs more review rounds when that interval excludes zero`, () => {
+  const bullet = `is cheaper per PR but needs more review rounds to pass`
+  assertStringIncludes(renderReport(ROUNDS, plan).markdown, `Sonnet 5.5 ${bullet}`)
+  assertEquals(renderReport(FLAT, plan).markdown.includes(bullet), false)
+})
+
+t(`draws each whisker from the interval's low end to its high end, with caps`, () => {
+  const arms = [
+    { label: `A`, n: 5, value: 7.5, lo: 6, hi: 9 },
+    { label: `B`, n: 5, value: 5, lo: 3, hi: 8 },
+  ]
+  // Top 9, step 5, axis max 10; y = 260 - v / 10 * 232.
+  const [a, b] = placeArms(arms)
+  assertEquals([a.yHi, a.y, a.yLo], [51.2, 86, 120.8])
+  assertEquals([b.yHi, b.y, b.yLo], [74.4, 144, 190.4])
+  const svg = renderChart(arms, { title: `t`, desc: `d`, yLabel: `y` })
+  assertStringIncludes(svg, `<line x1="168" y1="51.2" x2="168" y2="120.8"`)
+  assertStringIncludes(svg, `<line x1="158" y1="51.2" x2="178" y2="51.2"`)
+  assertStringIncludes(svg, `<line x1="158" y1="120.8" x2="178" y2="120.8"`)
+  assertStringIncludes(svg, `<line x1="360" y1="74.4" x2="360" y2="190.4"`)
+})
+
+t(`the method note labels the arms, names the odd rule and counts other-model units`, () => {
+  const other = unit(12, `claude-haiku-5`, 1, 0.5)
+  const md = renderReport([...FLAT, other], plan).markdown
+  assertStringIncludes(md, `Opus 5.5 (arm A, 3 units, 3 reviewed) and Sonnet 5.5 (arm B, 3 units`)
+  assertStringIncludes(md, `odd issue numbers go to Sonnet 5.5, the others to Opus 5.5`)
+  assertStringIncludes(md, `1 trial units on other models`)
+  const even = renderReport(FLAT, { ...plan, oddIssues: `arm_a` }).markdown
+  assertStringIncludes(even, `even issue numbers go to Sonnet 5.5`)
+})
+
+t(`removes a stale chart.svg when the report has no chart`, async () => {
+  const dir = await Deno.makeTempDir({ prefix: `experiment-report-test-` })
+  try {
+    await Deno.writeTextFile(join(dir, `plan.md`), PLAN)
+    await Deno.writeTextFile(join(dir, `lanes.jsonl`), ``)
+    await Deno.writeTextFile(join(dir, `chart.svg`), `<svg/>`)
+    await writeReport(dir)
+    const names = [...Deno.readDirSync(dir)].map((e) => e.name).sort()
+    assertEquals(names, [`lanes.jsonl`, `plan.md`, `report.md`])
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
 })

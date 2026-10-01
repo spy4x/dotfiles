@@ -173,6 +173,20 @@ export function renderReport(
         `averages out luck better than the smaller one.`,
     )
   }
+  const roundsOf = (us: Unit[]) =>
+    reviewedOf(us).flatMap((u) => u.rounds === null ? [] : [u.rounds])
+  const rounds = bootstrapDifference(roundsOf(ruleA), roundsOf(ruleB), mean, options)
+  if (diff && !crossesZero(diff) && rounds && !crossesZero(rounds)) {
+    const winner = diff.value < 0 ? nameB : nameA
+    // Rounds: B minus A. The cost winner is worse on rounds when it needs more of them.
+    if ((diff.value < 0) === (rounds.value > 0)) {
+      doubts.push(
+        `${winner} is cheaper per PR but needs more review rounds to pass (mean difference ` +
+          `${rounds.value.toFixed(2)} for ${nameB} minus ${nameA}, interval excludes zero). The ` +
+          `headline is about cost only.`,
+      )
+    }
+  }
   const leftOut = trial.length - ruleA.length - ruleB.length
   if (leftOut > 0) {
     const noIssue = trial.filter((u) => u.issue === null).length
@@ -233,18 +247,20 @@ export function renderReport(
   out.push(``)
 
   out.push(`## Method`, ``)
+  const otherModels = units.filter((u) => u.period === `C` && u.model !== A && u.model !== B)
+    .length
   const reviewedA = reviewedOf(ruleA).length
   const reviewedB = reviewedOf(ruleB).length
   out.push(
-    `- Arms: ${nameA} (baseline, ${ruleA.length} units, ${reviewedA} reviewed) and ${nameB} ` +
-      `(${ruleB.length} units, ${reviewedB} reviewed). Cost figures use the reviewed units.`,
+    `- Arms: ${nameA} (arm A, ${ruleA.length} units, ${reviewedA} reviewed) and ${nameB} ` +
+      `(arm B, ${ruleB.length} units, ${reviewedB} reviewed). Cost figures use the reviewed units.`,
     `- A unit is the implementer lanes that share a pull request, with the reviews of that PR. ` +
       `Lanes with no PR form no unit.`,
     `- Arm assignment: ${
       plan.oddIssues === `arm_b` ? `odd` : `even`
     } issue numbers go to ${nameB}, the others to ${nameA}.`,
-    `- Excluded from the comparison: ${leftOut} trial units (see above), and every unit that ` +
-      `started before ${plan.trialStart}.`,
+    `- Excluded from the comparison: ${leftOut} trial units (see above), ${otherModels} trial ` +
+      `units on other models, and every unit that started before ${plan.trialStart}.`,
     `- Intervals: percentile bootstrap, 95%, seed ${seed}, ${iterations} resamples. The same ` +
       `seed and data give the same figures.`,
     `- Cost is each API response priced once, from the token counts the transcripts record.`,
@@ -343,7 +359,16 @@ export async function writeReport(folder: string, options: BootstrapOptions = {}
   const rows = parseRows(await Deno.readTextFile(join(folder, `lanes.jsonl`)))
   const report = renderReport(rows, plan, options)
   await Deno.writeTextFile(join(folder, `report.md`), report.markdown)
-  if (report.chart) await Deno.writeTextFile(join(folder, `chart.svg`), report.chart)
+  if (report.chart) {
+    await Deno.writeTextFile(join(folder, `chart.svg`), report.chart)
+  } else {
+    // A chart left by an earlier run would now disagree with the report.
+    try {
+      await Deno.remove(join(folder, `chart.svg`))
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) throw error
+    }
+  }
   return report
 }
 
