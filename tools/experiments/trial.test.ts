@@ -424,8 +424,17 @@ t(
 t(`rejects a command line without a run folder or without --log`, () => {
   assertThrows(() => parseCli([`--log`, `x.md`]), UsageError, `exactly one run folder`)
   assertThrows(() => parseCli([`run`]), UsageError, `--log`)
-  assertThrows(() => parseCli([`run`, `--log`, `x`, `--since`, `soon`]), UsageError, `--since`)
   assertEquals(parseCli([`run`, `--log`, `x.md`]).since, `2026-10-01T00:00:00Z`)
+})
+
+t(`rejects a --since that is not an ISO date or a time with its zone`, () => {
+  const since = (value: string) => parseCli([`run`, `--log`, `x`, `--since`, value]).since
+  for (const bad of [`1`, `soon`, `2026-02-30`, `2026-10-01T00:00`, `10/01/2026`]) {
+    assertThrows(() => since(bad), UsageError, `--since must be an ISO date`)
+  }
+  for (const good of [`2026-10-01`, `2026-10-01T14:48:42Z`, `2026-10-01T21:48:42+07:00`]) {
+    assertEquals(since(good), good)
+  }
 })
 
 t(`reads lanes.jsonl and the log from disk and prints the report`, async () => {

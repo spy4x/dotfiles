@@ -542,7 +542,8 @@ export function renderTrial(input: TrialInput): string {
 // Exit codes: 0 report printed, 1 failure, 2 bad command line, 3 report printed and it holds a
 // trial-stopping line.
 const USAGE =
-  `usage: trial.ts <run folder> --log <markdown file> [--since ISO] [--projects <dir>] [--seed N] [--iterations N]`
+  `usage: trial.ts <run folder> --log <markdown file> [--since ISO] [--projects <dir>] ` +
+  `[--seed N] [--iterations N]`
 
 /** A command line the trial view cannot run with. */
 export class UsageError extends Error {
@@ -550,6 +551,18 @@ export class UsageError extends Error {
     super(`${message}\n${USAGE}`)
     this.name = `UsageError`
   }
+}
+
+/**
+ * True for a real calendar day written `YYYY-MM-DD`, alone or followed by a time with `Z` or an
+ * offset. `Date.parse` alone would take `1` as the year 2001.
+ */
+export function isIsoInstant(value: string): boolean {
+  const m = value.match(
+    /^(\d{4}-\d{2}-\d{2})(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2}))?$/,
+  )
+  return m !== null && !Number.isNaN(Date.parse(value)) &&
+    new Date(`${m[1]}T00:00:00Z`).toISOString().startsWith(m[1])
 }
 
 /** Reads the command line. */
@@ -570,7 +583,12 @@ export function parseCli(args: string[]): {
   if (parsed._.length !== 1) throw new UsageError(`give exactly one run folder`)
   if (!parsed.log) throw new UsageError(`--log <markdown file> is required`)
   const since = parsed.since ?? TRIAL_START
-  if (Number.isNaN(Date.parse(since))) throw new UsageError(`--since is not a date: "${since}"`)
+  if (!isIsoInstant(since)) {
+    throw new UsageError(
+      `--since must be an ISO date (2026-10-01) or a time with its zone ` +
+        `(2026-10-01T00:00:00Z), not "${since}"`,
+    )
+  }
   const whole = (name: string, value: string | undefined, min: number) => {
     if (value === undefined) return undefined
     if (!/^-?\d+$/.test(value) || Number(value) < min) {
