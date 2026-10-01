@@ -417,9 +417,12 @@ trial. Write the reviewer model into the lane's brief file before the first
 review, and never pick it by difficulty. Re-reviews continue the same reviewer.
 When a `sonnet` reviewer passes a PR whose issue number is divisible by 3, a
 fresh `opus` reviewer reviews the same commit before the merge: its verdict
-decides the merge, and its findings are what Sonnet missed. Record each such
-pair (issue, both verdicts, Opus findings with severity) in the experiment
-file's log.
+decides the merge, and its findings are what Sonnet missed. If it says
+`needs-fix`, the Opus reviewer owns the PR from then on and re-reviews the
+fixes, and its verdicts count toward the three-verdict cap. This double-check is
+the trial's one exception to one reviewer per diff. Record each such pair
+(issue, both verdicts, Opus findings with severity) in the experiment file's
+log.
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
 Effort belongs to the agent type, not to the call.
