@@ -51,7 +51,8 @@ deno task experiment:analyse <run folder> [--seed 1] [--iterations 10000]
 
 Prints Markdown. Medians and rates carry a seeded percentile bootstrap 95% interval; each
 arm-to-arm difference says whether its interval crosses zero. Cost is judged per PR; per-100-line
-rows are kept to match the published trial tables.
+rows are kept to match the published trial tables. Flags go before or after the folder; a seed or
+iteration count that is not a whole number stops the command with exit 2.
 
 - Table 1 holds every unit of each period, whatever assigned its model.
 - The headline and Table 2 compare only trial units whose issue number assigned the model they ran

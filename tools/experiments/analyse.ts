@@ -13,6 +13,7 @@
 // Ported from the 29-30 September trial's `units2.py` and `compare4.py`; the grouping and the
 // column definitions are the same so its published tables can be reproduced.
 
+import { parseArgs } from "jsr:@std/cli@1.0.32/parse-args"
 import { join } from "jsr:@std/path@1.1.6"
 import { type PrInfo, type ReviewRound, SCHEMA_VERSION } from "./schema.ts"
 import type { LaneRow } from "./schema.ts"
@@ -653,9 +654,43 @@ export function renderReport(
 
 // ===== CLI =====
 
-function flag(args: string[], name: string): string | undefined {
-  const i = args.indexOf(name)
-  return i === -1 ? undefined : args[i + 1]
+const USAGE = `usage: analyse.ts <run folder> [--seed N] [--iterations N]`
+
+/** A command line the analysis cannot run with. */
+export class UsageError extends Error {
+  constructor(message: string) {
+    super(`${message}\n${USAGE}`)
+    this.name = `UsageError`
+  }
+}
+
+/**
+ * Reads the command line: flags first, so `--seed 7 <folder>` takes the folder, never `7`. The
+ * seed must be a whole number and the iterations a positive whole number.
+ */
+export function parseCli(args: string[]): { folder: string; options: BootstrapOptions } {
+  const parsed = parseArgs(args, {
+    string: [`seed`, `iterations`],
+    unknown: (arg) => {
+      if (arg.startsWith(`-`)) throw new UsageError(`unknown flag ${arg}`)
+      return true
+    },
+  })
+  if (parsed._.length !== 1) throw new UsageError(`give exactly one run folder`)
+  const whole = (name: string, value: string | undefined, min: number) => {
+    if (value === undefined) return undefined
+    if (!/^-?\d+$/.test(value) || Number(value) < min) {
+      throw new UsageError(`--${name} must be a whole number of at least ${min}, not "${value}"`)
+    }
+    return Number(value)
+  }
+  return {
+    folder: String(parsed._[0]),
+    options: {
+      seed: whole(`seed`, parsed.seed, Number.MIN_SAFE_INTEGER),
+      iterations: whole(`iterations`, parsed.iterations, 1),
+    },
+  }
 }
 
 /** Reads a run folder and renders its report; throws `PlanError` when `plan.md` is missing. */
@@ -681,20 +716,15 @@ export async function analyseFolder(
 }
 
 if (import.meta.main) {
-  const folder = Deno.args.find((a) => !a.startsWith(`--`))
-  if (!folder) {
-    console.error(`usage: analyse.ts <run folder> [--seed N] [--iterations N]`)
+  let cli: ReturnType<typeof parseCli>
+  try {
+    cli = parseCli(Deno.args)
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error)
     Deno.exit(2)
   }
-  const seed = flag(Deno.args, `--seed`)
-  const iterations = flag(Deno.args, `--iterations`)
   try {
-    console.log(
-      await analyseFolder(folder, {
-        seed: seed === undefined ? undefined : Number(seed),
-        iterations: iterations === undefined ? undefined : Number(iterations),
-      }),
-    )
+    console.log(await analyseFolder(cli.folder, cli.options))
   } catch (error) {
     console.error(`analyse failed: ${error instanceof Error ? error.message : error}`)
     Deno.exit(1)

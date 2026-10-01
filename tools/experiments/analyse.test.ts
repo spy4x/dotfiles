@@ -5,10 +5,12 @@ import {
   analyseFolder,
   assignedArm,
   buildUnits,
+  parseCli,
   parsePlan,
   parseRows,
   PlanError,
   renderReport,
+  UsageError,
 } from "./analyse.ts"
 import type { LaneRow, PrInfo, ReviewRound } from "./schema.ts"
 
@@ -311,4 +313,46 @@ t(`takes a unit's issue from its first PR in sorted order when no brief names on
   })
   const [unit] = buildUnits([lane], plan)
   assertEquals([unit.issue, unit.issueSource], [66, `closing ref`])
+})
+
+t(`reads flags before the folder, so --seed 7 <folder> takes the folder`, () => {
+  assertEquals(parseCli([`--seed`, `7`, `/runs/a`]), {
+    folder: `/runs/a`,
+    options: { seed: 7, iterations: undefined },
+  })
+  assertEquals(parseCli([`/runs/a`, `--iterations=500`]).options.iterations, 500)
+})
+
+t(`rejects a seed or iteration count that is not a whole number`, () => {
+  for (
+    const args of [
+      [`--iterations`, `abc`, `/runs/a`],
+      [`--iterations`, `0`, `/runs/a`],
+      [`--seed`, `1.5`, `/runs/a`],
+      [`--seed`, `/runs/a`],
+      [`--sed`, `7`, `/runs/a`],
+    ]
+  ) {
+    let error: unknown
+    try {
+      parseCli(args)
+    } catch (e) {
+      error = e
+    }
+    assertEquals(error instanceof UsageError, true, `accepted ${args.join(` `)}`)
+  }
+})
+
+t(`the command exits 2 on a bad flag and prints no report`, async () => {
+  const result = await new Deno.Command(Deno.execPath(), {
+    args: [`run`, `-A`, ANALYSE, `--iterations`, `abc`, `/nonexistent-run`],
+    stdout: `piped`,
+    stderr: `piped`,
+  }).output()
+  assertEquals(result.code, 2)
+  assertStringIncludes(
+    new TextDecoder().decode(result.stderr),
+    `--iterations must be a whole number`,
+  )
+  assertEquals(new TextDecoder().decode(result.stdout), ``)
 })
