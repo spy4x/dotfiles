@@ -1,0 +1,17 @@
+# Woodpecker CI (self-hosted, same instance as the other spy4x repos).
+# `deno task ai --check` is left out on purpose: it compares this machine's harness
+# folders, and CI has none to compare.
+when:
+  - event: [push, pull_request]
+    branch: main
+
+steps:
+  check:
+    image: denoland/deno:2.9.7
+    commands:
+      # The image has neither `git` nor `ps`; the env-key-copy and sweep-orphans tests run both.
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git procps
+      - deno --version
+      - deno fmt --check
+      - deno lint
+      - deno task test
