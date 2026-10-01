@@ -131,6 +131,20 @@ Deno.test(`--kill stops the listed orphans and nothing outside --under`, async (
   })
 })
 
+Deno.test(`still lists an orphan when USER is unset, as in a CI container`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const pid = await orphan(await dir(`lane`), ME)
+    spawned.push(pid)
+    const { stdout } = await new Deno.Command(`bash`, {
+      args: [`-c`, `unset USER; exec bash "$1"`, `bash`, SCRIPT],
+      env: { CLAUDE_CODE_SESSION_ID: ME },
+      stdout: `piped`,
+      stderr: `null`,
+    }).output()
+    assert(new TextDecoder().decode(stdout).split(`\n`).some((l) => l.startsWith(`${pid} `)))
+  })
+})
+
 Deno.test(`never lists its own ancestors, even when they are orphans`, async () => {
   await withOrphans(async (dir, spawned) => {
     const lane = await dir(`lane`)

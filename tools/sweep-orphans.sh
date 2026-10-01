@@ -63,7 +63,7 @@ while (($#)); do
   esac
 done
 
-MGR=$(pgrep -xu "$USER" systemd || echo 1)
+MGR=$(pgrep -xu "${USER:-$(id -un)}" systemd || echo 1)
 
 # Never signal these: init, the user manager (SIGTERM = log out) and this script's ancestors.
 SAFE=" 1 $MGR "
