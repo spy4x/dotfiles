@@ -3,8 +3,19 @@
 #
 # A tool call's children inherit the harness's cgroup and keep it when they are
 # reparented, so orphans are members of this cgroup whose parent is now init or
-# the systemd user manager. Anything that moves itself to a fresh cgroup (a
-# Docker container, `systemd-run --scope`) is invisible here: clean it by name.
+# the systemd user manager. A Docker container moves to a fresh cgroup and is
+# invisible here: clean it by name.
+#
+# `systemd-run --user --scope` also moves its command to a fresh cgroup, a
+# transient unit named `run-*.scope`. When its `timeout` dies first, the
+# children keep the unit alive. So the sweep also lists active `run-*.scope`
+# user units older than `--min-age` seconds (default 3600, so a capped test
+# run still in progress does not show). Scopes are machine-wide, so a scope
+# counts as this session's only when one of its processes names this
+# CLAUDE_CODE_SESSION_ID, or, with `--under`, runs inside one of the given
+# directories; one process naming another session hides it. Without a session
+# ID or `--under`, only `--all` lists scopes. Without a systemd user manager
+# (a CI container) there are no such units and this part is skipped.
 #
 # Every desktop-app session shares one cgroup, so the cgroup alone would list
 # every sibling session's orphans too. Inside a Claude Code session, a process
@@ -30,7 +41,8 @@
 # `--kill` stops what it lists: SIGTERM, then SIGKILL for anything still alive
 # after three seconds, and `systemctl --user stop` for each listed scope. It
 # never signals PID 1, the user manager or its own ancestors, nor stops a scope
-# holding one of them, so there is no PID to copy by hand. Pair it with
+# holding one of them, so there is no PID to copy by hand. A scope still active
+# after its stop is named on stderr, and the exit code is 1. Pair it with
 # `--under`.
 #
 # Needs Linux with cgroup v2 and a systemd user manager. Elsewhere it fails
@@ -45,6 +57,7 @@ USAGE="usage: sweep-orphans.sh [--all] [--kill] [--min-age <seconds>] [--under <
 ALL=0
 KILL=0
 MIN_AGE=3600
+FAILED=0
 UNDER=()
 while (($#)); do
   case $1 in
@@ -117,6 +130,15 @@ foreign() {
   [[ -n $sid && $sid != "$CLAUDE_CODE_SESSION_ID" ]]
 }
 
+# Whether a process names this Claude Code session.
+mine() {
+  local sid
+  [[ -n ${CLAUDE_CODE_SESSION_ID:-} ]] || return 1
+  sid=$(tr '\0' '\n' 2>/dev/null <"/proc/$1/environ" | sed -n 's/^CLAUDE_CODE_SESSION_ID=//p') ||
+    sid=
+  [[ $sid == "$CLAUDE_CODE_SESSION_ID" ]]
+}
+
 # Whether a process runs inside one of the --under directories (always true without --under).
 under() {
   local cwd dir
@@ -169,15 +191,19 @@ if ((MGR != 1)); then
     cmd=$(sed -n 's/^Description=//p' <<<"$props")
     cmd=${cmd#\[systemd-run\] }
     [[ $started == +([0-9]) && -n $cgroup ]] || continue
-    ((NOW - started >= MIN_AGE)) || continue
-    [[ $cgroup == "$CG" ]] && continue
+    ((NOW - started >= 10#$MIN_AGE)) || continue
     procs=$(cat "/sys/fs/cgroup$cgroup/cgroup.procs" 2>/dev/null) || continue
-    # One process of another session or one ancestor hides the scope; one inside --under keeps it.
+    # One process of another session or one ancestor hides the scope. Otherwise one process inside
+    # --under keeps it, and without --under one process of this session (any process with --all).
     keep=0
     for pid in $procs; do
       [[ $SAFE == *" $pid "* ]] && continue 2
       foreign "$pid" && continue 2
-      under "$pid" && keep=1
+      if ((${#UNDER[@]})); then
+        under "$pid" && keep=1
+      elif ((ALL)) || mine "$pid"; then
+        keep=1
+      fi
     done
     ((keep)) || continue
     cpu=$(ps -o pcpu= -p "$(paste -sd, <<<"$procs")" | awk '{s += $1} END {printf "%.1f", s}') ||
@@ -197,9 +223,18 @@ if ((${#SCOPES[@]})); then
     STOP+=("${line%% *}")
   done
   systemctl --user stop "${STOP[@]}" || true
-  echo "stopped ${#STOP[@]} scopes" >&2
+  running=()
+  for unit in "${STOP[@]}"; do
+    systemctl --user is-active --quiet "$unit" && running+=("$unit")
+  done
+  if ((${#running[@]})); then
+    echo "stopped $((${#STOP[@]} - ${#running[@]})) scopes; still active: ${running[*]}" >&2
+    FAILED=1
+  else
+    echo "stopped ${#STOP[@]} scopes" >&2
+  fi
 fi
-((${#LISTED[@]})) || exit 0
+((${#LISTED[@]})) || exit "$FAILED"
 
 PIDS=()
 for line in "${LISTED[@]}"; do
@@ -220,3 +255,4 @@ if ((${#alive[@]})); then
 else
   echo "killed ${#PIDS[@]}" >&2
 fi
+exit "$FAILED"

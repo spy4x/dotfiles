@@ -232,10 +232,11 @@ async function withScope(
   cwd: string,
   session: string,
   scopes: { unit: string; child: Deno.ChildProcess }[],
+  command = [`sleep`, `120`],
+  unit = `run-sweep-test-${crypto.randomUUID()}.scope`,
 ): Promise<string> {
-  const unit = `run-sweep-test-${crypto.randomUUID()}.scope`
   const child = new Deno.Command(`systemd-run`, {
-    args: [`--user`, `--scope`, `--collect`, `--quiet`, `--unit`, unit, `sleep`, `120`],
+    args: [`--user`, `--scope`, `--collect`, `--quiet`, `--unit`, unit, ...command],
     cwd,
     env: { CLAUDE_CODE_SESSION_ID: session },
     stdout: `null`,
@@ -312,6 +313,54 @@ Deno.test({
 })
 
 Deno.test({
+  name: `lists a scope without a session ID only with --all or --under`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const lane = await dir(`lane`)
+      // Started outside Claude Code, the way the owner or another harness would.
+      const unit = await withScope(lane, ME, scopes, [
+        `env`,
+        `-u`,
+        `CLAUDE_CODE_SESSION_ID`,
+        `sleep`,
+        `120`,
+      ])
+      assert(!(await sweepNames(`--min-age`, `0`)).names.includes(unit))
+      assert((await sweepNames(`--all`, `--min-age`, `0`)).names.includes(unit))
+      assert((await sweepNames(`--min-age`, `0`, `--under`, lane)).names.includes(unit))
+    }),
+})
+
+Deno.test({
+  name: `never lists its own scope or a scope holding one of its ancestors`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const lane = await dir(`lane`)
+      const out = join(lane, `out`)
+      const inner = `run-sweep-test-${crypto.randomUUID()}.scope`
+      // The outer scope holds `sh`, the sweep's parent; the inner scope holds the sweep itself.
+      const outer = await withScope(lane, ME, scopes, [
+        `sh`,
+        `-c`,
+        `systemd-run --user --scope --collect --quiet --unit "$1" bash "$2" --min-age 0 > "$3.tmp"; mv "$3.tmp" "$3"; sleep 120`,
+        `sh`,
+        inner,
+        SCRIPT,
+        out,
+      ])
+      for (let i = 0; i < 50 && !(await exists(out)); i++) {
+        await new Promise((r) => setTimeout(r, 100))
+      }
+      const names = (await Deno.readTextFile(out)).split(`\n`).filter(Boolean)
+        .map((line) => line.split(` `)[0])
+      assert(!names.includes(inner), `the sweep listed its own scope`)
+      assert(!names.includes(outer), `the sweep listed its parent's scope`)
+    }),
+})
+
+Deno.test({
   name: `--kill stops the listed scope and no scope outside --under`,
   ignore: noScopes,
   fn: () =>
@@ -331,4 +380,22 @@ Deno.test({
 Deno.test(`rejects --min-age without a number of seconds`, async () => {
   assertEquals((await sweepNames(`--min-age`, `soon`)).code, 2)
   assertEquals((await sweepNames(`--min-age`)).code, 2)
+})
+
+Deno.test({
+  name: `reads --min-age with a leading zero as decimal`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      // The age is compared only when a scope exists.
+      await withScope(await dir(`lane`), ME, scopes)
+      const { code, stdout, stderr } = await new Deno.Command(`bash`, {
+        args: [SCRIPT, `--min-age`, `08`, `--under`, await dir(`empty`)],
+        stdout: `piped`,
+        stderr: `piped`,
+      }).output()
+      assertEquals(new TextDecoder().decode(stderr), ``)
+      assertEquals(code, 0)
+      assertEquals(new TextDecoder().decode(stdout), ``)
+    }),
 })
