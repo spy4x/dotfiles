@@ -39,8 +39,9 @@ is applied here.
   the checks itself, breaks the code to prove each test goes red, and counts every claim in the
   PR body. Its verdict is what authorises a merge.
 - **Nothing left running.** [`tools/sweep-orphans.sh`](tools/sweep-orphans.sh) lists the
-  processes an agent session left behind, and kills exactly those on request. The rules cap
-  the processes and memory of anything that spawns processes, and give every wait a deadline.
+  processes and stale `systemd-run` scopes an agent session left behind, and stops exactly
+  those on request. The rules cap the processes and memory of anything that spawns processes,
+  and give every wait a deadline.
 - **Costs you can see.** [`tools/session-cost.ts`](tools/session-cost.ts) reports each session's
   and subagent's cost, peak context and compactions from Claude Code's transcripts.
 - **Secrets stay local.** Committed env files are age-encrypted one value per line, and
