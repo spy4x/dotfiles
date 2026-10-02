@@ -185,3 +185,150 @@ Deno.test(`refuses to kill other sessions' orphans`, async () => {
     assertEquals((await sweep(`--all`, `--kill`, `--under`, await dir(`empty`))).code, 2)
   })
 })
+
+/** Whether a systemd user manager answers; `systemctl` itself may be missing. */
+async function hasUserManager(): Promise<boolean> {
+  try {
+    return (await new Deno.Command(`systemctl`, {
+      args: [`--user`, `show-environment`],
+      stdout: `null`,
+      stderr: `null`,
+    }).output()).success
+  } catch {
+    return false
+  }
+}
+
+// A CI container has no systemd user manager, so it cannot start a scope. Anywhere else a missing
+// manager fails these tests instead of skipping them.
+const noScopes = !(await hasUserManager()) && Deno.env.get(`CI`) === `true`
+
+/** Runs the sweep as session `ME` and returns the first column of each line and its exit code. */
+async function sweepNames(...args: string[]): Promise<{ names: string[]; code: number }> {
+  const { code, stdout } = await new Deno.Command(`bash`, {
+    args: [SCRIPT, ...args],
+    env: { CLAUDE_CODE_SESSION_ID: ME },
+    stdout: `piped`,
+    stderr: `null`,
+  }).output()
+  const names = new TextDecoder().decode(stdout).split(`\n`).filter(Boolean)
+    .map((line) => line.split(` `)[0])
+  return { names, code }
+}
+
+async function active(unit: string): Promise<boolean> {
+  const { stdout } = await new Deno.Command(`systemctl`, {
+    args: [`--user`, `is-active`, unit],
+    stdout: `piped`,
+  }).output()
+  return new TextDecoder().decode(stdout).trim() === `active`
+}
+
+/**
+ * Starts `sleep 120` in a `run-sweep-test-*.scope` user unit, the way `systemd-run --user --scope`
+ * caps a test run, in `cwd` and tagged with `session`. The unit is stopped when the test ends.
+ */
+async function withScope(
+  cwd: string,
+  session: string,
+  scopes: { unit: string; child: Deno.ChildProcess }[],
+): Promise<string> {
+  const unit = `run-sweep-test-${crypto.randomUUID()}.scope`
+  const child = new Deno.Command(`systemd-run`, {
+    args: [`--user`, `--scope`, `--collect`, `--quiet`, `--unit`, unit, `sleep`, `120`],
+    cwd,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    stdout: `null`,
+    stderr: `null`,
+  }).spawn()
+  scopes.push({ unit, child })
+  for (let i = 0; i < 50 && !(await active(unit)); i++) {
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  assert(await active(unit), `the scope did not start`)
+  return unit
+}
+
+/** Temp directories and scopes for one test, removed and stopped even when it fails. */
+async function withScopes(
+  body: (
+    dir: (name: string) => Promise<string>,
+    scopes: { unit: string; child: Deno.ChildProcess }[],
+  ) => Promise<void>,
+): Promise<void> {
+  const scopes: { unit: string; child: Deno.ChildProcess }[] = []
+  await withOrphans(async (dir) => {
+    try {
+      await body(dir, scopes)
+    } finally {
+      for (const { unit, child } of scopes) {
+        await new Deno.Command(`systemctl`, { args: [`--user`, `stop`, unit], stderr: `null` })
+          .output()
+        await child.status
+      }
+    }
+  })
+}
+
+Deno.test({
+  name: `lists a stale scope of the current session with its age, CPU and command`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const unit = await withScope(await dir(`lane`), ME, scopes)
+      const { stdout } = await new Deno.Command(`bash`, {
+        args: [SCRIPT, `--min-age`, `0`],
+        env: { CLAUDE_CODE_SESSION_ID: ME },
+        stdout: `piped`,
+      }).output()
+      const line = new TextDecoder().decode(stdout).split(`\n`).find((l) =>
+        l.startsWith(`${unit} `)
+      )
+      assert(line, `the scope is not listed`)
+      assert(/^\S+ [\d:-]+ [\d.]+ \S*sleep 120$/.test(line), line)
+    }),
+})
+
+Deno.test({
+  name: `does not list a scope younger than --min-age`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const unit = await withScope(await dir(`lane`), ME, scopes)
+      assert(!(await sweepNames()).names.includes(unit))
+      assert(!(await sweepNames(`--min-age`, `600`)).names.includes(unit))
+    }),
+})
+
+Deno.test({
+  name: `hides another session's scope unless --all is given`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const unit = await withScope(await dir(`lane`), SIBLING, scopes)
+      assert(!(await sweepNames(`--min-age`, `0`)).names.includes(unit))
+      assert((await sweepNames(`--all`, `--min-age`, `0`)).names.includes(unit))
+    }),
+})
+
+Deno.test({
+  name: `--kill stops the listed scope and no scope outside --under`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const mine = await dir(`mine`)
+      const inside = await withScope(mine, ME, scopes)
+      const outside = await withScope(await dir(`theirs`), ME, scopes)
+      const { names, code } = await sweepNames(`--kill`, `--min-age`, `0`, `--under`, mine)
+      assertEquals(code, 0)
+      assert(names.includes(inside))
+      assert(!names.includes(outside), `a scope outside --under is listed`)
+      assert(!(await active(inside)), `the listed scope still runs`)
+      assert(await active(outside), `a scope outside --under was stopped`)
+    }),
+})
+
+Deno.test(`rejects --min-age without a number of seconds`, async () => {
+  assertEquals((await sweepNames(`--min-age`, `soon`)).code, 2)
+  assertEquals((await sweepNames(`--min-age`)).code, 2)
+})
