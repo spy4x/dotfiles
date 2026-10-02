@@ -201,7 +201,7 @@ async function hasUserManager(): Promise<boolean> {
 
 // A CI container has no systemd user manager, so it cannot start a scope. Anywhere else a missing
 // manager fails these tests instead of skipping them.
-const noScopes = !(await hasUserManager()) && Deno.env.get(`CI`) === `true`
+const noScopes = !(await hasUserManager()) && Boolean(Deno.env.get(`CI`))
 
 /** Runs the sweep as session `ME` and returns the first column of each line and its exit code. */
 async function sweepNames(...args: string[]): Promise<{ names: string[]; code: number }> {
