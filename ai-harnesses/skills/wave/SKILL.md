@@ -61,7 +61,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   behaviour defect (the code does the wrong thing, not a missing test, a false claim or wording),
   and the fix is bigger than the ones you apply yourself, send that one fix round one step up, to a
   fresh agent. A `sonnet` lane goes to `implementer` with `model: opus`: the model switch is the big
-  step, at a fraction of the cost of `xhigh`. An `opus` lane goes to `implementer-xhigh`, because
+  step, and most likely cheaper than `xhigh`. An `opus` lane goes to `implementer-xhigh`, because
   effort is the only thing left to raise; its first six rounds (2026-09-25 to 10-01) cost $4 to $29
   each, and nothing has yet measured whether `xhigh` beats `medium`. The brief is the original
   brief, every verdict so far, the branch name and the PR URL, and says the PR already exists; it

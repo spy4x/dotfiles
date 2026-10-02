@@ -422,8 +422,8 @@ much as Opus and passed 0 of 8 first reviews), for auth, crypto, payments and
 other security-sensitive work (a miss costs too much, and the trial had too few
 such tasks to judge). Decide the model from the repo and the kind of work before
 the lane starts, and keep it for the lane's fix rounds until the one escalation
-round in the `wave` skill: a `sonnet` lane escalates to `opus` at `medium`
-effort, an `opus` lane to `implementer-xhigh`.
+round in the `wave` skill: a `sonnet` lane escalates to `implementer` on
+`opus`, an `opus` lane to `implementer-xhigh`.
 
 **Sonnet 5.5 reviewer trial** (from 2026-10-01, while
 `~/sync/code/ai-memory/experiments/sonnet55-reviewer.md` says `running`): a PR's
