@@ -54,15 +54,19 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - Implementers start at `implementer` (`medium`): don't guess difficulty up front.
 - Each implementer lane's `model` follows the global `AGENTS.md` ("Implementers → `sonnet`"):
   `sonnet` by default, `opus` for UI component libraries and security-sensitive work. Write it in
-  the lane's brief file. Fix rounds keep it; the `implementer-xhigh` round runs on `opus`. The
-  reviewer's model follows the "Sonnet 5.5 reviewer trial" paragraph there while it runs, including
-  the Opus double-check on every Sonnet pass whose issue number is divisible by 3.
+  the lane's brief file. Fix rounds keep it until the escalation below. The reviewer's model follows
+  the "Sonnet 5.5 reviewer trial" paragraph there while it runs, including the Opus double-check on
+  every Sonnet pass whose issue number is divisible by 3.
 - Escalate once. When a PR's second `needs-fix` verdict, whatever the first was about, names a
   behaviour defect (the code does the wrong thing, not a missing test, a false claim or wording),
-  and the fix is bigger than the ones you apply yourself, send that one fix round to a fresh
-  `implementer-xhigh`. Its brief is the original brief, every verdict so far, the branch name and
-  the PR URL, and says the PR already exists; it reads `git diff origin/main...HEAD`. The
-  three-verdict cap then applies as usual. A harness without the variant keeps `implementer`.
+  and the fix is bigger than the ones you apply yourself, send that one fix round one step up, to a
+  fresh agent. A `sonnet` lane goes to `implementer` with `model: opus`: the model switch is the big
+  step, at a fraction of the cost of `xhigh`. An `opus` lane goes to `implementer-xhigh`, because
+  effort is the only thing left to raise; its first six rounds (2026-09-25 to 10-01) cost $4 to $29
+  each, and nothing has yet measured whether `xhigh` beats `medium`. The brief is the original
+  brief, every verdict so far, the branch name and the PR URL, and says the PR already exists; it
+  reads `git diff origin/main...HEAD`. The three-verdict cap then applies as usual. A harness
+  without `implementer-xhigh` uses `implementer`.
 - Reviewers stay at `medium`: `xhigh` and `max` rounds cost 5–9 times as much and did not cut
   review rounds (2026-09-25..26, `~/sync/code/ai-memory/experiments/model-comparison/`).
 
