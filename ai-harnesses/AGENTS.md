@@ -308,8 +308,8 @@ yourself from the first round: show
 the test red then green, and have the same reviewer confirm. After the third
 verdict, do that if about ten lines remain; otherwise leave the PR open with a
 comment on what is left, and move on. After a second `needs-fix` that names a
-behaviour defect, the `wave` skill says when to escalate to
-`implementer-xhigh`. Never count rejections in a summary, PR body or issue:
+behaviour defect, the `wave` skill says when and how to escalate that
+fix round. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
 undo it → leave the PR open and say so.
 
@@ -414,15 +414,16 @@ I re-enable it. Architecture and final verdicts stay with the lead. Fresh
 subagents over forks (a fork copies the whole conversation).
 
 **Implementers → `sonnet` (Sonnet 5.5)** by default. In the 2026-09-30 trial it
-cost about 0.57 times as much as Opus 5.5 per merged line, reviews included,
-though it passed its first review less often (13% against 33%)
+cost about 0.6 times as much as Opus 5.5 per merged line, reviews included,
+though it passed its first review less often (13% against 30%)
 (`~/sync/code/ai-memory/experiments/sonnet55-implementer.md`). Use `opus`
 instead for UI component libraries (`preact-components`: there Sonnet cost as
 much as Opus and passed 0 of 8 first reviews), for auth, crypto, payments and
 other security-sensitive work (a miss costs too much, and the trial had too few
-such tasks to judge), and for every `implementer-xhigh` fix round. Decide the
-model from the repo and the kind of work before the lane starts, and keep it for
-the lane's fix rounds; only the `implementer-xhigh` round switches to `opus`.
+such tasks to judge). Decide the model from the repo and the kind of work before
+the lane starts, and keep it for the lane's fix rounds until the one escalation
+round in the `wave` skill: a `sonnet` lane escalates to `implementer` on
+`opus`, an `opus` lane to `implementer-xhigh`.
 
 **Sonnet 5.5 reviewer trial** (from 2026-10-01, while
 `~/sync/code/ai-memory/experiments/sonnet55-reviewer.md` says `running`): a PR's
