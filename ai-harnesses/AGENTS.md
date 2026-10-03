@@ -407,9 +407,9 @@ context that makes it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
-whatever the task, except search/inventory → `haiku`, implementers and the
-reviewer trial (below). Opus 5.5 did the same work as Sonnet 5 in far fewer
-calls at about half the cost, and it matches Fable 5.1 faster and cheaper
+whatever the task, except search/inventory → `haiku` and implementers (below).
+Opus 5.5 did the same work as Sonnet 5 in far fewer calls at about half the
+cost, and it matches Fable 5.1 faster and cheaper
 (`~/sync/code/ai-memory/experiments/model-comparison/`). `fable` is paused until
 I re-enable it. Architecture and final verdicts stay with the lead. Fresh
 subagents over forks (a fork copies the whole conversation).
@@ -426,21 +426,12 @@ the lane starts, and keep it for the lane's fix rounds until the one escalation
 round in the `wave` skill: a `sonnet` lane escalates to `implementer` on
 `opus`, an `opus` lane to `implementer-xhigh`.
 
-**Sonnet 5.5 reviewer trial** (from 2026-10-01, while
-`~/sync/code/ai-memory/experiments/sonnet55-reviewer.md` says `running`): a PR's
-reviewer model comes from its issue number: odd → `model: sonnet`, even →
-`model: opus`; several issues → the lowest; no issue, `preact-components`, or
-auth, crypto, payments and other security-sensitive work → `opus`, outside the
-trial. Write the reviewer model into the lane's brief file before the first
-review, and never pick it by difficulty. Re-reviews continue the same reviewer.
-When a `sonnet` reviewer passes a PR whose issue number is divisible by 3, a
-fresh `opus` reviewer reviews the same commit before the merge: its verdict
-decides the merge, and its findings are what Sonnet missed. If it says
-`needs-fix`, the Opus reviewer owns the PR from then on and re-reviews the
-fixes, and its verdicts count toward the three-verdict cap. This double-check is
-the trial's one exception to one reviewer per diff. Record each such pair
-(issue, both verdicts, Opus findings with severity) in the experiment file's
-log.
+**Reviewers stay on `opus`.** In the 2026-10-01 trial, a fresh Opus reviewer
+re-checked 23 passes by a Sonnet 5.5 reviewer (28 PRs). It sent 15 back, and in
+6 it found a 🔴 bug, one of them injection into outgoing mail
+(`~/sync/code/ai-memory/experiments/sonnet55-reviewer.md`). The bar was a 🔴 in
+at most 1 in 10 Sonnet passes, and a 🔴 in a security path ended the trial at
+once.
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
 Effort belongs to the agent type, not to the call.
