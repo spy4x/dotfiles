@@ -371,7 +371,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 
 **Your authentic angle** (per "Voice with clients" in the global rules):
 
-- Show the work: screenshots and numbers make screenshot-driven tweets
+- Show the work: screenshots, numbers and shipped features
 - Warm, plain and transparent: explain the trade-offs you chose, invite replies, no fluff
 - 15 years experience = technical authority most indie devs lack
 

@@ -37,4 +37,5 @@ Steps:
    ## Recommended Next Step
    <one concrete action>
 
-The playbook is read later — full sentences. Ethics explicit. No tactic that costs trust or makes him servile.
+The playbook is read later — full sentences. Ethics explicit. No tactic that costs trust or makes
+him servile.
