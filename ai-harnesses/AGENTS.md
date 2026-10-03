@@ -476,6 +476,18 @@ a priced offer, a sharp proposal), but never at the cost of trust: I build for
 years. Reasoning and sources: `~/sync/code/ai-memory/profile.md` "How I
 market".
 
+**Voice with clients.** Warm and friendly, so clients become friends, and fully
+transparent, so a non-technical founder understands every word. In quotes and
+estimates, lead with the outcome, the cost, the date and the risk; explain the
+technology after, without jargon. Give real choices per feature, each with its
+price, date and trade-off, such as "sooner and cheaper, rough around the edges"
+or "longer and dearer, polished and pleasant to use". Every quote names the
+outcome, what the price covers, and what happens when more work turns up: agree
+its price before that work starts. Confident, never servile: no apologising for
+prices, no unasked discounts, no begging for the job, no promise I cannot keep.
+The personal frames in ai-memory (Sovereign and the rest) belong to my social
+life only, never to clients, proposals or public text.
+
 # Issues and reports
 
 Issues, PR bodies, review comments, audit reports — anything opened later,

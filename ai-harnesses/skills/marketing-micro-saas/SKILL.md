@@ -369,10 +369,10 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa @tony_dinh), join conversations
 - **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer quotes
 
-**Your authentic angle** (per your existing frames):
+**Your authentic angle** (per "Voice with clients" in the global rules):
 
-- "Show, don't tell" principle = perfect for screenshot-driven tweets
-- Sovereign + Evaluator frames = confident, terse, no fluff tweets
+- Show the work: screenshots, numbers and shipped features
+- Warm, plain and transparent: explain the trade-offs you chose, invite replies, no fluff
 - 15 years experience = technical authority most indie devs lack
 
 **Tone**: don't shill, share the journey. The product sells itself if the journey is interesting.
