@@ -427,10 +427,11 @@ round in the `wave` skill: a `sonnet` lane escalates to `implementer` on
 `opus`, an `opus` lane to `implementer-xhigh`.
 
 **Reviewers stay on `opus`.** In the 2026-10-01 trial, a fresh Opus reviewer
-re-checked 23 PRs that a Sonnet 5.5 reviewer had passed. It sent 15 back, and in
+re-checked 23 passes by a Sonnet 5.5 reviewer (28 PRs). It sent 15 back, and in
 6 it found a 🔴 bug, one of them injection into outgoing mail
-(`~/sync/code/ai-memory/experiments/sonnet55-reviewer.md`). The bar was at most
-1 in 10.
+(`~/sync/code/ai-memory/experiments/sonnet55-reviewer.md`). The bar was a 🔴 in
+at most 1 in 10 Sonnet passes, and a 🔴 in a security path ended the trial at
+once.
 
 **Effort.** `medium` for sessions, leads, implementers and every review.
 Effort belongs to the agent type, not to the call.
