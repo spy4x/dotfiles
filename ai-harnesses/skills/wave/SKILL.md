@@ -48,6 +48,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - A lane whose issue needs reusable code does the library part first. It opens its own worktree
   and PR in the library, and that PR is reviewed, merged and released before the consumer PR
   imports the release. Never brief a lane to write a local copy and file an issue to move it later.
+  A library change that two lanes need belongs to the serial spine.
 - The brief is all the agent sees. Write it in full sentences: worktree path, read-only sources,
   output paths, house style, the issue, and what to do when stuck (decide and document, don't
   stop). The agent owns its worktree, temp dirs and processes, and leaves nothing running.
