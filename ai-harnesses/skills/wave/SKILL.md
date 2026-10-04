@@ -45,6 +45,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - Serial spine first. If every unit needs one scaffold, schema or config, build and merge it alone,
   then fan out. Prove there is no contention by experiment (Deno skips absent workspace members, so
   pre-listed members mean zero shared files).
+- A lane whose issue needs reusable code does the library part first. It opens its own worktree
+  and PR in the library, and that PR is reviewed, merged and released before the consumer PR
+  imports the release. Never brief a lane to write a local copy and file an issue to move it later.
 - The brief is all the agent sees. Write it in full sentences: worktree path, read-only sources,
   output paths, house style, the issue, and what to do when stuck (decide and document, don't
   stop). The agent owns its worktree, temp dirs and processes, and leaves nothing running.
