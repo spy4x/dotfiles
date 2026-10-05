@@ -347,8 +347,9 @@ export async function collect(options: CollectOptions): Promise<LaneRow[]> {
       infos[pr] = prInfo.get(pr)!
       lanesReviews[pr] = reviews.get(pr) ?? []
     }
-    const firstReview = Object.values(lanesReviews).flat().map((r) => r.ts)
-      .filter((ts) => ts >= l.start).sort()[0]
+    // A lane that picks up a PR already reviewed gets no count: its calls are a fix round.
+    const earliest = Object.values(lanesReviews).flat().map((r) => r.ts).sort()[0]
+    const firstReview = earliest !== undefined && earliest >= l.start ? earliest : undefined
     const mergedLines = Object.values(infos)
       .filter((i) => i.state === `MERGED`)
       .reduce((sum, i) => sum + i.additions + i.deletions, 0)

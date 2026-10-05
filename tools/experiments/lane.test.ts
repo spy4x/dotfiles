@@ -72,8 +72,9 @@ t(`counts compactions, each tool call once and the most common effort`, () => {
     assistant(`m1`, OPUS, `2026-09-30T01:00:02.000Z`, {}, [
       { type: `tool_use`, id: `t1`, name: `Read`, input: {} },
     ], { effort: `medium` }),
-    line({ type: `system`, subtype: `compact_boundary`, timestamp: `2026-09-30T01:05:00.000Z` }),
+    // Out of order on disk: compactedAt still lists them oldest first.
     line({ type: `system`, subtype: `compact_boundary`, timestamp: `2026-09-30T01:06:00.000Z` }),
+    line({ type: `system`, subtype: `compact_boundary`, timestamp: `2026-09-30T01:05:00.000Z` }),
     assistant(`m2`, OPUS, `2026-09-30T01:07:00.000Z`, {}, [
       { type: `tool_use`, id: `t3`, name: `Edit`, input: {} },
     ], { effort: `high` }),

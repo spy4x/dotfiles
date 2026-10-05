@@ -169,6 +169,12 @@ t(
           ),
         ],
       })
+      // A later review, written first: the count still stops at the earliest one.
+      await writeLane(dir, {
+        id: `arev`,
+        meta: { agentType: `reviewer`, description: `Review PR 12` },
+        lines: reviewerLines(`2026-09-30T04:00:00.000Z`, `2026-09-30T04:05:00.000Z`),
+      })
       await writeLane(dir, {
         id: `rev`,
         meta: { agentType: `reviewer`, description: `Review PR 12` },
@@ -197,6 +203,12 @@ t(`a lane that picks up a PR reviewed before it started has no calls before revi
       id: `rev`,
       meta: { agentType: `reviewer`, description: `Review PR 12` },
       lines: reviewerLines(`2026-09-30T02:00:00.000Z`, `2026-09-30T02:05:00.000Z`),
+    })
+    // The review of its own fix round comes after it started; it still gets no count.
+    await writeLane(dir, {
+      id: `arev`,
+      meta: { agentType: `reviewer`, description: `Review PR 12` },
+      lines: reviewerLines(`2026-09-30T04:00:00.000Z`, `2026-09-30T04:05:00.000Z`),
     })
     const rows = await collect({ projectsDir: dir, exec: fakeExec() })
     assertEquals(rows.find((r) => r.role === `implementer`)!.callsBeforeReview, null)
