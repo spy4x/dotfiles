@@ -42,7 +42,8 @@ Collect all four before judging. A source that fails is named in the review, nev
    It reads the homelab database read-only over `ssh homelab`. A working day with no entries is a
    finding in itself: the analysis is blind there.
 2. **What shipped.** `gh search prs --owner spy4x --merged --merged-at <from>..<to> --json
-   repository,title,url --limit 100`. Group by repository; note which groups are tooling
+   repository,title,url --limit 1000`. GitHub search returns at most 1,000 results, and a
+   week has passed 500: a count of exactly 1,000 means split the range. Group by repository; note which groups are tooling
    (dotfiles, ai-memory, rostok, homelab, experiments) and which earn or publish. Most PRs are
    agent output on spare quota, so their count is not Anton's hours: judge his time by Traggo and the
    numbers, and use PRs to see where his attention went.
@@ -167,12 +168,15 @@ Write the entry with this shape:
 ```
 
 Then update `TASKS.md`: tick items the evidence shows are done, editing that line to say what
-shipped and when. Daily runs only tick; dates and order change in the weekly and monthly runs, with
-Anton's agreement.
+shipped and when, and in the weekly run write the numbers on the "Sunday numbers" line. Daily runs
+only tick. New dates or a new order come only from the weekly and monthly runs, with Anton's
+agreement in the session.
 
-Commit straight to `main` in `~/sync/code/ai-memory`, as its README allows for journal entries and
-ticks: add the entry by its path, and add `TASKS.md` only when it had no uncommitted changes before
-this run (otherwise Anton's own edits would ride along; leave it for him and say so). Subject
-`docs(planning): <mode> <date>`. Push; a failed push is reported, not retried in a loop.
+Commit straight to `main` in `~/sync/code/ai-memory`, as its README allows for journal entries,
+ticks and the Sunday numbers: add the entry by its path, and add `TASKS.md` only when it had no
+uncommitted changes before this run (otherwise Anton's own edits would ride along; leave it for him
+and say so). Subject `docs(planning): <mode> <date>`. New dates or order go through a pull request
+in that repo instead, from a worktree, as its README requires. Push; a failed push is reported, not
+retried in a loop.
 
 End with the entry's ONE Thing and its first block, in two lines.
