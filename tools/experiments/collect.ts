@@ -347,6 +347,9 @@ export async function collect(options: CollectOptions): Promise<LaneRow[]> {
       infos[pr] = prInfo.get(pr)!
       lanesReviews[pr] = reviews.get(pr) ?? []
     }
+    // A lane that picks up a PR already reviewed gets no count: its calls are a fix round.
+    const earliest = Object.values(lanesReviews).flat().map((r) => r.ts).sort()[0]
+    const firstReview = earliest !== undefined && earliest >= l.start ? earliest : undefined
     const mergedLines = Object.values(infos)
       .filter((i) => i.state === `MERGED`)
       .reduce((sum, i) => sum + i.additions + i.deletions, 0)
@@ -379,6 +382,10 @@ export async function collect(options: CollectOptions): Promise<LaneRow[]> {
       cost: Math.round(cost * 1e4) / 1e4,
       peakContext: peakContext(l.scan.calls),
       compactions: l.scan.compactions,
+      compactedAt: l.scan.compactedAt,
+      callsBeforeReview: firstReview === undefined
+        ? null
+        : l.scan.calls.filter((c) => c.timestamp < firstReview).length,
       prs,
       prSource: found?.source ?? null,
       prInfo: infos,

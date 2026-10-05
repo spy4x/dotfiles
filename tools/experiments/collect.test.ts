@@ -1,6 +1,6 @@
 import { assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19"
 import { dirname, fromFileUrl, join } from "jsr:@std/path@1.1.6"
-import { assistant, user, writeLane } from "./_fixtures.ts"
+import { assistant, line, user, writeLane } from "./_fixtures.ts"
 import {
   collect,
   commitAt,
@@ -127,6 +127,91 @@ t(`writes one row per lane with a schema version, linking the PR, issue and revi
     const text = toJsonl(rows)
     const parsed = text.trimEnd().split(`\n`).map((l) => JSON.parse(l))
     assertEquals(parsed.map((r) => r.schema), [1, 1])
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+t(
+  `records when the lane compacted and how many calls it made before its first review`,
+  async () => {
+    const dir = await tempProjects()
+    try {
+      await writeLane(dir, {
+        id: `impl`,
+        meta: { agentType: `implementer`, description: `Implement table` },
+        lines: [
+          ...implementerLines(`2026-09-30T01:00:00.000Z`),
+          line({
+            type: `system`,
+            subtype: `compact_boundary`,
+            timestamp: `2026-09-30T01:30:00.000Z`,
+          }),
+          assistant(
+            `m2`,
+            `claude-sonnet-5-5`,
+            `2026-09-30T01:40:00.000Z`,
+            { input_tokens: 10 },
+            [],
+          ),
+          // The fix round after the review: neither its call nor its compaction is before review.
+          line({
+            type: `system`,
+            subtype: `compact_boundary`,
+            timestamp: `2026-09-30T02:30:00.000Z`,
+          }),
+          assistant(
+            `m3`,
+            `claude-sonnet-5-5`,
+            `2026-09-30T03:00:00.000Z`,
+            { input_tokens: 10 },
+            [],
+          ),
+        ],
+      })
+      // A later review, written first: the count still stops at the earliest one.
+      await writeLane(dir, {
+        id: `arev`,
+        meta: { agentType: `reviewer`, description: `Review PR 12` },
+        lines: reviewerLines(`2026-09-30T04:00:00.000Z`, `2026-09-30T04:05:00.000Z`),
+      })
+      await writeLane(dir, {
+        id: `rev`,
+        meta: { agentType: `reviewer`, description: `Review PR 12` },
+        lines: reviewerLines(`2026-09-30T02:00:00.000Z`, `2026-09-30T02:05:00.000Z`),
+      })
+      const [impl, rev] = await collect({ projectsDir: dir, exec: fakeExec() })
+      assertEquals(impl.compactedAt, [`2026-09-30T01:30:00.000Z`, `2026-09-30T02:30:00.000Z`])
+      assertEquals(impl.calls, 3)
+      assertEquals(impl.callsBeforeReview, 2)
+      assertEquals(rev.callsBeforeReview, null)
+    } finally {
+      await Deno.remove(dir, { recursive: true })
+    }
+  },
+)
+
+t(`a lane that picks up a PR reviewed before it started has no calls before review`, async () => {
+  const dir = await tempProjects()
+  try {
+    await writeLane(dir, {
+      id: `impl`,
+      meta: { agentType: `implementer`, description: `Implement table` },
+      lines: implementerLines(`2026-09-30T03:00:00.000Z`),
+    })
+    await writeLane(dir, {
+      id: `rev`,
+      meta: { agentType: `reviewer`, description: `Review PR 12` },
+      lines: reviewerLines(`2026-09-30T02:00:00.000Z`, `2026-09-30T02:05:00.000Z`),
+    })
+    // The review of its own fix round comes after it started; it still gets no count.
+    await writeLane(dir, {
+      id: `arev`,
+      meta: { agentType: `reviewer`, description: `Review PR 12` },
+      lines: reviewerLines(`2026-09-30T04:00:00.000Z`, `2026-09-30T04:05:00.000Z`),
+    })
+    const rows = await collect({ projectsDir: dir, exec: fakeExec() })
+    assertEquals(rows.find((r) => r.role === `implementer`)!.callsBeforeReview, null)
   } finally {
     await Deno.remove(dir, { recursive: true })
   }

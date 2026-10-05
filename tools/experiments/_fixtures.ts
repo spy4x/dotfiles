@@ -91,6 +91,8 @@ export function laneRow(overrides: Partial<LaneRow> = {}): LaneRow {
     cost: 1,
     peakContext: 100_000,
     compactions: 0,
+    compactedAt: [],
+    callsBeforeReview: null,
     prs: [],
     prSource: null,
     prInfo: {},
