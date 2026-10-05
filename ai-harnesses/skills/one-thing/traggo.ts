@@ -3,7 +3,7 @@
 // against the 60/25/15 rule in ai-memory's TASKS.md. Reads the homelab's Traggo SQLite database
 // read-only over ssh, so it needs no token and never passes Authelia.
 //
-// Usage: deno run --allow-run=ssh traggo.ts <from YYYY-MM-DD> <to YYYY-MM-DD, inclusive>
+// A span counts whole on the local day it starts. Usage: deno run --allow-run=ssh traggo.ts <from YYYY-MM-DD> <to YYYY-MM-DD, inclusive>
 
 const HOST = `homelab`
 const DB = `/home/spy4x/ssd-2tb/rostok/volumes/traggo/data/traggo.db`
@@ -65,7 +65,7 @@ export function summarize(spans: Span[], now = new Date()): Summary {
 export function query(from: string, to: string): string {
   return `SELECT s.start_utc AS start, s.end_utc AS end, substr(s.start_user_time, 1, 10) AS day,
   (SELECT t.string_value FROM time_span_tags t WHERE t.time_span_id = s.id AND t.key = 'area'
-   LIMIT 1) AS area
+   ORDER BY t.string_value LIMIT 1) AS area
 FROM time_spans s
 WHERE substr(s.start_user_time, 1, 10) BETWEEN '${from}' AND '${to}'
 ORDER BY s.start_utc;`
@@ -85,6 +85,7 @@ if (import.meta.main) {
     stdin: `piped`,
     stdout: `piped`,
     stderr: `piped`,
+    signal: AbortSignal.timeout(60_000),
   }).spawn()
   const writer = child.stdin.getWriter()
   await writer.write(new TextEncoder().encode(query(from, to)))

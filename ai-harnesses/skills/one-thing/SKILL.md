@@ -1,14 +1,15 @@
 ---
-name: plan
+name: one-thing
 description: "Daily, weekly and monthly planning on The ONE Thing method: compare the previous period's plan with what actually happened (Traggo time, merged PRs, TASKS.md ticks, the three numbers), name the drift plainly, set the next ONE Thing, update TASKS.md and write a journal entry. Load when asked to plan the day, week or month, to review how a period went, or when a scheduled planning run starts."
 invocation: both
 argument-hint: "day | week | month"
 ---
 
-# /plan $ARGUMENTS
+# /one-thing $ARGUMENTS
 
 Plan one period and hold Anton to the last one. The mode is `day`, `week` or `month`; with none
-given, pick by date: the 1st of a month → `month`, a Sunday → `week`, otherwise `day`.
+given, pick by date: a Sunday → `week`, the 1st of a month → `month`, otherwise `day`. A Sunday
+that is also the 1st runs `month`, then `week`.
 
 This routine exists to push. Anton's known pattern (`profile.md`) is choosing work that cannot be
 rejected (tooling, research, refactors, strategy) over work that can (proposals, outreach,
@@ -21,7 +22,7 @@ All in `~/sync/code/ai-memory/`:
 
 - `profile.md`, `situation.md`, `TASKS.md`: who, the frozen plan and its targets, the ordered list.
 - `planning/README.md`: the Traggo `area` tags and the journal rules. Read it every run.
-- `planning/days/YYYY-MM-DD.md`, `planning/weeks/YYYY-Www.md` (ISO week),
+- `planning/days/YYYY-MM-DD.md`, `planning/weeks/YYYY-Www.md` (the ISO week being planned, so a Sunday run names next week),
   `planning/months/YYYY-MM.md`: one journal entry per run.
 
 Read the latest entry of the same mode and the current entry of the next larger period (a day
@@ -37,7 +38,7 @@ agreed after its entry; copy anything missing into that entry's `## Amended` bef
 
 Collect all four before judging. A source that fails is named in the review, never guessed.
 
-1. **Tracked time.** `deno run --allow-run=ssh ~/sync/code/dotfiles/ai-harnesses/skills/plan/traggo.ts <from> <to>`
+1. **Tracked time.** `deno run --allow-run=ssh ~/sync/code/dotfiles/ai-harnesses/skills/one-thing/traggo.ts <from> <to>`
    prints hours per `area`, per day, and the paid/product/video split against the 60/25/15 rule.
    It reads the homelab database read-only over `ssh homelab`. A working day with no entries is a
    finding in itself: the analysis is blind there.
@@ -77,7 +78,7 @@ Added from elsewhere, with their strength:
   a medium-to-large effect on reaching goals): proven. Every plan carries one for its likeliest
   obstacle.
 - **The planning fallacy** (Buehler, Griffin and Ross, 1994: people underestimate their own task
-  times): proven. Estimates get 1.5 times the first guess.
+  times): proven. Estimates get 1.5 times the first guess: a rule of thumb, not the paper's finding.
 - **Lead and lag measures** (_The 4 Disciplines of Execution_): practitioner consensus. Proposals
   sent and calls held are lead measures Anton controls; dollars invoiced is the lag measure.
 - **The weekly review** (David Allen's GTD: get clear, get current, get creative): practitioner
@@ -173,9 +174,9 @@ only tick. New dates or a new order come only from the weekly and monthly runs, 
 agreement in the session.
 
 Commit straight to `main` in `~/sync/code/ai-memory`, as its README allows for journal entries,
-ticks and the Sunday numbers: add the entry by its path, and add `TASKS.md` only when it had no
-uncommitted changes before this run (otherwise Anton's own edits would ride along; leave it for him
-and say so). Subject `docs(planning): <mode> <date>`. New dates or order go through a pull request
+ticks and the Sunday numbers. Commit only named paths, `git commit -m <subject> -- <paths>`, so
+nothing Anton staged rides along: the entry always, and `TASKS.md` only when it had no uncommitted
+changes before this run (otherwise leave it for him and say so). Subject `docs(planning): <mode> <date>`. New dates or order go through a pull request
 in that repo instead, from a worktree, as its README requires. Push; a failed push is reported, not
 retried in a loop.
 

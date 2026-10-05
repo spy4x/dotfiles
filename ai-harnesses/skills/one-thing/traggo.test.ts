@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@^1.0.0"
+import { assertEquals } from "jsr:@std/assert@1.0.19"
 import { query, summarize } from "./traggo.ts"
 
 Deno.test(`sums hours per area and per day`, () => {
@@ -64,5 +64,38 @@ Deno.test(`reports zero shares when nothing is tracked`, () => {
 
 Deno.test(`filters spans by local start day, inclusive`, () => {
   const sql = query(`2026-10-01`, `2026-10-31`)
-  assertEquals(sql.includes(`BETWEEN '2026-10-01' AND '2026-10-31'`), true)
+  assertEquals(
+    sql.includes(`WHERE substr(s.start_user_time, 1, 10) BETWEEN '2026-10-01' AND '2026-10-31'`),
+    true,
+  )
+})
+
+Deno.test(`counts client and sales together as paid work`, () => {
+  const s = summarize([
+    {
+      start: `2026-10-05T00:00:00Z`,
+      end: `2026-10-05T01:00:00Z`,
+      day: `2026-10-05`,
+      area: `client`,
+    },
+    {
+      start: `2026-10-05T01:00:00Z`,
+      end: `2026-10-05T02:00:00Z`,
+      day: `2026-10-05`,
+      area: `sales`,
+    },
+  ])
+  assertEquals(s.rule.paid, { hours: 2, share: 1, target: 0.6 })
+})
+
+Deno.test(`never counts a span that ends before it starts`, () => {
+  const s = summarize([
+    {
+      start: `2026-10-05T02:00:00Z`,
+      end: `2026-10-05T01:00:00Z`,
+      day: `2026-10-05`,
+      area: `sales`,
+    },
+  ])
+  assertEquals(s.total, 0)
 })
