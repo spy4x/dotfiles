@@ -80,6 +80,7 @@ t(`counts compactions, each tool call once and the most common effort`, () => {
   ]
   const scan = scanTranscript(lines)
   assertEquals(scan.compactions, 2)
+  assertEquals(scan.compactedAt, [`2026-09-30T01:05:00.000Z`, `2026-09-30T01:06:00.000Z`])
   assertEquals(scan.toolCalls, 3)
   assertEquals(scan.effort, `medium`)
 })

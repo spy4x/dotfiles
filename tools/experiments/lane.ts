@@ -14,6 +14,8 @@ const WORKTREE_BRANCH = /worktrees\/([\w.-]+)\/([\w-]+\/[\w-]+(?:[./][\w-]+)*)/g
 export interface LaneScan {
   readonly calls: Call[]
   readonly compactions: number
+  /** When each compaction happened, oldest first. */
+  readonly compactedAt: string[]
   readonly toolCalls: number
   readonly effort: string | null
   /** The first user message: the brief the lane was given. */
@@ -124,6 +126,7 @@ export function scanTranscript(lines: string[]): LaneScan {
   return {
     calls,
     compactions: compactionTimestamps.length,
+    compactedAt: [...compactionTimestamps].sort(),
     toolCalls: toolIds.size,
     effort,
     prompt: prompt ?? ``,

@@ -83,6 +83,13 @@ export interface LaneRow {
   /** Largest single-call context: input + cache read + cache writes. */
   readonly peakContext: number
   readonly compactions: number
+  /** When each compaction happened, oldest first: tells a compaction before a review from one
+   * during a fix round. */
+  readonly compactedAt: string[]
+  /** Implementer rows: calls made before the earliest review round on any of the lane's PRs, so
+   * lane size can be compared without the fix rounds a failed review adds. Null when no review
+   * round on its PRs came after the lane started. */
+  readonly callsBeforeReview: number | null
   readonly prs: string[]
   readonly prSource: `create` | `report` | `branch` | null
   readonly prInfo: Record<string, PrInfo>
