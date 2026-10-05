@@ -22,8 +22,8 @@ All in `~/sync/code/ai-memory/`:
 
 - `profile.md`, `situation.md`, `TASKS.md`: who, the frozen plan and its targets, the ordered list.
 - `planning/README.md`: the Traggo `area` tags and the journal rules. Read it every run.
-- `planning/days/YYYY-MM-DD.md`, `planning/weeks/YYYY-Www.md` (the ISO week being planned, so a Sunday run names next week),
-  `planning/months/YYYY-MM.md`: one journal entry per run.
+- `planning/days/YYYY-MM-DD.md`, `planning/weeks/YYYY-Www.md` (the ISO week being planned, so a
+  Sunday run names next week), `planning/months/YYYY-MM.md`: one journal entry per run.
 
 Read the latest entry of the same mode and the current entry of the next larger period (a day
 reads its week, a week reads its month, a month reads `situation.md`). No previous entry → say
@@ -38,16 +38,17 @@ agreed after its entry; copy anything missing into that entry's `## Amended` bef
 
 Collect all four before judging. A source that fails is named in the review, never guessed.
 
-1. **Tracked time.** `deno run --allow-run=ssh ~/sync/code/dotfiles/ai-harnesses/skills/one-thing/traggo.ts <from> <to>`
-   prints hours per `area`, per day, and the paid/product/video split against the 60/25/15 rule.
-   It reads the homelab database read-only over `ssh homelab`. A working day with no entries is a
-   finding in itself: the analysis is blind there.
+1. **Tracked time.** `deno run --allow-run=ssh
+   ~/sync/code/dotfiles/ai-harnesses/skills/one-thing/traggo.ts <from> <to>` prints hours per
+   `area`, per day, and the paid/product/video split against the 60/25/15 rule. It reads the homelab
+   database read-only over `ssh homelab`. A working day with no entries is a finding in itself: the
+   analysis is blind there.
 2. **What shipped.** `gh search prs --owner spy4x --merged --merged-at <from>..<to> --json
-   repository,title,url --limit 1000`. GitHub search returns at most 1,000 results, and a
-   week has passed 500: a count of exactly 1,000 means split the range. Group by repository; note which groups are tooling
-   (dotfiles, ai-memory, rostok, homelab, experiments) and which earn or publish. Most PRs are
-   agent output on spare quota, so their count is not Anton's hours: judge his time by Traggo and the
-   numbers, and use PRs to see where his attention went.
+   repository,title,url --limit 1000`. GitHub search returns at most 1,000 results, and a week has
+   passed 500: a count of exactly 1,000 means split the range. Group by repository; note which
+   groups are tooling (dotfiles, ai-memory, rostok, homelab, experiments) and which earn or publish.
+   Most PRs are agent output on spare quota, so their count is not Anton's hours: judge his time by
+   Traggo and the numbers, and use PRs to see where his attention went.
 3. **What was ticked.** `git -C ~/sync/code/ai-memory log --since=<from> --until=<to+1> -p --
    TASKS.md`, plus `git diff -- TASKS.md` for uncommitted ticks.
 4. **The three numbers**: outreach sent, calls held, dollars invoiced. No system holds them; ask
@@ -174,10 +175,11 @@ only tick. New dates or a new order come only from the weekly and monthly runs, 
 agreement in the session.
 
 Commit straight to `main` in `~/sync/code/ai-memory`, as its README allows for journal entries,
-ticks and the Sunday numbers. Commit only named paths, `git commit -m <subject> -- <paths>`, so
-nothing Anton staged rides along: the entry always, and `TASKS.md` only when it had no uncommitted
-changes before this run (otherwise leave it for him and say so). Subject `docs(planning): <mode> <date>`. New dates or order go through a pull request
-in that repo instead, from a worktree, as its README requires. Push; a failed push is reported, not
+ticks and the Sunday numbers. Stage the new entry, then commit only named paths, `git add <entry> &&
+git commit -m <subject> -- <paths>`, so nothing else Anton staged rides along: the entry always, and
+`TASKS.md` only when it had no uncommitted changes before this run (otherwise leave it for him and
+say so). Subject `docs(planning): <mode> <date>`. New dates or order go through a pull request in
+that repo instead, from a worktree, as its README requires. Push; a failed push is reported, not
 retried in a loop.
 
 End with the entry's ONE Thing and its first block, in two lines.

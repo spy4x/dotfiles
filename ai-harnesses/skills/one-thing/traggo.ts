@@ -3,7 +3,9 @@
 // against the 60/25/15 rule in ai-memory's TASKS.md. Reads the homelab's Traggo SQLite database
 // read-only over ssh, so it needs no token and never passes Authelia.
 //
-// A span counts whole on the local day it starts. Usage: deno run --allow-run=ssh traggo.ts <from YYYY-MM-DD> <to YYYY-MM-DD, inclusive>
+// A span counts whole on the local day it starts.
+//
+// Usage: deno run --allow-run=ssh traggo.ts <from YYYY-MM-DD> <to YYYY-MM-DD, inclusive>
 
 const HOST = `homelab`
 const DB = `/home/spy4x/ssd-2tb/rostok/volumes/traggo/data/traggo.db`
