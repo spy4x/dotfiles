@@ -9,6 +9,9 @@
   "autoContinueAtUsageLimit": true,
   "bashOutputMaxChars": 12000,
   "effortLevel": "medium",
+  "env": {
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/harness-rules"
+  },
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [

@@ -99,11 +99,25 @@ How `invocation` renders:
   intended rendering change: `deno test -A ai-harnesses/adapters.test.ts -- --update`, then review
   the golden diff.
 
-## No harness hooks
+## Hooks and mods
 
 Rules live in `AGENTS.md`, which every harness reads, not in hooks that only Claude Code runs. The
 Claude Code adapter would still ship a `settings/claude/hooks/` directory if one came back with a
 `hooks` key in `settings/claude/settings.json`.
+
+One exception, an experiment until 2026-10-15: the Claude Code mod `harness-rules`
+(`settings/claude/mods/harness-rules/`, copied to `~/.claude/mods/harness-rules/` and loaded
+through `CLAUDE_CODE_PLUGIN_DIRS` in `settings.json`). It enforces rules `AGENTS.md` already
+states, so the prose stays the source:
+
+- an Agent call without `model` is refused, and so is a reviewer on anything but Opus;
+- at 90% of the 5-hour limit, no new agent starts;
+- a recursive `rm` of a path holding a variable, and `find /`, are refused;
+- a `gh issue` or `gh pr` body must carry `<!-- agent -->` and pass `gitleaks`. A failed check
+  refuses the post.
+
+Each spawn and each refusal is a line in `~/.claude/mods-log/harness-rules.jsonl`. Test it with
+`claude plugin test ai-harnesses/settings/claude/mods/harness-rules`; `deno task test` skips it.
 
 Claude Code's built-in worktree features nest checkouts under `<repo>/.claude/worktrees/`, which
 repo tooling then walks. `AGENTS.md` tells the agent to create worktrees by hand instead; don't tick

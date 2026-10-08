@@ -42,6 +42,11 @@
     ".config/obs-studio/basic",
     ".config/obs-studio/plugin_manager"
   ],
+  // Mods are tested by `claude plugin test`: their tests import `claude-code/testing`, which only
+  // that runner provides.
+  "test": {
+    "exclude": ["ai-harnesses/settings/claude/mods"]
+  },
   "lint": {
     "rules": {
       "tags": [
