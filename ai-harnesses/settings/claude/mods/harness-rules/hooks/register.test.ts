@@ -123,7 +123,8 @@ test(`checks a body file for the marker and secrets, then posts`, async ($, on) 
     command: `gh issue create --title "Use -F flag" --body-file /abs/b.md`,
   })
   expect(ran.deny).toBeUndefined()
-  expect(scanned).toEqual([`<!-- agent -->\nbody`])
+  expect(scanned.length).toBe(1)
+  expect(scanned[0]).toContain(`<!-- agent -->\nbody`)
 })
 
 test(`refuses a body piped through --body-file -`, async ($) => {
@@ -154,4 +155,16 @@ test(`logs a gh refusal without the command, which may hold the secret`, async (
   await $.tool.call({ tool: `Bash`, command: `gh pr comment 5 --body "<!-- agent --> SECRETX"` })
   expect(logged.join(``)).toContain(`"event":"gh"`)
   expect(logged.join(``)).not.toContain(`SECRETX`)
+})
+
+test(`scans the whole command, so an escaped quote cannot hide a secret`, async ($, on) => {
+  on(`process.run`, (_$, e) => ({
+    value: RAN(e.argv[0] === `gitleaks` && (e.init?.stdin ?? ``).includes(`SECRET`) ? 1 : 0),
+  }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> use \\"a | b\\" here; key=SECRET"`,
+  })
+  expect(ran.deny).toContain(`secret`)
 })

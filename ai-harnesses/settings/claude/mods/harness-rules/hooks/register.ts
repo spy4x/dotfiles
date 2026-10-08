@@ -79,7 +79,9 @@ export const register: Register = (on) => {
     if (!verdict.deny) {
       const scan = await $.process.run(
         [`gitleaks`, `stdin`, `--no-banner`, `--redact`],
-        { stdin: body, timeoutMs: 8000 },
+        // The whole command too: the word parser is not a shell, and a body it cut short
+        // (an escaped quote, `$(…)`) must not hide a secret.
+        { stdin: post.kind === `file` ? `${body}\n${e.command}` : e.command, timeoutMs: 8000 },
       )
       verdict = leakVerdict(scan.exitCode)
     }
