@@ -1,0 +1,5 @@
+{
+  "name": "harness-rules",
+  "version": "0.1.0",
+  "description": "Enforces the global CLAUDE.md rules on agent models, the 5-hour quota, cleanup commands and posted bodies."
+}
