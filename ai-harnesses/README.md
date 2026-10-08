@@ -19,12 +19,13 @@ reviewed. `--check` works anywhere.
 
 ## Layout
 
-| Source                                | Claude Code (`~/.claude`) | OpenCode (`~/.config/opencode`)              | DSH (`$DSH_HOME`, default `~/.local/share/dsh`)   |
-| ------------------------------------- | ------------------------- | -------------------------------------------- | ------------------------------------------------- |
-| `AGENTS.md`                           | `CLAUDE.md`               | `AGENTS.md`                                  | `AGENTS.md`                                       |
-| `skills/<name>/` (`SKILL.md` + files) | `skills/<name>/`          | `skills/<name>/` and/or `commands/<name>.md` | `skills/<name>/`                                  |
-| `agents/<name>.md`                    | `agents/<name>.md`        | `agents/<name>.md`                           | `.agent-presets/<name>/{preset,agent.cordis}.yml` |
-| `settings/<harness>/**`               | `settings.json` merged    | `opencode.json`, `tui.json` merged           | `settings.yaml` merged, `profiles/web/*` copied   |
+| Source                                | Claude Code (`~/.claude`)                | OpenCode (`~/.config/opencode`)              | DSH (`$DSH_HOME`, default `~/.local/share/dsh`)   |
+| ------------------------------------- | ---------------------------------------- | -------------------------------------------- | ------------------------------------------------- |
+| `AGENTS.md`                           | `CLAUDE.md`                              | `AGENTS.md`                                  | `AGENTS.md`                                       |
+| `skills/<name>/` (`SKILL.md` + files) | `skills/<name>/`                         | `skills/<name>/` and/or `commands/<name>.md` | `skills/<name>/`                                  |
+| `agents/<name>.md`                    | `agents/<name>.md`                       | `agents/<name>.md`                           | `.agent-presets/<name>/{preset,agent.cordis}.yml` |
+| `settings/<harness>/**`               | `settings.json` merged                   | `opencode.json`, `tui.json` merged           | `settings.yaml` merged, `profiles/web/*` copied   |
+| `mcp.jsonc`                           | `mcpServers` in `~/.claude.json`, merged | `mcp` in `opencode.json`, merged             | not rendered                                      |
 
 `config.jsonc` says where each harness lives, whether it is enabled (`auto`: its home exists or its
 binary is on `PATH`), which settings files are merged instead of copied, and which model each
@@ -79,6 +80,35 @@ How `invocation` renders:
 | `model`      | skill                                 | skill                | skill                                 |
 | `user`       | skill with `disable-model-invocation` | `commands/<name>.md` | skill with `disable-model-invocation` |
 | `both`       | skill                                 | skill and command    | skill                                 |
+
+## MCP servers
+
+`mcp.jsonc` lists every MCP server once, by lowercase name. `deno task ai` renders it into
+OpenCode's `mcp` block and into Claude Code's `mcpServers`.
+
+```jsonc
+"caldav": {
+  "command": "~/sync/code/mcps/caldav/start.sh", // a leading ~/ is expanded when rendering
+  "args": [], // optional
+  "env": {}, // optional
+  "enabled": false, // optional; default true
+  "targets": ["opencode"], // optional; default every harness that has MCP servers (not DSH)
+  "harness": { "opencode": { "timeout": 300000 } } // optional keys only one harness understands
+}
+```
+
+Neither harness runs the command through a shell, so write `~/` and let the renderer expand it; do
+not use `$HOME`.
+
+Claude Code keeps user-scope servers in `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json`),
+outside its home, and a running session rewrites that file. The engine reads the file again right
+before writing, changes only the `mcpServers.<name>` keys listed here, and swaps it in with an
+atomic rename that keeps the file's permissions. Servers you added with `claude mcp add` stay.
+
+`enabled: false` becomes `enabled: false` in OpenCode. Claude Code has no off switch for a
+user-scope server, so a disabled server is not rendered there. As with all merged settings, removing
+a server from `mcp.jsonc` does not remove it from the live files; run `claude mcp remove <name>` and
+delete it from `opencode.json` by hand.
 
 ## Details worth knowing
 
