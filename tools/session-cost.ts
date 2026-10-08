@@ -17,7 +17,7 @@
 // (<id>/subagents/agent-*.jsonl) and their sibling agent-*.meta.json, when present, are folded
 // in automatically. Several session arguments are reported one after another.
 //
-// Prices are API list prices as of 2026-09 (see PRICES below) — a proxy for subscription
+// Prices are API list prices as of 2026-10 (see PRICES below) — a proxy for subscription
 // usage, not what a Claude subscription actually bills.
 
 import { join } from "jsr:@std/path@^1.0.0"
@@ -26,15 +26,24 @@ import { readJsonFile } from "@spy4x/platform/server/atomic-json"
 
 // ===== Pricing =====
 
-/** Dollars per million tokens for one model. */
-export interface Price {
+/** Dollars per million tokens. */
+export interface Rates {
   readonly input: number
   readonly output: number
   readonly cacheRead: number
 }
 
 /**
- * API list prices in dollars per million tokens, as of 2026-09, keyed by model-id prefix. A
+ * One model's prices. `longPrompt`, when set, replaces every rate for a call whose prompt
+ * (input plus cache read and write tokens) is over `over` tokens: Haiku 5.5 charges five times
+ * as much for the whole call above 100K.
+ */
+export interface Price extends Rates {
+  readonly longPrompt?: Rates & { readonly over: number }
+}
+
+/**
+ * API list prices in dollars per million tokens, as of 2026-10, keyed by model-id prefix. A
  * model id may carry a date suffix (`claude-haiku-4-5-20251001`); `priceFor` matches on prefix.
  * These are a proxy for subscription usage, not actual subscription billing.
  */
@@ -42,7 +51,14 @@ export const PRICES: Record<string, Price> = {
   "claude-opus-5-5": { input: 4, output: 20, cacheRead: 0.20 },
   "claude-fable-5-1": { input: 10, output: 50, cacheRead: 0.25 },
   "claude-opus-5": { input: 5, output: 25, cacheRead: 0.50 },
+  "claude-sonnet-5-5": { input: 2, output: 10, cacheRead: 0.10 },
   "claude-sonnet-5": { input: 2, output: 10, cacheRead: 0.20 },
+  "claude-haiku-5-5": {
+    input: 0.10,
+    output: 0.50,
+    cacheRead: 0.01,
+    longPrompt: { over: 100_000, input: 0.50, output: 2.50, cacheRead: 0.05 },
+  },
   "claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.10 },
 }
 
@@ -196,8 +212,10 @@ export function totalOf(cost: CostBreakdown): number {
  * if the call were free.
  */
 export function costOf(call: Call): { cost: CostBreakdown; priced: boolean } {
-  const price = priceFor(call.model)
-  if (!price) return { cost: ZERO_COST, priced: false }
+  const listed = priceFor(call.model)
+  if (!listed) return { cost: ZERO_COST, priced: false }
+  const long = listed.longPrompt
+  const price: Rates = long && ctxOf(call) > long.over ? long : listed
   const cost: CostBreakdown = {
     cacheRead: (call.cacheReadTokens * price.cacheRead) / 1_000_000,
     cacheWrite: (call.cache5mTokens * price.input * CACHE_WRITE_5M +
