@@ -2,6 +2,7 @@ import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19"
 import { dirname, fromFileUrl, join } from "jsr:@std/path@^1.0.0"
 import {
   type AgentReport,
+  costOf,
   loadSessionReport,
   parseTranscript,
   priceFor,
@@ -94,6 +95,31 @@ Deno.test(`treats a missing cache_creation split as all 5-minute writes`, () => 
 Deno.test(`matches claude-opus-5-5 before claude-opus-5`, () => {
   assertEquals(priceFor(`claude-opus-5-5-20260101`)?.input, 4)
   assertEquals(priceFor(`claude-opus-5-20260101`)?.input, 5)
+})
+
+Deno.test(`prices sonnet 5.5 cache reads at a tenth of input, unlike sonnet 5`, () => {
+  assertEquals(priceFor(`claude-sonnet-5-5`)?.cacheRead, 0.10)
+  assertEquals(priceFor(`claude-sonnet-5-20260101`)?.cacheRead, 0.20)
+})
+
+Deno.test(`prices a haiku 5.5 call by its prompt size`, () => {
+  // One Haiku 5.5 call: 1M output, the given cache reads, and no input or cache writes unless given.
+  const call = (cacheReadTokens: number, inputTokens = 0, cache5mTokens = 0) => ({
+    timestamp: `2026-10-08T00:00:00.000Z`,
+    model: `claude-haiku-5-5`,
+    inputTokens,
+    outputTokens: 1_000_000,
+    cacheReadTokens,
+    cache5mTokens,
+    cache1hTokens: 0,
+  })
+  assertEquals(costOf(call(100_000)).cost.output, 0.5)
+  assertEquals(costOf(call(100_001)).cost.output, 2.5)
+  assertEquals(costOf(call(1_000_000)).cost.cacheRead, 0.05)
+  assertEquals(costOf(call(0, 1_000_000)).cost.input, 0.5)
+  // Cache writes count toward the prompt: 100K read plus 1 write token crosses the line.
+  assertEquals(costOf(call(100_000, 0, 1)).cost.output, 2.5)
+  assertEquals(costOf(call(0, 0, 1_000_000)).cost.cacheWrite, 0.625)
 })
 
 Deno.test(`skips synthetic messages`, () => {

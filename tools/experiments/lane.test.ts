@@ -32,9 +32,9 @@ t(`prices each API response once, from the last usage line sharing its message i
   ]
   const { calls } = scanTranscript(lines)
   assertEquals(calls.length, 1)
-  // $2/M input, $10/M output, $0.20/M read; 5-minute write 1.25x, 1-hour write 2x input price.
-  // 1000*2 + 100*10 + 2000*2*1.25 + 1000*2*2 + 10000*0.2 = 14000 millionths.
-  assertAlmostEquals(priceCalls(calls).cost, 0.014, 1e-12)
+  // $2/M input, $10/M output, $0.10/M read; 5-minute write 1.25x, 1-hour write 2x input price.
+  // 1000*2 + 100*10 + 2000*2*1.25 + 1000*2*2 + 10000*0.1 = 13000 millionths.
+  assertAlmostEquals(priceCalls(calls).cost, 0.013, 1e-12)
   assertEquals(tokenCounts(calls), {
     input: 1000,
     output: 100,
