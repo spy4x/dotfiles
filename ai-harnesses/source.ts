@@ -1,13 +1,15 @@
 // Reads the harness-neutral source tree: `AGENTS.md`, `skills/<name>/SKILL.md` plus any files
-// beside it, `agents/<name>.md`, and `settings/<harness>/**`.
+// beside it, `agents/<name>.md`, `mcp.jsonc`, and `settings/<harness>/**`.
 
 import type { Type } from "arktype"
 import { join, relative } from "jsr:@std/path@^1.0.0"
+import { parse as parseJsonc } from "jsr:@std/jsonc@^1.0.0"
 import { extract } from "jsr:@std/front-matter@1.0.9/yaml"
 import {
   AgentFrontmatter,
   HARNESSES,
   type HarnessName,
+  McpServers,
   SkillFrontmatter,
   validate,
 } from "./schema.ts"
@@ -34,6 +36,8 @@ export interface Source {
   rules: string
   skills: Skill[]
   agents: Agent[]
+  /** MCP servers from `mcp.jsonc`, by name. */
+  mcp: McpServers
   settings: Record<HarnessName, SourceFile[]>
 }
 
@@ -131,7 +135,16 @@ export async function loadSource(root: string): Promise<Source> {
     )
   }
 
-  return { rules: await Deno.readTextFile(join(root, `AGENTS.md`)), skills, agents, settings }
+  const mcpPath = join(root, `mcp.jsonc`)
+  const mcp = await Deno.readTextFile(mcpPath).then(
+    (text) => validate(McpServers, parseJsonc(text), `mcp.jsonc`),
+    (error) => {
+      if (error instanceof Deno.errors.NotFound) return {}
+      throw error
+    },
+  )
+
+  return { rules: await Deno.readTextFile(join(root, `AGENTS.md`)), skills, agents, mcp, settings }
 }
 
 /** Whether an item without `targets` (every harness) or with this harness listed ships to it. */

@@ -244,3 +244,102 @@ Deno.test(`the CLI applies from a main checkout, refuses in a linked worktree, a
     await cleanup()
   }
 })
+
+const CLAUDE_JSON = (home: string) => join(home, `.claude.json`)
+
+Deno.test(`resolveHome appends the rest of a $VAR/path alternative to the variable`, () => {
+  const spec = `$CLAUDE_CONFIG_DIR/.claude.json|~/.claude.json`
+  assertEquals(resolveHome(spec, envOf({ HOME: `/h`, CLAUDE_CONFIG_DIR: `/c` })), `/c/.claude.json`)
+  assertEquals(resolveHome(spec, envOf({ HOME: `/h` })), `/h/.claude.json`)
+})
+
+Deno.test(`MCP servers are added to ~/.claude.json and the servers already there are kept`, async () => {
+  const { home, source, targets, cleanup } = await fixture()
+  try {
+    await write(
+      CLAUDE_JSON(home),
+      JSON.stringify({
+        userID: `abc`,
+        mcpServers: { mine: { type: `stdio`, command: `mine`, args: [], env: {} } },
+      }),
+    )
+    await apply(await plan(source, targets))
+    const live = JSON.parse(await Deno.readTextFile(CLAUDE_JSON(home)))
+    assertEquals(live.userID, `abc`)
+    assertEquals(live.mcpServers, {
+      mine: { type: `stdio`, command: `mine`, args: [], env: {} },
+      lookup: {
+        type: `stdio`,
+        command: join(home, `bin`, `lookup`),
+        args: [`--stdio`],
+        env: { TOKEN_FILE: join(home, `token`) },
+      },
+    })
+    assertEquals(pending(await plan(source, targets)), [])
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`MCP servers go to OpenCode with ~ expanded, and a disabled server stays off`, async () => {
+  const { home, source, targets, cleanup } = await fixture()
+  try {
+    await apply(await plan(source, targets))
+    const live = JSON.parse(
+      await Deno.readTextFile(join(home, `.config`, `opencode`, `opencode.json`)),
+    )
+    assertEquals(live.model, `some/model`)
+    assertEquals(live.mcp.lookup.command, [join(home, `bin`, `lookup`), `--stdio`])
+    assertEquals(live.mcp.paused.enabled, false)
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`a ~/.claude.json saved after the plan is not overwritten when the plan is applied`, async () => {
+  const { home, source, targets, cleanup } = await fixture()
+  try {
+    await write(CLAUDE_JSON(home), JSON.stringify({ numStartups: 1 }))
+    const ops = await plan(source, targets)
+    // A running Claude Code saves while the plan waits.
+    await write(CLAUDE_JSON(home), JSON.stringify({ numStartups: 2 }))
+    await apply(ops)
+    const live = JSON.parse(await Deno.readTextFile(CLAUDE_JSON(home)))
+    assertEquals(live.numStartups, 2)
+    assertEquals(Object.keys(live.mcpServers), [`lookup`])
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`~/.claude.json keeps its permissions and leaves no temp file behind`, async () => {
+  const { home, source, targets, cleanup } = await fixture()
+  try {
+    await write(CLAUDE_JSON(home), `{}`)
+    await Deno.chmod(CLAUDE_JSON(home), 0o600)
+    await apply(await plan(source, targets))
+    assertEquals((await Deno.stat(CLAUDE_JSON(home))).mode! & 0o777, 0o600)
+    const names: string[] = []
+    for await (const entry of Deno.readDir(home)) names.push(entry.name)
+    assertEquals(names.filter((name) => name.includes(`.tmp`)), [])
+  } finally {
+    await cleanup()
+  }
+})
+
+Deno.test(`CLAUDE_CONFIG_DIR moves the file that holds the MCP servers`, async () => {
+  const { home, source, cleanup } = await fixture()
+  try {
+    const config = await loadConfig(join(FIXTURES, `config.jsonc`))
+    const moved = join(home, `elsewhere`)
+    const targets = await detect(config, envOf({ HOME: home, CLAUDE_CONFIG_DIR: moved }))
+    await apply(await plan(source, targets))
+    assertEquals(
+      Object.keys(JSON.parse(await Deno.readTextFile(join(moved, `.claude.json`))).mcpServers),
+      [`lookup`],
+    )
+    assertEquals(await Deno.lstat(CLAUDE_JSON(home)).catch(() => null), null)
+  } finally {
+    await cleanup()
+  }
+})

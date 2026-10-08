@@ -1,0 +1,10 @@
+{
+  "lookup": { "command": "~/bin/lookup", "args": ["--stdio"], "env": { "TOKEN_FILE": "~/token" } },
+  "paused": { "command": "paused-server", "enabled": false },
+  "web": {
+    "command": "npx",
+    "args": ["web-mcp"],
+    "targets": ["opencode"],
+    "harness": { "opencode": { "timeout": 5 } }
+  }
+}

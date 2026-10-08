@@ -105,3 +105,49 @@ Deno.test(`loadSource rejects a body-from that points at another variant`, async
     await Deno.remove(dir, { recursive: true })
   }
 })
+
+for (
+  const [name, text, message] of [
+    [`an undeclared key`, `{ "a": { "command": "x", "cmd": "y" } }`, `cmd`],
+    [`a server without a command`, `{ "a": {} }`, `command`],
+    [`a server name that is not lowercase`, `{ "Caldav": { "command": "x" } }`, `lowercase`],
+  ]
+) {
+  Deno.test(`loadSource rejects mcp.jsonc with ${name}`, async () => {
+    const dir = await brokenSource(`mcp.jsonc`, text)
+    try {
+      await assertRejects(() => loadSource(dir), Error, message)
+    } finally {
+      await Deno.remove(dir, { recursive: true })
+    }
+  })
+}
+
+Deno.test(`the real mcp.jsonc keeps playwright's OpenCode entry as it was in opencode.json`, async () => {
+  const source = await loadSource(ROOT)
+  const config = await loadConfig(join(ROOT, `config.jsonc`))
+  const file = ADAPTERS.opencode.render(source, config.harnesses.opencode)
+    .find((rendered) => rendered.path === `opencode.json`)!
+  assertEquals(JSON.parse(file.content).mcp.playwright, {
+    type: `local`,
+    command: [
+      `npx`,
+      `@playwright/mcp@latest`,
+      `--browser`,
+      `chromium`,
+      `--headless`,
+      `--timeout-navigation`,
+      `300000`,
+    ],
+    enabled: true,
+    timeout: 300000,
+  })
+  assertEquals(JSON.parse(file.content).mcp.caldav.enabled, false)
+})
+
+Deno.test(`the real mcp.jsonc registers nothing in Claude Code while caldav is disabled`, async () => {
+  const source = await loadSource(ROOT)
+  const config = await loadConfig(join(ROOT, `config.jsonc`))
+  const rendered = ADAPTERS.claude.render(source, config.harnesses.claude)
+  assertEquals(rendered.filter((file) => file.at === `mcpFile`), [])
+})
