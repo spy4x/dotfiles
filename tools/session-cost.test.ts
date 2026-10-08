@@ -103,7 +103,7 @@ Deno.test(`prices sonnet 5.5 cache reads at a tenth of input, unlike sonnet 5`, 
 })
 
 Deno.test(`prices a haiku 5.5 call by its prompt size`, () => {
-  // A prompt of 1M input, 1M cache-write and `cacheReadTokens` tokens: over 100K either way.
+  // One Haiku 5.5 call: 1M output, the given cache reads, and no input or cache writes unless given.
   const call = (cacheReadTokens: number, inputTokens = 0, cache5mTokens = 0) => ({
     timestamp: `2026-10-08T00:00:00.000Z`,
     model: `claude-haiku-5-5`,
