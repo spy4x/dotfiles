@@ -9,7 +9,14 @@ import { claude } from "./adapters/claude.ts"
 import { dsh } from "./adapters/dsh.ts"
 import { opencode } from "./adapters/opencode.ts"
 import { denoFileSystem } from "@spy4x/platform/server"
-import { Config, type HarnessConfig, HARNESSES, type HarnessName, validate } from "./schema.ts"
+import {
+  Config,
+  type HarnessConfig,
+  HARNESSES,
+  type HarnessName,
+  type McpServers,
+  validate,
+} from "./schema.ts"
 import type { Source } from "./source.ts"
 
 export const ADAPTERS: Record<HarnessName, Adapter> = { claude, opencode, dsh }
@@ -24,6 +31,10 @@ type Action = `skip` | `write` | `remove`
 export interface Target {
   name: HarnessName
   home: string
+  /** Where the harness keeps user-scope MCP servers, when it has a file for them. */
+  mcpFile?: string
+  /** The user's `$HOME`, to expand `~` in MCP server commands. */
+  userHome: string
   config: HarnessConfig
 }
 
@@ -34,6 +45,8 @@ export interface Op {
   action: Action
   reason: string
   content?: string
+  /** Recomputes `content` from the file as it is at apply time (merged files only). */
+  rebuild?: () => Promise<string>
 }
 
 /** The environment the engine reads, injectable for tests. */
@@ -50,8 +63,9 @@ export function resolveHome(spec: string, env: Env): string {
   const home = env.get(`HOME`)
   for (const alternative of spec.split(`|`).map((part) => part.trim())) {
     if (alternative.startsWith(`$`)) {
-      const value = env.get(alternative.slice(1))
-      if (value) return resolve(value)
+      const [variable, ...rest] = alternative.slice(1).split(`/`)
+      const value = env.get(variable)
+      if (value) return resolve(value, ...rest)
       continue
     }
     if (alternative.startsWith(`~`)) {
@@ -83,7 +97,10 @@ export async function detect(config: Config, env: Env): Promise<Target[]> {
     const enabled = harness.enabled === `auto`
       ? await exists(home) || await onPath(harness.bin, env)
       : harness.enabled
-    if (enabled) found.push({ name, home, config: harness })
+    if (!enabled) continue
+    const userHome = env.get(`HOME`) ?? ``
+    const mcpFile = harness.mcpFile ? resolveHome(harness.mcpFile, env) : undefined
+    found.push({ name, home, mcpFile, userHome, config: harness })
   }
   return found
 }
@@ -133,29 +150,64 @@ function canonical(value: unknown): string {
   )
 }
 
-/** Plans a key-level merge of a tracked JSON or YAML settings file into the live one. */
-async function planMerge(label: string, path: string, file: RenderedFile): Promise<Op> {
+/** The live file overlaid with the tracked one: its text before (null if missing) and after. */
+async function mergeFile(
+  path: string,
+  file: RenderedFile,
+): Promise<{ before: string | null; after: string; same: boolean }> {
   const [decode, encode] = file.merge === `yaml`
     ? [parseYaml, (data: Json) => stringifyYaml(data, { lineWidth: -1 })]
     : [JSON.parse, (data: Json) => JSON.stringify(data, null, 2) + `\n`]
   const tracked = decode(file.content)
   if (!isObject(tracked)) throw new Error(`tracked ${file.path} is not a mapping`)
-  const liveText = await denoFileSystem.readText(path)
+  const before = await denoFileSystem.readText(path)
   let live: unknown = {}
   try {
-    live = liveText === null ? {} : decode(liveText) ?? {}
+    live = before === null ? {} : decode(before) ?? {}
   } catch {
     throw new Error(`${path} does not parse — fix it by hand; refusing to overwrite it`)
   }
   if (!isObject(live)) throw new Error(`${path} is not a mapping; refusing to overwrite it`)
   const merged = mergeSettings(live, tracked)
-  if (liveText !== null && canonical(merged) === canonical(live)) {
-    return { label, path, action: `skip`, reason: `in sync` }
-  }
-  const reason = liveText === null ? `missing` : `tracked keys differ`
   // A file that does not exist yet is written as tracked, comments and all.
-  const content = liveText === null ? file.content : encode(merged)
-  return { label, path, action: `write`, reason, content }
+  return {
+    before,
+    after: before === null ? file.content : encode(merged),
+    same: before !== null && canonical(merged) === canonical(live),
+  }
+}
+
+/** Plans a key-level merge of a tracked JSON or YAML settings file into the live one. */
+async function planMerge(label: string, path: string, file: RenderedFile): Promise<Op> {
+  const { before, after, same } = await mergeFile(path, file)
+  if (same) return { label, path, action: `skip`, reason: `in sync` }
+  const reason = before === null ? `missing` : `tracked keys differ`
+  return {
+    label,
+    path,
+    action: `write`,
+    reason,
+    content: after,
+    rebuild: async () => (await mergeFile(path, file)).after,
+  }
+}
+
+/**
+ * Replaces `path` with `content` through a temp file and a rename, so a reader (a running Claude
+ * Code rewrites its own config) never sees a half-written file. Keeps the file's mode: some of
+ * these files hold credentials.
+ */
+async function writeAtomic(path: string, content: string): Promise<void> {
+  const mode = await Deno.stat(path).then((stat) => stat.mode, () => null)
+  const temp = `${path}.${crypto.randomUUID()}.tmp`
+  try {
+    await Deno.writeTextFile(temp, content)
+    if (mode !== null) await Deno.chmod(temp, mode & 0o777)
+    await Deno.rename(temp, path)
+  } catch (error) {
+    await Deno.remove(temp).catch(() => {})
+    throw error
+  }
 }
 
 /**
@@ -173,7 +225,10 @@ export async function planTarget(target: Target, rendered: RenderedFile[]): Prom
   for (const file of rendered) {
     if (seen.has(file.path)) throw new Error(`${target.name}: two items render ${file.path}`)
     seen.add(file.path)
-    const path = join(target.home, file.path)
+    if (file.at === `mcpFile` && !target.mcpFile) {
+      throw new Error(`${target.name}: config has no mcpFile for the MCP servers`)
+    }
+    const path = file.at === `mcpFile` ? target.mcpFile! : join(target.home, file.path)
     const label = `${target.name} ${file.path}`
     if (file.merge) {
       ops.push(await planMerge(`${label} (merge of tracked keys)`, path, file))
@@ -199,11 +254,26 @@ export async function planTarget(target: Target, rendered: RenderedFile[]): Prom
   return ops
 }
 
+/** MCP servers with a leading `~/` in the command, args and env values replaced by `home`. */
+export function expandMcp(servers: McpServers, home: string): McpServers {
+  const expand = (text: string) => text.startsWith(`~/`) ? join(home, text.slice(2)) : text
+  return Object.fromEntries(
+    Object.entries(servers).map(([name, server]) => [name, {
+      ...server,
+      command: expand(server.command),
+      ...server.args && { args: server.args.map(expand) },
+      ...server.env &&
+        { env: Object.fromEntries(Object.entries(server.env).map(([k, v]) => [k, expand(v)])) },
+    }]),
+  )
+}
+
 /** Every change needed on every detected harness. */
 export async function plan(source: Source, found: Target[]): Promise<Op[]> {
   const ops: Op[] = []
   for (const target of found) {
-    ops.push(...await planTarget(target, ADAPTERS[target.name].render(source, target.config)))
+    const expanded = { ...source, mcp: expandMcp(source.mcp, target.userHome) }
+    ops.push(...await planTarget(target, ADAPTERS[target.name].render(expanded, target.config)))
   }
   return ops
 }
@@ -213,12 +283,15 @@ export async function apply(ops: Op[]): Promise<number> {
   let changed = 0
   for (const op of ops) {
     if (op.action === `skip`) continue
+    // Merged files are re-read now: the app that owns the file may have saved since the plan.
+    const content = op.rebuild ? await op.rebuild() : op.content ?? ``
     // Deno.writeTextFile follows symlinks; remove one first so the write creates a real file.
     const lstat = await Deno.lstat(op.path).catch(() => null)
     if (lstat && (lstat.isSymlink || op.action === `remove`)) await Deno.remove(op.path)
     if (op.action === `write`) {
       await Deno.mkdir(dirname(op.path), { recursive: true })
-      await Deno.writeTextFile(op.path, op.content ?? ``)
+      if (op.rebuild) await writeAtomic(op.path, content)
+      else await Deno.writeTextFile(op.path, content)
     }
     changed++
   }

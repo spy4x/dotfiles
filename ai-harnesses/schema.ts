@@ -48,6 +48,26 @@ export const AgentFrontmatter = type({
 })
 export type AgentFrontmatter = typeof AgentFrontmatter.infer
 
+/** One MCP server, harness-neutral. `~/` at the start of `command`, `args` or `env` values expands. */
+export const McpServer = type({
+  command: `string > 0`,
+  "args?": `string[]`,
+  "env?": `Record<string, string>`,
+  /** `false` keeps the server in the list but renders it nowhere that has an off switch. */
+  "enabled?": `boolean`,
+  "targets?": harnessName.array(),
+  "harness?": harnessBlock,
+  "+": `reject`,
+})
+export type McpServer = typeof McpServer.infer
+
+/** `mcp.jsonc`: servers by name. */
+export const McpServers = type({ "[string]": McpServer }).narrow((servers, ctx) =>
+  Object.keys(servers).every((key) => name.allows(key)) ||
+  ctx.mustBe(`keyed by lowercase names such as "caldav"`)
+)
+export type McpServers = typeof McpServers.infer
+
 const model = type(`string | null`)
 const HarnessConfig = type({
   /** `auto`: render when the home directory exists or the binary is on PATH. */
@@ -55,6 +75,11 @@ const HarnessConfig = type({
   /** Alternatives separated by `|`, first that resolves wins: `$VAR` or a path (`~` = HOME). */
   home: `string > 0`,
   bin: `string > 0`,
+  /**
+   * Where the harness keeps user-scope MCP servers when that is outside `home`: same `$VAR|path`
+   * syntax, and `$VAR/rest` appends `rest` to the variable's value. Merged key by key.
+   */
+  "mcpFile?": `string > 0`,
   /** Settings files merged key by key into the live file instead of copied over it. */
   merge: `string[]`,
   /** Model per tier; null leaves the choice to the harness default. */

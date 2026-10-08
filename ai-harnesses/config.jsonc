@@ -7,6 +7,8 @@
       "home": "$CLAUDE_CONFIG_DIR|~/.claude",
       "bin": "claude",
       "merge": ["settings.json"],
+      // User-scope MCP servers live here, not in the home. A running Claude Code rewrites it.
+      "mcpFile": "$CLAUDE_CONFIG_DIR/.claude.json|~/.claude.json",
       // `strongest` is `fable` while Fable is the best model. Fable 5.1 is paused: Opus 5.5
       // matches it, faster and cheaper. Set it back to `fable` when the owner re-enables it.
       // `standard` is `opus` too: Opus 5.5 costs about half what Sonnet 5 does per changed line.

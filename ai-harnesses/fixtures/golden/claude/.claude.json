@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "lookup": {
+      "type": "stdio",
+      "command": "~/bin/lookup",
+      "args": [
+        "--stdio"
+      ],
+      "env": {
+        "TOKEN_FILE": "~/token"
+      }
+    }
+  }
+}

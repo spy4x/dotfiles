@@ -3,8 +3,8 @@
 
 import { extname } from "jsr:@std/path@^1.0.0"
 import { stringify } from "jsr:@std/yaml@1.2.0"
-import type { HarnessConfig, HarnessName } from "../schema.ts"
-import type { Source, SourceFile } from "../source.ts"
+import type { HarnessConfig, HarnessName, McpServer } from "../schema.ts"
+import { type Source, type SourceFile, targets } from "../source.ts"
 
 /** One file for a harness home. `merge` files are overlaid on the live file, never copied. */
 export interface RenderedFile {
@@ -12,12 +12,19 @@ export interface RenderedFile {
   path: string
   content: string
   merge?: `json` | `yaml`
+  /** Set when the file lives at the harness's `mcpFile`, outside its home; `path` is a label. */
+  at?: `mcpFile`
 }
 
 export interface Adapter {
   name: HarnessName
   /** Renders every canonical item that targets this harness. */
   render(source: Source, config: HarnessConfig): RenderedFile[]
+}
+
+/** The servers that ship to `harness`: listed for it. A server with `enabled: false` is kept. */
+export function mcpFor(source: Source, harness: HarnessName): [string, McpServer][] {
+  return Object.entries(source.mcp).filter(([, server]) => targets(server, harness))
 }
 
 /** A Markdown file with YAML frontmatter; keys with an undefined value are left out. */

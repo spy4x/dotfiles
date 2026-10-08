@@ -1,11 +1,28 @@
 // OpenCode: `AGENTS.md`, `skills/<name>/SKILL.md` for model-invoked skills, `commands/<name>.md`
 // for user-invoked ones, `agents/<name>.md`, and settings merged key by key.
 
-import { type Adapter, markdown, modelFor, type RenderedFile, settingsFile } from "./shared.ts"
-import { targets } from "../source.ts"
+import {
+  type Adapter,
+  markdown,
+  mcpFor,
+  modelFor,
+  type RenderedFile,
+  settingsFile,
+} from "./shared.ts"
+import { type SourceFile, targets } from "../source.ts"
 
 /** Tools OpenCode can deny, keyed by the neutral capability that grants them. */
 const PERMISSIONS: [string, string][] = [[`edit`, `edit`], [`shell`, `bash`], [`web`, `webfetch`]]
+
+/** The tracked `opencode.json` with the rendered `mcp` block added; it may not set its own. */
+function withMcp(file: SourceFile, mcp: Record<string, unknown>): SourceFile {
+  if (Object.keys(mcp).length === 0) return file
+  const settings = JSON.parse(file.content)
+  if (`mcp` in settings) {
+    throw new Error(`settings/opencode/opencode.json: list servers in mcp.jsonc`)
+  }
+  return { ...file, content: JSON.stringify({ ...settings, mcp }, null, 2) + `\n` }
+}
 
 export const opencode: Adapter = {
   name: `opencode`,
@@ -49,7 +66,21 @@ export const opencode: Adapter = {
       files.push({ path: `agents/${meta.name}.md`, content: markdown(frontmatter, body) })
     }
 
-    for (const file of source.settings.opencode) files.push(settingsFile(file, config))
+    const mcp = Object.fromEntries(
+      mcpFor(source, `opencode`).map(([serverName, server]) => [serverName, {
+        type: `local`,
+        command: [server.command, ...server.args ?? []],
+        environment: server.env,
+        enabled: server.enabled ?? true,
+        ...server.harness?.opencode,
+      }]),
+    )
+    for (const file of source.settings.opencode) {
+      files.push(settingsFile(
+        file.path === `opencode.json` ? withMcp(file, mcp) : file,
+        config,
+      ))
+    }
     return files
   },
 }

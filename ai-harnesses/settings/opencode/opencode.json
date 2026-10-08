@@ -10,21 +10,5 @@
       ".git/**",
       "*.log"
     ]
-  },
-  "mcp": {
-    "playwright": {
-      "type": "local",
-      "command": [
-        "npx",
-        "@playwright/mcp@latest",
-        "--browser",
-        "chromium",
-        "--headless",
-        "--timeout-navigation",
-        "300000"
-      ],
-      "enabled": true,
-      "timeout": 300000
-    }
   }
 }

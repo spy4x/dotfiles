@@ -1,7 +1,14 @@
 // Claude Code: `CLAUDE.md`, `skills/<name>/SKILL.md`, `agents/<name>.md`, and `settings.json`
 // merged key by key. Hook scripts ship only while the tracked settings wire them up.
 
-import { type Adapter, markdown, modelFor, type RenderedFile, settingsFile } from "./shared.ts"
+import {
+  type Adapter,
+  markdown,
+  mcpFor,
+  modelFor,
+  type RenderedFile,
+  settingsFile,
+} from "./shared.ts"
 import { targets } from "../source.ts"
 
 const TOOLS: Record<string, string[]> = {
@@ -52,6 +59,28 @@ export const claude: Adapter = {
     for (const file of settings) {
       if (file.path.startsWith(`hooks/`) && !hooksWired) continue
       files.push(settingsFile(file, config))
+    }
+
+    // Claude Code has no off switch for a user-scope server, so a disabled one is not rendered.
+    // The merge never removes, so one registered earlier stays until it is removed by hand.
+    const mcpServers = Object.fromEntries(
+      mcpFor(source, `claude`).filter(([, server]) => server.enabled !== false).map((
+        [serverName, server],
+      ) => [serverName, {
+        type: `stdio`,
+        command: server.command,
+        args: server.args ?? [],
+        env: server.env ?? {},
+        ...server.harness?.claude,
+      }]),
+    )
+    if (Object.keys(mcpServers).length > 0) {
+      files.push({
+        path: `.claude.json`,
+        content: JSON.stringify({ mcpServers }, null, 2) + `\n`,
+        merge: `json`,
+        at: `mcpFile`,
+      })
     }
     return files
   },

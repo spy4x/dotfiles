@@ -6,6 +6,7 @@
       "home": "~/.claude",
       "bin": "claude",
       "merge": ["settings.json"],
+      "mcpFile": "$CLAUDE_CONFIG_DIR/.claude.json|~/.claude.json",
       "tiers": { "cheap": "haiku", "standard": "sonnet", "strong": "opus", "strongest": "fable" }
     },
     "opencode": {

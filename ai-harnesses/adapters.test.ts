@@ -46,7 +46,7 @@ Deno.test(`settings named in merge are merged, everything else is copied`, () =>
         .filter((file) => !file.path.startsWith(`.agent-presets/`))
         .map((file) => [file.path, file.merge ?? `copy`]),
     )
-  assertEquals(kinds(`claude`), { "settings.json": `json` })
+  assertEquals(kinds(`claude`), { "settings.json": `json`, ".claude.json": `json` })
   assertEquals(kinds(`opencode`), { "opencode.json": `json` })
   assertEquals(kinds(`dsh`), { "settings.yaml": `yaml`, "profiles/web/cordis.patch.yml": `copy` })
 })
