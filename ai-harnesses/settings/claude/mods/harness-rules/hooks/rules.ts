@@ -6,7 +6,7 @@ export interface Verdict {
   readonly deny?: string
 }
 
-const ALLOW: Verdict = {}
+export const ALLOW: Verdict = {}
 
 /** The marker every comment, issue and PR body we post starts with (global CLAUDE.md). */
 export const AGENT_MARKER = `<!-- agent -->`
@@ -46,14 +46,46 @@ export function spawnVerdict(spawn: Spawn, fiveHourPercent: number | undefined):
   return ALLOW
 }
 
-/** Splits a shell command into simple commands at `;`, `&&`, `||`, `|`, `&` and newlines. */
-function segments(command: string): string[] {
-  return command.split(/;|&&|\|\||\||&|\n/).map((part) => part.trim())
+/**
+ * Splits a shell command into simple commands, each a list of words. Quotes group words and are
+ * dropped; `;`, `&`, `|` and newlines outside quotes end a command. No expansion: `"$D"` stays
+ * the word `$D`. Best effort, not a shell: a heredoc's lines read as commands of their own.
+ */
+export function commandsOf(command: string): string[][] {
+  const commands: string[][] = []
+  let words: string[] = []
+  let word: string | undefined
+  let quote: string | undefined
+  const endWord = () => {
+    if (word !== undefined) words.push(word)
+    word = undefined
+  }
+  const endCommand = () => {
+    endWord()
+    if (words.length > 0) commands.push(words)
+    words = []
+  }
+  for (const char of command) {
+    if (quote) {
+      if (char === quote) quote = undefined
+      else word = (word ?? ``) + char
+    } else if (char === `"` || char === `'`) {
+      quote = char
+      word = word ?? ``
+    } else if (/[;&|\n]/.test(char)) endCommand()
+    else if (/\s/.test(char)) endWord()
+    else word = (word ?? ``) + char
+  }
+  endCommand()
+  return commands
 }
 
 /** Drops a leading `sudo` and its flags, so `sudo -n rm` reads as `rm`. */
-function withoutSudo(segment: string): string {
-  return segment.replace(/^sudo(\s+-\S+)*\s+/, ``)
+function withoutSudo(words: string[]): string[] {
+  if (words[0] !== `sudo`) return words
+  let i = 1
+  while (words[i]?.startsWith(`-`)) i++
+  return words.slice(i)
 }
 
 /**
@@ -62,8 +94,7 @@ function withoutSudo(segment: string): string {
  * reads the command's words, not what the shell would expand.
  */
 export function bashVerdict(command: string): Verdict {
-  for (const segment of segments(command).map(withoutSudo)) {
-    const words = segment.split(/\s+/)
+  for (const words of commandsOf(command).map(withoutSudo)) {
     if (words[0] === `rm`) {
       const flags = words.slice(1).filter((word) => word.startsWith(`-`))
       const isRecursive = flags.some((flag) => /^-[^-]*[rR]/.test(flag) || flag === `--recursive`)
@@ -82,23 +113,45 @@ export function bashVerdict(command: string): Verdict {
   return ALLOW
 }
 
-/** What a `gh` command posts: nothing, an inline body, or a body read from a file. */
+/**
+ * What a `gh` command posts: nothing, an inline body, a body read from a file, or a body read
+ * from standard input (`--body-file -`, usually a heredoc in the same command).
+ */
 export type GhPost =
   | { readonly kind: `none` }
-  | { readonly kind: `inline` }
+  | { readonly kind: `inline`; readonly body: string }
   | { readonly kind: `file`; readonly path: string }
+  | { readonly kind: `stdin` }
 
-const GH_POSTING = /\bgh\s+(issue|pr)\s+(create|comment|edit|review)\b/
+const POSTING_VERBS = [`create`, `comment`, `edit`, `review`]
+
+/** The value of `flag` in `words`, given as `flag value` or `--long=value`. */
+function flagValue(words: string[], flags: string[]): string | undefined {
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i] ?? ``
+    if (flags.includes(word)) return words[i + 1] ?? ``
+    const long = flags.find((flag) => flag.startsWith(`--`) && word.startsWith(`${flag}=`))
+    if (long) return word.slice(long.length + 1)
+  }
+  return undefined
+}
 
 /**
- * Finds the body a `gh issue|pr create|comment|edit|review` command posts. A command with no
- * body flag (a title-only edit, `--fill`) posts none this mod can check.
+ * Finds the body a `gh issue|pr create|comment|edit|review` command posts, reading only that
+ * command's own words. One with no body flag (a title-only edit, `--fill`) posts none this mod
+ * can check.
  */
 export function ghPost(command: string): GhPost {
-  if (!GH_POSTING.test(command)) return { kind: `none` }
-  const file = command.match(/(?:--body-file|-F)(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/)
-  if (file) return { kind: `file`, path: file[1] ?? file[2] ?? file[3] ?? `` }
-  if (/(?:--body|-b)(?:=|\s+)/.test(command)) return { kind: `inline` }
+  for (const words of commandsOf(command)) {
+    const [gh, noun, verb] = words
+    if (gh !== `gh` || (noun !== `issue` && noun !== `pr`)) continue
+    if (!POSTING_VERBS.includes(verb ?? ``)) continue
+    const path = flagValue(words, [`--body-file`, `-F`])
+    if (path === `-`) return { kind: `stdin` }
+    if (path !== undefined) return { kind: `file`, path }
+    const body = flagValue(words, [`--body`, `-b`])
+    if (body !== undefined) return { kind: `inline`, body }
+  }
   return { kind: `none` }
 }
 

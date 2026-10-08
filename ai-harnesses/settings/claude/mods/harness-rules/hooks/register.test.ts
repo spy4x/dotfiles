@@ -10,6 +10,9 @@ const RAN = (exitCode: number) => ({
   isStderrTruncated: false,
 })
 
+/** A Bash call that ran, as the engine beneath the mod answers it. */
+const BASH_OK = { result: { stdout: `ok`, stderr: ``, interrupted: false } }
+
 /** An Agent call from the main session, as the engine raises it, with these fields over it. */
 function spawnOf(fields: Partial<AgentSpawnInput>): AgentSpawnInput {
   return {
@@ -84,4 +87,71 @@ test(`lets a spawn with a model through under the limit`, async ($, on) => {
   spawnable(on)
   const spawned = await $.agent.spawn(spawnOf({ subagentType: `Explore`, model: `haiku` }))
   expect(spawned.agentId).toBe(`a1`)
+})
+
+test(
+  `lets a gh command through whose -b or -F belongs to another command or a title`,
+  async ($, on) => {
+    const commands: string[] = []
+    on(`tool.call`, (_$, e) => {
+      commands.push(e.tool === `Bash` ? e.command : ``)
+      return BASH_OK
+    })
+    for (
+      const command of [
+        `git checkout -b x && gh pr create --fill`,
+        `gh pr edit 1 --title "explain -b"`,
+      ]
+    ) {
+      const ran = await $.tool.call({ tool: `Bash`, command })
+      expect(ran.deny).toBeUndefined()
+    }
+    expect(commands.length).toBe(2)
+  },
+)
+
+test(`checks a body file for the marker and secrets, then posts`, async ($, on) => {
+  const scanned: string[] = []
+  on(`fs.read`, () => ({ value: `<!-- agent -->\nbody` }))
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] === `gitleaks`) scanned.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh issue create --title "Use -F flag" --body-file /abs/b.md`,
+  })
+  expect(ran.deny).toBeUndefined()
+  expect(scanned).toEqual([`<!-- agent -->\nbody`])
+})
+
+test(`refuses a body piped through --body-file -`, async ($) => {
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body-file - <<'X'\n<!-- agent --> hi\nX`,
+  })
+  expect(ran.deny).toContain(`absolute path`)
+})
+
+test(`refuses a post whose body file cannot be read`, async ($, on) => {
+  on(`fs.read`, () => {
+    throw new Error(`ENOENT`)
+  })
+  const ran = await $.tool.call({ tool: `Bash`, command: `gh pr comment 1 --body-file /no/such` })
+  expect(ran.deny).toContain(`could not be read`)
+})
+
+test(`logs a gh refusal without the command, which may hold the secret`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  mock.clock(on)
+  const logged: string[] = []
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] === `gitleaks`) return { value: RAN(1) }
+    logged.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  await $.tool.call({ tool: `Bash`, command: `gh pr comment 5 --body "<!-- agent --> SECRETX"` })
+  expect(logged.join(``)).toContain(`"event":"gh"`)
+  expect(logged.join(``)).not.toContain(`SECRETX`)
 })

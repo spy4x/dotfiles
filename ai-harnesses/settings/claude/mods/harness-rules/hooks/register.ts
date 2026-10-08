@@ -1,5 +1,6 @@
 import type { EngineInterface, Register } from "claude-code"
 import {
+  ALLOW,
   bashVerdict,
   ghPost,
   leakVerdict,
@@ -7,6 +8,9 @@ import {
   spawnVerdict,
   type Verdict,
 } from "./rules.ts"
+
+const STDIN_BODY = `Write the body to a file and pass its absolute path to --body-file: ` +
+  `this mod cannot read a body from standard input.`
 
 /**
  * Appends one JSON line to ~/.claude/mods-log/harness-rules.jsonl: every spawn and every
@@ -60,12 +64,18 @@ export const register: Register = (on) => {
     return { deny: verdict.deny }
   })
 
-  // A body we post leaves the machine, so this guard fails closed: a hook that throws refuses.
+  // A body we post leaves the machine, so this guard fails closed: a hook that throws refuses,
+  // and a re-entry (a gh call another hook makes beneath this one) is refused when it posts.
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const post = ghPost(e.command)
     if (post.kind === `none`) return next(e)
-    const body = post.kind === `file` ? await $.fs.read(post.path) : e.command
-    let verdict: Verdict = markerVerdict(body)
+    let verdict: Verdict = post.kind === `stdin` ? { deny: STDIN_BODY } : ALLOW
+    const body = post.kind === `file`
+      ? await $.fs.read(post.path)
+      : post.kind === `inline`
+      ? post.body
+      : ``
+    if (!verdict.deny) verdict = markerVerdict(body)
     if (!verdict.deny) {
       const scan = await $.process.run(
         [`gitleaks`, `stdin`, `--no-banner`, `--redact`],
@@ -74,12 +84,15 @@ export const register: Register = (on) => {
       verdict = leakVerdict(scan.exitCode)
     }
     if (!verdict.deny) return next(e)
-    await log($, { event: `gh`, command: e.command.slice(0, 120), deny: verdict.deny })
+    // The command can hold the secret gitleaks found, so the log keeps only the refusal.
+    await log($, { event: `gh`, deny: verdict.deny })
     return { deny: verdict.deny }
-  }).catch((_$, e, next) =>
-    next.called ? next(e) : {
-      deny: `The check of this post failed (an unreadable body file, or gitleaks did not run), ` +
-        `so it was not sent. Give --body-file an absolute path.`,
+  }).catch((_$, e, next) => {
+    const refusal = {
+      deny: `The check of this post failed: its body file could not be read, or gitleaks did ` +
+        `not run. It was not sent.`,
     }
-  )
+    if (next.error.kind === `re-entry`) return ghPost(e.command).kind === `none` ? next(e) : refusal
+    return next.called ? next(e) : refusal
+  })
 }

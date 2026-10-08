@@ -40,6 +40,11 @@ test(`allows rm of a literal path and a plain rm of a variable file`, () => {
   expect(bashVerdict(`find "$D" -delete`).deny).toBeUndefined()
 })
 
+test(`reads ; and && inside quotes as text, not as a new command`, () => {
+  expect(bashVerdict(`echo "a; rm -rf $D"`).deny).toBeUndefined()
+  expect(bashVerdict(`echo 'x && find / -name y'`).deny).toBeUndefined()
+})
+
 test(`refuses find / and allows find in a directory`, () => {
   expect(bashVerdict(`find / -name x`).deny).toContain(`find /`)
   expect(bashVerdict(`ls; sudo find / -name x`).deny).toContain(`find /`)
@@ -52,8 +57,20 @@ test(`finds the body a gh command posts`, () => {
     path: `/tmp/b.md`,
   })
   expect(ghPost(`gh pr create -F "/tmp/a b.md"`)).toEqual({ kind: `file`, path: `/tmp/a b.md` })
-  expect(ghPost(`gh issue comment 5 --body "hi"`)).toEqual({ kind: `inline` })
-  expect(ghPost(`gh pr review 5 --approve -b ok`)).toEqual({ kind: `inline` })
+  expect(ghPost(`gh issue comment 5 --body "hi"`)).toEqual({ kind: `inline`, body: `hi` })
+  expect(ghPost(`gh pr review 5 --approve -b ok`)).toEqual({ kind: `inline`, body: `ok` })
+  expect(ghPost(`gh pr edit 5 --body=x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr comment 5 --body-file - <<'X'\nhi\nX`)).toEqual({ kind: `stdin` })
+})
+
+test(`reads only the gh command's own flags, not flags elsewhere or inside quotes`, () => {
+  expect(ghPost(`git checkout -b fix/x && gh pr create --fill`)).toEqual({ kind: `none` })
+  expect(ghPost(`gh pr edit 118 --title "docs: explain -b usage"`)).toEqual({ kind: `none` })
+  expect(ghPost(`rg -n -F 'gh pr create --fill' ai-harnesses`)).toEqual({ kind: `none` })
+  expect(ghPost(`gh issue create --title "Use -F flag" --body-file /abs/b.md`)).toEqual({
+    kind: `file`,
+    path: `/abs/b.md`,
+  })
 })
 
 test(`sees no body in a title-only edit, a --fill PR or another gh command`, () => {

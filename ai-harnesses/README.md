@@ -114,7 +114,11 @@ states, so the prose stays the source:
 - at 90% of the 5-hour limit, no new agent starts;
 - a recursive `rm` of a path holding a variable, and `find /`, are refused;
 - a `gh issue` or `gh pr` body must carry `<!-- agent -->` and pass `gitleaks`. A failed check
-  refuses the post.
+  refuses the post, and so does a body piped in with `--body-file -`.
+
+It reads a command's words, not what the shell would run, so it misses some cases: `sudo -u x` or
+`timeout 60` in front of `rm`, bodies posted by `gh api`, `gh release` or `gh pr create --fill`,
+and heredoc lines, which it reads as commands of their own.
 
 Each spawn and each refusal is a line in `~/.claude/mods-log/harness-rules.jsonl`. Test it with
 `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`; `deno task test` skips it.
