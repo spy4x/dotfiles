@@ -88,21 +88,76 @@ function withoutSudo(words: string[]): string[] {
   return words.slice(i)
 }
 
+/** Where a command runs: the session's directory and the home directory, both absolute. */
+export interface Where {
+  readonly cwd?: string
+  readonly home?: string
+}
+
+const LITERAL_PATH = `Delete by literal path: \`find "<literal path>" -delete\`, or \`rm -rf\` ` +
+  `a literal path.`
+
+/**
+ * Resolves `path` the way the shell would name it, without expansion: `~` becomes `home`, a
+ * relative path joins `cwd`, and `.`, `..`, a trailing `/` or `/*` fold away. Undefined when
+ * the path is relative or starts with `~` and that base is unknown.
+ */
+function resolved(path: string, { cwd, home }: Where): string | undefined {
+  let full = path
+  if (full === `~` || full.startsWith(`~/`)) {
+    if (!home) return undefined
+    full = home + full.slice(1)
+  } else if (!full.startsWith(`/`)) {
+    if (!cwd) return undefined
+    full = `${cwd}/${full}`
+  }
+  const parts: string[] = []
+  for (const part of full.replace(/\/\*$/, ``).split(`/`)) {
+    if (part === `..`) parts.pop()
+    else if (part !== `` && part !== `.`) parts.push(part)
+  }
+  return `/${parts.join(`/`)}`
+}
+
+/**
+ * Whether deleting `path` would hit a path Claude Code guards even in bypass mode: `/`, a
+ * top-level directory, home, or the working directory or one of its parents.
+ */
+function isCritical(path: string, where: Where): boolean {
+  if ([`~`, `~/`, `.`, `./`, `..`, `../`, `*`].includes(path)) return true
+  const full = resolved(path, where)
+  if (full === undefined) return false
+  if (full.split(`/`).length <= 2) return true
+  if (where.home && full === resolved(where.home, {})) return true
+  const cwd = where.cwd ? resolved(where.cwd, {}) : undefined
+  return cwd !== undefined && (cwd === full || cwd.startsWith(`${full}/`))
+}
+
 /**
  * Judges a Bash command against the cleanup rules in the global CLAUDE.md ("Leave nothing
- * running"): no recursive `rm` of a path holding a variable, and no `find /`. Best effort: it
- * reads the command's words, not what the shell would expand.
+ * running"): `rm` and `rmdir` take only literal paths, never a critical one, and no `find /`.
+ * These are the deletions Claude Code stops on for approval even in bypass mode; a refusal
+ * instead tells the agent how to retry. Best effort: it reads the command's words, not what
+ * the shell would expand.
  */
-export function bashVerdict(command: string): Verdict {
+export function bashVerdict(command: string, where: Where = {}): Verdict {
   for (const words of commandsOf(command).map(withoutSudo)) {
-    if (words[0] === `rm`) {
-      const flags = words.slice(1).filter((word) => word.startsWith(`-`))
-      const isRecursive = flags.some((flag) => /^-[^-]*[rR]/.test(flag) || flag === `--recursive`)
+    const name = (words[0] ?? ``).replace(/^\\/, ``).split(`/`).pop()
+    if (name === `rm` || name === `rmdir`) {
       const paths = words.slice(1).filter((word) => !word.startsWith(`-`))
-      if (isRecursive && paths.some((path) => path.includes(`$`))) {
+      if (paths.some((path) => /[$`]/.test(path))) {
         return {
-          deny: `Never \`rm -r\` a variable path: an empty variable deletes from \`/\`. Use ` +
-            `\`find "<literal path>" -delete\`, or \`rm -rf\` a literal path.`,
+          deny: `Never pass \`${name}\` a path from a variable or a command substitution: an ` +
+            `empty one deletes from \`/\`, and Claude Code stops for approval on it even in ` +
+            `bypass mode. ${LITERAL_PATH}`,
+        }
+      }
+      const critical = paths.find((path) => isCritical(path, where))
+      if (critical !== undefined) {
+        return {
+          deny: `Never \`${name}\` \`${critical}\`: it is \`/\`, a top-level directory, home, or ` +
+            `the working directory or one of its parents, and Claude Code stops for approval ` +
+            `on it even in bypass mode. Delete only what you created. ${LITERAL_PATH}`,
         }
       }
     }

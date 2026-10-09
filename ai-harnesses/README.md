@@ -142,13 +142,22 @@ states, so the prose stays the source:
 
 - an Agent call without `model` is refused, and so is a reviewer on anything but Opus;
 - at 90% of the 5-hour limit, no new agent starts;
-- a recursive `rm` of a path holding a variable, and `find /`, are refused;
+- `rm` and `rmdir` of a variable or a command substitution (`$`, `$(…)`, backticks), recursive or
+  not, are refused, and so are `/`, a top-level directory, home, `.`, `..`, and the session's
+  working directory or one of its parents. Claude Code stops for approval on these even in bypass
+  mode; a refusal instead tells the agent to retry with `find "<literal path>" -delete` or `rm` of
+  a literal path;
+- `find /` is refused;
 - a `gh issue` or `gh pr` body must carry `<!-- agent -->` and pass `gitleaks`. A failed check
   refuses the post, and so does a body piped in with `--body-file -`.
 
 It reads a command's words, not what the shell would run, so it misses some cases: `sudo -u x` or
 `timeout 60` in front of `rm`, bodies posted by `gh api`, `gh release` or `gh pr create --fill`,
 and heredoc lines, which it reads as commands of their own.
+
+A session reads `CLAUDE_CODE_PLUGIN_DIRS` when it starts: one started before the mod existed runs
+without it, and so do its subagents, until it is restarted. A desktop-app session also keeps the
+version it started with; it reloads a changed mod only when `CLAUDE_CODE_PLUGIN_DIR_WATCH=1` is set.
 
 Each spawn and each refusal is a line in `~/.claude/mods-log/harness-rules.jsonl`. Test it with
 `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`; `deno task test` skips it.

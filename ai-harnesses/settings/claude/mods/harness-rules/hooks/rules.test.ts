@@ -27,17 +27,59 @@ test(`allows a spawn when there is no 5-hour reading`, () => {
   expect(spawnVerdict(opusReviewer, undefined).deny).toBeUndefined()
 })
 
+const WHERE = { cwd: `/home/u/code/worktrees/repo/fix/x`, home: `/home/u` }
+
 test(`refuses a recursive rm of a variable path, sudo or not`, () => {
-  expect(bashVerdict(`rm -rf "$D"`).deny).toContain(`rm -r`)
-  expect(bashVerdict(`cd x && sudo -n rm -r $TMP/a`).deny).toContain(`rm -r`)
-  expect(bashVerdict(`rm --recursive \${DIR}`).deny).toContain(`rm -r`)
-  expect(bashVerdict(`rm -fR "$D"`).deny).toContain(`rm -r`)
+  expect(bashVerdict(`rm -rf "$D"`).deny).toContain(`variable`)
+  expect(bashVerdict(`cd x && sudo -n rm -r $TMP/a`).deny).toContain(`variable`)
+  expect(bashVerdict(`rm --recursive \${DIR}`).deny).toContain(`variable`)
+  expect(bashVerdict(`rm -fR "$D"`).deny).toContain(`variable`)
 })
 
-test(`allows rm of a literal path and a plain rm of a variable file`, () => {
-  expect(bashVerdict(`rm -rf /tmp/claude-1000/x`).deny).toBeUndefined()
-  expect(bashVerdict(`rm -f "$FILE"`).deny).toBeUndefined()
-  expect(bashVerdict(`find "$D" -delete`).deny).toBeUndefined()
+test(`refuses a plain rm or rmdir of a variable path`, () => {
+  expect(bashVerdict(`rm -f "$FILE"`).deny).toContain(`find "<literal path>" -delete`)
+  expect(bashVerdict(`rmdir $D`).deny).toContain(`rmdir`)
+  expect(bashVerdict(`rm "$HOME"`).deny).toContain(`variable`)
+})
+
+test(`refuses rm of a command substitution`, () => {
+  expect(bashVerdict(`rm -rf "$(mktemp -d)"`).deny).toContain(`command substitution`)
+  expect(bashVerdict(`rm -rf $(ls x)`).deny).toContain(`command substitution`)
+  expect(bashVerdict("rm -rf `pwd`/x").deny).toContain(`command substitution`)
+  expect(bashVerdict(`/usr/bin/rm -f "$(cat f)"`).deny).toContain(`command substitution`)
+})
+
+test(`refuses rm of / and of a top-level directory`, () => {
+  expect(bashVerdict(`rm -rf /`, WHERE).deny).toContain(`top-level`)
+  expect(bashVerdict(`rm -rf /*`, WHERE).deny).toContain(`top-level`)
+  expect(bashVerdict(`rm -rf /tmp/`, WHERE).deny).toContain(`top-level`)
+  expect(bashVerdict(`rmdir /opt`).deny).toContain(`top-level`)
+  expect(bashVerdict(`rm -rf /tmp/a/../..`).deny).toContain(`top-level`)
+})
+
+test(`refuses rm of home, the working directory and its parents`, () => {
+  expect(bashVerdict(`rm -rf ~`).deny).toContain(`home`)
+  expect(bashVerdict(`rm -rf ~/`, WHERE).deny).toContain(`home`)
+  expect(bashVerdict(`rm -rf /home/u`, { cwd: `/srv/app`, home: `/home/u` }).deny).toContain(`home`)
+  expect(bashVerdict(`\\rm -rf .`).deny).toContain(`working directory`)
+  expect(bashVerdict(`rm -rf .`).deny).toContain(`working directory`)
+  expect(bashVerdict(`rm -rf ..`).deny).toContain(`working directory`)
+  expect(bashVerdict(`rm -rf ./*`, WHERE).deny).toContain(`working directory`)
+  expect(bashVerdict(`rm -rf /home/u/code/worktrees/repo/fix/x`, WHERE).deny).toContain(`parents`)
+  expect(bashVerdict(`rm -rf ../../fix`, WHERE).deny).toContain(`parents`)
+  expect(bashVerdict(`rm -rf /home/u/code/worktrees`, WHERE).deny).toContain(`parents`)
+})
+
+test(`allows rm of a literal path below the working directory or elsewhere`, () => {
+  expect(bashVerdict(`rm -rf /tmp/claude-1000/x`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`rm -rf build dist/x`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`rm -rf ../sibling`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`rm -rf /home/u/code/worktrees/repo/fix/xy`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`rm -rf /home/u/code/worktrees/repo/fi`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`rm -rf /srv/build`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`rm -f ~/notes.txt`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`find "$D" -delete`, WHERE).deny).toBeUndefined()
+  expect(bashVerdict(`echo $HOME && grep -rn rm .`, WHERE).deny).toBeUndefined()
 })
 
 test(`reads ; and && inside quotes as text, not as a new command`, () => {

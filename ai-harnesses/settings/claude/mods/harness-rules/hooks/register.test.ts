@@ -62,7 +62,23 @@ test(`refuses a spawn at 90% of the 5-hour limit`, async ($, on) => {
 
 test(`refuses a Bash call that deletes a variable path`, async ($) => {
   const ran = await $.tool.call({ tool: `Bash`, command: `rm -rf "$D"` })
-  expect(ran.deny).toContain(`rm -r`)
+  expect(ran.deny).toContain(`variable`)
+})
+
+test(`refuses a Bash call that deletes the session's directory or home`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  on(`session.cwd`, () => ({ value: `/home/test/code/app` }))
+  expect((await $.tool.call({ tool: `Bash`, command: `rm -rf /home/test/code` })).deny)
+    .toContain(`parents`)
+  expect((await $.tool.call({ tool: `Bash`, command: `rm -r /home/test/` })).deny)
+    .toContain(`home`)
+})
+
+test(`lets rm of a literal path below the session's directory through`, async ($, on) => {
+  on(`session.cwd`, () => ({ value: `/home/test/code/app` }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `rm -rf build` })
+  expect(ran.deny).toBeUndefined()
 })
 
 test(`refuses a gh comment without the agent marker before scanning it`, async ($) => {
