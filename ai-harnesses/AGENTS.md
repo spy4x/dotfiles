@@ -345,6 +345,12 @@ Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 `--repo`: without it, gh tries to delete the local branch, fails while its
 worktree exists, and skips the remote delete.
 
+The default branch of every public repo with CI is protected, admins included:
+a merge needs the Woodpecker pull-request check green, and nothing pushes to it
+directly or force-pushes. A blocked merge means wait for CI or fix it; never
+pass `--admin`, and never lift the protection, which is mine to change. A new
+public repo with CI gets the same protection when its first pipeline runs.
+
 After merge, unless told otherwise:
 
 1. Untracked files in the worktree → `find <path> -delete`; temp files →
