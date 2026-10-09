@@ -65,13 +65,19 @@ test(`refuses a Bash call that deletes a variable path`, async ($) => {
   expect(ran.deny).toContain(`variable`)
 })
 
-test(`refuses a Bash call that deletes the session's directory or home`, async ($, on) => {
+test(`refuses a Bash call that deletes the session's directory or a parent`, async ($, on) => {
+  on(`session.cwd`, () => ({ value: `/srv/app/web` }))
+  expect((await $.tool.call({ tool: `Bash`, command: `rm -rf /srv/app/web` })).deny)
+    .toContain(`it is the working directory`)
+  expect((await $.tool.call({ tool: `Bash`, command: `rm -rf /srv/app` })).deny)
+    .toContain(`it is a parent of the working directory`)
+})
+
+test(`refuses a Bash call that deletes home`, async ($, on) => {
   mock.env(on, { HOME: `/home/test` })
-  on(`session.cwd`, () => ({ value: `/home/test/code/app` }))
-  expect((await $.tool.call({ tool: `Bash`, command: `rm -rf /home/test/code` })).deny)
-    .toContain(`parents`)
-  expect((await $.tool.call({ tool: `Bash`, command: `rm -r /home/test/` })).deny)
-    .toContain(`home`)
+  on(`session.cwd`, () => ({ value: `/srv/app` }))
+  const ran = await $.tool.call({ tool: `Bash`, command: `rm -r /home/test/` })
+  expect(ran.deny).toContain(`it is home`)
 })
 
 test(`lets rm of a literal path below the session's directory through`, async ($, on) => {

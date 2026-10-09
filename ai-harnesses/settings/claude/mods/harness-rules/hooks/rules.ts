@@ -80,12 +80,48 @@ export function commandsOf(command: string): string[][] {
   return commands
 }
 
-/** Drops a leading `sudo` and its flags, so `sudo -n rm` reads as `rm`. */
-function withoutSudo(words: string[]): string[] {
-  if (words[0] !== `sudo`) return words
-  let i = 1
-  while (words[i]?.startsWith(`-`)) i++
-  return words.slice(i)
+/** Words that run the command after them: `sudo rm`, `then rm`, `timeout 60 rm`. */
+const PREFIXES = [
+  `sudo`,
+  `command`,
+  `builtin`,
+  `exec`,
+  `nohup`,
+  `time`,
+  `env`,
+  `timeout`,
+  `if`,
+  `then`,
+  `else`,
+  `elif`,
+  `while`,
+  `until`,
+  `do`,
+  `!`,
+]
+
+/** Prefix flags that take a value: `sudo -u x`, `timeout -s KILL`. */
+const VALUE_FLAGS = [`-u`, `-g`, `-s`, `-k`]
+
+/**
+ * Drops what runs before the command proper: prefixes and their flags, a `timeout` duration,
+ * `X=1` assignments, and a `(` or `{` that opens a group. So `do (X=1 sudo -n rm` reads as `rm`.
+ */
+function commandProper(words: string[]): string[] {
+  const rest = [...words]
+  let i = 0
+  while (i < rest.length) {
+    const word = (rest[i] ?? ``).replace(/^[({]+/, ``)
+    rest[i] = word
+    if (word === `` || /^[A-Za-z_][A-Za-z0-9_]*=/.test(word)) {
+      i++
+    } else if (PREFIXES.includes(word)) {
+      i++
+      while (rest[i]?.startsWith(`-`)) i += VALUE_FLAGS.includes(rest[i] ?? ``) ? 2 : 1
+      if (word === `timeout`) i++
+    } else break
+  }
+  return rest.slice(i).map((word) => word.replace(/[)}]+$/, ``))
 }
 
 /** Where a command runs: the session's directory and the home directory, both absolute. */
@@ -120,44 +156,49 @@ function resolved(path: string, { cwd, home }: Where): string | undefined {
 }
 
 /**
- * Whether deleting `path` would hit a path Claude Code guards even in bypass mode: `/`, a
- * top-level directory, home, or the working directory or one of its parents.
+ * What `path` is when Claude Code guards it even in bypass mode: `/`, a top-level directory,
+ * home, or the working directory or one of its parents. Undefined for any other path.
  */
-function isCritical(path: string, where: Where): boolean {
-  if ([`~`, `~/`, `.`, `./`, `..`, `../`, `*`].includes(path)) return true
+function criticalKind(path: string, where: Where): string | undefined {
+  if ([`~`, `~/`].includes(path)) return `home`
+  if ([`.`, `./`, `./*`, `*`].includes(path)) return `the working directory`
+  if ([`..`, `../`].includes(path)) return `a parent of the working directory`
   const full = resolved(path, where)
-  if (full === undefined) return false
-  if (full.split(`/`).length <= 2) return true
-  if (where.home && full === resolved(where.home, {})) return true
+  if (full === undefined) return undefined
+  if (full === `/`) return `the root`
+  if (full.split(`/`).length === 2) return `a top-level directory`
+  if (where.home && full === resolved(where.home, {})) return `home`
   const cwd = where.cwd ? resolved(where.cwd, {}) : undefined
-  return cwd !== undefined && (cwd === full || cwd.startsWith(`${full}/`))
+  if (cwd === full) return `the working directory`
+  if (cwd?.startsWith(`${full}/`)) return `a parent of the working directory`
+  return undefined
 }
 
 /**
  * Judges a Bash command against the cleanup rules in the global CLAUDE.md ("Leave nothing
  * running"): `rm` and `rmdir` take only literal paths, never a critical one, and no `find /`.
- * These are the deletions Claude Code stops on for approval even in bypass mode; a refusal
- * instead tells the agent how to retry. Best effort: it reads the command's words, not what
+ * Claude Code stops for approval on critical paths and some substitutions even in bypass mode;
+ * a refusal instead tells the agent how to retry. Best effort: it reads the command's words, not what
  * the shell would expand.
  */
 export function bashVerdict(command: string, where: Where = {}): Verdict {
-  for (const words of commandsOf(command).map(withoutSudo)) {
+  for (const words of commandsOf(command).map(commandProper)) {
     const name = (words[0] ?? ``).replace(/^\\/, ``).split(`/`).pop()
     if (name === `rm` || name === `rmdir`) {
       const paths = words.slice(1).filter((word) => !word.startsWith(`-`))
       if (paths.some((path) => /[$`]/.test(path))) {
         return {
           deny: `Never pass \`${name}\` a path from a variable or a command substitution: an ` +
-            `empty one deletes from \`/\`, and Claude Code stops for approval on it even in ` +
-            `bypass mode. ${LITERAL_PATH}`,
+            `empty one deletes from \`/\`, and some forms (\`rm -rf $(…)\`) make Claude Code ` +
+            `stop for approval even in bypass mode. ${LITERAL_PATH}`,
         }
       }
-      const critical = paths.find((path) => isCritical(path, where))
-      if (critical !== undefined) {
+      for (const path of paths) {
+        const kind = criticalKind(path, where)
+        if (kind === undefined) continue
         return {
-          deny: `Never \`${name}\` \`${critical}\`: it is \`/\`, a top-level directory, home, or ` +
-            `the working directory or one of its parents, and Claude Code stops for approval ` +
-            `on it even in bypass mode. Delete only what you created. ${LITERAL_PATH}`,
+          deny: `Never \`${name}\` \`${path}\`: it is ${kind}, and Claude Code stops for ` +
+            `approval on it even in bypass mode. Delete only what you created. ${LITERAL_PATH}`,
         }
       }
     }
