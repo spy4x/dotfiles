@@ -16,6 +16,7 @@
 // Without `--apply` nothing is written anywhere: the plan is printed. Credentials
 // (CALDAV_SERVER_URL, CALDAV_USERNAME, CALDAV_PASSWORD) come from the env file.
 
+import { basename, dirname } from "jsr:@std/path@^1.0.0"
 import {
   type CalDavClient,
   CalDavErrorCode,
@@ -134,8 +135,12 @@ export function sectionStart(heading: string, year: number): string | undefined 
 export interface Item {
   /** Index of the item's first line in the file. */
   line: number
+  /** Index of the item's last line in the file. */
+  end: number
   /** The id written on the line, if any. */
   id?: string
+  /** The id was already used by an earlier item (a copied line): it needs a fresh one. */
+  copied?: boolean
   done: boolean
   /** The item's own lines, joined, without the marker, id and priority comments. */
   text: string
@@ -169,7 +174,7 @@ export function summarize(text: string): string {
 
 /** Reads the top-level checkboxes. `year` completes dates that name no year. */
 export function parseTasks(text: string, fallbackYear = new Date().getUTCFullYear()): Item[] {
-  const lines = text.split(`\n`)
+  const lines = text.split(/\r?\n/)
   const title = lines.find((l) => l.startsWith(`# `)) ?? ``
   const year = Number([...title.matchAll(/\b(20\d\d)\b/g)].at(-1)?.[1] ?? fallbackYear)
   const items: Item[] = []
@@ -191,6 +196,7 @@ export function parseTasks(text: string, fallbackYear = new Date().getUTCFullYea
     if (top) {
       current = {
         line: index,
+        end: index,
         done: top[1] !== ` `,
         text: top[2],
         checklist: [],
@@ -208,6 +214,7 @@ export function parseTasks(text: string, fallbackYear = new Date().getUTCFullYea
       current = undefined
       continue
     }
+    if (line.trim() !== ``) current.end = index
     const nested = line.match(/^\s+- \[([ xX])\]\s+(.*)$/)
     if (nested) {
       current.checklist.push({ done: nested[1] !== ` `, text: nested[2] })
@@ -217,7 +224,15 @@ export function parseTasks(text: string, fallbackYear = new Date().getUTCFullYea
       else current.text += ` ${line.trim()}`
     }
   }
-  for (const item of items) finish(item, year)
+  const seen = new Set<string>()
+  for (const item of items) {
+    finish(item, year)
+    if (!item.id) continue
+    if (seen.has(item.id)) {
+      item.copied = true
+      item.id = undefined
+    } else seen.add(item.id)
+  }
   return items
 }
 
@@ -265,7 +280,11 @@ export function assignIds(
     taken.add(id)
     item.id = id
     assigned.set(item.line, id)
-    lines[item.line] = `${lines[item.line].trimEnd()} <!-- id:${id} -->`
+    if (item.copied) {
+      for (let i = item.line; i <= item.end; i++) lines[i] = lines[i].replace(ID_COMMENT, ``)
+    }
+    const cr = lines[item.line].endsWith(`\r`) ? `\r` : ``
+    lines[item.line] = `${lines[item.line].trimEnd()} <!-- id:${id} -->${cr}`
   }
   return { text: lines.join(`\n`), assigned }
 }
@@ -352,8 +371,14 @@ export interface SyncOptions {
   push?: boolean
   newId?: () => string
   year?: number
+  /**
+   * Called with the new TASKS.md text after the plan is made and before the first calendar write.
+   * Writes the file, or throws to stop the run with the calendar untouched.
+   */
+  commitText?: (text: string) => Promise<void>
 }
 
+const isOpen = (t: Todo) => t.status !== TodoStatus.Completed && t.status !== TodoStatus.Cancelled
 const uidOf = (id: string) => `${UID_PREFIX}${id}@${UID_DOMAIN}`
 const idOf = (uid?: string) =>
   uid?.startsWith(UID_PREFIX) && uid.endsWith(`@${UID_DOMAIN}`)
@@ -395,8 +420,14 @@ export async function sync(options: SyncOptions): Promise<Report> {
   }
   if (!doPush) return report
 
+  if (apply && !items.length && [...remote.values()].some((r) => isOpen(r.todo))) {
+    throw new Error(`no checkbox found in TASKS.md but the calendar has open tasks: not cancelling`)
+  }
   const { text } = assignIds(options.text, items, options.newId)
-  if (apply) report.text = text
+  if (apply) {
+    await options.commitText?.(text)
+    report.text = text
+  }
   const options_ = { now }
   const act = async (action: Action, write: () => Promise<void>) => {
     report.actions.push(action)
@@ -535,6 +566,31 @@ export function formatReport(report: Report, apply: boolean): string {
   return lines.join(`\n`)
 }
 
+/**
+ * Replaces `path` with `after` through a temp file in the same folder and a rename, so a reader
+ * never sees half a file. Throws, writing nothing, when the file no longer holds `before`: it is
+ * synced and may have been edited meanwhile.
+ */
+export async function commitTasksFile(path: string, before: string, after: string): Promise<void> {
+  if (await Deno.readTextFile(path) !== before) {
+    throw new Error(`${path} changed during the run; nothing written, run again`)
+  }
+  if (after === before) return
+  const tmp = await Deno.makeTempFile({
+    dir: dirname(path),
+    prefix: `.${basename(path)}.`,
+    suffix: `.tmp`,
+  })
+  try {
+    await Deno.writeTextFile(tmp, after)
+    await Deno.chmod(tmp, (await Deno.stat(path)).mode ?? 0o644)
+    await Deno.rename(tmp, path)
+  } catch (error) {
+    await Deno.remove(tmp).catch(() => {})
+    throw error
+  }
+}
+
 async function main(args: string[]) {
   const flag = (name: string) => args.includes(`--${name}`)
   const value = (name: string, fallback: string) => {
@@ -587,14 +643,8 @@ async function main(args: string[]) {
     apply,
     pull: !flag(`push`),
     push: !flag(`pull`),
+    commitText: (after) => commitTasksFile(tasksPath, before, after),
   })
-  if (apply && report.text !== before) {
-    // The file may have been edited meanwhile (it is synced): never overwrite a newer version.
-    if (await Deno.readTextFile(tasksPath) !== before) {
-      throw new Error(`${tasksPath} changed during the run; ids not written, run again`)
-    }
-    await Deno.writeTextFile(tasksPath, report.text)
-  }
   console.log(formatReport(report, apply))
   if (report.actions.some((a) => a.error)) Deno.exit(1)
 }

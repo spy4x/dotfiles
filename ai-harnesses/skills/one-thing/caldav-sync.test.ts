@@ -1,9 +1,10 @@
-import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.19"
+import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19"
 import type { CalDavObject } from "jsr:@spy4x/caldav@1.44.0"
 import { parseIcal, serializeIcal } from "jsr:@spy4x/time@1.44.0/ical"
 import { patchTodo, readTodo, TodoStatus } from "jsr:@spy4x/time@1.44.0/ical-tasks"
 import {
   assignIds,
+  commitTasksFile,
   mondayOf,
   parseEnv,
   parseTasks,
@@ -374,4 +375,64 @@ Deno.test(`reads quoted and bare values from the env file`, () => {
     parseEnv(`# note\nCALDAV_USERNAME="a b"\nCALDAV_SERVER_URL=https://example.org\n`),
     { CALDAV_USERNAME: `a b`, CALDAV_SERVER_URL: `https://example.org` },
   )
+})
+
+Deno.test(`a file that changed during the run stops it before any calendar write`, async () => {
+  const store = fakeStore()
+  await assertRejects(
+    () =>
+      run(FILE, store, {
+        commitText: () => Promise.reject(new Error(`changed during the run`)),
+      }),
+    Error,
+    `changed during the run`,
+  )
+  assertEquals([store.writes, store.objects.size], [0, 0])
+})
+
+Deno.test(`commits the file through a rename and refuses when it changed meanwhile`, async () => {
+  const dir = await Deno.makeTempDir()
+  try {
+    const path = `${dir}/TASKS.md`
+    await Deno.writeTextFile(path, `one`)
+    const inode = (await Deno.stat(path)).ino
+    await commitTasksFile(path, `one`, `two`)
+    assert((await Deno.stat(path)).ino !== inode, `replaced by rename, not rewritten in place`)
+    assertEquals(await Deno.readTextFile(path), `two`)
+    await assertRejects(() => commitTasksFile(path, `one`, `three`), Error, `changed during`)
+    assertEquals(await Deno.readTextFile(path), `two`)
+    assertEquals([...Deno.readDirSync(dir)].map((e) => e.name), [`TASKS.md`])
+  } finally {
+    await Deno.remove(dir, { recursive: true })
+  }
+})
+
+Deno.test(`a copied line gets a fresh id and becomes a second task`, async () => {
+  const store = fakeStore()
+  const first = await run(FILE, store)
+  const line = first.text.split(`\n`).find((l) => l.includes(`Draft the garden plan`))!
+  const copied = first.text.replace(line, `${line}\n${line.replace(`4 Mar`, `7 Mar`)}`)
+  const second = await run(copied, store)
+  assertEquals(second.actions.filter((a) => a.kind === `create`).map((a) => a.id), [`id0010`])
+  assertEquals(second.text.match(/<!-- id:id0001 -->/g)?.length, 1)
+  assertEquals(store.objects.size, 10)
+})
+
+Deno.test(`reads and keeps CRLF line endings`, () => {
+  const crlf = FILE.replaceAll(`\n`, `\r\n`)
+  assertEquals(parseTasks(crlf), parseTasks(FILE))
+  const { text } = assignIds(crlf, parseTasks(crlf), counter())
+  assert(!text.replaceAll(`\r\n`, ``).match(/[\r\n]/), `every line break stays CRLF`)
+  assertEquals(text.replaceAll(`\r\n`, `\n`).match(/<!-- id:/g)?.length, 9)
+})
+
+Deno.test(`refuses to cancel everything when no checkbox parses but tasks are open`, async () => {
+  const store = fakeStore()
+  await run(FILE, store)
+  const writes = store.writes
+  await assertRejects(() => run(``, store), Error, `not cancelling`)
+  assertEquals(store.writes, writes)
+  // a dry run only reports
+  const dry = await run(``, store, { apply: false })
+  assertEquals(dry.actions.length, 9)
 })
