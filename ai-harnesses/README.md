@@ -162,8 +162,8 @@ version it started with; it reloads a changed mod only when `CLAUDE_CODE_PLUGIN_
 
 Each spawn and each refusal is a line in `~/.claude/mods-log/harness-rules.jsonl`. A refused Bash
 command is logged whole, unless it also posts with `gh`: then it is logged without its command,
-since the post's body may hold a secret. Test it with `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`;
-`deno task test` skips it.
+since the post's body may hold a secret. Test it with
+`claude plugin test ai-harnesses/settings/claude/mods/harness-rules`; `deno task test` skips it.
 
 Claude Code's built-in worktree features nest checkouts under `<repo>/.claude/worktrees/`, which
 repo tooling then walks. `AGENTS.md` tells the agent to create worktrees by hand instead; don't tick
