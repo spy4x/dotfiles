@@ -178,8 +178,8 @@ function criticalKind(path: string, where: Where): string | undefined {
  * Judges a Bash command against the cleanup rules in the global CLAUDE.md ("Leave nothing
  * running"): `rm` and `rmdir` take only literal paths, never a critical one, and no `find /`.
  * Claude Code stops for approval on critical paths and some substitutions even in bypass mode;
- * a refusal instead tells the agent how to retry. Best effort: it reads the command's words, not what
- * the shell would expand.
+ * a refusal instead tells the agent how to retry. Best effort: it reads the command's words, not
+ * what the shell would expand.
  */
 export function bashVerdict(command: string, where: Where = {}): Verdict {
   for (const words of commandsOf(command).map(commandProper)) {
