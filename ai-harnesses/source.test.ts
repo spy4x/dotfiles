@@ -142,12 +142,17 @@ Deno.test(`the real mcp.jsonc keeps playwright's OpenCode entry as it was in ope
     enabled: true,
     timeout: 300000,
   })
-  assertEquals(JSON.parse(file.content).mcp.caldav.enabled, false)
+  assertEquals(JSON.parse(file.content).mcp.caldav.enabled, true)
 })
 
-Deno.test(`the real mcp.jsonc registers nothing in Claude Code while caldav is disabled`, async () => {
+Deno.test(`the real mcp.jsonc registers only caldav in Claude Code, as a stdio server`, async () => {
   const source = await loadSource(ROOT)
   const config = await loadConfig(join(ROOT, `config.jsonc`))
   const rendered = ADAPTERS.claude.render(source, config.harnesses.claude)
-  assertEquals(rendered.filter((file) => file.at === `mcpFile`), [])
+    .filter((file) => file.at === `mcpFile`)
+  assertEquals(rendered.length, 1)
+  const servers = JSON.parse(rendered[0].content).mcpServers
+  assertEquals(Object.keys(servers), [`caldav`])
+  assertEquals(servers.caldav.type, `stdio`)
+  assertEquals(servers.caldav.command.endsWith(`/sync/code/mcps/caldav/start.sh`), true)
 })

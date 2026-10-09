@@ -1,9 +1,9 @@
 // MCP servers for every harness. `deno task ai` renders each one into OpenCode's `mcp` and into
 // Claude Code's `mcpServers` (in `~/.claude.json`). See README → "MCP servers".
 {
-  // Off until spy4x/caldav-mcp#14 stops it damaging tasks on update. Then drop `enabled`.
-  // OpenCode gets it with `enabled: false`; Claude Code has no off switch, so it gets nothing.
-  "caldav": { "command": "~/sync/code/mcps/caldav/start.sh", "enabled": false },
+  // The owner's tasks and calendars on Stalwart. Edits patch the original iCalendar text, so
+  // reminders and fields Tasks.org wrote survive (spy4x/caldav-mcp#14, fixed by #18).
+  "caldav": { "command": "~/sync/code/mcps/caldav/start.sh" },
   "playwright": {
     "command": "npx",
     "args": [
