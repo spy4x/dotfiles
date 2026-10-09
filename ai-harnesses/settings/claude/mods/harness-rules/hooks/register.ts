@@ -10,6 +10,13 @@ import {
   type Where,
 } from "./rules.ts"
 
+/**
+ * Added to every refused Bash call. Agents often fix a body (`sed -i '1i <!-- agent -->'`) and
+ * post it in one command, then retry that same command after the refusal.
+ */
+const NOTHING_RAN = `Nothing in this command ran, not even the steps before the refused one: ` +
+  `run any fix in a command of its own, then retry.`
+
 const STDIN_BODY = `Write the body to a file and pass its absolute path to --body-file: ` +
   `this mod cannot read a body from standard input.`
 
@@ -73,8 +80,11 @@ export const register: Register = (on) => {
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const verdict = bashVerdict(e.command, await whereOf($))
     if (!verdict.deny) return next(e)
-    await log($, { event: `bash`, command: e.command.slice(0, 200), deny: verdict.deny })
-    return { deny: verdict.deny }
+    // The whole command, read on this machine to judge each refusal; none when it also posts,
+    // since a post's body may hold a secret.
+    const command = ghPost(e.command).kind === `none` ? e.command : null
+    await log($, { event: `bash`, command, deny: verdict.deny })
+    return { deny: `${verdict.deny} ${NOTHING_RAN}` }
   })
 
   // A body we post leaves the machine, so this guard fails closed: a hook that throws refuses,
@@ -101,11 +111,11 @@ export const register: Register = (on) => {
     if (!verdict.deny) return next(e)
     // The command can hold the secret gitleaks found, so the log keeps only the refusal.
     await log($, { event: `gh`, deny: verdict.deny })
-    return { deny: verdict.deny }
+    return { deny: `${verdict.deny} ${NOTHING_RAN}` }
   }).catch((_$, e, next) => {
     const refusal = {
       deny: `The check of this post failed: its body file could not be read, or gitleaks did ` +
-        `not run. It was not sent.`,
+        `not run. It was not sent. ${NOTHING_RAN}`,
     }
     if (next.error.kind === `re-entry`) return ghPost(e.command).kind === `none` ? next(e) : refusal
     return next.called ? next(e) : refusal
