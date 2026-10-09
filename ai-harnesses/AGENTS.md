@@ -97,6 +97,18 @@ NTFY, Gatus, Authelia.
 Cost-aware: fixed price per month (Hetzner BM/VM) or usage-based with hard or
 prepaid caps (DeepSeek API). No wallet-attack risk like serverless functions.
 
+**Runtime-agnostic code.** The Deno team joined Cloudflare: the runtime gets
+fixes until about October 2027, then its development ends. So new code, and the
+old functions you change anyway, must run unchanged on Deno, Node and Bun. Use
+web standards (`fetch`, `Request`/`Response`, `URL`, Web Crypto, Web Streams,
+`AbortController`, `TextEncoder`) and `@std/*` packages that run on all three
+(JSR's compatibility list is a hint, not the test). Anything runtime-specific
+(`Deno.*`, `process`, `Bun.*`, `node:*` for env, files, subprocesses, sockets,
+KV) goes behind a small adapter in `@spy4x/platform` (`ts-libs`), never in
+business code; the first task that needs one adds it there. Never rewrite old
+code only to drop `Deno.*`. Until the review due 2027-01-10 decides, Deno stays
+the runtime and toolchain, and `Deno.test` and Fresh apps are exempt.
+
 **Build less.** First understand the problem. Then, before writing code, stop
 at the first step that holds:
 
