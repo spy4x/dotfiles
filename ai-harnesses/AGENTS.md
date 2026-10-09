@@ -347,9 +347,12 @@ worktree exists, and skips the remote delete.
 
 The default branch of every public repo with CI is protected, admins included:
 a merge needs the Woodpecker pull-request check green, and nothing pushes to it
-directly or force-pushes. A blocked merge means wait for CI or fix it; never
-pass `--admin`, and never lift the protection, which is mine to change. A new
-public repo with CI gets the same protection when its first pipeline runs.
+directly or force-pushes. A blocked merge → wait with
+`timeout 900 gh pr checks <n> --repo <owner>/<repo> --watch`; red → fix it;
+still pending after that (a pipeline waiting for approval) → leave the PR open
+and say so. Never pass `--admin`, and never loosen or lift the protection,
+which is mine to change. Whoever adds CI to a public repo protects its default
+branch the same way once its first pull-request pipeline has run.
 
 After merge, unless told otherwise:
 
