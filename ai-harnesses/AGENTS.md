@@ -326,7 +326,8 @@ after push, never ask.
 self-review. Every test the diff adds or changes needs its `Mutation:` line in
 the PR body; a missing one goes back to the implementer before any reviewer is
 spent. Pass → merge your own PR without asking (never an outside author's).
-`needs-fix` → the fix goes back to the author with the cause the verdict names, and the same reviewer re-reviews it
+`needs-fix` → the fix goes back to the author with the cause the verdict names,
+and the same reviewer re-reviews it
 (`SendMessage`: it keeps its findings, and its cache lasts an hour); a new PR or
 a rework of most of the diff → a fresh reviewer. At most three `needs-fix`
 verdicts per PR. A wording fix, or one of about ten lines or fewer, you apply
