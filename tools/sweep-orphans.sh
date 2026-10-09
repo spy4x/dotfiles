@@ -43,26 +43,38 @@
 # never signals PID 1, the user manager or its own ancestors, nor stops a scope
 # holding one of them, so there is no PID to copy by hand. A scope still active
 # after its stop is named on stderr, and the exit code is 1. Pair it with
-# `--under`.
+# `--under`, except in `--stale` mode.
+#
+# `--stale` is `--all` limited to orphans and scopes older than `--min-age`,
+# which defaults to a day here. Unlike `--all`, it may be paired with `--kill`:
+# whatever another session left running for a day is abandoned, not in use.
+# Without `--under`, `--stale --kill` refuses a `--min-age` below a day, so it
+# cannot stop another session's live work.
 #
 # Needs Linux with cgroup v2 and a systemd user manager. Elsewhere it fails
 # loudly instead of printing a falsely clean result; fall back to
 # `ps -eo pcpu,etime,args --sort=-pcpu | head`, which finds only CPU burners.
 #
-# Usage: sweep-orphans.sh [--all] [--kill] [--min-age <seconds>] [--under <dir>...]
+# Usage: sweep-orphans.sh [--all | --stale] [--kill] [--min-age <seconds>] [--under <dir>...]
 set -euo pipefail
 shopt -s extglob
 
-USAGE="usage: sweep-orphans.sh [--all] [--kill] [--min-age <seconds>] [--under <dir>...]"
+USAGE="usage: sweep-orphans.sh [--all | --stale] [--kill] [--min-age <seconds>] [--under <dir>...]"
 ALL=0
+STALE=0
 KILL=0
-MIN_AGE=3600
+MIN_AGE=
 FAILED=0
 UNDER=()
 while (($#)); do
   case $1 in
     --all)
       ALL=1
+      shift
+      ;;
+    --stale)
+      ALL=1
+      STALE=1
       shift
       ;;
     --kill)
@@ -91,6 +103,14 @@ while (($#)); do
   esac
 done
 
+[[ -n $MIN_AGE ]] || MIN_AGE=$((STALE ? 86400 : 3600))
+
+if ((STALE && KILL && !${#UNDER[@]} && 10#$MIN_AGE < 86400)); then
+  echo "sweep-orphans.sh: --stale --kill stops only what is a day old; --min-age below 86400" \
+    "needs --under" >&2
+  exit 2
+fi
+
 MGR=$(pgrep -xu "${USER:-$(id -un)}" systemd || echo 1)
 
 # Never signal these: init, the user manager (SIGTERM = log out) and this script's ancestors.
@@ -102,8 +122,9 @@ while ((p > 1)); do
   p=${p// /}
 done
 
-if ((ALL && KILL)); then
-  echo "sweep-orphans.sh: --all lists other sessions' orphans; report those, never --kill them" >&2
+if ((ALL && KILL && !STALE)); then
+  echo "sweep-orphans.sh: --all lists other sessions' orphans; report those, never --kill them;" \
+    "--stale --kill stops those older than a day" >&2
   exit 2
 fi
 
@@ -172,6 +193,10 @@ while IFS= read -r line; do
   foreign "$pid" && continue
   under "$pid" || continue
   [[ $SAFE == *" $pid "* ]] && continue
+  if ((STALE)); then
+    age=$(ps -o etimes= -p "$pid") || continue
+    ((age >= 10#$MIN_AGE)) || continue
+  fi
   LISTED+=("$line")
 done <<<"$ORPHANS"
 

@@ -308,8 +308,10 @@ It also lists `systemd-run --user --scope` units (`run-*.scope`) older than an
 hour, with the unit name in place of the PID; `--min-age <seconds>` changes the
 hour. A subagent adds `--under <worktree> <scratch dir>`, reads the list, then
 reruns it with `--kill` to stop exactly those. Empty output = clean. The lead's
-final sweep adds `--all`, which shows other sessions' orphans too: report those,
-never kill them. It misses Docker containers (own cgroup): clean those by name.
+final sweep adds `--all`, which shows other sessions' orphans too. One older
+than 24 hours is abandoned, whoever started it: stop it with `--stale --kill`
+and report what it stopped. Report a younger one, never kill it. The sweep
+misses Docker containers (own cgroup): clean those by name.
 
 **Killing processes.** Kill only a PID you started, or one `sweep-orphans.sh`
 listed first on its line; prefer its `--kill`. Never signal PID 1, any `systemd`
