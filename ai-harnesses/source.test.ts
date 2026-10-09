@@ -123,7 +123,7 @@ for (
   })
 }
 
-Deno.test(`the real mcp.jsonc keeps playwright's OpenCode entry as it was in opencode.json`, async () => {
+Deno.test(`the real mcp.jsonc renders playwright's OpenCode entry with a pinned version`, async () => {
   const source = await loadSource(ROOT)
   const config = await loadConfig(join(ROOT, `config.jsonc`))
   const file = ADAPTERS.opencode.render(source, config.harnesses.opencode)
@@ -132,7 +132,7 @@ Deno.test(`the real mcp.jsonc keeps playwright's OpenCode entry as it was in ope
     type: `local`,
     command: [
       `npx`,
-      `@playwright/mcp@latest`,
+      `@playwright/mcp@0.0.83`,
       `--browser`,
       `chromium`,
       `--headless`,
