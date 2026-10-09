@@ -16,7 +16,7 @@
 // Without `--apply` nothing is written anywhere: the plan is printed. Credentials
 // (CALDAV_SERVER_URL, CALDAV_USERNAME, CALDAV_PASSWORD) come from the env file.
 
-import { basename, dirname } from "jsr:@std/path@^1.0.0"
+import { basename, dirname } from "jsr:@std/path@1.1.6"
 import {
   type CalDavClient,
   CalDavErrorCode,
