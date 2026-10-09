@@ -7,6 +7,7 @@ import {
   markerVerdict,
   spawnVerdict,
   type Verdict,
+  type Where,
 } from "./rules.ts"
 
 const STDIN_BODY = `Write the body to a file and pass its absolute path to --body-file: ` +
@@ -43,6 +44,18 @@ async function fiveHourPercent($: EngineInterface): Promise<number | undefined> 
   return rateLimits.find((limit) => limit.kind === `five_hour`)?.percentUsed
 }
 
+/**
+ * The session's directory and home, for the `rm` rule. Each is left out when it cannot be read:
+ * the rule then still refuses variable paths and the paths it can judge without them.
+ */
+async function whereOf($: EngineInterface): Promise<Where> {
+  const [cwd, home] = await Promise.all([
+    $.session.cwd().catch(() => undefined),
+    $.env.get(`HOME`).catch(() => undefined),
+  ])
+  return { cwd, home }
+}
+
 export const register: Register = (on) => {
   on(`agent.spawn`, async ($, e, next) => {
     const verdict = spawnVerdict(e, await fiveHourPercent($))
@@ -58,7 +71,7 @@ export const register: Register = (on) => {
   })
 
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
-    const verdict = bashVerdict(e.command)
+    const verdict = bashVerdict(e.command, await whereOf($))
     if (!verdict.deny) return next(e)
     await log($, { event: `bash`, command: e.command.slice(0, 200), deny: verdict.deny })
     return { deny: verdict.deny }

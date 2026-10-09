@@ -226,11 +226,14 @@ Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers,
 Always close browser contexts at the end of a lane, including on the failure
 path. A failed lane that leaks a browser is worse than a failed lane.
 
-Never `rm -rf` a variable path from a command line, guarded or not: the harness
-stops for approval on it even in bypass mode, which stalls unattended work, and
-an empty variable deletes from `/`. Delete with `find "$D" -delete` (it
-removes the directory too), or `rm -rf` a literal path. Never `find /`; search
-the directory that can hold the answer.
+Never give `rm` or `rmdir` a variable or a command substitution (`"$D"`,
+`"$(mktemp -d)"`), recursive or not, guarded or not: an empty one deletes from
+`/`. Never give it `/`, a top-level directory, home, `.`, `..`, or the working
+directory or one of its parents: the harness stops for approval on these, and
+on some substitutions, even in bypass mode, which stalls unattended work.
+Delete with `find "$D" -delete` (it removes the directory too), or `rm -rf` a
+literal path.
+Never `find /`; search the directory that can hold the answer.
 
 **Delete only what you created.** Each agent keeps its scratch files in its own
 `mktemp -d` folder, records the path it prints, and deletes only paths it
