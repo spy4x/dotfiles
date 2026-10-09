@@ -190,3 +190,27 @@ test(`scans the whole command, so an escaped quote cannot hide a secret`, async 
   })
   expect(ran.deny).toContain(`secret`)
 })
+
+test(`tells the agent that nothing in a refused command ran`, async ($, on) => {
+  on(`fs.read`, () => ({ value: `no marker` }))
+  const posted = await $.tool.call({
+    tool: `Bash`,
+    command: `sed -i '1i <!-- agent -->' /abs/b.md && gh pr edit 1 --body-file /abs/b.md`,
+  })
+  expect(posted.deny).toContain(`Nothing in this command ran`)
+  const deleted = await $.tool.call({ tool: `Bash`, command: `cd x && rm -rf "$D"` })
+  expect(deleted.deny).toContain(`Nothing in this command ran`)
+})
+
+test(`logs a refused Bash command whole`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  mock.clock(on)
+  const logged: string[] = []
+  on(`process.run`, (_$, e) => {
+    logged.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  const command = `echo ${`x`.repeat(300)}; rm -rf "$D"`
+  await $.tool.call({ tool: `Bash`, command })
+  expect(logged.join(``)).toContain(JSON.stringify(command).slice(1, -1))
+})

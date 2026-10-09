@@ -160,8 +160,10 @@ A session reads `CLAUDE_CODE_PLUGIN_DIRS` when it starts: one started before the
 without it, and so do its subagents, until it is restarted. A desktop-app session also keeps the
 version it started with; it reloads a changed mod only when `CLAUDE_CODE_PLUGIN_DIR_WATCH=1` is set.
 
-Each spawn and each refusal is a line in `~/.claude/mods-log/harness-rules.jsonl`. Test it with
-`claude plugin test ai-harnesses/settings/claude/mods/harness-rules`; `deno task test` skips it.
+Each spawn and each refusal is a line in `~/.claude/mods-log/harness-rules.jsonl`. A refused Bash
+command is logged whole; a refused `gh` post is logged without its command, which may hold the
+secret. Test it with `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`;
+`deno task test` skips it.
 
 Claude Code's built-in worktree features nest checkouts under `<repo>/.claude/worktrees/`, which
 repo tooling then walks. `AGENTS.md` tells the agent to create worktrees by hand instead; don't tick
