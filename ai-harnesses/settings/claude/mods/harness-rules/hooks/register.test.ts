@@ -202,6 +202,17 @@ test(`tells the agent that nothing in a refused command ran`, async ($, on) => {
   expect(deleted.deny).toContain(`Nothing in this command ran`)
 })
 
+test(`says nothing ran when the check of a post fails`, async ($, on) => {
+  on(`fs.read`, () => {
+    throw new Error(`ENOENT`)
+  })
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `printf '<!-- agent -->' > /abs/b.md && gh pr comment 1 --body-file /abs/b.md`,
+  })
+  expect(ran.deny).toContain(`Nothing in this command ran`)
+})
+
 test(`logs a refused Bash command whole`, async ($, on) => {
   mock.env(on, { HOME: `/home/test` })
   mock.clock(on)
@@ -210,7 +221,24 @@ test(`logs a refused Bash command whole`, async ($, on) => {
     logged.push(e.init?.stdin ?? ``)
     return { value: RAN(0) }
   })
-  const command = `echo ${`x`.repeat(300)}; rm -rf "$D"`
+  const command = `echo ${`x`.repeat(2000)}; rm -rf "$D"`
   await $.tool.call({ tool: `Bash`, command })
-  expect(logged.join(``)).toContain(JSON.stringify(command).slice(1, -1))
+  expect(JSON.parse(logged.join(``)).command).toBe(command)
+})
+
+test(`logs a refused rm that also posts without its command`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  mock.clock(on)
+  const logged: string[] = []
+  on(`process.run`, (_$, e) => {
+    logged.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> SECRETX"; rm -rf "$D"`,
+  })
+  expect(ran.deny).toContain(`rm`)
+  expect(logged.join(``)).toContain(`"event":"bash"`)
+  expect(logged.join(``)).not.toContain(`SECRETX`)
 })

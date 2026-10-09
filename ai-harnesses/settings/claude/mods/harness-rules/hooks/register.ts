@@ -80,8 +80,10 @@ export const register: Register = (on) => {
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const verdict = bashVerdict(e.command, await whereOf($))
     if (!verdict.deny) return next(e)
-    // The whole command: the log is read on this machine to judge each refusal.
-    await log($, { event: `bash`, command: e.command, deny: verdict.deny })
+    // The whole command, read on this machine to judge each refusal; none when it also posts,
+    // since a post's body may hold a secret.
+    const command = ghPost(e.command).kind === `none` ? e.command : null
+    await log($, { event: `bash`, command, deny: verdict.deny })
     return { deny: `${verdict.deny} ${NOTHING_RAN}` }
   })
 
