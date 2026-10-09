@@ -186,6 +186,12 @@ Deno.test(`refuses to kill other sessions' orphans`, async () => {
   })
 })
 
+Deno.test(`--stale --kill refuses a --min-age below a day without --under`, async () => {
+  // One second short of a day: if the refusal ever breaks, it can only stop what is nearly a day
+  // old, which the rule stops anyway. A lower age would stop other sessions' live work.
+  assertEquals((await sweep(`--stale`, `--kill`, `--min-age`, `86399`)).code, 2)
+})
+
 Deno.test(`--stale leaves another session's orphan alone until it is a day old`, async () => {
   await withOrphans(async (dir, spawned) => {
     const lane = await dir(`lane`)

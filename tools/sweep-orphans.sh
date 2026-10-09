@@ -43,11 +43,13 @@
 # never signals PID 1, the user manager or its own ancestors, nor stops a scope
 # holding one of them, so there is no PID to copy by hand. A scope still active
 # after its stop is named on stderr, and the exit code is 1. Pair it with
-# `--under`.
+# `--under`, except in `--stale` mode.
 #
 # `--stale` is `--all` limited to orphans and scopes older than `--min-age`,
 # which defaults to a day here. Unlike `--all`, it may be paired with `--kill`:
 # whatever another session left running for a day is abandoned, not in use.
+# Without `--under`, `--stale --kill` refuses a `--min-age` below a day, so it
+# cannot stop another session's live work.
 #
 # Needs Linux with cgroup v2 and a systemd user manager. Elsewhere it fails
 # loudly instead of printing a falsely clean result; fall back to
@@ -102,6 +104,12 @@ while (($#)); do
 done
 
 [[ -n $MIN_AGE ]] || MIN_AGE=$((STALE ? 86400 : 3600))
+
+if ((STALE && KILL && !${#UNDER[@]} && 10#$MIN_AGE < 86400)); then
+  echo "sweep-orphans.sh: --stale --kill stops only what is a day old; --min-age below 86400" \
+    "needs --under" >&2
+  exit 2
+fi
 
 MGR=$(pgrep -xu "${USER:-$(id -un)}" systemd || echo 1)
 
