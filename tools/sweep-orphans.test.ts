@@ -186,6 +186,34 @@ Deno.test(`refuses to kill other sessions' orphans`, async () => {
   })
 })
 
+Deno.test(`--stale leaves another session's orphan alone until it is a day old`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const lane = await dir(`lane`)
+    const pid = await orphan(lane, SIBLING)
+    spawned.push(pid)
+    const { pids, code } = await sweep(`--stale`, `--kill`, `--under`, lane)
+    assertEquals(code, 0)
+    assertEquals(pids, [])
+    assert(await exists(`/proc/${pid}`), `a fresh orphan of another session was killed`)
+  })
+})
+
+Deno.test(`--stale --kill stops another session's orphan older than --min-age`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const lane = await dir(`lane`)
+    const old = await orphan(lane, SIBLING)
+    const outside = await orphan(await dir(`theirs`), SIBLING)
+    spawned.push(old, outside)
+    await new Promise((r) => setTimeout(r, 1100))
+    const { pids, code } = await sweep(`--stale`, `--kill`, `--min-age`, `1`, `--under`, lane)
+    assertEquals(code, 0)
+    assertEquals(pids, [old])
+    await new Promise((r) => setTimeout(r, 200))
+    assert(!(await exists(`/proc/${old}`)), `the stale orphan still runs`)
+    assert(await exists(`/proc/${outside}`), `an orphan outside --under was killed`)
+  })
+})
+
 /** Whether a systemd user manager answers; `systemctl` itself may be missing. */
 async function hasUserManager(): Promise<boolean> {
   try {
@@ -309,6 +337,29 @@ Deno.test({
       const unit = await withScope(await dir(`lane`), SIBLING, scopes)
       assert(!(await sweepNames(`--min-age`, `0`)).names.includes(unit))
       assert((await sweepNames(`--all`, `--min-age`, `0`)).names.includes(unit))
+    }),
+})
+
+Deno.test({
+  name: `--stale --kill stops another session's scope only past --min-age`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const lane = await dir(`lane`)
+      const unit = await withScope(lane, SIBLING, scopes)
+      assertEquals((await sweepNames(`--stale`, `--kill`, `--under`, lane)).names, [])
+      assert(await active(unit), `a fresh scope of another session was stopped`)
+      const { names, code } = await sweepNames(
+        `--stale`,
+        `--kill`,
+        `--min-age`,
+        `0`,
+        `--under`,
+        lane,
+      )
+      assertEquals(code, 0)
+      assertEquals(names, [unit])
+      assert(!(await active(unit)), `the stale scope is still active`)
     }),
 })
 
