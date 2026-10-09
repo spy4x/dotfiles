@@ -15,8 +15,13 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 
 - Take open issues by priority, `p1-critical` first; no priority label counts as `p3-medium`;
   oldest first within a level. Skip issues labelled `manual` or `needs-decision`, and issues with
-  an open PR. This lists the candidates oldest first; group them by priority label yourself:
-  `gh issue list --state open --limit 500 -S '-label:manual -label:needs-decision sort:created-asc'`.
+  an open PR by `spy4x`. This lists the candidates oldest first; group them by priority label
+  yourself:
+  `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision sort:created-asc'`.
+- Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
+  never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
+  `gh pr list --state open --limit 500 -S '-author:spy4x'` and
+  `gh issue list --state open --limit 500 -S '-author:spy4x'`.
 - Stuck on a decision → comment on the issue in the Issues and reports shape (option A and B, one
   consequence each, your pick), add `needs-decision`, and move on to the next issue. The owner
   answers in a comment and removes the label.
