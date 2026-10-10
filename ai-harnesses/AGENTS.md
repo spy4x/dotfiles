@@ -36,7 +36,8 @@ and say so in the report.
 **Picking work yourself** (a wave, "work through the backlog") → the `wave`
 skill. Any open issue at `p3-medium` or above is yours to take, highest
 priority first, unless it carries `manual` (work only I can do) or
-`needs-decision` (waits on my answer): skip those until I remove the label. Priority labels, five levels:
+`needs-decision` (waits on my answer): skip those until I remove the label.
+Priority labels, five levels:
 
 - `p1-critical`: urgent tasks and critical bugs.
 - `p2-high`: work a project or consumer app needs.
@@ -49,13 +50,13 @@ go looking for work below it.
 
 **Filing issues.** This paragraph is the one place that says what an agent may
 file without asking. File an issue only when I asked for it, or for one of
-these: a security or data-loss risk; a bug that a person or an app has
-actually hit or reported; a gap that a named app needs filled. Give it the
-priority the labels above define. Anything else you notice is not filed: a bug
-nobody has hit (however real), a rare edge case, test-tooling polish, a
-refactor, a side note from review. It goes into your final report under **Proposed
-issues**: one line each, with what a person would notice and a suggested
-priority. I pick which ones become issues; the list never blocks the report.
+these: a security or data-loss risk; a bug that a person or an app has hit or
+reported (a reviewer's note is not a report); a gap that a named app needs
+filled. Give it the priority the labels above define. Anything else you notice
+is not filed: a bug nobody has hit (however real), a rare edge case,
+test-tooling polish, a refactor, a side note from review. It goes into your
+final report under **Proposed issues**: one line each, with what a person
+would notice and a suggested priority. I pick which ones become issues; the list never blocks the report.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
 when it needs my hands or my answer. A repo without these labels → create

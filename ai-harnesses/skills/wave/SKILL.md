@@ -16,8 +16,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - Take open issues by priority, `p1-critical` first; no priority label counts as `p3-medium`;
   oldest first within a level. Stop at `p3-medium`: `p4-low` and `p5-someday` are never
   candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual`
-  or `needs-decision`, and issues with an open PR by `spy4x`. This lists the candidates oldest first; group them by priority label
-  yourself:
+  or `needs-decision`, and issues with an open PR by `spy4x`. This lists the candidates oldest
+  first; group them by priority label yourself:
   `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:p4-low -label:p5-someday sort:created-asc'`.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
   never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
