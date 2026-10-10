@@ -34,15 +34,30 @@ green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
 and say so in the report.
 
 **Picking work yourself** (a wave, "work through the backlog") → the `wave`
-skill. Any open issue is yours to take, highest priority first, unless it
-carries `manual` (work only I can do) or `needs-decision` (waits on my answer):
-skip those until I remove the label. Priority labels, five levels:
+skill. Any open issue at `p3-medium` or above is yours to take, highest
+priority first, unless it carries `manual` (work only I can do) or
+`needs-decision` (waits on my answer): skip those until I remove the label.
+Priority labels, five levels:
 
 - `p1-critical`: urgent tasks and critical bugs.
 - `p2-high`: work a project or consumer app needs.
 - `p3-medium`: the default. An issue with no priority label is `p3-medium`.
-- `p4-low`: worth doing when nothing above is open.
-- `p5-someday`: ideas and nice-to-haves.
+- `p4-low`: parked. An agent never picks it; I raise it when I want it.
+- `p5-someday`: ideas and nice-to-haves. Never picked either.
+
+A backlog with nothing at `p3` or above is finished: report that and stop. Never
+go looking for work below it.
+
+**Filing issues.** This paragraph is the one place that says what an agent may
+file without asking. File an issue only when I asked for it, or for one of
+these: a security or data-loss risk; a bug that a person or an app has hit or
+reported (a reviewer's note is not a report); a gap that a named app needs
+filled. Give it the priority the labels above define. Anything else you notice
+is not filed: a bug nobody has hit (however real), a rare edge case,
+test-tooling polish, a refactor, a side note from review. It goes into your
+final report under **Proposed issues**: one line each, with what a person
+would notice and a suggested priority. I pick which ones become issues; the
+list never blocks the report.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
 when it needs my hands or my answer. A repo without these labels → create
@@ -370,7 +385,10 @@ comment on what is left, and move on. After a second `needs-fix` that names a
 behaviour defect, the `wave` skill says when and how to escalate that
 fix round. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
-undo it → leave the PR open and say so.
+undo it → leave the PR open and say so. A finding about code the diff did not
+change never blocks the PR: the reviewer lists it under **Outside this diff**,
+and the lead files it or carries it into **Proposed issues** by the "Filing
+issues" rule.
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`; independent commits → the same with `--rebase`. Always pass
@@ -450,6 +468,19 @@ A fake binary prepended to `PATH` never calls the real tool by name: resolve
 its absolute path before changing `PATH` and pass it in an env var. Add a
 recursion guard too: the fake sets a depth variable and exits non-zero when it
 sees one already set.
+
+**Test tooling serves the product, never the reverse.** Browser tests use
+Playwright, which waits for elements by itself; never a hand-written DevTools
+client with its own waits and scroll helpers. Change test tooling (harness,
+helpers, check runners) only in two cases: to prove a behaviour change in the
+same PR, or to fix a run that actually failed in CI. Refactoring or
+deduplicating checks, and hardening one against a failure nobody has seen, is
+not work to take on. A repo that already has its own client keeps it until I
+ask for a migration; its `AGENTS.md` wins as usual.
+
+**A repo's `AGENTS.md` holds current rules, not history.** Keep it under about
+200 lines. A lesson learned (a browser quirk, the incident behind a rule) goes
+in the doc of the tool it is about, with a link from `AGENTS.md` when needed.
 
 # Memory
 
