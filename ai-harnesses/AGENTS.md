@@ -56,7 +56,8 @@ filled. Give it the priority the labels above define. Anything else you notice
 is not filed: a bug nobody has hit (however real), a rare edge case,
 test-tooling polish, a refactor, a side note from review. It goes into your
 final report under **Proposed issues**: one line each, with what a person
-would notice and a suggested priority. I pick which ones become issues; the list never blocks the report.
+would notice and a suggested priority. I pick which ones become issues; the
+list never blocks the report.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
 when it needs my hands or my answer. A repo without these labels → create
