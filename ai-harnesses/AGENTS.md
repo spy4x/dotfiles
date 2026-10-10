@@ -145,7 +145,7 @@ tests, docs and cleanup.
 anything small and opinionated whose defaults we'd fight — UI components
 especially (no shadcn/Radix/Headless UI/Material/Chakra). Keep the giant,
 well-solved ones: postgres.js, arktype, preact, wouter, tailwind, `@std/*`,
-signals, hono, qrcode, webpush, otpauth, playwright, ioredis, fresh, vite, d3,
+signals, hono, qrcode, webpush, otpauth, playwright, axe-core, ioredis, fresh, vite, d3,
 leaflet, an SMTP lib, a date/tz lib — never reimplement these. Libraries are
 design references, never code sources: port markup and behaviour, not the
 dependency. Owning a component means owning its accessibility: roles, labels,
@@ -475,8 +475,10 @@ client with its own waits and scroll helpers. Change test tooling (harness,
 helpers, check runners) only in two cases: to prove a behaviour change in the
 same PR, or to fix a run that actually failed in CI. Refactoring or
 deduplicating checks, and hardening one against a failure nobody has seen, is
-not work to take on. A repo that already has its own client keeps it until I
-ask for a migration; its `AGENTS.md` wins as usual.
+not work to take on. In a repo that already has its own client, a new browser
+test, or an existing one you edit, moves to Playwright; leave the untouched
+ones where they are. Accessibility checks (contrast, roles, names) use
+axe-core through `@axe-core/playwright`, not hand-written measurements.
 
 **A repo's `AGENTS.md` holds current rules, not history.** Keep it under about
 200 lines. A lesson learned (a browser quirk, the incident behind a rule) goes
