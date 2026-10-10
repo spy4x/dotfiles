@@ -145,8 +145,9 @@ tests, docs and cleanup.
 anything small and opinionated whose defaults we'd fight — UI components
 especially (no shadcn/Radix/Headless UI/Material/Chakra). Keep the giant,
 well-solved ones: postgres.js, arktype, preact, wouter, tailwind, `@std/*`,
-signals, hono, qrcode, webpush, otpauth, playwright, axe-core, ioredis, fresh, vite, d3,
-leaflet, an SMTP lib, a date/tz lib — never reimplement these. Libraries are
+signals, hono, qrcode, webpush, otpauth, playwright, axe-core, ioredis, fresh,
+vite, d3, leaflet, an SMTP lib, a date/tz lib — never reimplement these.
+Libraries are
 design references, never code sources: port markup and behaviour, not the
 dependency. Owning a component means owning its accessibility: roles, labels,
 keyboard handling, focus.
