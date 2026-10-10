@@ -41,8 +41,19 @@ skip those until I remove the label. Priority labels, five levels:
 - `p1-critical`: urgent tasks and critical bugs.
 - `p2-high`: work a project or consumer app needs.
 - `p3-medium`: the default. An issue with no priority label is `p3-medium`.
-- `p4-low`: worth doing when nothing above is open.
-- `p5-someday`: ideas and nice-to-haves.
+- `p4-low`: parked. An agent never picks it; I raise it when I want it.
+- `p5-someday`: ideas and nice-to-haves. Never picked either.
+
+A backlog with nothing at `p3` or above is finished: report that and stop. Never
+go looking for work below it.
+
+**Filing issues.** File one only when I asked for it, or when it records
+something a person or a consumer app hits: a bug in shipped behaviour, a gap an
+app needs filled, a security or data-loss risk. Anything else you notice (a
+rare edge case nobody reported, test-tooling polish, a refactor, a side note
+from review) is not filed. It goes into your final report under **Proposed
+issues**: one line each, with what a person would notice and a suggested
+priority. I pick which ones become issues; the list never blocks the report.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
 when it needs my hands or my answer. A repo without these labels → create
@@ -370,7 +381,10 @@ comment on what is left, and move on. After a second `needs-fix` that names a
 behaviour defect, the `wave` skill says when and how to escalate that
 fix round. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
-undo it → leave the PR open and say so.
+undo it → leave the PR open and say so. A finding about code the diff did not
+change neither blocks the PR nor becomes an issue by itself: the reviewer lists
+it under **Outside this diff**, and the lead carries it into **Proposed
+issues** (see "Filing issues").
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`; independent commits → the same with `--rebase`. Always pass
@@ -450,6 +464,19 @@ A fake binary prepended to `PATH` never calls the real tool by name: resolve
 its absolute path before changing `PATH` and pass it in an env var. Add a
 recursion guard too: the fake sets a depth variable and exits non-zero when it
 sees one already set.
+
+**Test tooling serves the product, never the reverse.** Browser tests use
+Playwright, which waits for elements by itself; never a hand-written DevTools
+client with its own waits and scroll helpers. Change test tooling (harness,
+helpers, check runners) only in two cases: to prove a behaviour change in the
+same PR, or to fix a run that actually failed in CI. Refactoring or
+deduplicating checks, and hardening one against a failure nobody has seen, is
+not work to take on. When a repo's test tooling grows past a third of its
+product code, say so in the final report.
+
+**A repo's `AGENTS.md` holds current rules, not history.** Keep it under about
+200 lines. A lesson learned (a browser quirk, the incident behind a rule) goes
+in the doc of the tool it is about, with a link from `AGENTS.md` when needed.
 
 # Memory
 
