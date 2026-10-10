@@ -110,9 +110,8 @@ Claims: <claim> → confirmed | refuted (<actual>)
 Something you noticed in code the diff did not change is not a finding against this PR and never
 decides the verdict. List it after the evidence block under **Outside this diff**, one line each:
 what a person would notice, where (`<file>:L<line>`), and a suggested priority. Never file an issue
-for it yourself; the lead reports the list to the owner, who decides. Leave out what nobody would
-notice. A 🔴 there (a shipped bug, a security or data-loss risk) is marked as such so the lead can
-file it at once.
+for it yourself; the lead applies the "Filing issues" rule in the global `AGENTS.md`, and the owner
+decides the rest. Leave out what nobody would notice. Mark a security or data-loss risk as such.
 
 `VERDICT: pass | needs-fix` goes in the visible body, as the last line. The lead
 must not have to expand anything to learn the outcome.

@@ -18,7 +18,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual`
   or `needs-decision`, and issues with an open PR by `spy4x`. This lists the candidates oldest first; group them by priority label
   yourself:
-  `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision sort:created-asc'`.
+  `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:p4-low -label:p5-someday sort:created-asc'`.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
   never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
   `gh pr list --state open --limit 500 -S '-author:spy4x'` and
@@ -112,8 +112,8 @@ The wave's final report ends with:
 - **Proposed issues**: every reviewer's "Outside this diff" lines and anything else the wave
   noticed but did not file (the "Filing issues" rule in `AGENTS.md`), merged and deduplicated,
   each one line with its repo, what a person would notice and a suggested priority, asked as a
-  question: "Want an issue for any of these?". The owner answers later; nothing waits on it. A
-  wave files only the 🔴 ones itself, at `p2-high`;
+  question: "Want an issue for any of these?". The owner answers later; nothing waits on it.
+  Items the "Filing issues" rule lets the wave file itself are filed, not listed;
 - what this wave cost: each agent's dollars, peak context and compactions
   (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`);
 - a chip that starts the next wave in its own session: the background-task suggestion tool

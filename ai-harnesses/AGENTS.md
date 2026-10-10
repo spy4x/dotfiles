@@ -34,9 +34,9 @@ green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
 and say so in the report.
 
 **Picking work yourself** (a wave, "work through the backlog") → the `wave`
-skill. Any open issue is yours to take, highest priority first, unless it
-carries `manual` (work only I can do) or `needs-decision` (waits on my answer):
-skip those until I remove the label. Priority labels, five levels:
+skill. Any open issue at `p3-medium` or above is yours to take, highest
+priority first, unless it carries `manual` (work only I can do) or
+`needs-decision` (waits on my answer): skip those until I remove the label. Priority labels, five levels:
 
 - `p1-critical`: urgent tasks and critical bugs.
 - `p2-high`: work a project or consumer app needs.
@@ -47,11 +47,13 @@ skip those until I remove the label. Priority labels, five levels:
 A backlog with nothing at `p3` or above is finished: report that and stop. Never
 go looking for work below it.
 
-**Filing issues.** File one only when I asked for it, or when it records
-something a person or a consumer app hits: a bug in shipped behaviour, a gap an
-app needs filled, a security or data-loss risk. Anything else you notice (a
-rare edge case nobody reported, test-tooling polish, a refactor, a side note
-from review) is not filed. It goes into your final report under **Proposed
+**Filing issues.** This paragraph is the one place that says what an agent may
+file without asking. File an issue only when I asked for it, or for one of
+these: a security or data-loss risk; a bug that a person or an app has
+actually hit or reported; a gap that a named app needs filled. Give it the
+priority the labels above define. Anything else you notice is not filed: a bug
+nobody has hit (however real), a rare edge case, test-tooling polish, a
+refactor, a side note from review. It goes into your final report under **Proposed
 issues**: one line each, with what a person would notice and a suggested
 priority. I pick which ones become issues; the list never blocks the report.
 
@@ -382,9 +384,9 @@ behaviour defect, the `wave` skill says when and how to escalate that
 fix round. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
 undo it → leave the PR open and say so. A finding about code the diff did not
-change neither blocks the PR nor becomes an issue by itself: the reviewer lists
-it under **Outside this diff**, and the lead carries it into **Proposed
-issues** (see "Filing issues").
+change never blocks the PR: the reviewer lists it under **Outside this diff**,
+and the lead files it or carries it into **Proposed issues** by the "Filing
+issues" rule.
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`; independent commits → the same with `--rebase`. Always pass
@@ -471,8 +473,8 @@ client with its own waits and scroll helpers. Change test tooling (harness,
 helpers, check runners) only in two cases: to prove a behaviour change in the
 same PR, or to fix a run that actually failed in CI. Refactoring or
 deduplicating checks, and hardening one against a failure nobody has seen, is
-not work to take on. When a repo's test tooling grows past a third of its
-product code, say so in the final report.
+not work to take on. A repo that already has its own client keeps it until I
+ask for a migration; its `AGENTS.md` wins as usual.
 
 **A repo's `AGENTS.md` holds current rules, not history.** Keep it under about
 200 lines. A lesson learned (a browser quirk, the incident behind a rule) goes
