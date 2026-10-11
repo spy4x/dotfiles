@@ -36,8 +36,8 @@ export function spawnVerdict(spawn: Spawn, fiveHourPercent: number | undefined):
   if (spawn.model === undefined) {
     return {
       deny: `Pass \`model\` on every Agent call: an omitted one inherits the lead's model. ` +
-        `Search and inventory: haiku. Implementers: sonnet, or opus for UI libraries and ` +
-        `security work. Everything else, reviewers included: opus.`,
+        `Search and inventory: haiku. Everything else, implementers and reviewers ` +
+        `included: opus.`,
     }
   }
   if (spawn.subagentType === `reviewer` && !spawn.model.includes(`opus`)) {
