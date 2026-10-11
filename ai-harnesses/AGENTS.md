@@ -468,15 +468,17 @@ Types: `interface` for extensible shapes, `enum` for finite constants
 (start at 1), `type` for unions/intersections only. Money: `number`
 smallest unit. Never float.
 Ids: never create a UUID version 4 (`crypto.randomUUID()`, `gen_random_uuid()`,
-`uuid_generate_v4()`). An id of anything (a record, a device, a request, an
-idempotency key) is a version 7 UUID: `uuidV7()` from
+`uuid_generate_v4()`, `uuidv4()`). An id of anything (a record, a device, a
+request, an idempotency key) is a version 7 UUID: `uuidV7()` from
 `@spy4x/platform/universal/uuid`; in a repo that does not import ts-libs,
 `generate` from `@std/uuid/v7`; in SQL, `uuidv7()` from Postgres 18 on, and
-before that the application makes the id. A value that must be unguessable (a
-session id, a CSRF or claim token, a generated secret) is never a UUID: a
-version 7 id shows when it was made, so use `randomBase64Url()` from
-`@spy4x/platform/tokens`. A validator accepts any UUID version, and stored ids
-are never rewritten.
+before that the application makes the id. Two kinds of value are never a UUID,
+because a version 7 id shows when it was made and is easier to guess: one that
+must be unguessable (a session id, a CSRF or claim token, a generated secret),
+and an id that other people see and that must not show its creation time (a
+share link, a public profile or order number). Both are `randomBase64Url()`
+from `@spy4x/platform/tokens`. A validator accepts any UUID version, and stored
+ids are never rewritten.
 Functions: named exports, async/await, default export for config objects.
 Errors: explicit throw on missing required env. Structured result
 `{ success, output, error }` from commands.
