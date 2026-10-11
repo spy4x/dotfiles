@@ -49,15 +49,38 @@ A backlog with nothing at `p3` or above is finished: report that and stop. Never
 go looking for work below it.
 
 **Filing issues.** This paragraph is the one place that says what an agent may
-file without asking. File an issue only when I asked for it, or for one of
-these: a security or data-loss risk; a bug that a person or an app has hit or
-reported (a reviewer's note is not a report); a gap that a named app needs
-filled. Give it the priority the labels above define. Anything else you notice
-is not filed: a bug nobody has hit (however real), a rare edge case,
-test-tooling polish, a refactor, a side note from review. It goes into your
-final report under **Proposed issues**: one line each, with what a person
-would notice and a suggested priority. I pick which ones become issues; the
-list never blocks the report.
+file without asking. You file issues yourself; never hand me a list of proposed
+issues to choose from. Something you notice outside your task (a bug, a rare
+edge case, a test gap, a reviewer's side note) is a claim, not an issue yet.
+File only in `spy4x/*` repositories, and comment only on issues `spy4x`
+authored; anything about another repository goes in your report. Before the
+final report:
+
+1. **Verify.** Find the code and confirm what a person would notice. Drop what
+   is false or already fixed, and what has no effect a person or an app could
+   ever see: a refactor, test-tooling polish, a nicer name. A missing test is
+   not polish; it is parked.
+2. **Search the open issues.** One that covers it → file nothing new; comment
+   there only when you add a case or a file it does not name.
+3. **Set the class.** _To do_ (`p3-medium` or higher, by the labels above): a
+   security or data-loss risk, a bug that a person or an app has hit or
+   reported (a reviewer's note is not a report), a gap that a named app needs
+   filled. _Parked_ (`p4-low`): everything else that survived step 1, such as a
+   bug nobody has hit, a rare edge case, a missing test or a wrong doc line.
+4. **Group.** A to-do issue is one piece of work for one implementer and one
+   review, in the "Issues and reports" shape: to-do items that touch the same
+   files or the same behaviour share it, and a parked item in those same files
+   rides along, so one review covers both. Every other parked item goes into
+   the repo's parked issue for its package or top-level directory, titled
+   `Parked: <package or directory>`. Find it with
+   `gh issue list --state open --label p4-low -S 'Parked: in:title'`; create it
+   only when none exists. It is a checklist, not one piece of work: add one
+   checkbox per item, with what a person would notice and its `file:line`.
+
+The final report lists each issue filed or extended (link, one line, priority)
+and each item dropped with its reason, under **Issues filed**. That section
+asks me nothing. A subagent files nothing: it lists what it noticed in its
+report, and its lead does the steps above.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
 when it needs my hands or my answer. A repo without these labels → create
@@ -387,8 +410,7 @@ fix round. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
 undo it → leave the PR open and say so. A finding about code the diff did not
 change never blocks the PR: the reviewer lists it under **Outside this diff**,
-and the lead files it or carries it into **Proposed issues** by the "Filing
-issues" rule.
+and the lead verifies, groups and files it by the "Filing issues" rule.
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`; independent commits → the same with `--rebase`. Always pass

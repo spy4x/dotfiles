@@ -109,11 +109,12 @@ The wave's final report ends with:
 
 - the project's position: the plan, how much is done, what remains before the next milestone;
 - what the next wave must not touch: open PRs, issues waiting on the owner;
-- **Proposed issues**: every reviewer's "Outside this diff" lines and anything else the wave
-  noticed but did not file (the "Filing issues" rule in `AGENTS.md`), merged and deduplicated,
-  each one line with its repo, what a person would notice and a suggested priority, asked as a
-  question: "Want an issue for any of these?". The owner answers later; nothing waits on it.
-  Items the "Filing issues" rule lets the wave file itself are filed, not listed;
+- **Issues filed**: every reviewer's "Outside this diff" lines and anything else the wave
+  noticed, handled by the "Filing issues" rule in `AGENTS.md`: verified, deduplicated, grouped and
+  filed by you, never proposed to the owner. Keep the running list in `.wave<N>/noticed.md`, since
+  your context compacts, and file once, at the end, so one issue can hold a whole group. A security
+  or data-loss risk does not wait: file it when you learn of it. List each issue filed or extended
+  (link, one line, priority) and each item dropped with its reason;
 - what this wave cost: each agent's dollars, peak context and compactions
   (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`);
 - a chip that starts the next wave in its own session: the background-task suggestion tool
