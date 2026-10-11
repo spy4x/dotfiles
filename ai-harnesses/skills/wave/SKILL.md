@@ -62,19 +62,16 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 ## Models and effort
 
 - Implementers start at `implementer` (`medium`): don't guess difficulty up front.
-- Each implementer lane's `model` follows the global `AGENTS.md` ("Implementers → `sonnet`"):
-  `sonnet` by default, `opus` for UI component libraries and security-sensitive work. Write it in
-  the lane's brief file. Fix rounds keep it until the escalation below. Reviewers run on `opus`.
+- Every implementer lane runs on `opus` (the global `AGENTS.md`, "Implementers → `opus`"), and so
+  do its fix rounds and its reviewers.
 - Escalate once. When a PR's second `needs-fix` verdict, whatever the first was about, names a
   behaviour defect (the code does the wrong thing, not a missing test, a false claim or wording),
   and the fix is bigger than the ones you apply yourself, send that one fix round one step up, to a
-  fresh agent. A `sonnet` lane goes to `implementer` with `model: opus`: the model switch is the big
-  step, and most likely cheaper than `xhigh`. An `opus` lane goes to `implementer-xhigh`, because
-  effort is the only thing left to raise; its first six rounds (2026-09-25 to 10-01) cost $4 to $29
-  each, and nothing has yet measured whether `xhigh` beats `medium`. The brief is the original
-  brief, every verdict so far, the branch name and the PR URL, and says the PR already exists; it
-  reads `git diff origin/main...HEAD`. The three-verdict cap then applies as usual. A harness
-  without `implementer-xhigh` uses `implementer`.
+  fresh agent: `implementer-xhigh`, because effort is the only thing left to raise. Its first six
+  rounds (2026-09-25 to 10-01) cost $4 to $29 each, and nothing has yet measured whether `xhigh`
+  beats `medium`. The brief is the original brief, every verdict so far, the branch name and the
+  PR URL, and says the PR already exists; it reads `git diff origin/main...HEAD`. The three-verdict
+  cap then applies as usual. A harness without `implementer-xhigh` uses `implementer`.
 - Reviewers stay at `medium`: `xhigh` and `max` rounds cost 5–9 times as much and did not cut
   review rounds (2026-09-25..26, `~/sync/code/ai-memory/experiments/model-comparison/`).
 

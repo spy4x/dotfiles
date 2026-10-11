@@ -532,24 +532,22 @@ context that makes it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the
 lead's tier, always the most expensive. Every subagent → `opus` (Opus 5.5),
-whatever the task, except search/inventory → `haiku` and implementers (below).
+whatever the task, implementers included, except search/inventory → `haiku`.
 Opus 5.5 did the same work as Sonnet 5 in far fewer calls at about half the
 cost, and it matches Fable 5.1 faster and cheaper
 (`~/sync/code/ai-memory/experiments/model-comparison/`). `fable` is paused until
 I re-enable it. Architecture and final verdicts stay with the lead. Fresh
 subagents over forks (a fork copies the whole conversation).
 
-**Implementers → `sonnet` (Sonnet 5.5)** by default. In the 2026-09-30 trial it
-cost about 0.6 times as much as Opus 5.5 per merged line, reviews included,
-though it passed its first review less often (13% against 30%)
-(`~/sync/code/ai-memory/experiments/sonnet55-implementer.md`). Use `opus`
-instead for UI component libraries (`preact-components`: there Sonnet cost as
-much as Opus and passed 0 of 8 first reviews), for auth, crypto, payments and
-other security-sensitive work (a miss costs too much, and the trial had too few
-such tasks to judge). Decide the model from the repo and the kind of work before
-the lane starts, and keep it for the lane's fix rounds until the one escalation
-round in the `wave` skill: a `sonnet` lane escalates to `implementer` on
-`opus`, an `opus` lane to `implementer-xhigh`.
+**Implementers → `opus` (Opus 5.5)**, in every repo. Sonnet 5.5 was the default
+from 2026-09-30 to 2026-10-11 because it cost about 0.6 times as much per
+merged line (`~/sync/code/ai-memory/experiments/sonnet55-implementer.md`). On
+2026-10-11 both models implemented the same five issues: a blind judge
+preferred the Opus pull request in four, and Sonnet's five held five wrong
+behaviours that Opus's did not
+(`~/sync/code/ai-memory/experiments/sonnet55-vs-opus55-paired.md`). The saving
+left after reviews and fix rounds is an estimated quarter. The one escalation round
+in the `wave` skill goes to `implementer-xhigh`.
 
 **Reviewers stay on `opus`.** In the 2026-10-01 trial, a fresh Opus reviewer
 re-checked 23 passes by a Sonnet 5.5 reviewer (28 PRs). It sent 15 back, and in
