@@ -467,18 +467,20 @@ shared monorepo scripts. Minimize deps.
 Types: `interface` for extensible shapes, `enum` for finite constants
 (start at 1), `type` for unions/intersections only. Money: `number`
 smallest unit. Never float.
-Ids: never create a UUID version 4 (`crypto.randomUUID()`, `gen_random_uuid()`,
-`uuid_generate_v4()`, `uuidv4()`). An id of anything (a record, a device, a
-request, an idempotency key) is a version 7 UUID: `uuidV7()` from
-`@spy4x/platform/universal/uuid`; in a repo that does not import ts-libs,
-`generate` from `@std/uuid/v7`; in SQL, `uuidv7()` from Postgres 18 on, and
-before that the application makes the id. Two kinds of value are never a UUID,
-because a version 7 id shows when it was made and is easier to guess: one that
-must be unguessable (a session id, a CSRF or claim token, a generated secret),
-and an id that other people see and that must not show its creation time (a
-share link, a public profile or order number). Both are `randomBase64Url()`
-from `@spy4x/platform/tokens`. A validator accepts any UUID version, and stored
-ids are never rewritten.
+Ids: every id and every generated unique value is a version 7 UUID, whatever
+it names: a record, a device, a request, a session, an idempotency key, a
+public link. Use `uuidV7()` from `@spy4x/platform/universal/uuid`; in a repo
+that does not import ts-libs, `generate` from `@std/uuid/v7`; in SQL,
+`uuidv7()` from Postgres 18 on, and before that the application makes the id.
+Never create a version 4 (`crypto.randomUUID()`, `gen_random_uuid()`,
+`uuid_generate_v4()`, `uuidv4()`). The one exception is a real secret: a value
+that gives access to whoever guesses it, such as a password, a key or a bearer
+token. A version 7 id shows when it was made and is easier to guess, so such a
+value may need `randomBase64Url()` from `@spy4x/platform/tokens` instead. That
+choice is mine: ask me in chat before implementing, naming the value and what
+a guess would give, and use version 7 unless I agree. This question is allowed
+besides the "Ask only when" list. A validator accepts any UUID version, and
+stored ids are never rewritten.
 Functions: named exports, async/await, default export for config objects.
 Errors: explicit throw on missing required env. Structured result
 `{ success, output, error }` from commands.
