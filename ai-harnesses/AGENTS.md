@@ -49,15 +49,30 @@ A backlog with nothing at `p3` or above is finished: report that and stop. Never
 go looking for work below it.
 
 **Filing issues.** This paragraph is the one place that says what an agent may
-file without asking. File an issue only when I asked for it, or for one of
-these: a security or data-loss risk; a bug that a person or an app has hit or
-reported (a reviewer's note is not a report); a gap that a named app needs
-filled. Give it the priority the labels above define. Anything else you notice
-is not filed: a bug nobody has hit (however real), a rare edge case,
-test-tooling polish, a refactor, a side note from review. It goes into your
-final report under **Proposed issues**: one line each, with what a person
-would notice and a suggested priority. I pick which ones become issues; the
-list never blocks the report.
+file without asking. File what is worth doing yourself; never hand me a list of
+proposed issues to choose from. Something you notice outside your task (a bug,
+a rare edge case, a test gap, a reviewer's side note) is a claim, not an issue
+yet. Before the final report:
+
+1. **Verify.** Find the code and confirm what a person would notice. Drop what
+   is false, already fixed, or what nobody would ever notice.
+2. **Search the open issues.** One that covers it → add a comment there when
+   that helps, and file nothing new.
+3. **Group.** One issue is one piece of work for one implementer and one
+   review. Items that touch the same files or the same behaviour share an
+   issue, written in the "Issues and reports" shape. Aim for few issues.
+4. **Give it the priority the labels above define.** A security or data-loss
+   risk, a bug that a person or an app has hit, or a gap that a named app needs
+   filled is `p3-medium` or higher. A bug nobody has hit, a rare edge case,
+   test-tooling polish and refactors are parked: one `p4-low` issue per repo
+   and area holds them as a checklist, and a new one joins the open parked
+   issue of its area before you open another. Never put parked items into an
+   issue agents pick up, or one small item would spend a whole review.
+
+The final report lists each issue filed or extended (link, one line, priority)
+and each item dropped with its reason, under **Issues filed**. It asks me
+nothing. A subagent files nothing: it lists what it noticed in its report, and
+its lead does the steps above.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
 when it needs my hands or my answer. A repo without these labels → create
@@ -387,8 +402,7 @@ fix round. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
 undo it → leave the PR open and say so. A finding about code the diff did not
 change never blocks the PR: the reviewer lists it under **Outside this diff**,
-and the lead files it or carries it into **Proposed issues** by the "Filing
-issues" rule.
+and the lead verifies, groups and files it by the "Filing issues" rule.
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`; independent commits → the same with `--rebase`. Always pass
