@@ -58,7 +58,8 @@ final report:
 
 1. **Verify.** Find the code and confirm what a person would notice. Drop what
    is false or already fixed, and what has no effect a person or an app could
-   ever see: a refactor, test-tooling polish, a nicer name.
+   ever see: a refactor, test-tooling polish, a nicer name. A missing test is
+   not polish; it is parked.
 2. **Search the open issues.** One that covers it → file nothing new; comment
    there only when you add a case or a file it does not name.
 3. **Set the class.** _To do_ (`p3-medium` or higher, by the labels above): a
