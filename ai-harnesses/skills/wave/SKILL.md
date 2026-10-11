@@ -69,10 +69,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   and the fix is bigger than the ones you apply yourself, send that one fix round one step up, to a
   fresh agent: `implementer-xhigh`, because effort is the only thing left to raise. Its first six
   rounds (2026-09-25 to 10-01) cost $4 to $29 each, and nothing has yet measured whether `xhigh`
-  beats `medium`. The brief is the original
-  brief, every verdict so far, the branch name and the PR URL, and says the PR already exists; it
-  reads `git diff origin/main...HEAD`. The three-verdict cap then applies as usual. A harness
-  without `implementer-xhigh` uses `implementer`.
+  beats `medium`. The brief is the original brief, every verdict so far, the branch name and the
+  PR URL, and says the PR already exists; it reads `git diff origin/main...HEAD`. The three-verdict
+  cap then applies as usual. A harness without `implementer-xhigh` uses `implementer`.
 - Reviewers stay at `medium`: `xhigh` and `max` rounds cost 5–9 times as much and did not cut
   review rounds (2026-09-25..26, `~/sync/code/ai-memory/experiments/model-comparison/`).
 

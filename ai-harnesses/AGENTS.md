@@ -546,7 +546,7 @@ merged line (`~/sync/code/ai-memory/experiments/sonnet55-implementer.md`). On
 preferred the Opus pull request in four, and Sonnet's five held five wrong
 behaviours that Opus's did not
 (`~/sync/code/ai-memory/experiments/sonnet55-vs-opus55-paired.md`). The saving
-left after reviews and fix rounds was about a quarter. The one escalation round
+left after reviews and fix rounds is an estimated quarter. The one escalation round
 in the `wave` skill goes to `implementer-xhigh`.
 
 **Reviewers stay on `opus`.** In the 2026-10-01 trial, a fresh Opus reviewer
