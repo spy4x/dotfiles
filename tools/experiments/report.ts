@@ -31,7 +31,7 @@ import {
   crossesZero,
   mean,
   median,
-} from "./stats.ts"
+} from "@spy4x/platform/universal/statistics"
 
 /** The rendered report and its chart. */
 export interface Report {
