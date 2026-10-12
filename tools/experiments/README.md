@@ -172,4 +172,6 @@ Paired runs.
 
 `lane.ts`, `collect.ts` and `analyse.ts` port the trial's `lanes.py`, `prs.py`, `tokens.py`,
 `reviews2.py`, `units2.py` and `compare4.py`: same patterns, grouping and column definitions.
-`stats.ts` has no dependency on this repo and is a candidate for `spy4x/ts-libs`.
+The statistics (median, mean, quantile, seeded bootstrap) come from
+`@spy4x/platform/universal/statistics` in `spy4x/ts-libs`, which throws a `RangeError` on a
+non-finite sample instead of printing `NaN`.

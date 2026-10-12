@@ -24,7 +24,7 @@ import {
   crossesZero,
   mean,
   median,
-} from "./stats.ts"
+} from "@spy4x/platform/universal/statistics"
 
 /** A plan that is missing or incomplete, or a run folder that is not usable. */
 export class PlanError extends Error {

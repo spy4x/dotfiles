@@ -30,7 +30,7 @@ import {
   median,
   quantileSorted,
   seededRandom,
-} from "./stats.ts"
+} from "@spy4x/platform/universal/statistics"
 
 /** The trial began when its rule merged (spy4x/dotfiles#94); before that every reviewer was Opus. */
 export const TRIAL_START = `2026-10-01T14:48:43Z`

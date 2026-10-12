@@ -13,7 +13,7 @@ import { parseArgs } from "jsr:@std/cli@1.0.32/parse-args"
 import { join } from "jsr:@std/path@1.1.6"
 import { costOf, ctxOf, parseTranscript, totalOf } from "../session-cost.ts"
 import { denoExec, type Exec } from "./exec.ts"
-import { median } from "./stats.ts"
+import { median } from "@spy4x/platform/universal/statistics"
 
 export type Role = `lead` | `implementer` | `reviewer` | `other`
 const ROLES: Role[] = [`lead`, `implementer`, `reviewer`, `other`]
