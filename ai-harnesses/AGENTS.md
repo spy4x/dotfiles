@@ -321,12 +321,12 @@ don't inherit it), without printing it:
 T="$(sed -n 's/^JSR_TOKEN=//p' ~/sync/code/homelab/.env.accounts)" && deno publish --token "$T"
 ```
 
-Never source the whole file. The hard rule above applies in full. A token
-missing from the file → ask me; don't search other files for one. A new
-account-wide token → add it to that file, run `rostok env encrypt` in homelab,
-commit the `.age` file, and list it here. Never put one of these tokens into a
-project's `.env.root` or a server's `.env`: `rostok deploy` copies both to the
-server.
+Never source the whole file: every token would land in the shell. The hard rule
+above applies in full. A token missing from the file → ask me; don't search
+other files for one. A new account-wide token → add it to that file, run
+`rostok env encrypt` in homelab, commit the `.age` file, and list it here. Never
+put one of these tokens into a project's `.env.root` or a server's `.env`:
+`rostok deploy` copies both to the server.
 
 # Sudo
 
