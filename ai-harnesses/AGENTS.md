@@ -220,7 +220,7 @@ Agent setup:
 - `ai-memory`: private profile, plans, tasks and incidents (see "Memory").
 - `skill-state`: helpers for the `skill-state` skill. Experiment stopped.
 
-Shared libraries, imported by everything below:
+Shared libraries, imported by the TypeScript projects below:
 
 - `ts-libs`: code with no UI, published as `@spy4x/*` on JSR. Exports:
   `llms.txt`.
@@ -231,11 +231,6 @@ Work and production:
 - `template`: SaaS starting point. It owns how a product is hosted and
   deployed; a new product starts from it.
 - `financy`: self-hosted finance tracker for a person or a family.
-- `mig`: self-hosted meeting scheduler. Also a rostok stack.
-- `caldav-tasks-web`: web companion to Tasks.org for a CalDAV server. Also a
-  rostok stack.
-- `caldav-mcp`: MCP server for a CalDAV server; agents reach my calendar and
-  tasks through it. A rostok stack, deployed in `homelab`.
 - `antonshubin.com`: my freelance site.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
@@ -249,10 +244,19 @@ projects:
   between the two.
 - `homelab`: my real rostok project: which stacks run on which server, with
   their encrypted settings.
-- `zond`: health checks for services behind the SSO proxy. A rostok stack,
-  deployed in `homelab`.
-- `oko`: one page for every service, with its Gatus uptime. A rostok stack,
-  deployed in `homelab`.
+
+Open-source self-hosted tools, each a stack in the rostok catalog:
+
+- `zond`: health checks for services behind the SSO proxy. Deployed in
+  `homelab`.
+- `oko`: one page for every service, with its Gatus uptime. Deployed in
+  `homelab`.
+- `caldav-mcp`: MCP server for a CalDAV server; agents reach my calendar and
+  tasks through it. Deployed in `homelab`.
+- `caldav-tasks-web`: web companion to Tasks.org for a CalDAV server.
+- `mig`: meeting scheduler.
+
+Not listed: personal side projects.
 
 # Session bootstrap
 
