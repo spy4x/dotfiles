@@ -299,8 +299,9 @@ already have it), notify me, and log the event (never the value) in
 
 # Account tokens
 
-`~/sync/code/rostok/.env.root` (gitignored; encrypted copy `.env.root.age`)
-holds account-wide tokens any project or task may use:
+`~/sync/code/homelab/.env.accounts` (gitignored; encrypted copy
+`.env.accounts.age`, in the private `spy4x/homelab` repo) holds account-wide
+tokens any project or task may use:
 
 - `CLOUDFLARE_API_TOKEN`: Cloudflare API, DNS edit on my zones.
 - `HETZNER_CLOUD_API_TOKEN`: Hetzner Cloud API and `hcloud`.
@@ -317,14 +318,15 @@ that command, into a plain shell variable (not `export`, so child processes
 don't inherit it), without printing it:
 
 ```bash
-T="$(sed -n 's/^JSR_TOKEN=//p' ~/sync/code/rostok/.env.root)" && deno publish --token "$T"
+T="$(sed -n 's/^JSR_TOKEN=//p' ~/sync/code/homelab/.env.accounts)" && deno publish --token "$T"
 ```
 
-Never source the whole file: it also holds backup and auth passwords. The hard
-rule above applies in full. A token missing from the file → ask me; don't
-search other files for one. A new account-wide token → add it here. The file is
-due to move to the private `spy4x/homelab` repo: move the whole current file
-(every token above goes with it), then update the paths in this section.
+Never source the whole file: every token would land in the shell. The hard rule
+above applies in full. A token missing from the file → ask me; don't search
+other files for one. A new account-wide token → add it to that file, run
+`rostok env encrypt` in homelab, commit the `.age` file, and list it here. Never
+put one of these tokens into a project's `.env.root` or a server's `.env`:
+`rostok deploy` copies both to the server.
 
 # Sudo
 
