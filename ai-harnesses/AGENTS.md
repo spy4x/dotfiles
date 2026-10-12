@@ -208,6 +208,52 @@ Both ways: an app feeds the libraries, and every app, old or new, imports from
 them instead of keeping its own copy. Details: each library's `AGENTS.md`, "What
 belongs in this library".
 
+# Projects
+
+Each is `~/sync/code/<name>` and `github.com/spy4x/<name>`. Before working in
+one or answering about it, read its `AGENTS.md` at the root.
+
+Agent setup:
+
+- `dotfiles`: machine config, and the source of these rules, skills and agents
+  (`ai-harnesses/`).
+- `ai-memory`: private profile, plans, tasks and incidents (see "Memory").
+- `skill-state`: helpers for the `skill-state` skill. Experiment stopped.
+
+Shared libraries, imported by everything below:
+
+- `ts-libs`: code with no UI, published as `@spy4x/*` on JSR. Exports:
+  `llms.txt`.
+- `preact-components`: components, icons, design tokens. Exports: `llms.txt`.
+
+Work and production:
+
+- `template`: SaaS starting point. It owns how a product is hosted and
+  deployed; a new product starts from it.
+- `financy`: self-hosted finance tracker for a person or a family.
+- `mig`: self-hosted meeting scheduler. Also a rostok stack.
+- `caldav-tasks-web`: web companion to Tasks.org for a CalDAV server. Also a
+  rostok stack.
+- `caldav-mcp`: MCP server for a CalDAV server; agents reach my calendar and
+  tasks through it. A rostok stack, deployed in `homelab`.
+- `antonshubin.com`: my freelance site.
+- `neatsoft.dev`: company card for NeatSoft PTE LTD.
+- `spy4x`: GitHub profile README. No `AGENTS.md`.
+- `gb`: SmartLite, park light control. No `AGENTS.md`; read `README.md`.
+
+Homelab, for self-hosted services, never for hosting work or production
+projects:
+
+- `rostok`: CLI that scaffolds a homelab from a catalog of stacks (`stacks/`).
+  Code that both it and `template` need lives in `ts-libs`, never copied
+  between the two.
+- `homelab`: my real rostok project: which stacks run on which server, with
+  their encrypted settings.
+- `zond`: health checks for services behind the SSO proxy. A rostok stack,
+  deployed in `homelab`.
+- `oko`: one page for every service, with its Gatus uptime. A rostok stack,
+  deployed in `homelab`.
+
 # Session bootstrap
 
 New repo, before first edit, read in parallel: repo-local `AGENTS.md` (unless
