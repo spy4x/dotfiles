@@ -65,7 +65,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - Every implementer lane runs on `opus` (the global `AGENTS.md`, "Implementers → `opus`"), and so
   do its fix rounds and its reviewers.
 - Escalate once. When a PR's second `needs-fix` verdict, whatever the first was about, names a
-  behaviour defect (the code does the wrong thing, not a missing test, a false claim or wording),
+  behaviour defect (the code does the wrong thing, not a false claim or a failing check),
   and the fix is bigger than the ones you apply yourself, send that one fix round one step up, to a
   fresh agent: `implementer-xhigh`, because effort is the only thing left to raise. Its first six
   rounds (2026-09-25 to 10-01) cost $4 to $29 each, and nothing has yet measured whether `xhigh`
@@ -107,7 +107,8 @@ The wave's final report ends with:
 - the project's position: the plan, how much is done, what remains before the next milestone;
 - what the next wave must not touch: open PRs, issues waiting on the owner;
 - **Issues filed**: every reviewer's "Not blocking" and "Outside this diff" lines and anything
-  else the wave noticed, handled by the "Filing issues" rule in `AGENTS.md`: verified, deduplicated, grouped and
+  else the wave noticed, handled by the "Filing issues" rule in `AGENTS.md`: verified,
+  deduplicated, grouped and
   filed by you, never proposed to the owner. Keep the running list in `.wave<N>/noticed.md`, since
   your context compacts, and file once, at the end, so one issue can hold a whole group. A security
   or data-loss risk does not wait: file it when you learn of it. List each issue filed or extended
