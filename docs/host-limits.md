@@ -57,8 +57,8 @@ crashed. Nothing stopped it, because systemd lets each app create up to 111,895 
 `system/etc/systemd/user.conf.d/50-tasks-max.conf` lowers that default to 16,384 tasks for each
 app, service and scope. A task is a process or a thread. Each app keeps its own budget, so a runaway
 in the Claude app cannot use up the game's or the browser's. When this was written, the Claude app
-held about 900 tasks and no other app more than 900. The agent rules still cap each command at 500
-tasks; this file is the backstop for a command that skips that cap. When the Claude app reaches the
+held about 900 tasks and no other app more than 900. The agent rules still cap each command at
+4,000 tasks (500 until 2026-10-14); this file is the backstop for a command that skips that cap. When the Claude app reaches the
 limit, every session in it fails to start new processes until the runaway ends, and the kernel log
 says `fork rejected by pids controller`.
 
