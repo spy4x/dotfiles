@@ -113,6 +113,22 @@ what a person would notice, where (`<file>:L<line>`), and a suggested priority. 
 for it yourself; the lead verifies, groups and files these by the "Filing issues" rule in the global
 `AGENTS.md`. Leave out what nobody would notice. Mark a security or data-loss risk as such.
 
+## What decides the verdict
+
+The verdict is `needs-fix` only when the diff holds at least one of these:
+
+- a 🔴 bug: behaviour a person or an app would find broken;
+- a security or data-loss risk, even one you would mark 🟡;
+- a false claim in the docs, a comment or the PR body;
+- a failing required check: tests, `deno fmt --check`, `deno lint`, or a conflict with the base
+  branch.
+
+Everything else never decides the verdict: a 🟡 risk outside security and data loss, a missing
+test or one that stays green when you break the code, a rare edge case, a 🔵 nit, a ❓ question. List each under **Not blocking**, after the
+evidence block and before **Outside this diff**, one line each in the evidence format. A diff
+with only such findings passes. In a `needs-fix` verdict, **Done when** names only the blocking
+causes; the author may leave the **Not blocking** lines alone, and the lead files them.
+
 `VERDICT: pass | needs-fix` goes in the visible body, as the last line. The lead
 must not have to expand anything to learn the outcome.
 

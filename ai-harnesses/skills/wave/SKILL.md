@@ -106,8 +106,8 @@ The wave's final report ends with:
 
 - the project's position: the plan, how much is done, what remains before the next milestone;
 - what the next wave must not touch: open PRs, issues waiting on the owner;
-- **Issues filed**: every reviewer's "Outside this diff" lines and anything else the wave
-  noticed, handled by the "Filing issues" rule in `AGENTS.md`: verified, deduplicated, grouped and
+- **Issues filed**: every reviewer's "Not blocking" and "Outside this diff" lines and anything
+  else the wave noticed, handled by the "Filing issues" rule in `AGENTS.md`: verified, deduplicated, grouped and
   filed by you, never proposed to the owner. Keep the running list in `.wave<N>/noticed.md`, since
   your context compacts, and file once, at the end, so one issue can hold a whole group. A security
   or data-loss risk does not wait: file it when you learn of it. List each issue filed or extended
