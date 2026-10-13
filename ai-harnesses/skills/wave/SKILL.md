@@ -21,12 +21,13 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:p4-low -label:p5-someday sort:created-asc'`.
 - Two limits in `AGENTS.md`, "Picking work yourself", come before priority. The repo has an open
   milestone (`gh api 'repos/{owner}/{repo}/milestones' --jq '.[] | "\(.due_on) \(.title)"'`) → add
-  `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: my
-  putting an issue there outranks its priority label. Run it once more with `label:p1-critical` in
-  place of the milestone. Nothing else is a candidate. An issue outside a milestone whose body
-  starts with `<!-- agent -->` becomes a lane only with the `Asked for by the owner` line, or when
-  it passes step 2 of "Filing issues". Otherwise set it aside as that rule says, and the next
-  issue takes its place.
+  `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
+  owner put the issue there, and that outranks its priority label. Run it once more with
+  `label:p1-critical` in place of the milestone. Nothing else is a candidate. An issue outside a
+  milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
+  (the `Asked for by the owner` line, or a comment of theirs without the marker that says to build
+  it), or when it passes step 2 of "Filing issues". Otherwise set it aside as that rule says, and
+  the next issue takes its place.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
   never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
   `gh pr list --state open --limit 500 -S '-author:spy4x'` and

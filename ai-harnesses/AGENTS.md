@@ -54,10 +54,11 @@ Two limits come before priority:
   `p1-critical` issue. Nothing else is picked. An issue you file outside it is
   named in the report as waiting for me to add it.
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a
-  candidate only when its next line is `Asked for by the owner, <date>`, or it
-  passes step 2 of "Filing issues" below. Any other is not built: it gets
-  `p4-low` and a one-line comment with the reason and the label it had, and the
-  report lists it under **Set aside**.
+  candidate only when I asked for it or it passes step 2 of "Filing issues"
+  below. I asked for it when its next line is `Asked for by the owner, <date>`,
+  or when a comment of mine on it (one without the marker) says to build it.
+  Any other is not built: it gets `p4-low` and a one-line comment with the
+  reason and the label it had, and the report lists it under **Set aside**.
 
 Milestones and the labels that gate work are mine. Never create, edit or close
 a milestone, file an issue into one, or move an issue in or out. Never raise an
@@ -125,7 +126,8 @@ idea came from: name it in one line of the report. When I ask for work in chat,
 feature or not, the session I asked writes the issue, and its first lines after
 the marker are `Asked for by the owner, <date>` and my sentence, quoted. Never
 add that line to an existing issue; a subagent never writes it. An agent-filed
-feature issue without it is built only once I put it in a milestone.
+feature issue without it is built only once I put it in a milestone, or say so
+in a comment of mine on it.
 
 **Rules are mine.** Never add, remove, reword or weaken a rule in `AGENTS.md`
 (this file or a repo's), a skill, an agent definition or harness settings, and
