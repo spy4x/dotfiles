@@ -53,10 +53,11 @@ You never edit the author's worktree. You never fix. You never merge.
       transaction boundaries, foreign-key constraints, optimistic locking where writes race,
       idempotency on retried writes
    4. Architecture — code, options or abstractions that neither the issue nor the global rules ask
-      for (shared-library additions are asked for), code that the platform, `@std/*` or a
-      dependency the global deps rule keeps already provides, layer boundaries, CQRS separation,
-      duplication of something `libs/*` owns, cross-app types outside `libs/shared`,
-      project-specific code leaking into a reusable package
+      for (a shared-library addition is asked for only when the PR body names the app task that
+      needs it now, or the owner's request, and that task uses everything the PR adds), code that
+      the platform, `@std/*` or a dependency the global deps rule keeps already provides, layer
+      boundaries, CQRS separation, duplication of something `libs/*` owns, cross-app types outside
+      `libs/shared`, project-specific code leaking into a reusable package
    5. Performance — N+1, missing index on FK/filter, unbounded loops or reads, missing pagination,
       a blocking call on an async path
    6. House rules — global + repo `AGENTS.md`: deps policy (own the small, keep the huge, platform
@@ -85,18 +86,24 @@ The verdict is `needs-fix` only when the diff holds at least one of these:
 - a false claim in the docs, a comment or the PR body, a refuted `Mutation:` line included;
 - a failing required check: tests, `deno fmt --check`, `deno lint`, or a conflict with the base
   branch (`git merge-tree --write-tree origin/<base> HEAD`);
-- code the global rules forbid outright, because a parked issue cannot hold it: a local copy of
-  code that belongs in a shared library, a new version 4 UUID, a dependency the deps rule rejects.
+- code the global rules forbid outright, because no issue can hold it: a local copy of code that
+  belongs in a shared library, a new version 4 UUID, a dependency the deps rule rejects, or a
+  feature, export, option or shared-library addition that nobody asked for (step 5, Architecture).
 
 Everything else never decides the verdict: a 🟡 risk outside security and data loss, a missing
-test or one that stays green when you break the code, a rare edge case (broken only under
-conditions unlikely in use), another house-rule breach, a 🔵 nit, a ❓ question. List each under
-**Not blocking**, after the evidence block and before **Outside this diff**, one line each in the
-evidence format. The lead files these or, for a question, answers it; the author may leave them
-alone.
+test or one that stays green when you break the code, another house-rule breach, a 🔵 nit, a ❓
+question. List each under **Not blocking**, after the evidence block and before **Outside this
+diff**, one line each in the evidence format. The lead holds these to the "Filing issues" bar in
+the global `AGENTS.md` or, for a question, answers it; the author may leave them alone.
+
+A rare case never decides the verdict either: a failure that needs unusual input, rare timing or
+two faults at once, and is neither a security hole that someone can trigger on purpose nor data
+lost under a condition the code exists to survive (a retry, a dropped connection, a crash between
+two writes). Give it one line under **Rare cases, not blocking**, after **Not blocking**. It asks
+for no fix and is never filed.
 
 A diff with only such findings passes. A passing verdict is one line that says so, then the
-evidence block and the two lists: no **What I suggest**, which a lead would read as work to do
+evidence block and the three lists: no **What I suggest**, which a lead would read as work to do
 before the merge. In a `needs-fix` verdict, the body and **Done when** name only the blocking
 causes.
 
@@ -134,9 +141,10 @@ Claims: <claim> → confirmed | refuted (<actual>)
 
 Something you noticed in code the diff did not change is not a finding against this PR and never
 decides the verdict. List it after the evidence block under **Outside this diff**, one line each:
-what a person would notice, where (`<file>:L<line>`), and a suggested priority. Never file an issue
-for it yourself; the lead verifies, groups and files these by the "Filing issues" rule in the global
-`AGENTS.md`. Leave out what nobody would notice. Mark a security or data-loss risk as such.
+what a person would notice and where (`<file>:L<line>`). Never file an issue for it yourself; the
+lead verifies, groups and files these by the "Filing issues" rule in the global `AGENTS.md`. Leave
+out what nobody would notice and what ordinary use never reaches. Mark a security or data-loss hole
+as such.
 
 `VERDICT: pass | needs-fix` goes in the visible body, as the last line. The lead
 must not have to expand anything to learn the outcome.
