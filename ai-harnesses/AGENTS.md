@@ -313,7 +313,6 @@ Work and production:
 - `antonshubin.com`: my freelance site.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
-- `gb`: SmartLite, park light control. No `AGENTS.md`; read `README.md`.
 
 Homelab, for self-hosted services, never for hosting work or production
 projects:
@@ -463,8 +462,13 @@ scripts, a lane's test run) so a runaway stops at the cap (once: a fake `rsync`
 called itself, 4,900 processes and 73 GB of RAM in minutes).
 
 ```bash
-systemd-run --user --scope --quiet -p TasksMax=500 -p MemoryMax=8G timeout 120 <cmd>
+systemd-run --user --scope --quiet -p TasksMax=4000 -p MemoryMax=8G timeout 120 <cmd>
 ```
+
+The cap was 500 until 2026-10-14; that stopped ordinary builds, browser test
+runs and deploys. 4,000 is a trial, due for review on 2026-10-28. A run the cap
+stopped, or a runaway it caught, gets a row in
+`~/sync/code/ai-memory/experiments/tasksmax-4000.md`.
 
 Never `ulimit -u`: it counts every thread the user owns (over 3,000 here), so
 the first fork fails. Containers: `--pids-limit=500 --memory=8g`.
