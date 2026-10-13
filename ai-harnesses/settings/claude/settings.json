@@ -9,6 +9,16 @@
   "autoContinueAtUsageLimit": true,
   "bashOutputMaxChars": 12000,
   "effortLevel": "medium",
+  "skillOverrides": {
+    "chrome-browser": "off",
+    "computer-use": "off",
+    "docx": "off",
+    "google-workspace": "off",
+    "import-memory": "off",
+    "morning": "off",
+    "pptx": "off",
+    "xlsx": "off"
+  },
   "env": {
     "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/harness-rules"
   },
