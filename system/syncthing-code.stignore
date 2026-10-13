@@ -11,7 +11,11 @@ node_modules
 // matching pattern wins, so the two exceptions come first: encrypted files and
 // examples still sync. Each machine gets a repo's key by hand, once, and
 // decrypts there. A rule here does not delete copies that were synced before.
+// Keep the `!` lines below `/worktrees`: above it, Syncthing would walk and
+// watch every worktree directory again.
 !.env*.age
 !.env*.example
 .env*
+*.env
+*.env.bak*
 .age

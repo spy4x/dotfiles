@@ -82,11 +82,13 @@ every other machine. A worktree is not worth syncing: it is rebuilt from `origin
 its `.git` file names an absolute path in the main checkout, so the copy is broken anyway.
 `system/syncthing-code.stignore` is the tracked copy of the ignore list for the `code` folder.
 
-The same file keeps secrets off the other machines: it ignores plaintext env files (`.env*`) and
-age key directories (`.age`), and still syncs encrypted `*.age` files and `*.example` files. An
-ignore list is local to each machine, so copy it on every machine that shares the folder. It
-stops new copies only: delete the ones a machine already received by hand, and give each machine
-a repo's age key once, then decrypt there.
+The same file keeps plaintext env files and age keys off the other machines. It ignores names
+that start with `.env`, names that end in `.env` or contain `.env.bak`, and `.age` directories;
+it still syncs `.env*.age` and `.env*.example` files. A secret under any other name still syncs.
+An ignore list is local to each machine, so copy it on every machine that shares the folder
+first. It stops new copies only: after that, delete the ones a machine already received by hand,
+including older versions under `.stversions`, and give each machine a repo's age key once, then
+decrypt there.
 
 ```bash
 cp system/syncthing-code.stignore ~/sync/code/.stignore
