@@ -126,8 +126,8 @@ idea came from: name it in one line of the report. When I ask for work in chat,
 feature or not, the session I asked writes the issue, and its first lines after
 the marker are `Asked for by the owner, <date>` and my sentence, quoted. Never
 add that line to an existing issue; a subagent never writes it. An agent-filed
-feature issue without it is built only once I put it in a milestone, or say so
-in a comment of mine on it.
+feature issue without it is built only once I put it in a milestone or, in a
+repo with no open milestone, say so in a comment of mine on it.
 
 **Rules are mine.** Never add, remove, reword or weaken a rule in `AGENTS.md`
 (this file or a repo's), a skill, an agent definition or harness settings, and
