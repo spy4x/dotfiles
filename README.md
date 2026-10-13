@@ -73,9 +73,12 @@ settings, not a configurable product.
 ```bash
 curl -fsSL https://deno.land/install.sh | sh   # install Deno
 git clone https://github.com/spy4x/dotfiles && cd dotfiles
-deno task install-all      # apps, then the shell
 deno task ai --check       # compare your harness homes with ai-harnesses/, write nothing
+deno task install-all      # installs my apps and replaces your shell setup
 ```
+
+Only the last line installs my setup: it adds my apps and replaces your shell configuration. Read
+[docs/apps.md](docs/apps.md) and [docs/shell.md](docs/shell.md) before you run it.
 
 `deno task ai` without `--check` replaces the global rules, skills and agents of every installed
 harness with mine, and merges my settings into theirs. Read
