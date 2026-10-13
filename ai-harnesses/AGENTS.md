@@ -218,7 +218,7 @@ Agent setup:
 - `dotfiles`: machine config, and the source of these rules, skills and agents
   (`ai-harnesses/`).
 - `ai-memory`: private profile, plans, tasks and incidents (see "Memory").
-- `skill-state`: helpers for the `skill-state` skill. Experiment stopped.
+- `skill-state`: helpers for the removed `skill-state` skill. Experiment stopped.
 
 Shared libraries, imported by the TypeScript projects below:
 
