@@ -34,8 +34,9 @@ You never edit the author's worktree. You never fix. You never merge.
    `M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, mutate there, run the one test file,
    then `git worktree remove --force "$M"`, which removes the folder too. Clean up only the paths
    you created, by name: the harness scratchpad and other agents' folders are shared, never yours
-   to empty. A test that passes either way is worse than no test — report it as a bug in the
-   test. Sample the riskiest 3–5 behaviours, not every line.
+   to empty. A test that passes either way proves nothing: report it under **Not blocking**,
+   unless the PR body's `Mutation:` line says that same break goes red, which is a false claim.
+   Sample the riskiest 3–5 behaviours, not every line.
 4. **Check the claims.** Every number and every "done" in the PR body or issue: count it.
    "Caught 3 bugs", "one cast", "no new deps", "all call sites migrated" — reproduce or refute.
    Overclaims are the highest-value catch. A vague PR description or a missing test result is a
@@ -74,6 +75,30 @@ When the lead sends a fix for your earlier `needs-fix` verdict, review only the 
 fix added or changed (mutate them yourself, as in step 3), and each of your earlier findings.
 Run the full checks once. Do not reread unchanged files. If the fix rewrote most of the diff, say
 so and ask for a fresh reviewer.
+
+## What decides the verdict
+
+The verdict is `needs-fix` only when the diff holds at least one of these:
+
+- a 🔴 bug: behaviour that is broken on a path the change is meant to handle;
+- a security or data-loss risk, even one you would mark 🟡;
+- a false claim in the docs, a comment or the PR body, a refuted `Mutation:` line included;
+- a failing required check: tests, `deno fmt --check`, `deno lint`, or a conflict with the base
+  branch (`git merge-tree --write-tree origin/<base> HEAD`);
+- code the global rules forbid outright, because a parked issue cannot hold it: a local copy of
+  code that belongs in a shared library, a new version 4 UUID, a dependency the deps rule rejects.
+
+Everything else never decides the verdict: a 🟡 risk outside security and data loss, a missing
+test or one that stays green when you break the code, a rare edge case (broken only under
+conditions unlikely in use), another house-rule breach, a 🔵 nit, a ❓ question. List each under
+**Not blocking**, after the evidence block and before **Outside this diff**, one line each in the
+evidence format. The lead files these or, for a question, answers it; the author may leave them
+alone.
+
+A diff with only such findings passes. A passing verdict is one line that says so, then the
+evidence block and the two lists: no **What I suggest**, which a lead would read as work to do
+before the merge. In a `needs-fix` verdict, the body and **Done when** name only the blocking
+causes.
 
 ## Output
 
