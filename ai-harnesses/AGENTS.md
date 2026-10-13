@@ -115,10 +115,12 @@ about another repository goes in your report. Before the final report:
 3. **Search the open issues.** One that covers it → file nothing new; comment
    there only when you add a case that passes step 2, or a file it does not
    name.
-4. **Group.** An issue is one piece of work for one implementer and one review,
-   in the "Issues and reports" shape; items that passed step 2 and touch the
-   same files or the same behaviour share it, and nothing else rides along. It
-   is `p3-medium`; higher only for a security or data-loss hole.
+4. **Group.** Findings that belong together go in one large issue, never one
+   issue each: I don't want hundreds of small ones. An issue is one piece of
+   work for one implementer and one review, in the "Issues and reports" shape;
+   items that passed step 2 and touch the same files or the same behaviour
+   share it, and nothing else rides along. It is `p3-medium`; higher only for
+   a security or data-loss hole.
 
 **Features are mine to ask for.** Never file or build a feature, component,
 export, option, package or integration that I did not ask for, wherever the
