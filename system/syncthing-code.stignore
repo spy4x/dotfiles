@@ -5,3 +5,17 @@ node_modules
 // broken by construction. Syncing them replicated build output and held
 // thousands of inotify watches.
 /worktrees
+// Secrets stay on the machine that uses them. A plaintext env file or an age
+// key copied to every machine puts the tokens next to the key that decrypts
+// the committed `.age` files, on servers that never use them. The first
+// matching pattern wins, so the two exceptions come first: encrypted files and
+// examples still sync. Each machine gets a repo's key by hand, once, and
+// decrypts there. A rule here does not delete copies that were synced before.
+// Keep the `!` lines below `/worktrees`: above it, Syncthing would walk and
+// watch every worktree directory again.
+!.env*.age
+!.env*.example
+.env*
+*.env
+*.env.bak*
+.age
