@@ -295,7 +295,7 @@ Agent setup:
 - `dotfiles`: machine config, and the source of these rules, skills and agents
   (`ai-harnesses/`).
 - `ai-memory`: private profile, plans, tasks and incidents (see "Memory").
-- `skill-state`: helpers for the `skill-state` skill. Experiment stopped.
+- `skill-state`: helpers for the removed `skill-state` skill. Experiment stopped.
 
 Shared libraries, imported by the TypeScript projects below:
 
@@ -537,9 +537,18 @@ comment on what is left, and move on. After a second `needs-fix` that names a
 behaviour defect, the `wave` skill says when and how to escalate that
 fix round. Never count rejections in a summary, PR body or issue:
 report what the review found and what changed. Gate failed, or a revert can't
-undo it → leave the PR open and say so. A finding about code the diff did not
-change never blocks the PR: the reviewer lists it under **Outside this diff**,
-and the lead verifies, groups and files it by the "Filing issues" rule.
+undo it → leave the PR open and say so.
+
+A reviewer rejects only for a bug, a security or data-loss risk, a false claim,
+a failing required check, or code these rules forbid outright (the `reviewer`
+agent lists which). Its other findings (another risk, a missing test, a nit, a
+question) come under **Not blocking** and never block the PR; neither does a
+rare case, listed under **Rare cases, not blocking**, nor a finding about code
+the diff did not change, listed under **Outside this diff**. The lead holds
+the first and the last list to the "Filing issues" rule, files what passes its
+bar, and answers the questions. This bar is a trial from
+2026-10-13, due for review on 2026-10-20; its baseline is in
+`~/sync/code/ai-memory/experiments/reviewer-value/`.
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash
 --delete-branch`; independent commits → the same with `--rebase`. Always pass
