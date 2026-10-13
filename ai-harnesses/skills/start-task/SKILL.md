@@ -75,6 +75,11 @@ Create it with `gh issue create`, in the **Issues and reports** shape from `AGEN
 - **Done when** holds the acceptance criteria.
 - **Evidence** holds the reproduction and the `file:line` pointers.
 
+The first lines of the body, after the `<!-- agent -->` marker, are `Asked for by the owner, <date>`
+and my sentence, quoted: without them a later wave treats the issue as an agent's own claim and may
+set it aside ("Picking work yourself" in `AGENTS.md`). If the repo has an open milestone, say in the
+report that the issue is outside it and that no wave picks it until I add it.
+
 Label it with its priority (`p1-critical` to `p5-someday`, defined in `AGENTS.md`), and with
 `manual` or `needs-decision` when it needs the owner's hands or answer. Scrub secrets before
 sending (the hard rule). If the repo has no GitHub remote, keep the same text
