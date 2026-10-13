@@ -10,14 +10,14 @@
   "bashOutputMaxChars": 12000,
   "effortLevel": "medium",
   "skillOverrides": {
-    "anthropic-skills:chrome-browser": "off",
-    "anthropic-skills:computer-use": "off",
-    "anthropic-skills:docx": "off",
-    "anthropic-skills:google-workspace": "off",
-    "anthropic-skills:import-memory": "off",
-    "anthropic-skills:morning": "off",
-    "anthropic-skills:pptx": "off",
-    "anthropic-skills:xlsx": "off"
+    "chrome-browser": "off",
+    "computer-use": "off",
+    "docx": "off",
+    "google-workspace": "off",
+    "import-memory": "off",
+    "morning": "off",
+    "pptx": "off",
+    "xlsx": "off"
   },
   "env": {
     "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/harness-rules"

@@ -15,7 +15,7 @@ Deno.test(`the real source validates and renders for every harness`, async () =>
     const paths = rendered.map((file) => file.path)
     assertEquals(new Set(paths).size, paths.length, `${harness}: two items render one path`)
   }
-  // Each diverged item exists once and reaches every harness.
+  // The diverged skill exists once.
   assertEquals(source.skills.filter((skill) => skill.meta.name === `audit`).length, 1)
   const reviewer = source.agents.find((agent) => agent.meta.name === `reviewer`)
   assertEquals(reviewer?.meta.targets, undefined)
