@@ -97,9 +97,10 @@ diff**, one line each in the evidence format. The lead holds these to the "Filin
 the global `AGENTS.md` or, for a question, answers it; the author may leave them alone.
 
 A rare case never decides the verdict either: a failure that needs unusual input, rare timing or
-two faults at once, and is not a security hole that someone can trigger on purpose. Give it one
-line under **Rare cases, not blocking**, after **Not blocking**. It asks for no fix and is never
-filed.
+two faults at once, and is neither a security hole that someone can trigger on purpose nor data
+lost under a condition the code exists to survive (a retry, a dropped connection, a crash between
+two writes). Give it one line under **Rare cases, not blocking**, after **Not blocking**. It asks
+for no fix and is never filed.
 
 A diff with only such findings passes. A passing verdict is one line that says so, then the
 evidence block and the three lists: no **What I suggest**, which a lead would read as work to do

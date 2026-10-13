@@ -122,8 +122,8 @@ The wave's final report ends with:
   list in `.wave<N>/noticed.md`, since your context compacts, and file once, at the end, so one
   issue can hold a whole group. A security or data-loss hole does not wait: file it when you learn
   of it. List each issue filed or extended (link, one line, priority), then each thing noticed and
-  not filed, one line each, under **Noticed, not filed**, and each issue set aside, with the label
-  it had, under **Set aside**;
+  not filed, a reviewer's "Rare cases, not blocking" lines among them, one line each, under
+  **Noticed, not filed**, and each issue set aside, with the label it had, under **Set aside**;
 - what this wave cost: each agent's dollars, peak context and compactions
   (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`);
 - a chip that starts the next wave in its own session: the background-task suggestion tool
