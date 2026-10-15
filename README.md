@@ -55,6 +55,8 @@ How the rendering works, the file layout per harness and how to write a skill or
 
 - **Apps.** [`install-apps.ts`](docs/apps.md) installs everything in `apps.jsonc` with dnf, apt
   or zypper, and falls back to Flatpak.
+- **Claude Desktop.** [`tools/claude-desktop-update.sh`](tools/claude-desktop-update.sh)
+  installs or updates the app from Anthropic's Debian package, which Fedora has no updater for.
 - **Shell.** [`install-shell.ts`](docs/shell.md) sets up Zsh, Oh My Zsh, Powerlevel10k and the
   aliases in `aliases.sh`.
 - **Config in home.** tmux, Neovim, Zsh and the prompt are [symlinked](docs/sync.md) from this
