@@ -31,8 +31,10 @@ ln -s ~/sync/code/dotfiles/.config/git/ignore ~/.config/git/ignore
 
 A systemd user timer runs [`tools/claude-desktop-update.sh`](../tools/claude-desktop-update.sh)
 every night at 03:00. A night the machine was off, asleep or logged out is caught up at the next
-login. When it installs a new version, a dialog says so and stays until you close it. The script
-installs only what Anthropic's signing key signed; the key is committed next to it.
+login. When it installs a new version, or when the update fails, a dialog says so and stays until
+you close it. The script installs only what Anthropic's signing key signed; the key is committed
+next to it. It refuses an expired repository index and an older version than the installed one, and
+it swaps the new version in only once it is fully unpacked, so a failed update leaves the old app.
 
 ```bash
 systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-update.service
