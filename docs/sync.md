@@ -26,3 +26,16 @@ B=~/.config/git/ignore.bak-$(date +%Y%m%d%H%M%S)
 [ -e ~/.config/git/ignore ] && mv ~/.config/git/ignore "$B"
 ln -s ~/sync/code/dotfiles/.config/git/ignore ~/.config/git/ignore
 ```
+
+## Claude Desktop nightly update
+
+A systemd user timer runs [`tools/claude-desktop-update.sh`](../tools/claude-desktop-update.sh)
+every night at 03:00. A night the machine was off, asleep or logged out is caught up at the next
+login. When it installs a new version, a dialog says so and stays until you close it. The script
+installs only what Anthropic's signing key signed; the key is committed next to it.
+
+```bash
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-update.service
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-update.timer
+systemctl --user enable --now claude-desktop-update.timer
+```

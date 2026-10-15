@@ -1,0 +1,8 @@
+# Updates Claude Desktop and shows a dialog when a new version was installed.
+# Runs from claude-desktop-update.timer. Setup: docs/sync.md.
+[Unit]
+Description=Update Claude Desktop from Anthropic's Debian package
+
+[Service]
+Type=oneshot
+ExecStart=%h/sync/code/dotfiles/tools/claude-desktop-update.sh --notify
