@@ -24,8 +24,9 @@ for arg in "$@"; do
 done
 
 REPO="https://downloads.claude.ai/claude-desktop/apt/stable"
-# Anthropic's signing key, as published in the Claude Desktop on Linux docs.
-KEY_FPR=31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE
+# Anthropic's signing key, committed next to this script so that nothing downloaded decides what
+# is trusted. Fingerprint 31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE, as the Linux docs publish it.
+KEY="$(dirname "$(realpath "$0")")/claude-desktop-archive-keyring.asc"
 STAMP=/opt/claude-desktop/.deb-version
 
 fail() {
@@ -37,12 +38,8 @@ tmp=$(mktemp -d)
 trap 'find "$tmp" -delete' EXIT
 
 # Check the chain apt checks: the signed release file, the package index's checksum in it, and
-# the package's checksum in the index. Everything below runs as root, so nothing unsigned does.
-curl -fsS --max-time 60 --output "$tmp/key.asc" "https://downloads.claude.ai/claude-desktop/key.asc"
-fpr=$(GNUPGHOME="$tmp" gpg --batch --quiet --with-colons --show-keys "$tmp/key.asc" |
-  awk -F: '$1 == "fpr" { print $10; exit }')
-[ "$fpr" = "$KEY_FPR" ] || fail "signing key fingerprint is $fpr, expected $KEY_FPR"
-GNUPGHOME="$tmp" gpg --batch --quiet --dearmor --output "$tmp/key.gpg" "$tmp/key.asc"
+# the package's checksum in the index. The install runs as root, so nothing unsigned may reach it.
+GNUPGHOME="$tmp" gpg --batch --quiet --dearmor --output "$tmp/key.gpg" "$KEY"
 curl -fsS --max-time 60 --output "$tmp/InRelease" "$REPO/dists/stable/InRelease"
 gpgv --quiet --keyring "$tmp/key.gpg" --output "$tmp/Release" "$tmp/InRelease" 2>/dev/null ||
   fail "repository signature does not verify"
