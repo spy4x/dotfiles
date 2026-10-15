@@ -12,7 +12,7 @@ official `.deb` unpacked into `/opt/claude-desktop`; the installed version is in
 `/opt/claude-desktop/.deb-version`.
 
 A systemd user timer, `claude-desktop-update.timer`, runs the update every night and shows a
-dialog when it installed a new version. Check it with
+dialog when it installed a new version or failed. Check it with
 `systemctl --user list-timers claude-desktop-update.timer` and read the last run with
 `journalctl --user -u claude-desktop-update.service -n 20`. Setup: `docs/sync.md`.
 
