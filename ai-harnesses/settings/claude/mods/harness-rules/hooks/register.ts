@@ -102,7 +102,8 @@ export const register: Register = (on) => {
     if (post.kind === `none`) return next(e)
     // A body file is often written earlier in this same command (a heredoc, `sed -i`) or named
     // through a variable (`$D/b.md`), so it cannot be read yet; `--body-file -` reads a heredoc.
-    // The command text holds such a body, so it counts for the marker and is always scanned.
+    // The command text holds a heredoc body, so it counts for the marker and is always scanned.
+    // A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out unscanned.
     const file = post.kind === `file` ? await readable($, post.path) : undefined
     let verdict = markerVerdict(post.kind === `inline` ? post.body : `${file ?? ``}\n${e.command}`)
     if (!verdict.deny) {

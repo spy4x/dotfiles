@@ -95,6 +95,23 @@ test(`refuses a gh comment without the agent marker before scanning it`, async (
   expect(ran.deny).toContain(`<!-- agent -->`)
 })
 
+test(`refuses a body in a shell variable, even with the marker elsewhere in the command`, async (
+  $,
+  on,
+) => {
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  for (
+    const command of [
+      `NB=$(gh pr view 1 --json body -q .body) && gh pr edit 1 --body "$NB"`,
+      `gh pr edit 1 --title "<!-- agent --> t" --body "$NB"`,
+    ]
+  ) {
+    const ran = await $.tool.call({ tool: `Bash`, command })
+    expect(ran.deny).toContain(`<!-- agent -->`)
+  }
+})
+
 test(`refuses a gh body gitleaks flags`, async ($, on) => {
   on(`process.run`, (_$, e) => ({ value: RAN(e.argv[0] === `gitleaks` ? 1 : 0) }))
   const ran = await $.tool.call({
