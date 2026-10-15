@@ -1,0 +1,11 @@
+# Runs claude-desktop-update.service every night. Persistent catches up a night the machine was
+# off or asleep at the next boot or wake. Setup: docs/sync.md.
+[Unit]
+Description=Update Claude Desktop nightly
+
+[Timer]
+OnCalendar=*-*-* 03:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

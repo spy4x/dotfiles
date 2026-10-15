@@ -26,3 +26,15 @@ B=~/.config/git/ignore.bak-$(date +%Y%m%d%H%M%S)
 [ -e ~/.config/git/ignore ] && mv ~/.config/git/ignore "$B"
 ln -s ~/sync/code/dotfiles/.config/git/ignore ~/.config/git/ignore
 ```
+
+## Claude Desktop nightly update
+
+A systemd user timer runs [`tools/claude-desktop-update.sh`](../tools/claude-desktop-update.sh)
+every night at 03:00, and at the next boot or wake when the machine was off then. When it installs
+a new version, a dialog says so and stays until you close it.
+
+```bash
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-update.service
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-update.timer
+systemctl --user enable --now claude-desktop-update.timer
+```
