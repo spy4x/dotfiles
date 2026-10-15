@@ -1,11 +1,14 @@
-# Runs claude-desktop-update.service every night. Persistent catches up a night the machine was
-# off or asleep at the next boot or wake. Setup: docs/sync.md.
+# Runs claude-desktop-update.service every night. The timer lives only while the desktop session
+# does, so the update dialog always has a desktop to show on; Persistent catches up a night the
+# machine was off, asleep or logged out at the next login. Setup: docs/sync.md.
 [Unit]
 Description=Update Claude Desktop nightly
+PartOf=graphical-session.target
+After=graphical-session.target
 
 [Timer]
 OnCalendar=*-*-* 03:00
 Persistent=true
 
 [Install]
-WantedBy=timers.target
+WantedBy=graphical-session.target

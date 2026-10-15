@@ -24,15 +24,44 @@ for arg in "$@"; do
 done
 
 REPO="https://downloads.claude.ai/claude-desktop/apt/stable"
+# Anthropic's signing key, as published in the Claude Desktop on Linux docs.
+KEY_FPR=31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE
 STAMP=/opt/claude-desktop/.deb-version
 
-latest_path=$(curl -fsS --max-time 60 "$REPO/dists/stable/main/binary-amd64/Packages" |
-  grep '^Filename: pool/main/c/claude-desktop/claude-desktop_' |
-  sort -V | tail -n1 | cut -d' ' -f2)
-[ -n "$latest_path" ] || {
-  echo "could not read repository index" >&2
+fail() {
+  echo "$1" >&2
   exit 1
 }
+
+tmp=$(mktemp -d)
+trap 'find "$tmp" -delete' EXIT
+
+# Check the chain apt checks: the signed release file, the package index's checksum in it, and
+# the package's checksum in the index. Everything below runs as root, so nothing unsigned does.
+curl -fsS --max-time 60 --output "$tmp/key.asc" "https://downloads.claude.ai/claude-desktop/key.asc"
+fpr=$(GNUPGHOME="$tmp" gpg --batch --quiet --with-colons --show-keys "$tmp/key.asc" |
+  awk -F: '$1 == "fpr" { print $10; exit }')
+[ "$fpr" = "$KEY_FPR" ] || fail "signing key fingerprint is $fpr, expected $KEY_FPR"
+GNUPGHOME="$tmp" gpg --batch --quiet --dearmor --output "$tmp/key.gpg" "$tmp/key.asc"
+curl -fsS --max-time 60 --output "$tmp/InRelease" "$REPO/dists/stable/InRelease"
+gpgv --quiet --keyring "$tmp/key.gpg" --output "$tmp/Release" "$tmp/InRelease" 2>/dev/null ||
+  fail "repository signature does not verify"
+
+index_sha=$(awk '$1 ~ /^[0-9a-f]{64}$/ && $3 == "main/binary-amd64/Packages" { print $1; exit }' \
+  "$tmp/Release")
+[ -n "$index_sha" ] || fail "signed release file lists no package index"
+curl -fsS --max-time 60 --output "$tmp/Packages" "$REPO/dists/stable/main/binary-amd64/Packages"
+echo "$index_sha  $tmp/Packages" | sha256sum --check --quiet - ||
+  fail "package index checksum does not match the signed release file"
+
+read -r latest_path latest_sha < <(awk '
+  /^Package: / { pkg = $2 }
+  /^Filename: / { file = $2 }
+  /^SHA256: / { sha = $2 }
+  /^$/ { if (pkg == "claude-desktop") print file, sha; pkg = "" }
+  END { if (pkg == "claude-desktop") print file, sha }
+' "$tmp/Packages" | sort -V | tail -n1) || true
+[ -n "${latest_path:-}" ] && [ -n "${latest_sha:-}" ] || fail "could not read repository index"
 
 latest_ver=${latest_path##*claude-desktop_}
 latest_ver=${latest_ver%_amd64.deb}
@@ -44,9 +73,9 @@ if [ "$latest_ver" = "$current_ver" ] && [ "$force" = false ]; then
 fi
 echo "updating Claude Desktop: $current_ver -> $latest_ver"
 
-tmp=$(mktemp -d)
-trap 'find "$tmp" -delete' EXIT
 curl -fsSL --max-time 900 --output "$tmp/pkg.deb" "$REPO/$latest_path"
+echo "$latest_sha  $tmp/pkg.deb" | sha256sum --check --quiet - ||
+  fail "package checksum does not match the signed index"
 (cd "$tmp" && ar x pkg.deb && mkdir stage && tar -xf data.tar.* -C stage)
 
 src="$tmp/stage/usr"
@@ -72,7 +101,12 @@ trap - EXIT
 
 if [ "$notify" = true ]; then
   msg="Claude Desktop updated. Restart the app."
-  kdialog --title "Claude Desktop" --msgbox "$msg" 2>/dev/null ||
-    zenity --info --title "Claude Desktop" --text "$msg" 2>/dev/null ||
-    echo "could not show the update dialog" >&2
+  # Closing a dialog can return non-zero, so the fallback runs only when kdialog is missing.
+  if command -v kdialog >/dev/null; then
+    kdialog --title "Claude Desktop" --msgbox "$msg" || true
+  elif command -v zenity >/dev/null; then
+    zenity --info --title "Claude Desktop" --text "$msg" || true
+  else
+    echo "could not show the update dialog: no kdialog or zenity" >&2
+  fi
 fi
