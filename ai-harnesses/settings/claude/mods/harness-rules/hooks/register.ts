@@ -1,12 +1,10 @@
 import type { EngineInterface, Register } from "claude-code"
 import {
-  ALLOW,
   bashVerdict,
   ghPost,
   leakVerdict,
   markerVerdict,
   spawnVerdict,
-  type Verdict,
   type Where,
 } from "./rules.ts"
 
@@ -17,15 +15,25 @@ import {
 const NOTHING_RAN = `Nothing in this command ran, not even the steps before the refused one: ` +
   `run any fix in a command of its own, then retry.`
 
-const STDIN_BODY = `Write the body to a file and pass its absolute path to --body-file: ` +
-  `this mod cannot read a body from standard input.`
+/** The file's text, or undefined when it cannot be read yet. */
+async function readable($: EngineInterface, path: string): Promise<string | undefined> {
+  try {
+    return await $.fs.read(path)
+  } catch {
+    return undefined
+  }
+}
 
 /**
  * Appends one JSON line to ~/.claude/mods-log/harness-rules.jsonl: every spawn and every
  * refusal, so the experiment can count what the mod did. Fail-open: a lost line is no reason
  * to stop work.
  */
-async function log($: EngineInterface, entry: Record<string, unknown>): Promise<void> {
+async function log(
+  $: EngineInterface,
+  entry: Record<string, unknown>,
+  timeoutMs = 2000,
+): Promise<void> {
   try {
     const home = await $.env.get(`HOME`)
     if (!home) return
@@ -38,7 +46,7 @@ async function log($: EngineInterface, entry: Record<string, unknown>): Promise<
         `sh`,
         `${home}/.claude/mods-log`,
       ],
-      { stdin: `${line}\n`, timeoutMs: 2000 },
+      { stdin: `${line}\n`, timeoutMs },
     )
   } catch {
     // Logging is not critical.
@@ -92,19 +100,18 @@ export const register: Register = (on) => {
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const post = ghPost(e.command)
     if (post.kind === `none`) return next(e)
-    let verdict: Verdict = post.kind === `stdin` ? { deny: STDIN_BODY } : ALLOW
-    const body = post.kind === `file`
-      ? await $.fs.read(post.path)
-      : post.kind === `inline`
-      ? post.body
-      : ``
-    if (!verdict.deny) verdict = markerVerdict(body)
+    // A body file is often written earlier in this same command (a heredoc, `sed -i`) or named
+    // through a variable (`$D/b.md`), so it cannot be read yet; `--body-file -` reads a heredoc.
+    // The command text holds a heredoc body, so it counts for the marker and is always scanned.
+    // A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out unscanned.
+    const file = post.kind === `file` ? await readable($, post.path) : undefined
+    let verdict = markerVerdict(post.kind === `inline` ? post.body : `${file ?? ``}\n${e.command}`)
     if (!verdict.deny) {
       const scan = await $.process.run(
         [`gitleaks`, `stdin`, `--no-banner`, `--redact`],
         // The whole command too: the word parser is not a shell, and a body it cut short
         // (an escaped quote, `$(…)`) must not hide a secret.
-        { stdin: post.kind === `file` ? `${body}\n${e.command}` : e.command, timeoutMs: 8000 },
+        { stdin: file === undefined ? e.command : `${file}\n${e.command}`, timeoutMs: 8000 },
       )
       verdict = leakVerdict(scan.exitCode)
     }
@@ -112,12 +119,14 @@ export const register: Register = (on) => {
     // The command can hold the secret gitleaks found, so the log keeps only the refusal.
     await log($, { event: `gh`, deny: verdict.deny })
     return { deny: `${verdict.deny} ${NOTHING_RAN}` }
-  }).catch((_$, e, next) => {
-    const refusal = {
-      deny: `The check of this post failed: its body file could not be read, or gitleaks did ` +
-        `not run. It was not sent. ${NOTHING_RAN}`,
-    }
-    if (next.error.kind === `re-entry`) return ghPost(e.command).kind === `none` ? next(e) : refusal
-    return next.called ? next(e) : refusal
+  }).catch(async ($, e, next) => {
+    if (next.error.kind === `re-entry` && ghPost(e.command).kind === `none`) return next(e)
+    if (next.error.kind !== `re-entry` && next.called) return next(e)
+    const deny = `The check of this post failed: gitleaks did not run, or the check broke. ` +
+      `It was not sent.`
+    // Short: a handler that outruns its 1-second grace counts as absent, and the post would go.
+    // On a re-entry the engine rejects this handler's own calls, so nothing is logged.
+    await log($, { event: `gh`, deny }, 500)
+    return { deny: `${deny} ${NOTHING_RAN}` }
   })
 }

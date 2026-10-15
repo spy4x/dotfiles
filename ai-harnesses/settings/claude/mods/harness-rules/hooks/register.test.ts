@@ -95,6 +95,23 @@ test(`refuses a gh comment without the agent marker before scanning it`, async (
   expect(ran.deny).toContain(`<!-- agent -->`)
 })
 
+test(`refuses a body in a shell variable, even with the marker elsewhere in the command`, async (
+  $,
+  on,
+) => {
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  for (
+    const command of [
+      `NB=$(gh pr view 1 --json body -q .body) && gh pr edit 1 --body "$NB"`,
+      `gh pr edit 1 --title "<!-- agent --> t" --body "$NB"`,
+    ]
+  ) {
+    const ran = await $.tool.call({ tool: `Bash`, command })
+    expect(ran.deny).toContain(`<!-- agent -->`)
+  }
+})
+
 test(`refuses a gh body gitleaks flags`, async ($, on) => {
   on(`process.run`, (_$, e) => ({ value: RAN(e.argv[0] === `gitleaks` ? 1 : 0) }))
   const ran = await $.tool.call({
@@ -149,20 +166,85 @@ test(`checks a body file for the marker and secrets, then posts`, async ($, on) 
   expect(scanned[0]).toContain(`<!-- agent -->\nbody`)
 })
 
-test(`refuses a body piped through --body-file -`, async ($) => {
+/** A heredoc that writes a body file, then a gh call that posts it, in one command. */
+const HEREDOC_POST = (body: string) =>
+  `cat > /abs/b.md <<'EOF'\n${body}\nEOF\ngh pr create --title t --body-file /abs/b.md`
+
+/** Fails every file read, as for a file the command itself writes before gh runs. */
+function unreadable(on: On): void {
+  on(`fs.read`, () => {
+    throw new Error(`ENOENT`)
+  })
+}
+
+test(`posts a heredoc body written in the same command, checked in the command`, async ($, on) => {
+  const scanned: string[] = []
+  unreadable(on)
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] === `gitleaks`) scanned.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const command = HEREDOC_POST(`<!-- agent -->\nbody`)
+  const ran = await $.tool.call({ tool: `Bash`, command })
+  expect(ran.deny).toBeUndefined()
+  expect(scanned).toEqual([command])
+})
+
+test(`refuses a heredoc body written in the same command that holds a secret`, async ($, on) => {
+  unreadable(on)
+  on(`process.run`, (_$, e) => ({
+    value: RAN(e.argv[0] === `gitleaks` && (e.init?.stdin ?? ``).includes(`SECRETX`) ? 1 : 0),
+  }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: HEREDOC_POST(`<!-- agent -->\nkey=SECRETX`),
+  })
+  expect(ran.deny).toContain(`secret`)
+})
+
+test(
+  `posts a body file named through a variable when the command has the marker`,
+  async ($, on) => {
+    unreadable(on)
+    on(`process.run`, () => ({ value: RAN(0) }))
+    on(`tool.call`, () => BASH_OK)
+    const ran = await $.tool.call({
+      tool: `Bash`,
+      command: `printf '<!-- agent -->\\nhi' > "$D/x.md" && gh issue create -t t -F "$D/x.md"`,
+    })
+    expect(ran.deny).toBeUndefined()
+  },
+)
+
+test(`posts a heredoc body piped through --body-file - with the marker`, async ($, on) => {
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
   const ran = await $.tool.call({
     tool: `Bash`,
     command: `gh pr comment 1 --body-file - <<'X'\n<!-- agent --> hi\nX`,
   })
-  expect(ran.deny).toContain(`absolute path`)
+  expect(ran.deny).toBeUndefined()
 })
 
-test(`refuses a post whose body file cannot be read`, async ($, on) => {
-  on(`fs.read`, () => {
-    throw new Error(`ENOENT`)
+test(`refuses an unreadable body file when the command lacks the marker`, async ($, on) => {
+  unreadable(on)
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: HEREDOC_POST(`body`) })
+  expect(ran.deny).toContain(`<!-- agent -->`)
+})
+
+test(`posts a body file the same command gives the marker`, async ($, on) => {
+  on(`fs.read`, () => ({ value: `no marker` }))
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `sed -i '1i <!-- agent -->' /abs/b.md && gh pr edit 1 --body-file /abs/b.md`,
   })
-  const ran = await $.tool.call({ tool: `Bash`, command: `gh pr comment 1 --body-file /no/such` })
-  expect(ran.deny).toContain(`could not be read`)
+  expect(ran.deny).toBeUndefined()
 })
 
 test(`logs a gh refusal without the command, which may hold the secret`, async ($, on) => {
@@ -195,22 +277,30 @@ test(`tells the agent that nothing in a refused command ran`, async ($, on) => {
   on(`fs.read`, () => ({ value: `no marker` }))
   const posted = await $.tool.call({
     tool: `Bash`,
-    command: `sed -i '1i <!-- agent -->' /abs/b.md && gh pr edit 1 --body-file /abs/b.md`,
+    command: `sed -i 's/a/b/' /abs/b.md && gh pr edit 1 --body-file /abs/b.md`,
   })
   expect(posted.deny).toContain(`Nothing in this command ran`)
   const deleted = await $.tool.call({ tool: `Bash`, command: `cd x && rm -rf "$D"` })
   expect(deleted.deny).toContain(`Nothing in this command ran`)
 })
 
-test(`says nothing ran when the check of a post fails`, async ($, on) => {
-  on(`fs.read`, () => {
-    throw new Error(`ENOENT`)
+test(`refuses and logs a post whose check breaks, saying nothing ran`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  mock.clock(on)
+  const logged: string[] = []
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] === `gitleaks`) throw new Error(`gitleaks: not found`)
+    logged.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
   })
+  on(`tool.call`, () => BASH_OK)
   const ran = await $.tool.call({
     tool: `Bash`,
-    command: `printf '<!-- agent -->' > /abs/b.md && gh pr comment 1 --body-file /abs/b.md`,
+    command: `git push && gh pr comment 1 --body "<!-- agent --> SECRETX"`,
   })
   expect(ran.deny).toContain(`Nothing in this command ran`)
+  expect(logged.join(``)).toContain(`"event":"gh"`)
+  expect(logged.join(``)).not.toContain(`SECRETX`)
 })
 
 test(`logs a refused Bash command whole`, async ($, on) => {
