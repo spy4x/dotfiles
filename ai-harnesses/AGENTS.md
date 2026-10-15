@@ -697,8 +697,13 @@ whatever the task, implementers included, except search/inventory → `haiku`.
 Opus 5.5 did the same work as Sonnet 5 in far fewer calls at about half the
 cost, and it matches Fable 5.1 faster and cheaper
 (`~/sync/code/ai-memory/experiments/model-comparison/`). `fable` is paused until
-I re-enable it. Architecture and final verdicts stay with the lead. Fresh
-subagents over forks (a fork copies the whole conversation).
+I re-enable it. A `haiku` brief names one directory or one question; an
+inventory of a whole repo gets one `haiku` agent per top-level directory, and
+the lead merges their lists. Past 100,000 prompt tokens Haiku 5.5 charges five
+times its base price for the whole call; Haiku 5.5 searches crossed it in 61%
+of their calls, nearly all of them whole-repo inventories. Architecture and
+final verdicts stay with the lead. Fresh subagents over forks (a fork copies the
+whole conversation).
 
 **Implementers → `opus` (Opus 5.5)**, in every repo. Sonnet 5.5 was the default
 from 2026-09-30 to 2026-10-11 because it cost about 0.6 times as much per
