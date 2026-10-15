@@ -1,4 +1,4 @@
-# Updates Claude Desktop and shows a dialog when a new version was installed.
+# Updates Claude Desktop and shows a dialog when a new version was installed or the update failed.
 # Runs from claude-desktop-update.timer. Setup: docs/sync.md.
 [Unit]
 Description=Update Claude Desktop from Anthropic's Debian package

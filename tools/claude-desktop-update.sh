@@ -132,7 +132,7 @@ sudo -n rm -rf /opt/claude-desktop.new /opt/claude-desktop.old
 sudo -n cp -a "$src/lib/claude-desktop" /opt/claude-desktop.new
 sudo -n chown -R root:root /opt/claude-desktop.new
 [ -f /opt/claude-desktop.new/chrome-sandbox ] && [ ! -L /opt/claude-desktop.new/chrome-sandbox ] ||
-  fail "package has no chrome-sandbox file"
+  fail "package chrome-sandbox is missing or a symlink"
 sudo -n chmod 4755 /opt/claude-desktop.new/chrome-sandbox
 echo "$latest_ver" | sudo -n tee /opt/claude-desktop.new/.deb-version >/dev/null
 if [ -d /opt/claude-desktop ]; then
