@@ -148,8 +148,11 @@ states, so the prose stays the source:
   on these paths, and on some substitutions (`rm -rf $(…)`), even in bypass mode; the refusal
   instead tells the agent to retry with `find "<literal path>" -delete` or `rm` of a literal path;
 - `find /` is refused;
-- a `gh issue` or `gh pr` body must carry `<!-- agent -->` and pass `gitleaks`. A failed check
-  refuses the post, and so does a body piped in with `--body-file -`.
+- a `gh issue` or `gh pr` body must carry `<!-- agent -->` and pass `gitleaks`, which scans the
+  whole command too. With `--body-file`, the marker counts in the file or in the command text: a
+  file the same command writes or edits (a heredoc, `sed -i`), one named through a variable
+  (`$D/b.md`) and `-` (standard input) cannot be read before the command runs. A check that
+  breaks refuses the post.
 
 It reads a command's words, not what the shell would run. It sees `rm` after `sudo`, `timeout`,
 `env`, `X=1`, `do`, `then` or `(`, but misses it inside `xargs`, `find -exec`, `bash -c '…'` and
