@@ -141,9 +141,10 @@ Deno.test(`a file removed from the source is removed from the home; foreign file
     ])
     await apply(ops)
     assertEquals(
-      await Deno.lstat(join(home, `.claude`, `skills`, `lookup`, `SKILL.md`)).catch(() => null),
+      await Deno.lstat(join(home, `.claude`, `skills`, `lookup`)).catch(() => null),
       null,
     )
+    assertEquals((await Deno.lstat(join(home, `.claude`, `skills`))).isDirectory, true)
     assertEquals(
       await Deno.readTextFile(join(home, `.claude`, `skills`, `mine`, `SKILL.md`)),
       `hand-made\n`,
