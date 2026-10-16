@@ -25,6 +25,15 @@ test(`refuses a reviewer on sonnet and allows one on opus`, () => {
   expect(spawnVerdict({ ...opusReviewer, model: `claude-opus-5-5` }, 10).deny).toBeUndefined()
 })
 
+test(`refuses an implementer or a design reviewer on sonnet and allows them on opus`, () => {
+  for (const subagentType of [`implementer`, `implementer-xhigh`, `design-reviewer`]) {
+    expect(spawnVerdict({ subagentType, model: `sonnet`, fork: false }, 10).deny).toContain(`opus`)
+    expect(spawnVerdict({ subagentType, model: `opus`, fork: false }, 10).deny).toBeUndefined()
+  }
+  expect(spawnVerdict({ subagentType: `Explore`, model: `haiku`, fork: false }, 10).deny)
+    .toBeUndefined()
+})
+
 test(`refuses every spawn at 90% of the 5-hour limit, forks included`, () => {
   expect(spawnVerdict(opusReviewer, 89.9).deny).toBeUndefined()
   expect(spawnVerdict(opusReviewer, 90).deny).toContain(`5-hour`)
