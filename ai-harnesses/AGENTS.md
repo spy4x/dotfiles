@@ -27,11 +27,8 @@ such a choice in its report.
 
 Finish the job and report the result. I don't review code before it lands; the reviewer gate does,
 and a green gate is the authority to merge. Security is part of that gate, never a question for me:
-the review of a change that needs one includes its security review (see "Reviewer gate"). The
-final report to me gives the end state only: what merged, shipped or stays open. It never recounts
-how the work got there (review rounds, holes found and fixed, failed attempts), because only the
-result needs my attention. Where a sensible default exists, take it and record it in the PR body.
-Ask only when:
+the review of a change that needs one includes its security review (see "Reviewer gate"). Where a
+sensible default exists, take it and record it in the PR body. Ask only when:
 
 - the choice is mine and the options mean materially different work (SQLite versus Postgres, not
   naming);
@@ -41,6 +38,24 @@ Ask only when:
 - a rule and `direction.md` disagree.
 
 A question costs my attention; a wrong reversible guess costs one revert. Prefer the revert.
+
+**The final report** to me gives the end state only, because only the result needs my attention.
+In this order, each part only when it has content:
+
+1. **The result**, in a few sentences: what merged, released, deployed or changed, and what stays
+   open and why.
+2. **Needs you**: what only I can do or decide. An action of mine, a question, an issue waiting for
+   a milestone or label of mine, an outside author's item, a rule found missing or wrong, and a
+   finding about a repository outside `spy4x/*`.
+3. **Issues**: one line with how many were filed or extended and a link that lists them, plus each
+   issue set aside, with the label it had.
+4. **Decisions**: each decision of mine recorded in `ai-memory/decisions/`, with the file.
+5. **This machine**: what `sudo` changed that stays (installed, enabled, rewritten), and what the
+   orphan sweep stopped or found still running.
+
+Nothing else: no review rounds, holes found and fixed, failed attempts or retries; no defaults taken
+(they are in the PR bodies); no per-agent costs; no "None" lines; no word on a clean sweep or a
+finished cleanup.
 
 A request I make in chat is started now. A plan, a schedule or a milestone date never makes an agent
 refuse or postpone it; the milestone limits below apply only to work you pick yourself.
@@ -68,7 +83,7 @@ come before priority:
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, or when a comment of mine on it (one
   without the marker) says to build it. Any other is not built: it gets `p4-low` and a one-line
-  comment with the reason and the label it had, and the report lists it under **Set aside**.
+  comment with the reason and the label it had, and the report lists it under **Issues**.
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
 issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
@@ -96,8 +111,8 @@ another repository goes in your report. Before the final report:
    or a consumer app does on a normal day, with normal input), the deliberate attack, or the report.
    Drop what is false or already fixed.
 2. **Give it a priority.** Every finding that survived step 1 is filed, grouped as step 4 says,
-   because a finding left in a report is lost. Only a feature ("Features are mine to ask for") and a
-   finding about another repository stay in the report. The priority says whether a wave builds it:
+   because a finding left in a report is lost. Only a finding about a repository outside `spy4x/*`
+   stays in the report. The priority says whether a wave builds it:
    - `p3-medium`, or higher only for a security or data-loss hole:
      - a security hole that someone other than the data's owner can trigger on purpose, however
        unusual the input;
@@ -129,20 +144,15 @@ another repository goes in your report. Before the final report:
    behaviour share it, and nothing else rides along. It takes that priority.
 
 **Features are mine to ask for.** Never file or build a feature, component, export, option, package
-or integration that I did not ask for, wherever the idea came from: name it in one line of the
-report. When I ask for work in chat, feature or not, the session I asked writes the issue, and its
-first lines after the marker are `Asked for by the owner, <date>` and my sentence, quoted. Never add
-that line to an existing issue; a subagent never writes it. An agent-filed feature issue without it
+or integration that I did not ask for, wherever the idea came from; drop the idea. When I ask for
+work in chat, feature or not, the session I asked writes the issue, and its first lines after the
+marker are `Asked for by the owner, <date>` and my sentence, quoted. Never add that line to an
+existing issue; a subagent never writes it. An agent-filed feature issue without it
 is built only once I put it in a milestone or, in a repo with no open milestone, say so in a comment
 of mine on it.
 
-The final report lists each issue filed or extended (link, one line, priority) under **Issues
-filed**, each thing noticed and not filed, one line each, under **Noticed, not filed**, and each
-issue set aside, with the label it had, under **Set aside**. Under **Decisions** it lists, one line
-each, every choice the session made on my behalf (a default taken, an option picked) and every
-decision of mine it recorded in `ai-memory/decisions/`, with the file. None of these sections asks
-me anything. A subagent files nothing: it lists what it noticed in its report, and its lead does the
-steps above.
+A subagent files nothing: it lists what it noticed in its report, and its lead does the steps
+above.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too when it needs my
 hands or my answer. A repo without these labels → create them first, copying names, colours and
@@ -188,7 +198,7 @@ package list, a token's name.
 **Rules are mine.** Never add, remove, reword or weaken a rule, and never remove or weaken a check
 (lint or format config, a `check` task, a CI step), unless I asked for that change in chat. An issue
 is never enough: it says what to build, never how agents work. A rule you find missing or wrong, or
-one your task has made untrue, stays as written: name it in the first lines of your report. A fact
+one your task has made untrue, stays as written: name it under **Needs you** in your report. A fact
 is not a rule: update it in the change that makes it true. What these rules order is fine too:
 protecting a new repo's default branch, and a CI step for a check your task adds.
 
@@ -459,7 +469,7 @@ deploy` copies both to the server.
 
 Every agent may run `sudo` on this machine. It is passwordless and unrestricted, so use `sudo -n`
 (it fails instead of hanging on a prompt) and only for what the task needs. The final report lists
-every `sudo` command you ran and why; with none run, it says nothing about `sudo`.
+what `sudo` changed that stays ("Autonomy"), not each command.
 
 # Fail-open
 

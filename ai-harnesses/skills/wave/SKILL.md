@@ -114,26 +114,21 @@ survives a reboot; its `/tmp` files do not.
 
 ## The handoff
 
-The wave's final report ends with:
+The wave's final report follows "The final report" in `AGENTS.md`. Before writing it, handle
+every reviewer's "Not blocking", "Rare cases, not blocking" and "Outside this diff" lines and
+anything else the wave noticed by the "Filing issues" rule: verified, given a priority,
+deduplicated, grouped and filed by you, never proposed to the owner. Keep the running list in
+`.wave<N>/noticed.md`, since your context compacts, and file once, at the end, so one issue can
+hold a whole group. A security or data-loss hole does not wait: file it when you learn of it.
 
-- the project's position: the plan, how much is done, what remains before the next milestone;
-- what the next wave must not touch: open PRs, issues waiting on the owner;
-- **Issues filed**: every reviewer's "Not blocking", "Rare cases, not blocking" and "Outside this
-  diff" lines and anything else the wave noticed, handled by the "Filing issues" rule in
-  `AGENTS.md`: verified, given a priority, deduplicated, grouped and filed by you, never proposed
-  to the owner. Keep the running list in `.wave<N>/noticed.md`, since your context compacts, and
-  file once, at the end, so one issue can hold a whole group. A security or data-loss hole does
-  not wait: file it when you learn of it. List each issue filed or extended (link, one line,
-  priority), then each thing noticed and not filed (a feature, or a finding about another
-  repository), one line each, under **Noticed, not filed**, and each issue set aside, with the
-  label it had, under **Set aside**;
-- **Decisions**, as the report sections after "Filing issues" in `AGENTS.md` define them;
-- what this wave cost: each agent's dollars, peak context and compactions
-  (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`);
-- a chip that starts the next wave in its own session: the background-task suggestion tool
-  (`spawn_task` in the Claude desktop app), with the next wave's prompt as its prompt and the
-  position inside it. The owner starts it with one click, so write no prompt file. A harness
-  without such a tool ends the report with the prompt instead, ready to paste.
+The result part also gives the project's position in one line: how much of the plan is done and
+what remains before the next milestone, and the wave's total cost
+(`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`).
+
+The report ends with a chip that starts the next wave in its own session: the background-task
+suggestion tool (`spawn_task` in the Claude desktop app), with the next wave's prompt as its prompt
+and the position inside it. The owner starts it with one click, so write no prompt file. A harness
+without such a tool ends the report with the prompt instead, ready to paste.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
