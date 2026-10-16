@@ -476,6 +476,14 @@ what `sudo` changed that stays ("Autonomy"), not each command.
 Non-critical external calls (monitoring/reporting/analytics) → `|| true`. Secret-bearing sends
 fail-closed (see Hard rule).
 
+# Idempotency
+
+Make an operation idempotent wherever that is possible and makes sense: running it twice leaves
+the same result as running it once. Retries, crashes and reruns are normal, and an operation that
+repeats its effect corrupts data or acts twice. This covers scripts, setup and deploy tasks,
+migrations, and handlers of anything that can arrive twice (webhooks, payments, queue jobs,
+retried requests).
+
 # Leave nothing running
 
 A killed shell leaves its `&` children running, reparented to `systemd --user`, and cleanup on the
