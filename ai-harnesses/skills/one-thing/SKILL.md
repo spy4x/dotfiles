@@ -1,6 +1,6 @@
 ---
 name: one-thing
-description: "Daily, weekly and monthly planning on The ONE Thing method: compare the previous period's plan with what actually happened (Traggo time, merged PRs, TASKS.md ticks, the three numbers), name the drift plainly, set the next ONE Thing, update TASKS.md and write a journal entry. Load when asked to plan the day, week or month, to review how a period went, or when a scheduled planning run starts."
+description: "Daily, weekly and monthly planning on The ONE Thing method: compare the previous period's plan with what actually happened (Traggo time, merged PRs, TASKS.md ticks), name the drift plainly, set the next ONE Thing, update TASKS.md and write a journal entry. Load when asked to plan the day, week or month, to review how a period went, or when a scheduled planning run starts."
 invocation: both
 argument-hint: "day | week | month"
 ---
@@ -14,19 +14,21 @@ that is also the 1st runs `month`, then `week`.
 This routine exists to push. Anton's known pattern (`profile.md`) is choosing work that cannot be
 rejected (tooling, research, refactors, strategy) over work that can (proposals, outreach,
 publishing, recording). A plan that nobody checks drifts unnoticed for weeks. So every run starts
-by comparing what was planned with what happened, numbers first, and only then plans.
+by comparing what was planned with what happened, and only then plans. Money reminders and
+number targets do not move Anton; habits do (sleep, the gym). The push is about the work itself.
 
 ## Files
 
 All in `~/sync/code/ai-memory/`:
 
-- `profile.md`, `situation.md`, `TASKS.md`: who, the frozen plan and its targets, the ordered list.
+- `direction.md`, `profile.md`, `situation.md`, `TASKS.md`: where the work is going, who, the
+  current facts, the ranked open list.
 - `planning/README.md`: the Traggo `area` tags and the journal rules. Read it every run.
 - `planning/days/YYYY-MM-DD.md`, `planning/weeks/YYYY-Www.md` (the ISO week being planned, so a
   Sunday run names next week), `planning/months/YYYY-MM.md`: one journal entry per run.
 
 Read the latest entry of the same mode and the current entry of the next larger period (a day
-reads its week, a week reads its month, a month reads `situation.md`). No previous entry → say
+reads its week, a week reads its month, a month reads `direction.md`). No previous entry → say
 so once and plan from `TASKS.md`.
 
 **Previous chat.** The journal is the record. Agreements made in chat after an entry was written
@@ -36,11 +38,11 @@ agreed after its entry; copy anything missing into that entry's `## Amended` bef
 
 ## Evidence of what happened
 
-Collect all four before judging. A source that fails is named in the review, never guessed.
+Collect all three before judging. A source that fails is named in the review, never guessed.
 
 1. **Tracked time.** `deno run --allow-run=ssh
    ~/sync/code/dotfiles/ai-harnesses/skills/one-thing/traggo.ts <from> <to>` prints hours per
-   `area`, per day, and the paid/product/video split against the 60/25/15 rule. It reads the homelab
+   `area`, per day, and the paid/product/video split. It reads the homelab
    database read-only over `ssh homelab`. A working day with no entries is a finding in itself: the
    analysis is blind there.
 2. **What shipped.** `gh search prs --owner spy4x --merged --merged-at <from>..<to> --json
@@ -48,11 +50,9 @@ Collect all four before judging. A source that fails is named in the review, nev
    passed 500: a count of exactly 1,000 means split the range. Group by repository; note which
    groups are tooling (dotfiles, ai-memory, rostok, homelab, experiments) and which earn or publish.
    Most PRs are agent output on spare quota, so their count is not Anton's hours: judge his time by
-   Traggo and the numbers, and use PRs to see where his attention went.
+   Traggo, and use PRs to see where his attention went.
 3. **What was ticked.** `git -C ~/sync/code/ai-memory log --since=<from> --until=<to+1> -p --
    TASKS.md`, plus `git diff -- TASKS.md` for uncommitted ticks.
-4. **The three numbers**: outreach sent, calls held, dollars invoiced. No system holds them; ask
-   Anton. In an unattended run with no answer, write `not reported`. Never estimate them.
 
 ## The method
 
@@ -62,8 +62,8 @@ this skill takes from it:
 - **The focusing question.** "What's the ONE Thing I can do such that by doing it everything else
   will be easier or unnecessary?" Ask it of every period, and answer with one sentence that has a
   visible done-when.
-- **Goal setting to the now.** Someday (`profile.md` Goals) → this year and this quarter
-  (`situation.md`) → this month → this week → today → right now. Each ONE Thing must serve the one
+- **Goal setting to the now.** Someday (`profile.md` Goals) → the direction (`direction.md`) →
+  this month → this week → today → right now. Each ONE Thing must serve the one
   above it; say which.
 - **Time blocking.** The ONE Thing gets a protected block, ideally four hours, early in the day,
   before mail and chat. Time off is blocked first; the planning time itself is blocked.
@@ -79,16 +79,14 @@ Added from elsewhere, with their strength:
   a medium-to-large effect on reaching goals): proven. Every plan carries one for its likeliest
   obstacle.
 - **The planning fallacy** (Buehler, Griffin and Ross, 1994: people underestimate their own task
-  times): proven. Estimates get 1.5 times the first guess: a rule of thumb, not the paper's finding.
-- **Lead and lag measures** (_The 4 Disciplines of Execution_): practitioner consensus. Proposals
-  sent and calls held are lead measures Anton controls; dollars invoiced is the lag measure.
+  times): proven. So a plan names an order, never a date a feature must wait for.
 - **The weekly review** (David Allen's GTD: get clear, get current, get creative): practitioner
   consensus.
 
 ## How to push
 
 - Open with the review, in this order: the planned ONE Thing and whether it happened; hours by
-  area; what shipped; the three numbers. Then the finding, in one or two blunt sentences.
+  area; what shipped. Then the finding, in one or two blunt sentences.
 - Name avoidance by its content: "You planned ten proposals and shipped four dotfiles PRs instead;
   zero proposals are recorded." Then ask one question: what blocked it.
 - `tooling` hours above `sales` plus `client` hours on a working day, or a skipped ONE Thing while
@@ -97,8 +95,9 @@ Added from elsewhere, with their strength:
   minutes or less and give it a fixed start time as an if-then.
 - No praise, no therapy tone, no reassurance. A good period gets one plain line that it went to
   plan.
-- No new strategy. `situation.md` is frozen until its review date. A suggestion to change tools,
-  rewrite the plan or start a new repository is answered with that rule and the current ONE Thing.
+- No plan gates a request. When Anton asks for work in chat, it starts now, whatever the plan
+  said; the plan follows him, not the other way round. Focus shifts by season, and a ONE Thing may
+  change with it: record the change, do not argue it.
 - Unattended (scheduled) run with a phone-notification tool available (`PushNotification` in the
   Claude desktop app): send one line, today's ONE Thing, and say so if the previous one was skipped.
 
@@ -107,8 +106,8 @@ Added from elsewhere, with their strength:
 Review range: the previous day entry's date through yesterday.
 
 1. Review that range from the evidence.
-2. Today's ONE Thing: the focusing question applied to the week's ONE Thing and the first unticked
-   `TASKS.md` items dated today or earlier.
+2. Today's ONE Thing: the focusing question applied to the week's ONE Thing and the top unticked
+   `TASKS.md` items.
 3. The plan, nothing more than this: the fixed morning block `TASKS.md` currently prescribes (the
    proposals block, while it says so), then the ONE Thing block with a start and end time, then at
    most three other must-dos. Everything else waits.
@@ -119,11 +118,10 @@ Review range: the previous day entry's date through yesterday.
 
 Run on Sunday. Review range: Monday through Sunday of the closing week.
 
-1. Review the week: last week's ONE Thing, each day entry's result, Traggo totals against
-   60/25/15, what shipped, and the three numbers. Record the numbers on the week's "Sunday numbers"
-   line in `TASKS.md`.
-2. Every overdue unticked `TASKS.md` item gets one of three answers: this week, a new date, or
-   dropped. Anton decides; in an unattended run, propose and leave the decision in the entry.
+1. Review the week: last week's ONE Thing, each day entry's result, Traggo totals, and what
+   shipped.
+2. Every unticked `TASKS.md` item planned for the closing week gets one of three answers: this
+   week, later, or dropped. Anton decides; in an unattended run, propose and leave the decision in the entry.
 3. Next week's ONE Thing, serving the month's. Its time blocks by day, time off first, and next
    Sunday's planning hour.
 4. When a CalDAV tool is available and Anton agrees in the session, put the ONE Thing blocks in
@@ -133,9 +131,9 @@ Run on Sunday. Review range: Monday through Sunday of the closing week.
 
 Run on the 1st. Review range: the whole previous month.
 
-1. Review the month: last month's ONE Thing, the week entries, Traggo totals by area and against
-   60/25/15, what shipped, and the numbers against the targets and dates in `situation.md`.
-2. This month's ONE Thing, one measurable sentence that serves the quarter in `situation.md`.
+1. Review the month: last month's ONE Thing, the week entries, Traggo totals by area, and what
+   shipped.
+2. This month's ONE Thing, one sentence with a visible done-when that serves `direction.md`.
 3. Check this month's `TASKS.md` items still fit it, in order. Point out what does not; changing
    what a task is goes through a pull request, as `ai-memory/README.md` says.
 
@@ -149,9 +147,8 @@ Write the entry with this shape:
 ## Review of <range>
 
 - Planned ONE Thing: <text> → done | partly | not done
-- Time: <hours by area>; paid/product/video <x>/<y>/<z>% against 60/25/15
+- Time: <hours by area>; paid/product/video <x>/<y>/<z>%
 - Shipped: <grouped PR links>
-- Numbers: outreach <n> · calls <n> · invoiced $<n>
 - Finding: <one or two blunt sentences>
 
 ## ONE Thing
@@ -170,15 +167,14 @@ Write the entry with this shape:
 ```
 
 Then update `TASKS.md`: tick items the evidence shows are done, editing that line to say what
-shipped and when, and in the weekly run write the numbers on the "Sunday numbers" line. Daily runs
-only tick. New dates or a new order come only from the weekly and monthly runs, with Anton's
+shipped and when. Daily runs only tick. A new order come only from the weekly and monthly runs, with Anton's
 agreement in the session.
 
 Commit straight to `main` in `~/sync/code/ai-memory`, as its README allows for journal entries,
-ticks and the Sunday numbers. Stage the new entry, then commit only named paths, `git add <entry> &&
+and ticks. Stage the new entry, then commit only named paths, `git add <entry> &&
 git commit -m <subject> -- <paths>`, so nothing else Anton staged rides along: the entry always, and
 `TASKS.md` only when it had no uncommitted changes before this run (otherwise leave it for him and
-say so). Subject `docs(planning): <mode> <date>`. New dates or order go through a pull request in
+say so). Subject `docs(planning): <mode> <date>`. A new order goes through a pull request in
 that repo instead, from a worktree, as its README requires. Push; a failed push is reported, not
 retried in a loop.
 
