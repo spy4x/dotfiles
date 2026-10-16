@@ -114,5 +114,5 @@ Follow Git Flow from `AGENTS.md`:
 
 ## 7. Report
 
-Keep it to the chat register: the PR URL, what shipped, the decisions taken, and what is left for
-me.
+Keep it to the chat register and to "The final report" in `AGENTS.md`: the PR URL, what shipped,
+and what is left for me.
