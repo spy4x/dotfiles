@@ -167,7 +167,7 @@ Write the entry with this shape:
 ```
 
 Then update `TASKS.md`: tick items the evidence shows are done, editing that line to say what
-shipped and when. Daily runs only tick. A new order come only from the weekly and monthly runs, with Anton's
+shipped and when. Daily runs only tick. A new order comes only from the weekly and monthly runs, with Anton's
 agreement in the session.
 
 Commit straight to `main` in `~/sync/code/ai-memory`, as its README allows for journal entries,

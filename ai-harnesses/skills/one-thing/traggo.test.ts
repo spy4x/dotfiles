@@ -22,7 +22,7 @@ Deno.test(`sums hours per area and per day`, () => {
   assertEquals(s.byDay, { "2026-10-05": 4.5, "2026-10-06": 1 })
 })
 
-Deno.test(`splits only rule areas against the 60/25/15 targets`, () => {
+Deno.test(`splits only the paid, product and video areas`, () => {
   const s = summarize([
     {
       start: `2026-10-05T00:00:00Z`,
@@ -43,9 +43,9 @@ Deno.test(`splits only rule areas against the 60/25/15 targets`, () => {
       area: `tooling`,
     },
   ])
-  assertEquals(s.rule.paid, { hours: 3, share: 0.75, target: 0.6 })
-  assertEquals(s.rule.product, { hours: 1, share: 0.25, target: 0.25 })
-  assertEquals(s.rule.video, { hours: 0, share: 0, target: 0.15 })
+  assertEquals(s.rule.paid, { hours: 3, share: 0.75 })
+  assertEquals(s.rule.product, { hours: 1, share: 0.25 })
+  assertEquals(s.rule.video, { hours: 0, share: 0 })
 })
 
 Deno.test(`counts a running timer until now`, () => {
@@ -85,7 +85,7 @@ Deno.test(`counts client and sales together as paid work`, () => {
       area: `sales`,
     },
   ])
-  assertEquals(s.rule.paid, { hours: 2, share: 1, target: 0.6 })
+  assertEquals(s.rule.paid, { hours: 2, share: 1 })
 })
 
 Deno.test(`never counts a span that ends before it starts`, () => {

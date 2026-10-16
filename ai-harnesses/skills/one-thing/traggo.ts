@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-run=ssh
-// Tracked time from Traggo for a date range: hours per `area` tag, hours per day, and the split
-// against the 60/25/15 rule in ai-memory's TASKS.md. Reads the homelab's Traggo SQLite database
+// Tracked time from Traggo for a date range: hours per `area` tag, hours per day, and the
+// paid/product/video split. Reads the homelab's Traggo SQLite database
 // read-only over ssh, so it needs no token and never passes Authelia.
 //
 // A span counts whole on the local day it starts.
@@ -11,11 +11,11 @@ const HOST = `homelab`
 const DB = `/home/spy4x/ssd-2tb/rostok/volumes/traggo/data/traggo.db`
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
-/** Rule buckets from TASKS.md: share of working time each should get. */
-export const RULE: Record<string, { areas: string[]; target: number }> = {
-  paid: { areas: [`client`, `sales`], target: 0.6 },
-  product: { areas: [`product`], target: 0.25 },
-  video: { areas: [`video`], target: 0.15 },
+/** Split buckets: which `area` tags each one sums. */
+export const RULE: Record<string, { areas: string[] }> = {
+  paid: { areas: [`client`, `sales`] },
+  product: { areas: [`product`] },
+  video: { areas: [`video`] },
 }
 
 /** One Traggo time span as the query returns it. Times are ISO strings; `end` null = running. */
@@ -31,7 +31,7 @@ export interface Summary {
   total: number
   byArea: Record<string, number>
   byDay: Record<string, number>
-  rule: Record<string, { hours: number; share: number; target: number }>
+  rule: Record<string, { hours: number; share: number }>
 }
 
 const round = (n: number) => Math.round(n * 100) / 100
@@ -54,9 +54,9 @@ export function summarize(spans: Span[], now = new Date()): Summary {
     0,
   )
   const rule: Summary[`rule`] = {}
-  for (const [name, { areas, target }] of Object.entries(RULE)) {
+  for (const [name, { areas }] of Object.entries(RULE)) {
     const hours = areas.reduce((sum, a) => sum + (byArea[a] ?? 0), 0)
-    rule[name] = { hours: round(hours), share: ruleHours ? round(hours / ruleHours) : 0, target }
+    rule[name] = { hours: round(hours), share: ruleHours ? round(hours / ruleHours) : 0 }
   }
   for (const k in byArea) byArea[k] = round(byArea[k])
   for (const k in byDay) byDay[k] = round(byDay[k])
