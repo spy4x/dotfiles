@@ -330,11 +330,12 @@ spec at least twice before opening the PR.
 `design-reviewer` next to the `reviewer`, in the same round. It checks the
 built screens in a browser against the spec and the house design language, at
 390 and 1440 px, light and dark, with axe-core and the keyboard, and walks the
-main task as a first-time user. It blocks only for a departure from the
-approved spec or the design language, an accessibility failure, a broken
-layout or a task a first-time user cannot finish; taste nits come under
-**Not blocking**. The rest of the reviewer gate's rules (fix rounds, at most
-three verdicts, merging) apply to it unchanged.
+main task as a first-time user. On a public page it also measures load speed
+against `main`. It blocks only for a departure from the approved spec or the
+design language, an accessibility failure, a broken layout, a task a
+first-time user cannot finish, or a public page made slower; taste nits come
+under **Not blocking**. The PR merges only when both reviewers pass. Each
+reviewer counts its own fix rounds under the reviewer gate's rules.
 
 # Projects
 
@@ -577,8 +578,8 @@ always exists, `[WIP]` in the title until done; `gh pr create --fill` right
 after push, never ask.
 
 **Reviewer gate** before push: one separate `reviewer` agent per diff, never
-self-review, plus a `design-reviewer` when the diff changes what a person sees
-("Design" above). Every test the diff adds or changes needs its `Mutation:` line in
+self-review, plus a `design-reviewer` when the diff changes what a person
+sees ("Design" above). Every test the diff adds or changes needs its `Mutation:` line in
 the PR body; a missing one goes back to the implementer before any reviewer is
 spent. Whether a change needs a security review is decided when the work is
 requested, in its design (`start-task`) or its lane brief (`wave`): it does when
