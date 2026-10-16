@@ -41,3 +41,36 @@ systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-u
 systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-update.timer
 systemctl --user enable --now claude-desktop-update.timer
 ```
+
+## Secrets backup
+
+Syncthing does not copy age keys or plaintext env files out of `~/sync/code`
+([host limits](host-limits.md)), so a key made on this machine exists on its disk only. A systemd
+user timer runs [`tools/secrets-backup.sh`](../tools/secrets-backup.sh) every night at 02:30; a
+night the machine was off is caught up at the next start. It backs up every `.age` folder and every
+plaintext env file under `~/sync/code` (the names the Syncthing ignore list skips), leaving out
+worktrees, `node_modules`, `.volumes`, `.git` and `.stversions`. It keeps 7 daily, 4 weekly and 12
+monthly snapshots.
+
+The restic repository is `~/sync/backups/workstation-secrets`, inside the `backups` Syncthing
+folder, so the other machines that share that folder hold an encrypted copy. The first run creates
+the password in `~/.config/restic/workstation-secrets.pass`, outside every synced folder. Save it
+in the password manager: without it, no copy of the backup can be read. A run that finds the
+repository but not the password file stops with an error instead of making a new password.
+
+```bash
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/secrets-backup.service
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/secrets-backup.timer
+systemctl --user enable --now secrets-backup.timer
+systemctl --user start secrets-backup.service
+```
+
+To restore, on any machine that holds the repository and the password:
+
+```bash
+restic -r ~/sync/backups/workstation-secrets -p <password file> snapshots
+restic -r ~/sync/backups/workstation-secrets -p <password file> restore latest --target /tmp/restore
+```
+
+The files come back under `/tmp/restore` with their full original paths. Copy the ones you need
+into place and delete the rest.
