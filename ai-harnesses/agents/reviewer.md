@@ -97,7 +97,11 @@ The verdict is `needs-fix` only when the diff holds at least one of these:
   branch (`git merge-tree --write-tree origin/<base> HEAD`);
 - code the global rules forbid outright, because no issue can hold it: a local copy of code that
   belongs in a shared library, a new version 4 UUID, a dependency the deps rule rejects, or a
-  feature, export, option or shared-library addition that nobody asked for (step 5, Architecture).
+  feature, export, option or shared-library addition that nobody asked for (step 5, Architecture);
+- a rule lost, weakened or changed in meaning in `AGENTS.md` (global or a repo's), a skill, an
+  agent or harness settings, or a check removed or weakened, that the owner did not ask for in
+  chat ("Rules about rules" in the global `AGENTS.md`). Compare the old and new text rule by rule;
+  a reflow or a move that keeps every rule is no change.
 
 Everything else never decides the verdict: a 🟡 risk outside security and data loss, a missing
 test or one that stays green when you break the code, another house-rule breach, a 🔵 nit, a ❓

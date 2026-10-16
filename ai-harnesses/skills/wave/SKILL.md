@@ -65,8 +65,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   imports the release. Never brief a lane to write a local copy and file an issue to move it later.
   A library change that two lanes need belongs to the serial spine.
 - The brief is all the agent sees. Write it in full sentences: worktree path, read-only sources,
-  output paths, house style, the issue, and what to do when stuck (decide and document, don't
-  stop). It also says whether the lane needs a security review ("Reviewer gate" in `AGENTS.md`),
+  output paths, house style, the issue, why the lane matters ("Direction" in `AGENTS.md`), and
+  what to do when stuck (decide and document, don't stop). It also says whether the lane needs a security review ("Reviewer gate" in `AGENTS.md`),
   and that lane's reviewer brief asks for it. A lane that changes what a person sees carries
   its `design` spec in the brief and gets a `design-reviewer` next to its `reviewer`. The agent
   owns its worktree, temp dirs and processes, and leaves nothing running.
@@ -127,6 +127,7 @@ The wave's final report ends with:
   of it. List each issue filed or extended (link, one line, priority), then each thing noticed and
   not filed, a reviewer's "Rare cases, not blocking" lines among them, one line each, under
   **Noticed, not filed**, and each issue set aside, with the label it had, under **Set aside**;
+- **Decisions**, as the report sections after "Filing issues" in `AGENTS.md` define them;
 - what this wave cost: each agent's dollars, peak context and compactions
   (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`);
 - a chip that starts the next wave in its own session: the background-task suggestion tool

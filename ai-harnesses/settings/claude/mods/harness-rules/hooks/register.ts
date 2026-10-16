@@ -1,10 +1,13 @@
 import type { EngineInterface, Register } from "claude-code"
 import {
   bashVerdict,
+  DIRECTION_PATH,
+  directionBlock,
   ghPost,
   leakVerdict,
   markerVerdict,
   spawnVerdict,
+  uuidVerdict,
   type Where,
 } from "./rules.ts"
 
@@ -71,7 +74,42 @@ async function whereOf($: EngineInterface): Promise<Where> {
   return { cwd, home }
 }
 
+/**
+ * The owner's direction.md as a context block, or undefined. Fail-open: a missing file, an
+ * unknown home or a failed read starts the session without it. Reads that one path only.
+ */
+async function direction($: EngineInterface) {
+  try {
+    const home = await $.env.get(`HOME`)
+    if (!home) return undefined
+    return directionBlock(await readable($, `${home}/${DIRECTION_PATH}`))
+  } catch {
+    return undefined
+  }
+}
+
 export const register: Register = (on) => {
+  // The conversation's first message carries direction.md, as it carries CLAUDE.md.
+  on(`prompt.context`, async ($, e, next) => {
+    const context = await next(e)
+    const block = await direction($)
+    return block ? { ...context, blocks: [...context.blocks, block] } : context
+  })
+
+  on(`tool.call`, { tool: `Write` }, async ($, e, next) => {
+    const verdict = uuidVerdict(e.file_path, (await readable($, e.file_path)) ?? ``, e.content)
+    if (!verdict.deny) return next(e)
+    await log($, { event: `write`, path: e.file_path, deny: verdict.deny })
+    return { deny: verdict.deny }
+  })
+
+  on(`tool.call`, { tool: `Edit` }, async ($, e, next) => {
+    const verdict = uuidVerdict(e.file_path, e.old_string, e.new_string)
+    if (!verdict.deny) return next(e)
+    await log($, { event: `edit`, path: e.file_path, deny: verdict.deny })
+    return { deny: verdict.deny }
+  })
+
   on(`agent.spawn`, async ($, e, next) => {
     const verdict = spawnVerdict(e, await fiveHourPercent($))
     await log($, {
