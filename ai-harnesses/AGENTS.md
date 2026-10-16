@@ -28,10 +28,10 @@ such a choice in its report.
 Finish the job and report the result. I don't review code before it lands; the reviewer gate does,
 and a green gate is the authority to merge. Security is part of that gate, never a question for me:
 the review of a change that needs one includes its security review (see "Reviewer gate"). The
-final report gives the end state only: what merged, shipped or stays open. It never recounts how the
-work got there (review rounds, holes found and fixed, failed attempts), because only the result
-needs my attention. Where a sensible default exists, take it and record it in the PR body. Ask only
-when:
+final report to me gives the end state only: what merged, shipped or stays open. It never recounts
+how the work got there (review rounds, holes found and fixed, failed attempts), because only the
+result needs my attention. Where a sensible default exists, take it and record it in the PR body.
+Ask only when:
 
 - the choice is mine and the options mean materially different work (SQLite versus Postgres, not
   naming);
@@ -583,9 +583,9 @@ wording fix, or one of about ten lines or fewer, you apply yourself from the fir
 test red then green, and have the same reviewer confirm. After the third verdict, do that if about
 ten lines remain; otherwise leave the PR open with a comment on what is left, and move on. After a
 second `needs-fix` that names a behaviour defect, the `wave` skill says when and how to escalate
-that fix round. Never count rejections in a summary, PR body or issue. A PR body says what the
-review found and what changed; the final report gives only the end state ("Autonomy"). Gate failed,
-or a revert can't undo it → leave the PR open and say so.
+that fix round. Never count rejections in a summary, PR body or issue. A PR body or issue says what
+the review found and what changed; the final report to me gives only the end state ("Autonomy").
+Gate failed, or a revert can't undo it → leave the PR open and say so.
 
 A reviewer rejects only for a bug, a security or data-loss risk, a false claim, a failing required
 check, or code these rules forbid outright (the `reviewer` agent lists which). Its other findings
