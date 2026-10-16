@@ -51,7 +51,7 @@ In this order, each part only when it has content:
    issue set aside, with the label it had.
 4. **Decisions**: each decision of mine recorded in `ai-memory/decisions/`, with the file.
 5. **This machine**: what `sudo` changed that stays (installed, enabled, rewritten), and what the
-   orphan sweep found still running.
+   orphan sweep stopped or found still running.
 
 Nothing else: no review rounds, holes found and fixed, failed attempts or retries; no defaults taken
 (they are in the PR bodies); no per-agent costs; no "None" lines; no word on a clean sweep or a
