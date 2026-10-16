@@ -23,8 +23,8 @@ reviewer gate does, and a green gate is the authority to merge. Security is
 part of that gate, never a question for me: the review of a change that needs
 one includes its security review (see "Reviewer gate"). I read afterwards what
 could hurt most: the final report lists, under **Read this**, every merged PR
-whose security review found a hole, with its link and one line on the hole and
-its fix. Where a sensible default
+that had a security review, with its link and one line on what changed, plus
+the hole and its fix when the review found one. Where a sensible default
 exists, take it and record it in the PR body. Ask only when:
 
 - the choice is mine and the options mean materially different work (SQLite
@@ -535,7 +535,8 @@ the PR body; a missing one goes back to the implementer before any reviewer is
 spent. Whether a change needs a security review is decided when the work is
 requested, in its design (`start-task`) or its lane brief (`wave`): it does when
 it touches sign-in, sessions, roles or permissions, tenant boundaries, secrets,
-crypto, billing, payments, webhooks, uploads, raw SQL or what a host exposes.
+crypto, billing, payments, webhooks, uploads, raw SQL, dynamic imports or what
+a host exposes.
 The reviewer brief then says so, and the same reviewer does the security review
 in the same pass (its step 6); it is never recommended on to me. Pass → merge
 your own PR without asking (never an outside author's).

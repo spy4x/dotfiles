@@ -67,7 +67,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - The brief is all the agent sees. Write it in full sentences: worktree path, read-only sources,
   output paths, house style, the issue, and what to do when stuck (decide and document, don't
   stop). It also says whether the lane needs a security review ("Reviewer gate" in `AGENTS.md`),
-  and that lane's reviewer brief asks for it. The agent owns its worktree, temp dirs and processes, and leaves nothing running.
+  and that lane's reviewer brief asks for it. The agent owns its worktree, temp dirs and
+  processes, and leaves nothing running.
 
 ## Models and effort
 
