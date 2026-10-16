@@ -332,3 +332,30 @@ test(`logs a refused rm that also posts without its command`, async ($, on) => {
   expect(logged.join(``)).toContain(`"event":"bash"`)
   expect(logged.join(``)).not.toContain(`SECRETX`)
 })
+
+/** What the engine beneath answers for a conversation's context: the CLAUDE.md block. */
+function baseContext(on: On): void {
+  on(`prompt.context`, () => ({ blocks: [{ name: `claudeMd`, text: `rules` }] }))
+}
+
+test(`adds direction.md to the conversation's context, reading only that file`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  const read: string[] = []
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    return { value: `Ship often.` }
+  })
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`, `direction`])
+  expect(context.blocks[1]?.text).toContain(`Ship often.`)
+  expect(read).toEqual([`/home/test/sync/code/ai-memory/direction.md`])
+})
+
+test(`starts without direction.md when the file is missing`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  unreadable(on)
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`])
+})

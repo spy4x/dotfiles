@@ -209,6 +209,28 @@ export function bashVerdict(command: string, where: Where = {}): Verdict {
   return ALLOW
 }
 
+/** Where the owner's direction lives, relative to home (global CLAUDE.md, "Direction"). */
+export const DIRECTION_PATH = `sync/code/ai-memory/direction.md`
+
+/** A context block the conversation's first message carries. */
+export interface ContextBlock {
+  readonly name: string
+  readonly text: string
+}
+
+/**
+ * The context block that carries direction.md, or undefined when the file is missing or empty:
+ * the session then starts without it.
+ */
+export function directionBlock(text: string | undefined): ContextBlock | undefined {
+  if (!text?.trim()) return undefined
+  return {
+    name: `direction`,
+    text: `Contents of ~/${DIRECTION_PATH}, the owner's current direction ("Direction" in ` +
+      `the global rules):\n\n${text.trim()}`,
+  }
+}
+
 /**
  * What a `gh` command posts: nothing, an inline body, a body read from a file, or a body read
  * from standard input (`--body-file -`, usually a heredoc in the same command).

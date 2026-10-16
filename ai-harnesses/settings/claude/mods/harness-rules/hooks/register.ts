@@ -1,6 +1,8 @@
 import type { EngineInterface, Register } from "claude-code"
 import {
   bashVerdict,
+  DIRECTION_PATH,
+  directionBlock,
   ghPost,
   leakVerdict,
   markerVerdict,
@@ -71,7 +73,28 @@ async function whereOf($: EngineInterface): Promise<Where> {
   return { cwd, home }
 }
 
+/**
+ * The owner's direction.md as a context block, or undefined. Fail-open: a missing file, an
+ * unknown home or a failed read starts the session without it. Reads that one path only.
+ */
+async function direction($: EngineInterface) {
+  try {
+    const home = await $.env.get(`HOME`)
+    if (!home) return undefined
+    return directionBlock(await readable($, `${home}/${DIRECTION_PATH}`))
+  } catch {
+    return undefined
+  }
+}
+
 export const register: Register = (on) => {
+  // The conversation's first message carries direction.md, as it carries CLAUDE.md.
+  on(`prompt.context`, async ($, e, next) => {
+    const context = await next(e)
+    const block = await direction($)
+    return block ? { ...context, blocks: [...context.blocks, block] } : context
+  })
+
   on(`agent.spawn`, async ($, e, next) => {
     const verdict = spawnVerdict(e, await fiveHourPercent($))
     await log($, {

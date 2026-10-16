@@ -1,5 +1,12 @@
 import { expect, test } from "claude-code/testing"
-import { bashVerdict, ghPost, leakVerdict, markerVerdict, spawnVerdict } from "./rules.ts"
+import {
+  bashVerdict,
+  directionBlock,
+  ghPost,
+  leakVerdict,
+  markerVerdict,
+  spawnVerdict,
+} from "./rules.ts"
 
 const opusReviewer = { subagentType: `reviewer`, model: `opus`, fork: false }
 
@@ -149,4 +156,13 @@ test(`refuses a body gitleaks flags and one it failed to scan`, () => {
   expect(leakVerdict(0).deny).toBeUndefined()
   expect(leakVerdict(1).deny).toContain(`secret`)
   expect(leakVerdict(127).deny).toContain(`failed`)
+})
+
+test(`frames direction.md as a context block and skips a missing or empty one`, () => {
+  const block = directionBlock(`# Direction\n\nShip often.\n`)
+  expect(block?.name).toBe(`direction`)
+  expect(block?.text).toContain(`ai-memory/direction.md`)
+  expect(block?.text).toContain(`Ship often.`)
+  expect(directionBlock(undefined)).toBeUndefined()
+  expect(directionBlock(`  \n`)).toBeUndefined()
 })
