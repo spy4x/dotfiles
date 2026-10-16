@@ -26,8 +26,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   `label:p1-critical` in place of the milestone. Nothing else is a candidate. An issue outside a
   milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
   (the `Asked for by the owner` line, or a comment of theirs without the marker that says to build
-  it), or when it passes step 2 of "Filing issues". Otherwise set it aside as that rule says, and
-  the next issue takes its place.
+  it), or when step 2 of "Filing issues" gives it `p3-medium` or higher. Otherwise set it aside as
+  that rule says, and the next issue takes its place.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
   never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
   `gh pr list --state open --limit 500 -S '-author:spy4x'` and
@@ -119,14 +119,15 @@ The wave's final report ends with:
 - the project's position: the plan, how much is done, what remains before the next milestone;
 - what the next wave must not touch: open PRs, issues waiting on the owner;
 - **Read this**, as "Autonomy" in `AGENTS.md` defines it;
-- **Issues filed**: every reviewer's "Not blocking" and "Outside this diff" lines and anything
-  else the wave noticed, handled by the "Filing issues" rule in `AGENTS.md`: verified, held to
-  its bar, deduplicated, grouped and filed by you, never proposed to the owner. Keep the running
-  list in `.wave<N>/noticed.md`, since your context compacts, and file once, at the end, so one
-  issue can hold a whole group. A security or data-loss hole does not wait: file it when you learn
-  of it. List each issue filed or extended (link, one line, priority), then each thing noticed and
-  not filed, a reviewer's "Rare cases, not blocking" lines among them, one line each, under
-  **Noticed, not filed**, and each issue set aside, with the label it had, under **Set aside**;
+- **Issues filed**: every reviewer's "Not blocking", "Rare cases, not blocking" and "Outside this
+  diff" lines and anything else the wave noticed, handled by the "Filing issues" rule in
+  `AGENTS.md`: verified, given a priority, deduplicated, grouped and filed by you, never proposed
+  to the owner. Keep the running list in `.wave<N>/noticed.md`, since your context compacts, and
+  file once, at the end, so one issue can hold a whole group. A security or data-loss hole does
+  not wait: file it when you learn of it. List each issue filed or extended (link, one line,
+  priority), then each thing noticed and not filed (a feature, or a finding about another
+  repository), one line each, under **Noticed, not filed**, and each issue set aside, with the
+  label it had, under **Set aside**;
 - **Decisions**, as the report sections after "Filing issues" in `AGENTS.md` define them;
 - what this wave cost: each agent's dollars, peak context and compactions
   (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`);

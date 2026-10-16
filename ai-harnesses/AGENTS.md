@@ -65,10 +65,10 @@ come before priority:
   first), whatever their priority label, plus any `p1-critical` issue. Nothing else is picked. An
   issue you file outside it is named in the report as waiting for me to add it.
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
-  asked for it or it passes step 2 of "Filing issues" below. I asked for it when its next line is
-  `Asked for by the owner, <date>`, or when a comment of mine on it (one without the marker) says to
-  build it. Any other is not built: it gets `p4-low` and a one-line comment with the reason and the
-  label it had, and the report lists it under **Set aside**.
+  asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
+  when its next line is `Asked for by the owner, <date>`, or when a comment of mine on it (one
+  without the marker) says to build it. Any other is not built: it gets `p4-low` and a one-line
+  comment with the reason and the label it had, and the report lists it under **Set aside**.
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
 issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
@@ -95,35 +95,38 @@ another repository goes in your report. Before the final report:
 1. **Verify.** Find the code and say how it is reached: the ordinary action (something a normal user
    or a consumer app does on a normal day, with normal input), the deliberate attack, or the report.
    Drop what is false or already fixed.
-2. **Hold it to the bar.** File only:
-   - a security hole that someone other than the data's owner can trigger on purpose, however
-     unusual the input;
-   - data loss that the ordinary action reaches, or that happens under a condition the code exists
-     to survive (a retry, a dropped connection, a crash between two writes);
-   - a bug that the ordinary action hits, or that I or a person outside reported (a reviewer, an
-     audit or another agent is not a report);
-   - a gap that stops a lane running now: name the issue it blocks. It is the smallest change that
-     unblocks it.
+2. **Give it a priority.** Every finding that survived step 1 is filed, grouped as step 4 says,
+   because a finding left in a report is lost. Only a feature ("Features are mine to ask for") and a
+   finding about another repository stay in the report. The priority says whether a wave builds it:
+   - `p3-medium`, or higher only for a security or data-loss hole:
+     - a security hole that someone other than the data's owner can trigger on purpose, however
+       unusual the input;
+     - data loss that the ordinary action reaches, or that happens under a condition the code
+       exists to survive (a retry, a dropped connection, a crash between two writes);
+     - a bug that the ordinary action hits, or that I or a person outside reported (a reviewer, an
+       audit or another agent is not a report);
+     - a gap that stops a lane running now: name the issue it blocks. It is the smallest change
+       that unblocks it.
+   - `p4-low`, parked until I raise it: everything else that is true, such as a failure that needs
+     unusual input, rare timing or two faults at once, a missing test, a wrong doc line, a
+     refactor, tooling polish or a nicer name.
 
-   Name what is at stake, or it is none of these. A security hole lets someone read or change data
-   that is not theirs, act as another user, get in without credentials, run code, or take the
-   service down for others. Data loss destroys or corrupts stored data beyond recovery. A bug is
-   behaviour that differs from what the code, its docs or its issue say it does; something the
-   product never did is a feature. A wrong display, a rejected input or a crash that harms only the
-   person who caused it is a bug at most.
+   Name what is at stake, or it is none of the `p3-medium` kinds. A security hole lets someone read
+   or change data that is not theirs, act as another user, get in without credentials, run code, or
+   take the service down for others. Data loss destroys or corrupts stored data beyond recovery. A
+   bug is behaviour that differs from what the code, its docs or its issue say it does; something
+   the product never did is a feature. A wrong display, a rejected input or a crash that harms only
+   the person who caused it is a bug at most.
 
-   Nothing else is filed: a failure that needs unusual input, rare timing or two faults at once, a
-   missing test, a wrong doc line, a refactor, tooling polish, a nicer name. It gets one line in the
-   report and nothing on GitHub: no issue, no comment, no checkbox in another issue, no fix in the
-   PR at hand. Never add to a `Parked:` issue; the ones that exist stay as they are.
+   Never fix a finding in the PR at hand: it is filed instead. Never add to a `Parked:` issue; the
+   ones that exist stay as they are.
 3. **Search the open issues.** One that covers it → file nothing new; comment there only when you
-   add a case that passes step 2, or a file it does not name. Add to an existing issue in a comment,
-   never by editing its body.
+   add a case or a file it does not name. Add to an existing issue in a comment, never by editing
+   its body.
 4. **Group.** Findings that belong together go in one large issue, never one issue each: I don't
    want hundreds of small ones. An issue is one piece of work for one implementer and one review, in
-   the "Issues and reports" shape; items that passed step 2 and touch the same files or the same
-   behaviour share it, and nothing else rides along. It is `p3-medium`; higher only for a security
-   or data-loss hole.
+   the "Issues and reports" shape; items of the same priority that touch the same files or the same
+   behaviour share it, and nothing else rides along. It takes that priority.
 
 **Features are mine to ask for.** Never file or build a feature, component, export, option, package
 or integration that I did not ask for, wherever the idea came from: name it in one line of the
@@ -587,10 +590,9 @@ A reviewer rejects only for a bug, a security or data-loss risk, a false claim, 
 check, or code these rules forbid outright (the `reviewer` agent lists which). Its other findings
 (another risk, a missing test, a nit, a question) come under **Not blocking** and never block the
 PR; neither does a rare case, listed under **Rare cases, not blocking**, nor a finding about code
-the diff did not change, listed under **Outside this diff**. The lead holds the first and the last
-list to the "Filing issues" rule, files what passes its bar, and answers the questions. This bar is
-a trial from 2026-10-13, due for review on 2026-10-20; its baseline is in
-`~/sync/code/ai-memory/experiments/reviewer-value/`.
+the diff did not change, listed under **Outside this diff**. The lead files all three lists by the
+"Filing issues" rule and answers the questions. This bar is a trial from 2026-10-13, due for review
+on 2026-10-20; its baseline is in `~/sync/code/ai-memory/experiments/reviewer-value/`.
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash --delete-branch`; independent
 commits → the same with `--rebase`. Always pass `--repo`: without it, gh tries to delete the local

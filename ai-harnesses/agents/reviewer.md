@@ -106,14 +106,14 @@ The verdict is `needs-fix` only when the diff holds at least one of these:
 Everything else never decides the verdict: a 🟡 risk outside security and data loss, a missing
 test or one that stays green when you break the code, another house-rule breach, a 🔵 nit, a ❓
 question. List each under **Not blocking**, after the evidence block and before **Outside this
-diff**, one line each in the evidence format. The lead holds these to the "Filing issues" bar in
+diff**, one line each in the evidence format. The lead files these by the "Filing issues" rule in
 the global `AGENTS.md` or, for a question, answers it; the author may leave them alone.
 
 A rare case never decides the verdict either: a failure that needs unusual input, rare timing or
 two faults at once, and is neither a security hole that someone can trigger on purpose nor data
 lost under a condition the code exists to survive (a retry, a dropped connection, a crash between
 two writes). Give it one line under **Rare cases, not blocking**, after **Not blocking**. It asks
-for no fix and is never filed.
+for no fix; the lead files it at `p4-low`.
 
 A diff with only such findings passes. A passing verdict is one line that says so, then the
 evidence block and the three lists: no **What I suggest**, which a lead would read as work to do
