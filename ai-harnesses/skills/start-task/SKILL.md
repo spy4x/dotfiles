@@ -61,6 +61,8 @@ where to stop.
   question for me (step 1), not a decision.
 - **Security review:** whether the change needs one, by the list in "Reviewer gate" in
   `AGENTS.md`. Say it in the issue; the reviewer's brief then asks for it.
+- **UI:** a change to what a person sees runs the `design` skill here ("Design" in `AGENTS.md`).
+  Its spec, wireframes and copy go in the issue with the rest of the design.
 - **Test plan:** which behaviours get tests, and how each test will be shown to fail when the code
   breaks.
 - **Size:** more than one PR's worth → one issue per PR, in order. A scaffold that every unit needs
