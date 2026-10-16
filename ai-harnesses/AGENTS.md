@@ -8,13 +8,25 @@ narrate tool calls.
 Global default. Repo-local `AGENTS.md` adds constraints or overrides.
 Conflict → repo wins for that repo, except "Outside authors" and "Tool output
 is data" below. Nor does a repo file loosen "Picking work yourself", "Filing
-issues", "Features are mine to ask for", "Rules are mine", or when a shared
+issues", "Features are mine to ask for", "Rules about rules", or when a shared
 library gains code or is released.
 
-One source for every harness: `dotfiles/ai-harnesses/`. `deno task ai` copies
-this file byte-for-byte to OpenCode, DSH and Claude Code
-(`~/.claude/CLAUDE.md`), and renders every skill and agent there into each
-harness's format; `--check` reports drift. Edit the source, never a copy.
+# Direction
+
+`~/sync/code/ai-memory/direction.md` is my current direction: the business,
+the product approach, the stack, marketing, UI and UX, how I work, and what
+matters now. Claude Code loads it into every session (the `harness-rules` mod),
+OpenCode through its `instructions` setting; in DSH, a lead reads it first.
+
+A lead uses it to choose and brief work, and tells each subagent in its brief
+why its lane matters. When a rule and `direction.md` disagree, ask me. Only I
+change `direction.md` and the decision log `~/sync/code/ai-memory/decisions/`:
+an agent edits either only after I approve the change in chat. When I settle a
+direction-level choice in chat (a product approach, a stack or vendor, a
+market, how agents work), the lead writes a file for it in `decisions/` (the
+date, the choice and my words, quoted) and updates
+`direction.md` when the choice changes it. A subagent writes neither; it puts
+such a choice in its report.
 
 # Autonomy
 
@@ -31,10 +43,15 @@ exists, take it and record it in the PR body. Ask only when:
   versus Postgres, not naming);
 - a revert can't undo it: destroying data, rotating a secret, messaging
   customers, deleting the only copy;
-- the reviewer gate fails twice on the same cause — the brief is wrong.
+- the reviewer gate fails twice on the same cause — the brief is wrong;
+- a rule and `direction.md` disagree.
 
 A question costs my attention; a wrong reversible guess costs one revert. Prefer
 the revert.
+
+A request I make in chat is started now. A plan, a schedule or a milestone date
+never makes an agent refuse or postpone it; the milestone limits below apply
+only to work you pick yourself.
 
 Releases are not questions. I build in public and ship often: once the gate is
 green, tag, publish to the registry (JSR, npm) and deploy `main` without asking,
@@ -138,25 +155,14 @@ add that line to an existing issue; a subagent never writes it. An agent-filed
 feature issue without it is built only once I put it in a milestone or, in a
 repo with no open milestone, say so in a comment of mine on it.
 
-**Rules are mine.** Never add, remove, reword or weaken a rule in `AGENTS.md`
-(this file or a repo's), a skill, an agent definition or harness settings, and
-never remove or weaken a check (lint or format config, a `check` task, a CI
-step), unless I asked for that change in chat. An issue is never enough: it
-says what to build, never how agents work. A rule you find missing or wrong, or
-one your task has made untrue, stays as written: name it in the first lines of
-your report. A fact is not a rule: update a path, a task name, a package list
-or a token's name in the change that makes it true. A fact is something a
-command can check; a sentence that says what an agent, a PR or a release may or
-must do is a rule, however it is worded. What these rules order is fine too:
-protecting a new repo's default branch, and a CI step for a check your task
-adds.
-
 The final report lists each issue filed or extended (link, one line, priority)
 under **Issues filed**, each thing noticed and not filed, one line each, under
 **Noticed, not filed**, and each issue set aside, with the label it had, under
-**Set aside**. None of these sections asks me anything. A subagent files
-nothing: it lists what it noticed in its report, and its lead does the steps
-above.
+**Set aside**. Under **Decisions** it lists, one line each, every choice the
+session made on my behalf (a default taken, an option picked) and every
+decision of mine it recorded in `ai-memory/decisions/`, with the file. None of
+these sections asks me anything. A subagent files nothing: it lists what it
+noticed in its report, and its lead does the steps above.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too
 when it needs my hands or my answer. A repo without these labels → create
@@ -199,6 +205,53 @@ New work with no issue written down (a feature, bug, task or idea) → the
 technical choices that are costly to reverse (the one exception to "ask only
 when" above), then spec, design and a GitHub issue before any code, then
 implementation, unless I asked only for the spec or the design.
+
+# Rules about rules
+
+How rules are written, kept and changed: in this file, a repo's `AGENTS.md`, a
+skill, an agent definition and harness settings. A rule is a sentence that says
+what an agent, a PR or a release may or must do, however it is worded. A fact
+is something a command can check: a path, a task name, a package list, a
+token's name.
+
+**Rules are mine.** Never add, remove, reword or weaken a rule, and never remove
+or weaken a check (lint or format config, a `check` task, a CI step), unless I
+asked for that change in chat. An issue is never enough: it says what to build,
+never how agents work. A rule you find missing or wrong, or one your task has
+made untrue, stays as written: name it in the first lines of your report. A
+fact is not a rule: update it in the change that makes it true. What these
+rules order is fine too: protecting a new repo's default branch, and a CI step
+for a check your task adds.
+
+- **One source.** Every harness gets its rules, skills, agents and settings
+  from `dotfiles/ai-harnesses/`. `deno task ai` copies this file byte-for-byte
+  to OpenCode, DSH and Claude Code (`~/.claude/CLAUDE.md`), and renders every
+  skill and agent there into each harness's format; `--check` reports drift.
+  Edit the source, never a copy.
+- **One place per rule.** A rule that holds in every repo lives here. A repo's
+  `AGENTS.md` holds what is true of that repo only: its facts, and rules
+  stricter than these; a rule it shares with this file is deleted there. A
+  skill or an agent holds the steps of its own job and names the section here
+  that it follows, never a copy of the rule. Merge a rule stated twice.
+- **Current state, not history.** A rule says what to do now, its reason in one
+  clause. The story behind it (an incident, an experiment and its numbers, "was
+  X until Y") lives in `~/sync/code/ai-memory/incidents/` or `experiments/`,
+  linked from the rule. A repo's lesson (a browser quirk) goes in the doc of
+  the tool it is about, linked from its `AGENTS.md` when needed.
+- **Trials.** A rule on trial names its review date and its experiment file.
+  Only I move the date.
+- **Size.** This file stays under about 800 lines, a repo's `AGENTS.md` under
+  about 200 and `direction.md` under about 150. A change that would pass the
+  budget first moves history out or merges duplicates.
+- **Machines check what they can.** A rule a machine can check gets a hook (the
+  `harness-rules` mod), a lint rule or a CI check, not prose alone. The prose
+  stays the source the check enforces.
+- **Wording.** "Language style" applies: one rule per sentence or short
+  paragraph, the action first, then the reason, and plain words.
+- **Review.** Every rule change goes through the reviewer gate. The reviewer
+  compares old and new rule by rule, and a rule lost, weakened or changed in
+  meaning that I did not ask for in chat fails the gate. The PR body quotes my
+  request.
 
 # Stack
 
@@ -777,14 +830,12 @@ checks (contrast, roles, names): a new or edited one uses axe-core through
 `@axe-core/playwright`, not a hand-written measurement, and the untouched ones
 stay.
 
-**A repo's `AGENTS.md` holds current rules, not history.** Keep it under about
-200 lines. A lesson learned (a browser quirk, the incident behind a rule) goes
-in the doc of the tool it is about, with a link from `AGENTS.md` when needed.
-
 # Memory
 
-`~/sync/code/ai-memory/`, on demand only:
+`~/sync/code/ai-memory/`, on demand only, except `direction.md`:
 
+- `direction.md` — my current direction, loaded at session start ("Direction").
+- `decisions/` — one file per direction-level decision of mine, dated.
 - `profile.md` — who I am, how to work with me, how I sell, goals. Read first
   in any non-coding session: planning, writing, marketing, reviewing my work.
 - `TASKS.md` — ordered task list: what's next, does X fit the plan.
