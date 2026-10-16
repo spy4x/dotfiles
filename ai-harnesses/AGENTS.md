@@ -580,8 +580,8 @@ after push, never ask.
 **Reviewer gate** before push: one separate `reviewer` agent per diff, never
 self-review, plus a `design-reviewer` when the diff changes what a person
 sees ("Design" above). Every test the diff adds or changes needs its
-`Mutation:` line in the PR body; a missing one goes back to the implementer before any reviewer is
-spent. Whether a change needs a security review is decided when the work is
+`Mutation:` line in the PR body; a missing one goes back to the implementer
+before any reviewer is spent. Whether a change needs a security review is decided when the work is
 requested, in its design (`start-task`) or its lane brief (`wave`): it does when
 it touches sign-in, sessions, roles or permissions, tenant boundaries, secrets,
 crypto, billing, payments, webhooks, uploads, raw SQL, dynamic imports or what
