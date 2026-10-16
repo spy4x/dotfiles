@@ -65,10 +65,10 @@ come before priority:
   first), whatever their priority label, plus any `p1-critical` issue. Nothing else is picked. An
   issue you file outside it is named in the report as waiting for me to add it.
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
-  asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it when its next line is
-  `Asked for by the owner, <date>`, or when a comment of mine on it (one without the marker) says to
-  build it. Any other is not built: it gets `p4-low` and a one-line comment with the reason and the
-  label it had, and the report lists it under **Set aside**.
+  asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
+  when its next line is `Asked for by the owner, <date>`, or when a comment of mine on it (one
+  without the marker) says to build it. Any other is not built: it gets `p4-low` and a one-line
+  comment with the reason and the label it had, and the report lists it under **Set aside**.
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
 issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
@@ -105,26 +105,24 @@ another repository goes in your report. Before the final report:
        exists to survive (a retry, a dropped connection, a crash between two writes);
      - a bug that the ordinary action hits, or that I or a person outside reported (a reviewer, an
        audit or another agent is not a report);
-     - an accessibility failure, or a design defect that a person notices on a screen they use
-       normally;
      - a gap that stops a lane running now: name the issue it blocks. It is the smallest change
        that unblocks it.
    - `p4-low`, parked until I raise it: everything else that is true, such as a failure that needs
      unusual input, rare timing or two faults at once, a missing test, a wrong doc line, a
      refactor, tooling polish or a nicer name.
 
-   Name what is at stake. A security hole lets someone read or change data
-   that is not theirs, act as another user, get in without credentials, run code, or take the
-   service down for others. Data loss destroys or corrupts stored data beyond recovery. A bug is
-   behaviour that differs from what the code, its docs or its issue say it does; something the
-   product never did is a feature. A wrong display, a rejected input or a crash that harms only the
-   person who caused it is a bug at most.
+   Name what is at stake, or it is none of the `p3-medium` kinds. A security hole lets someone read
+   or change data that is not theirs, act as another user, get in without credentials, run code, or
+   take the service down for others. Data loss destroys or corrupts stored data beyond recovery. A
+   bug is behaviour that differs from what the code, its docs or its issue say it does; something
+   the product never did is a feature. A wrong display, a rejected input or a crash that harms only
+   the person who caused it is a bug at most.
 
    Never fix a finding in the PR at hand: it is filed instead. Never add to a `Parked:` issue; the
    ones that exist stay as they are.
 3. **Search the open issues.** One that covers it → file nothing new; comment there only when you
-   add a case or a file it does not name. Add to an existing issue in a comment,
-   never by editing its body.
+   add a case or a file it does not name. Add to an existing issue in a comment, never by editing
+   its body.
 4. **Group.** Findings that belong together go in one large issue, never one issue each: I don't
    want hundreds of small ones. An issue is one piece of work for one implementer and one review, in
    the "Issues and reports" shape; items of the same priority that touch the same files or the same
@@ -593,9 +591,8 @@ check, or code these rules forbid outright (the `reviewer` agent lists which). I
 (another risk, a missing test, a nit, a question) come under **Not blocking** and never block the
 PR; neither does a rare case, listed under **Rare cases, not blocking**, nor a finding about code
 the diff did not change, listed under **Outside this diff**. The lead files all three lists by the
-"Filing issues" rule and answers the questions. This bar is
-a trial from 2026-10-13, due for review on 2026-10-20; its baseline is in
-`~/sync/code/ai-memory/experiments/reviewer-value/`.
+"Filing issues" rule and answers the questions. This bar is a trial from 2026-10-13, due for review
+on 2026-10-20; its baseline is in `~/sync/code/ai-memory/experiments/reviewer-value/`.
 
 Merge: one feature → `gh pr merge <n> --repo <owner>/<repo> --squash --delete-branch`; independent
 commits → the same with `--rebase`. Always pass `--repo`: without it, gh tries to delete the local
