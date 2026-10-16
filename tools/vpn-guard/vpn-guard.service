@@ -1,0 +1,9 @@
+[Unit]
+Description=Keep the VPN connected only while the internet works through it
+Documentation=https://github.com/spy4x/dotfiles/blob/main/docs/vpn-guard.md
+Wants=network-online.target
+After=network-online.target NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/vpn-guard
