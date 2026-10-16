@@ -58,6 +58,9 @@ How the rendering works, the file layout per harness and how to write a skill or
 - **Claude Desktop.** [`tools/claude-desktop-update.sh`](tools/claude-desktop-update.sh)
   installs or updates the app from Anthropic's Debian package, which Fedora has no updater for.
   A [nightly timer](docs/sync.md#claude-desktop-nightly-update) runs it and says when to restart.
+- **Secrets backup.** [`tools/secrets-backup.sh`](tools/secrets-backup.sh) backs up the age keys
+  and plaintext env files that Syncthing keeps on this machine, with restic, every
+  [night](docs/sync.md#secrets-backup).
 - **Shell.** [`install-shell.ts`](docs/shell.md) sets up Zsh, Oh My Zsh, Powerlevel10k and the
   aliases in `aliases.sh`.
 - **Config in home.** tmux, Neovim, Zsh and the prompt are [symlinked](docs/sync.md) from this

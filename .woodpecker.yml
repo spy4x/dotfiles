@@ -10,7 +10,8 @@ steps:
     image: denoland/deno:2.9.7
     commands:
       # The image has neither `git` nor `ps`; the env-key-copy and sweep-orphans tests run both.
-      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git procps
+      # The secrets-backup test runs `restic`.
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git procps restic
       - deno --version
       - deno fmt --check
       - deno lint
