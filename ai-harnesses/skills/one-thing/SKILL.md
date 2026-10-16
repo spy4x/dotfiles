@@ -36,7 +36,7 @@ agreed after its entry; copy anything missing into that entry's `## Amended` bef
 
 ## Evidence of what happened
 
-Collect all four before judging. A source that fails is named in the review, never guessed.
+Collect all five before judging. A source that fails is named in the review, never guessed.
 
 1. **Tracked time.** `deno run --allow-run=ssh
    ~/sync/code/dotfiles/ai-harnesses/skills/one-thing/traggo.ts <from> <to>` prints hours per
@@ -51,7 +51,12 @@ Collect all four before judging. A source that fails is named in the review, nev
    Traggo and the numbers, and use PRs to see where his attention went.
 3. **What was ticked.** `git -C ~/sync/code/ai-memory log --since=<from> --until=<to+1> -p --
    TASKS.md`, plus `git diff -- TASKS.md` for uncommitted ticks.
-4. **The three numbers**: outreach sent, calls held, dollars invoiced. No system holds them; ask
+4. **Done on the phone.** Daily and weekly runs only: `deno run --allow-read --allow-write
+   --allow-net --allow-env=HOME ~/sync/code/dotfiles/ai-harnesses/skills/one-thing/caldav-sync.ts
+   --pull` lists `TASKS.md` items that Anton completed in Tasks.org while the line is still
+   unticked. Treat each as ticked evidence: tick the line, citing the phone, the same way as any
+   other tick. `--pull` never writes.
+5. **The three numbers**: outreach sent, calls held, dollars invoiced. No system holds them; ask
    Anton. In an unattended run with no answer, write `not reported`. Never estimate them.
 
 ## The method
@@ -101,6 +106,15 @@ Added from elsewhere, with their strength:
   rewrite the plan or start a new repository is answered with that rule and the current ONE Thing.
 - Unattended (scheduled) run with a phone-notification tool available (`PushNotification` in the
   Claude desktop app): send one line, today's ONE Thing, and say so if the previous one was skipped.
+
+## Pushing the plan to the phone
+
+At the end of every daily and weekly run, after `TASKS.md` is final, run the same script with
+`--apply --push`. It writes one task per open item to the "1.1 / Plan 90d" CalDAV calendar and a
+hidden `<!-- id:xxxxxx -->` comment at the end of each pushed line, so commit that `TASKS.md`
+change with the run's other edits. Without `--apply` it only prints what it would do. `TASKS.md`
+wins on wording, date, order and priority; recurring items ("every ...") are not pushed; a deleted
+line cancels its task. A line may carry `<!-- p:N -->` (0 to 9) to set the priority.
 
 ## Mode: day
 
