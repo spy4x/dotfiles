@@ -176,7 +176,8 @@ function criticalKind(path: string, where: Where): string | undefined {
 
 /**
  * Judges a Bash command against the cleanup rules in the global CLAUDE.md ("Leave nothing
- * running"): `rm` and `rmdir` take only literal paths, never a critical one, and no `find /`.
+ * running"): `rm` and `rmdir` take only literal paths, never a critical one, no `find /` and no
+ * `ulimit -u`; and against Git Flow: `gh pr merge` takes `--repo` and never `--admin`.
  * Claude Code stops for approval on critical paths and some substitutions even in bypass mode;
  * a refusal instead tells the agent how to retry. Best effort: it reads the command's words, not
  * what the shell would expand.
@@ -205,8 +206,72 @@ export function bashVerdict(command: string, where: Where = {}): Verdict {
     if (words[0] === `find` && words[1] === `/`) {
       return { deny: `Never \`find /\`: search the directory that can hold the answer.` }
     }
+    if (name === `ulimit` && words.slice(1).some((word) => /^-[A-Za-z]*u/.test(word))) {
+      return {
+        deny: `Never \`ulimit -u\`: it counts every thread the user owns, so the first fork ` +
+          `fails. Cap a run with \`systemd-run --user --scope --quiet -p TasksMax=4000 ` +
+          `-p MemoryMax=8G timeout <seconds> <cmd>\`.`,
+      }
+    }
+    if (words[0] === `gh` && words[1] === `pr` && words[2] === `merge`) {
+      const verdict = mergeVerdict(words)
+      if (verdict.deny) return verdict
+    }
   }
   return ALLOW
+}
+
+/**
+ * Judges a `gh pr merge` against the Git Flow rules: never `--admin`, which skips the branch
+ * protection only the owner may lift, and always `--repo`, without which gh skips the remote
+ * branch delete while the worktree exists.
+ */
+function mergeVerdict(words: string[]): Verdict {
+  if (words.includes(`--admin`)) {
+    return {
+      deny: `Never pass \`--admin\` to \`gh pr merge\`: the branch protection is the owner's. ` +
+        `Wait for the check with \`timeout 900 gh pr checks <n> --repo <owner>/<repo> ` +
+        `--watch\`, or leave the PR open and say so.`,
+    }
+  }
+  if (!words.some((word) => word === `--repo` || word === `-R` || word.startsWith(`--repo=`))) {
+    return {
+      deny: `Pass \`--repo <owner>/<repo>\` to \`gh pr merge\`: without it, gh tries to delete ` +
+        `the local branch, fails while its worktree exists, and skips the remote delete.`,
+    }
+  }
+  return ALLOW
+}
+
+/**
+ * Calls that make a version 4 UUID. Built from parts so this file does not hold the calls it
+ * refuses: an edit to it would otherwise count them.
+ */
+const UUID_V4_CALLS = [`crypto.random` + `UUID`, `gen_random` + `_uuid`, `uuid_generate` + `_v4`]
+  .map((name) => new RegExp(`\\b${name.replace(`.`, `\\.`)}\\s*\\(`, `g`))
+  .concat(new RegExp(`\\buuid` + `v4\\s*\\(`, `gi`))
+
+/** Source files the id rule covers: JavaScript, TypeScript and SQL. */
+const CODE_FILE = /\.(?:[cm]?[jt]sx?|sql)$/i
+
+/** How many version 4 UUID calls `text` holds. */
+function uuidV4Calls(text: string): number {
+  return UUID_V4_CALLS.reduce((sum, call) => sum + (text.match(call)?.length ?? 0), 0)
+}
+
+/**
+ * Judges a file write against the id rule in the global CLAUDE.md ("TS style"): it refuses one
+ * that adds a version 4 UUID call to a code file. `before` is the text the write replaces (the
+ * file, or an Edit's `old_string`), so keeping an existing call is no refusal.
+ */
+export function uuidVerdict(path: string, before: string, after: string): Verdict {
+  if (!CODE_FILE.test(path) || uuidV4Calls(after) <= uuidV4Calls(before)) return ALLOW
+  return {
+    deny: `Never create a version 4 UUID: every id is a version 7 UUID. Use \`uuidV7()\` from ` +
+      `\`@spy4x/platform/universal/uuid\`, \`generate\` from \`@std/uuid/v7\` in a repo that ` +
+      `does not import ts-libs, or \`uuidv7()\` in Postgres 18 SQL. A secret token is the ` +
+      `owner's choice: ask before implementing it.`,
+  }
 }
 
 /** Where the owner's direction lives, relative to home (global CLAUDE.md, "Direction"). */

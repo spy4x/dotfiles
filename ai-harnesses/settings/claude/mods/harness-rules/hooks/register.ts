@@ -7,6 +7,7 @@ import {
   leakVerdict,
   markerVerdict,
   spawnVerdict,
+  uuidVerdict,
   type Where,
 } from "./rules.ts"
 
@@ -93,6 +94,20 @@ export const register: Register = (on) => {
     const context = await next(e)
     const block = await direction($)
     return block ? { ...context, blocks: [...context.blocks, block] } : context
+  })
+
+  on(`tool.call`, { tool: `Write` }, async ($, e, next) => {
+    const verdict = uuidVerdict(e.file_path, (await readable($, e.file_path)) ?? ``, e.content)
+    if (!verdict.deny) return next(e)
+    await log($, { event: `write`, path: e.file_path, deny: verdict.deny })
+    return { deny: verdict.deny }
+  })
+
+  on(`tool.call`, { tool: `Edit` }, async ($, e, next) => {
+    const verdict = uuidVerdict(e.file_path, e.old_string, e.new_string)
+    if (!verdict.deny) return next(e)
+    await log($, { event: `edit`, path: e.file_path, deny: verdict.deny })
+    return { deny: verdict.deny }
   })
 
   on(`agent.spawn`, async ($, e, next) => {

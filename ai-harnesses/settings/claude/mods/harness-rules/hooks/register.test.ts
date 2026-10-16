@@ -359,3 +359,39 @@ test(`starts without direction.md when the file is missing`, async ($, on) => {
   const context = await $.prompt.context({ blocks: [] })
   expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`])
 })
+
+/** A version 4 UUID call, built from parts so this file holds none. */
+const V4_CALL = `crypto.random` + `UUID()`
+
+test(`refuses an Edit that adds a version 4 UUID call to a TypeScript file`, async ($, on) => {
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Edit`,
+    file_path: `/r/id.ts`,
+    old_string: `const id = x`,
+    new_string: `const id = ${V4_CALL}`,
+  })
+  expect(ran.deny).toContain(`version 7`)
+})
+
+test(`refuses a Write that adds a version 4 UUID call to a file that had none`, async ($, on) => {
+  on(`fs.read`, () => ({ value: `export const a = 1` }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Write`,
+    file_path: `/r/id.ts`,
+    content: `export const id = ${V4_CALL}`,
+  })
+  expect(ran.deny).toContain(`version 7`)
+})
+
+test(`lets a Write through that keeps the file's existing call`, async ($, on) => {
+  on(`fs.read`, () => ({ value: `export const id = ${V4_CALL}` }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Write`,
+    file_path: `/r/id.ts`,
+    content: `// keep\nexport const id = ${V4_CALL}`,
+  })
+  expect(ran.deny).toBeUndefined()
+})

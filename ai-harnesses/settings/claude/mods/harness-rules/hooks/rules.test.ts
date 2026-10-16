@@ -6,6 +6,7 @@ import {
   leakVerdict,
   markerVerdict,
   spawnVerdict,
+  uuidVerdict,
 } from "./rules.ts"
 
 const opusReviewer = { subagentType: `reviewer`, model: `opus`, fork: false }
@@ -156,6 +157,49 @@ test(`refuses a body gitleaks flags and one it failed to scan`, () => {
   expect(leakVerdict(0).deny).toBeUndefined()
   expect(leakVerdict(1).deny).toContain(`secret`)
   expect(leakVerdict(127).deny).toContain(`failed`)
+})
+
+test(`refuses ulimit -u in any spelling and allows other ulimit flags`, () => {
+  expect(bashVerdict(`ulimit -u 500`).deny).toContain(`ulimit -u`)
+  expect(bashVerdict(`ulimit -Su 500 && make`).deny).toContain(`ulimit -u`)
+  expect(bashVerdict(`(ulimit -u 100; ./x)`).deny).toContain(`ulimit -u`)
+  expect(bashVerdict(`ulimit -n 4096`).deny).toBeUndefined()
+  expect(bashVerdict(`ulimit -a`).deny).toBeUndefined()
+})
+
+test(`refuses gh pr merge with --admin`, () => {
+  expect(bashVerdict(`gh pr merge 5 --repo a/b --squash --admin`).deny).toContain(`--admin`)
+})
+
+test(`refuses gh pr merge without --repo and allows one with it`, () => {
+  expect(bashVerdict(`gh pr merge 5 --squash --delete-branch`).deny).toContain(`--repo`)
+  expect(bashVerdict(`gh pr merge 5 --repo a/b --squash --delete-branch`).deny).toBeUndefined()
+  expect(bashVerdict(`gh pr merge 5 -R a/b --rebase`).deny).toBeUndefined()
+  expect(bashVerdict(`gh pr merge 5 --repo=a/b --squash`).deny).toBeUndefined()
+  expect(bashVerdict(`gh pr view 5`).deny).toBeUndefined()
+})
+
+/** The calls the id rule refuses, built from parts so this file holds none of them. */
+const V4 = {
+  crypto: `crypto.random` + `UUID()`,
+  postgres: `gen_random` + `_uuid()`,
+  extension: `uuid_generate` + `_v4()`,
+  npm: `uuid` + `v4()`,
+}
+
+test(`refuses a write that adds a version 4 UUID call to a code file`, () => {
+  expect(uuidVerdict(`/r/a.ts`, ``, `const id = ${V4.crypto}`).deny).toContain(`version 7`)
+  expect(uuidVerdict(`/r/a.tsx`, ``, `id: ${V4.npm}`).deny).toContain(`version 7`)
+  expect(uuidVerdict(`/r/m.sql`, ``, `DEFAULT ${V4.postgres}`).deny).toContain(`version 7`)
+  expect(uuidVerdict(`/r/m.SQL`, ``, `DEFAULT ${V4.extension}`).deny).toContain(`version 7`)
+  expect(uuidVerdict(`/r/a.mjs`, V4.crypto, `${V4.crypto}; ${V4.crypto}`).deny)
+    .toContain(`version 7`)
+})
+
+test(`allows keeping an existing call and writing one outside code files`, () => {
+  expect(uuidVerdict(`/r/a.ts`, `a(${V4.crypto})`, `b(${V4.crypto})`).deny).toBeUndefined()
+  expect(uuidVerdict(`/r/AGENTS.md`, ``, `Never ${V4.crypto}`).deny).toBeUndefined()
+  expect(uuidVerdict(`/r/a.ts`, ``, `const id = uuidV7()`).deny).toBeUndefined()
 })
 
 test(`frames direction.md as a context block and skips a missing or empty one`, () => {
