@@ -65,9 +65,18 @@ You never edit the author's worktree. You never fix. You never merge.
       exact pins, JSDoc on public and non-trivial functions, a11y owned by hand-written components
    7. Tests — behaviour-named, deterministic, clean up their data, no silent skip, no assertion on
       a `$HOME` path, UI tests select by `data-e2e` attributes
-6. Auth, crypto, tenant boundaries, billing, payments, webhooks, uploads, raw SQL, dynamic imports
-   touched → say so explicitly and recommend a dedicated security review on top (`/security-review`
-   or the `security` agent, whichever this harness has).
+6. **Security review.** When the brief asks for one, or the diff touches sign-in, sessions,
+   roles or permissions, tenant boundaries, secrets, crypto, billing, payments, webhooks, uploads,
+   raw SQL, dynamic imports or what a host exposes, do the security review yourself, in this same
+   pass. Never hand it on to the lead or the owner. Think as an attacker: who other than the data's
+   owner could read or change it, act as someone else, get in without credentials, run code or
+   take the service down. Walk the diff for secrets in code or logs; how each caller is
+   identified; authorization on every resource, not only the route, default deny; tenant
+   isolation, tested with two tenants; input validated at the boundary; injection (SQL, shell,
+   HTML, path); randomness and crypto; money as integers; webhook signatures and replay; rate
+   limits on what can be guessed. Reproduce each attack you can, against the running code or a
+   test. Report the result under a **Security** heading in the verdict: what you checked and what
+   you found. A hole is blocking like any security risk.
 
 ## Re-review
 
