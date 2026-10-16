@@ -140,6 +140,10 @@ One exception, an experiment until 2026-10-15: the Claude Code mod `harness-rule
 through `CLAUDE_CODE_PLUGIN_DIRS` in `settings.json`). It enforces rules `AGENTS.md` already
 states, so the prose stays the source:
 
+- the first message of every conversation carries `~/sync/code/ai-memory/direction.md` as a context
+  block named `direction`, as it carries `CLAUDE.md`; a missing or empty file adds nothing.
+  OpenCode loads the same file through `instructions` in `settings/opencode/opencode.json`. DSH has
+  no setting for an extra instruction file, so it does not;
 - an Agent call without `model` is refused, and so is a reviewer on anything but Opus;
 - at 90% of the 5-hour limit, no new agent starts;
 - `rm` and `rmdir` of a variable or a command substitution (`$`, `$(…)`, backticks), recursive or
@@ -147,7 +151,10 @@ states, so the prose stays the source:
   `..`, and the session's working directory or one of its parents. Claude Code stops for approval
   on these paths, and on some substitutions (`rm -rf $(…)`), even in bypass mode; the refusal
   instead tells the agent to retry with `find "<literal path>" -delete` or `rm` of a literal path;
-- `find /` is refused;
+- `find /` and `ulimit -u` are refused, and so is `gh pr merge` with `--admin` or without `--repo`;
+- a `Write` or `Edit` that adds a version 4 UUID call (`crypto.randomUUID`, `gen_random_uuid`,
+  `uuid_generate_v4`, `uuidv4`) to a JavaScript, TypeScript or SQL file is refused; one that keeps
+  the calls the file or the replaced text already had is not;
 - a `gh issue` or `gh pr` body must carry `<!-- agent -->`, and `gitleaks` scans the command and
   any body file it can read. With `--body-file`, the marker counts in the file or in the command
   text: a file the same command writes or edits (a heredoc, `sed -i`), one named through a
