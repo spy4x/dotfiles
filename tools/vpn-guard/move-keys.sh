@@ -11,8 +11,10 @@ psks="$(wg show "$iface" preshared-keys)"
 # A hidden name, so NetworkManager never loads the half-written file.
 tmp="$(mktemp "$(dirname "$file")/.vpn-guard.XXXXXX")"
 trap 'find "$tmp" -delete 2>/dev/null || true' EXIT
-awk -v private="$private" -v psks="$psks" '
-  BEGIN { n = split(psks, lines, "\n"); for (i = 1; i <= n; i++) { split(lines[i], f, "\t"); psk[f[1]] = f[2] } }
+# Keys go to awk through its environment: a process's argv is world-readable in /proc, its
+# environment is not.
+private="$private" psks="$psks" awk '
+  BEGIN { private = ENVIRON["private"]; n = split(ENVIRON["psks"], lines, "\n"); for (i = 1; i <= n; i++) { split(lines[i], f, "\t"); psk[f[1]] = f[2] } }
   function flush() {
     if (peer == "") return
     # A peer without a preshared key: mark it "not required", or NetworkManager asks for one.

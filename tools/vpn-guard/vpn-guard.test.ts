@@ -15,7 +15,7 @@ case "$*" in
   *GENERAL.STATE*) [ "$state" = active ] && echo activated; exit 0 ;;
   *connection.interface-name*) echo wg9; exit 0 ;;
   *" up "*) [ "$FAKE_UP" = fail ] && exit 4; echo active > "$FAKE_DIR/state"; exit 0 ;;
-  *" down "*) echo inactive > "$FAKE_DIR/state"; exit 0 ;;
+  *" down "*) [ "$FAKE_DOWN" = fail ] && exit 4; echo inactive > "$FAKE_DIR/state"; exit 0 ;;
 esac
 exit 10
 `
@@ -141,7 +141,15 @@ const PEER_A = `${`A`.repeat(42)}1=`
 const PEER_B = `${`B`.repeat(42)}2=`
 
 /** Runs move-keys.sh on `profile` with a fake `wg` that reports PEER_A with a key, PEER_B without. */
-async function moveKeys(profile: string): Promise<{ code: number; profile: string; mode: number }> {
+async function moveKeys(
+  profile: string,
+): Promise<{ code: number; profile: string; mode: number; awkArgs: string }> {
+  // A wrapper records awk's arguments, then runs the real awk, resolved before PATH changes.
+  const realAwk = new TextDecoder().decode(
+    (await new Deno.Command(`sh`, { args: [`-c`, `command -v awk`], stdout: `piped` }).output())
+      .stdout,
+  ).trim()
+  assert(realAwk, `awk not found`)
   const dir = await Deno.makeTempDir({ prefix: `vpn-guard-keys-` })
   try {
     const bin = join(dir, `bin`)
@@ -154,12 +162,18 @@ async function moveKeys(profile: string): Promise<{ code: number; profile: strin
     )
     await Deno.writeTextFile(join(bin, `nmcli`), `#!/bin/sh\nexit 0\n`, { mode: 0o755 })
     await Deno.writeTextFile(join(bin, `restorecon`), `#!/bin/sh\nexit 0\n`, { mode: 0o755 })
+    await Deno.writeTextFile(
+      join(bin, `awk`),
+      `#!/bin/sh\n[ -n "$FAKE_DEPTH" ] && exit 99\nexport FAKE_DEPTH=1\n` +
+        `printf '%s\\n' "$@" >> "$FAKE_DIR/awk-args"\nexec "$REAL_AWK" "$@"\n`,
+      { mode: 0o755 },
+    )
     const file = join(dir, `test.nmconnection`)
     await Deno.writeTextFile(file, profile)
     const { code } = await new Deno.Command(`bash`, {
       args: [MOVE_KEYS, `wg9`, file],
       clearEnv: true,
-      env: { PATH: `${bin}:/usr/bin:/bin` },
+      env: { PATH: `${bin}:/usr/bin:/bin`, FAKE_DIR: dir, REAL_AWK: realAwk },
       stdout: `null`,
       stderr: `null`,
     }).output()
@@ -169,6 +183,7 @@ async function moveKeys(profile: string): Promise<{ code: number; profile: strin
       code,
       profile: await Deno.readTextFile(file),
       mode: (await Deno.stat(file)).mode! & 0o777,
+      awkArgs: await Deno.readTextFile(join(dir, `awk-args`)),
     }
   } finally {
     await Deno.remove(dir, { recursive: true })
@@ -223,4 +238,19 @@ method=manual
 Deno.test(`move-keys leaves the profile readable by root only`, async () => {
   const run = await moveKeys(KEYRING_PROFILE)
   assertEquals(run.mode, 0o600)
+})
+
+Deno.test(`move-keys never puts a key in a command line`, async () => {
+  const run = await moveKeys(KEYRING_PROFILE)
+  assertEquals(run.code, 0)
+  assert(run.awkArgs.length > 0, `awk was not called through the wrapper`)
+  assert(!run.awkArgs.includes(`PRIVATE`), `private key in awk's arguments`)
+  assert(!run.awkArgs.includes(`PSK-A`), `preshared key in awk's arguments`)
+})
+
+Deno.test(`fails loudly when a dead VPN cannot be disconnected`, async () => {
+  const run = await guard(`active`, { FAKE_INTERNET: `none`, FAKE_DOWN: `fail` })
+  assertEquals(run.code, 1)
+  assert(run.active)
+  assertStringIncludes(run.stdout, `disconnect failed`)
 })

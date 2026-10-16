@@ -16,8 +16,8 @@ Cloudflare's connectivity endpoint: three tries, five seconds apart. Binding to 
 the check from passing over the normal route while the tunnel is dead.
 
 What it costs: when the far end dies while connected, the machine has no internet until the next
-run, at most 30 minutes. When the far end is already dead at a run, the outage lasts only the check,
-about 30 seconds.
+run, at most 30 minutes. When the far end is already dead at a run, the outage lasts only the check:
+at most 70 seconds, three rounds of two 10-second requests with 5-second pauses.
 
 ## Install
 
@@ -57,7 +57,8 @@ systemctl list-timers vpn-guard.timer
 journalctl -u vpn-guard.service -n 20 --no-pager
 ```
 
-Each run logs one line: staying connected, connecting, or disconnecting and why.
+Each run logs what it did: staying connected, or connecting and then staying or disconnecting, with
+the reason.
 
 ## Remove
 
