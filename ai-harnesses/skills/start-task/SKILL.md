@@ -59,6 +59,8 @@ where to stop.
 - **Options:** option A and option B, one consequence each, the pick and why.
 - **Risks:** security, data, migrations, anything irreversible. Something a revert cannot undo is a
   question for me (step 1), not a decision.
+- **Security review:** whether the change needs one, by the list in "Reviewer gate" in
+  `AGENTS.md`. Say it in the issue; the reviewer's brief then asks for it.
 - **Test plan:** which behaviours get tests, and how each test will be shown to fail when the code
   breaks.
 - **Size:** more than one PR's worth → one issue per PR, in order. A scaffold that every unit needs
