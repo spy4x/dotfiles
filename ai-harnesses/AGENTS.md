@@ -45,6 +45,10 @@ or data-loss hole. Anything else waits for the next such release, or for one
 release by the lead as the last step of its wave or session. A subagent never
 releases.
 
+A release tag points at the merged version-bump commit on the default branch,
+never at a branch commit: a registry version cannot be deleted, and a tag build
+runs the tagged commit's own pipeline with the publish token.
+
 **Picking work yourself** (a wave, "work through the backlog") → the `wave`
 skill. Any open issue at `p3-medium` or above is yours to take, highest
 priority first, unless it carries `manual` (work only I can do) or
@@ -116,7 +120,8 @@ about another repository goes in your report. Before the final report:
    hand. Never add to a `Parked:` issue; the ones that exist stay as they are.
 3. **Search the open issues.** One that covers it → file nothing new; comment
    there only when you add a case that passes step 2, or a file it does not
-   name.
+   name. Add to an existing issue in a comment, never by editing its
+   body.
 4. **Group.** Findings that belong together go in one large issue, never one
    issue each: I don't want hundreds of small ones. An issue is one piece of
    work for one implementer and one review, in the "Issues and reports" shape;
@@ -206,6 +211,10 @@ NTFY, Gatus, Authelia.
 Cost-aware: fixed price per month (Hetzner BM/VM) or usage-based with hard or
 prepaid caps (DeepSeek API). No wallet-attack risk like serverless functions.
 
+Go services (zond, oko): `gofmt`-clean, standard library first, errors wrapped
+with `%w`, `log/slog` for logs, no package globals or `init()` side effects
+(wire config through `main()`), and a distroless nonroot image.
+
 **Runtime-agnostic code.** The Deno team joined Cloudflare: the runtime gets
 fixes until about October 2027, then its development ends. So new code, and the
 old functions you change anyway, must run unchanged on Deno, Node and Bun. Use
@@ -244,6 +253,9 @@ vite, d3, leaflet, an SMTP lib, a date/tz lib — never reimplement these.
 Libraries are design references, never code sources: port markup and behaviour,
 not the dependency. Owning a component means owning its accessibility: roles,
 labels, keyboard handling, focus.
+
+Runtime validation is arktype: no zod, no valibot, no hand-rolled validator,
+and no adapter that wraps a second one.
 
 **Shared libs before local code.** In any `spy4x/*` TypeScript repo, before
 writing a component, helper or library, search `spy4x/ts-libs` and
@@ -288,6 +300,11 @@ the consumer change is blocked too.
 Both ways: an app feeds the libraries, and every app, old or new, imports from
 them instead of keeping its own copy. Details: each library's `AGENTS.md`, "What
 belongs in this library".
+
+Never hold a reviewed merge or deploy for Deno's 24-hour minimum dependency age
+on a fresh library release, and never add a flag or wording to hide it. Write
+the consumer's lockfile once with `deno install --minimum-dependency-age=0` and
+commit it; CI then resolves the version from `deno.lock`.
 
 # Projects
 
@@ -362,6 +379,11 @@ customer comms, public calendars, provider logs (prompts + tool inputs),
 CI logs, synced state (clipboard/cloud tmux/syncthing/IndexedDB),
 **dotfiles commits**.
 
+A public library or product repository holds no code, paths, file lists or
+business vocabulary of a private project in its code, docs, PRs or issues.
+dotfiles, which holds these rules, is the exception. Never remove an existing
+mention in an unrelated change.
+
 **Transcript carve-out.** Read a `.env` when the task needs a value; it reaches
 the provider log, an accepted trade. The value goes no further: no commit, PR,
 issue, chat, shipped log line, or tracked or transmitted file (a local
@@ -435,6 +457,10 @@ hours). In order of preference:
 
 Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers,
 `tmux` sessions: clean up in a `trap`, not a trailing line.
+
+A test that needs a cloud server (Hetzner Cloud) creates one of the cheapest
+type that runs the test, keeps it no longer than the test needs, and deletes it
+with every SSH key and volume it created, whether the test passed or failed.
 
 Always close browser contexts at the end of a lane, including on the failure
 path. A failed lane that leaks a browser is worse than a failed lane.
@@ -580,6 +606,19 @@ is my action. Never pass `--admin`, and never loosen or lift the protection,
 which is mine to change. Whoever adds CI to a public repo protects its default
 branch the same way once its first pull-request pipeline has run.
 
+**Woodpecker pipelines.** A repository stays untrusted. Never add `volumes`,
+`privileged` or a Docker socket mount to a step, and never mark a repository
+trusted to make one work: that gives every pull request that edits the pipeline
+root on the agent host, which holds other projects and their keys. An image is
+built by kaniko with `--no-push` and no secret, because the Dockerfile's `RUN`
+lines run in that container; a separate crane step, which runs no repository
+code, is the only one holding the registry login, and only on the events that
+publish. Pin
+every pipeline image by version and digest. A step that checks a tag is on
+`main` catches mistakes; it is not a security boundary. Woodpecker substitutes
+`${VAR}` in the whole file before it parses the YAML, so write a variable the
+shell should expand as `$${VAR}`.
+
 After merge, unless told otherwise:
 
 1. Untracked files in the worktree → `find <path> -delete`; temp files →
@@ -603,6 +642,9 @@ It copies the age key from the main checkout without printing it or naming
 `.age/` on the command line (a plain `cp` is refused by `permissions.deny`).
 Idempotent. Repos with `post-checkout` hooks auto-decrypt
 once the key is in place (check repo-local `AGENTS.md`).
+
+Never copy a decrypted env file between checkouts or worktrees: decrypt fresh
+in each.
 
 ## Infrastructure as Code
 
@@ -655,6 +697,18 @@ D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D <check co
 Never assert a path under `$HOME`; resolve through the tool
 (`import.meta.resolve`) or injected config. A test that can silently skip when
 its dependency is missing will — fail loudly.
+
+Never delete or hand-edit `deno.lock`. A stale lockfile is fixed by running the
+task that needs the new dependency once with network access and committing the
+result. `CI=true` does not freeze the lockfile, so every Dockerfile installs
+with `deno install --frozen`, and CI either does the same or fails when a run
+changed `deno.lock`.
+
+Integration tests may share their services (Postgres, Redis, a mail server) with
+other runs. Give every schema, key, object and recipient a per-run name, never
+truncate a shared table or empty a shared mailbox, and clean up in a `finally`,
+also when the test failed: delete only what the run created, never `FLUSHDB`,
+`FLUSHALL` or `DROP DATABASE` on a shared service.
 
 A fake binary prepended to `PATH` never calls the real tool by name: resolve
 its absolute path before changing `PATH` and pass it in an env var. Add a
@@ -757,7 +811,7 @@ sequences, and a confused or repeating user. Both registers: no padding,
 preamble, restated question or praise.
 
 Commit subject ≤50 chars (hard cap 72), imperative, no trailing period, no AI
-attribution. Body only for non-obvious why.
+attribution. Body only for non-obvious why. One logical change per commit.
 
 # Marketing
 
