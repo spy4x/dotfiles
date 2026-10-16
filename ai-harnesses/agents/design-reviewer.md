@@ -44,6 +44,6 @@ screenshots, axe results, steps a person takes. You never edit the worktree, nev
 - a public page that breaks its budget, or is clearly slower or heavier than on `main`.
 
 Write the verdict in the shape the `reviewer` uses: findings most severe first, an evidence block,
-and the reviewed commit. Everything else (taste, polish, a better idea) goes under **Not blocking**, most valuable first.
-Each blocking finding names the screen, the size and theme, what a person notices, and the
-screenshot path.
+and the reviewed commit. Each blocking finding names the screen, the size and theme, what a person
+notices, and the screenshot path. Everything else (taste, polish, a better idea) goes under
+**Not blocking**, most valuable first.
