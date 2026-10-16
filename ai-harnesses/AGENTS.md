@@ -201,7 +201,8 @@ protecting a new repo's default branch, and a CI step for a check your task adds
   `~/sync/code/ai-memory/incidents/` or `experiments/`, linked from the rule. A repo's lesson (a
   browser quirk) goes in the doc of the tool it is about, linked from its `AGENTS.md` when needed.
 - **Trials.** A rule on trial names its review date and its experiment file. Only I move the date.
-- **Size.** This file stays under about 800 lines, a repo's `AGENTS.md` under about 200 and
+- **Size.** This file stays within 850 lines and 56,000 bytes (a test checks it; DSH reads at most
+  64 KiB of rules, a repo's included), a repo's `AGENTS.md` under about 200 lines and
   `direction.md` under about 150. A change that would pass the budget first moves history out or
   merges duplicates.
 - **Machines check what they can.** A rule a machine can check gets a hook (the `harness-rules`

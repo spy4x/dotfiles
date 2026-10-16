@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19"
+import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1.0.19"
 import { copy } from "jsr:@std/fs@^1.0.0/copy"
 import { join } from "jsr:@std/path@^1.0.0"
 import { ADAPTERS, loadConfig } from "./engine.ts"
@@ -19,6 +19,23 @@ Deno.test(`the real source validates and renders for every harness`, async () =>
   assertEquals(source.skills.filter((skill) => skill.meta.name === `audit`).length, 1)
   const reviewer = source.agents.find((agent) => agent.meta.name === `reviewer`)
   assertEquals(reviewer?.meta.targets, undefined)
+})
+
+/**
+ * The global rules' budget ("Rules about rules" in AGENTS.md): DSH renders at most 64 KiB of rules,
+ * the repo's own `AGENTS.md` included, and drops whole files past that.
+ */
+const RULES_MAX_LINES = 850
+const RULES_MAX_BYTES = 56_000
+
+Deno.test(`the global rules stay within their size budget`, async () => {
+  const rules = await Deno.readFile(join(ROOT, `AGENTS.md`))
+  const lines = new TextDecoder().decode(rules).split(`\n`).length
+  assert(lines <= RULES_MAX_LINES, `AGENTS.md has ${lines} lines; the budget is ${RULES_MAX_LINES}`)
+  assert(
+    rules.byteLength <= RULES_MAX_BYTES,
+    `AGENTS.md has ${rules.byteLength} bytes; the budget is ${RULES_MAX_BYTES}`,
+  )
 })
 
 /** A copy of the fixture source with one file replaced. */
