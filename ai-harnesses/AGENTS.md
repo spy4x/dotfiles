@@ -47,8 +47,7 @@ releases.
 
 A release tag points at the merged version-bump commit on the default branch,
 never at a branch commit: a registry version cannot be deleted, and a tag build
-runs the tagged commit's own pipeline with the publish token. That token is a
-CI secret of the one repository it publishes, allowed for the tag event only.
+runs the tagged commit's own pipeline with the publish token.
 
 **Picking work yourself** (a wave, "work through the backlog") → the `wave`
 skill. Any open issue at `p3-medium` or above is yours to take, highest
@@ -380,8 +379,10 @@ customer comms, public calendars, provider logs (prompts + tool inputs),
 CI logs, synced state (clipboard/cloud tmux/syncthing/IndexedDB),
 **dotfiles commits**.
 
-A public repository holds no code, paths, file lists or business vocabulary of
-a private project.
+A public library or product repository holds no code, paths, file lists or
+business vocabulary of a private project in its code, docs, PRs or issues.
+dotfiles, which holds these rules, is the exception. Never remove an existing
+mention in an unrelated change.
 
 **Transcript carve-out.** Read a `.env` when the task needs a value; it reaches
 the provider log, an accepted trade. The value goes no further: no commit, PR,
@@ -454,12 +455,12 @@ hours). In order of preference:
    SIGKILL). CPU load: `stress-ng --cpu 0 --timeout 60s` or at least
    `timeout 60s yes >/dev/null &`, never `while :; do :; done &`.
 
+Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers,
+`tmux` sessions: clean up in a `trap`, not a trailing line.
+
 A test that needs a cloud server (Hetzner Cloud) creates one of the cheapest
 type that runs the test, keeps it no longer than the test needs, and deletes it
 with every SSH key and volume it created, whether the test passed or failed.
-
-Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers,
-`tmux` sessions: clean up in a `trap`, not a trailing line.
 
 Always close browser contexts at the end of a lane, including on the failure
 path. A failed lane that leaks a browser is worse than a failed lane.
@@ -611,7 +612,8 @@ trusted to make one work: that gives every pull request that edits the pipeline
 root on the agent host, which holds other projects and their keys. An image is
 built by kaniko with `--no-push` and no secret, because the Dockerfile's `RUN`
 lines run in that container; a separate crane step, which runs no repository
-code, is the only one holding the registry login, for the tag event only. Pin
+code, is the only one holding the registry login, and only on the events that
+publish. Pin
 every pipeline image by version and digest. A step that checks a tag is on
 `main` catches mistakes; it is not a security boundary. Woodpecker substitutes
 `${VAR}` in the whole file before it parses the YAML, so write a variable the
@@ -698,10 +700,11 @@ its dependency is missing will — fail loudly.
 
 Never delete or hand-edit `deno.lock`. A stale lockfile is fixed by running the
 task that needs the new dependency once with network access and committing the
-result. `CI=true` does not freeze the lockfile, so CI and every Dockerfile
-install with `deno install --frozen`.
+result. `CI=true` does not freeze the lockfile, so every Dockerfile installs
+with `deno install --frozen`, and CI either does the same or fails when a run
+changed `deno.lock`.
 
-Integration tests share their services (Postgres, Redis, a mail server) with
+Integration tests may share their services (Postgres, Redis, a mail server) with
 other runs. Give every schema, key, object and recipient a per-run name, never
 truncate a shared table or empty a shared mailbox, and clean up in a `finally`,
 also when the test failed: delete only what the run created, never `FLUSHDB`,
