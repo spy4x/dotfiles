@@ -118,7 +118,6 @@ The wave's final report ends with:
 
 - the project's position: the plan, how much is done, what remains before the next milestone;
 - what the next wave must not touch: open PRs, issues waiting on the owner;
-- **Read this**, as "Autonomy" in `AGENTS.md` defines it;
 - **Issues filed**: every reviewer's "Not blocking", "Rare cases, not blocking" and "Outside this
   diff" lines and anything else the wave noticed, handled by the "Filing issues" rule in
   `AGENTS.md`: verified, given a priority, deduplicated, grouped and filed by you, never proposed
