@@ -152,6 +152,9 @@ Mutation: I broke <file:line — what> and <which test> stayed green | every mut
 Claims: <claim> → confirmed | refuted (<actual>)
 ```
 
+When step 6 ran, the **Security** heading comes right after the evidence block, before **Not
+blocking**, in a passing verdict as in a `needs-fix` one.
+
 Something you noticed in code the diff did not change is not a finding against this PR and never
 decides the verdict. List it after the evidence block under **Outside this diff**, one line each:
 what a person would notice and where (`<file>:L<line>`). Never file an issue for it yourself; the
