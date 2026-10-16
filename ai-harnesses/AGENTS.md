@@ -289,6 +289,53 @@ Both ways: an app feeds the libraries, and every app, old or new, imports from
 them instead of keeping its own copy. Details: each library's `AGENTS.md`, "What
 belongs in this library".
 
+# Design
+
+UI is designed, not just built. Every screen, page or flow a person uses
+ships to the bar of a well-funded product team, from the first PR: a clear
+job, one primary action, real content, every state drawn (empty, loading,
+error, success, long text, 390 px), and the taste of the house design
+language. "It works" is not done; "a person gets it in five seconds and it
+looks made with care" is.
+
+**One house style, a brand per app.** Every app looks made by the same person:
+the same type scale, spacing, radius, motion, density, shell, page header and
+component choices, all from `preact-components`. Each app varies only what its
+design language allows (a brand hue and the palette built from it, and
+anything else `preact-components` `docs/design-language.md` lists). A screen
+that needs a pattern the language lacks adds it there first, as a library
+change, never as a one-app variant.
+
+**The design phase.** New UI, a new screen or page, a redesign, or a change to
+what a person must understand or decide → the `design` skill before any code.
+It runs these roles in parallel, then the lead merges one spec:
+
+- `product-designer`: layout, hierarchy, interaction, states, accessibility,
+  against the house design language.
+- `product-lead`: the CEO lens. Why build it, for whom, what to cut, the one
+  number it should move, the business and legal risk.
+- `ux-writer`: every word on the screen: labels, errors, empty states,
+  microcopy, in the app's voice.
+- `psychologist`: trust, cognitive load, motivation; ethical persuasion only.
+- `marketing-seo`: pages a visitor uses to decide (public pages, pricing,
+  onboarding, sign-up), with a search lens and a conversion lens.
+
+A small change to an existing screen (one element, a wording, a bug with a
+visible symptom) runs `product-designer` alone. A fix with no visible change
+skips the phase. The spec, with wireframes at 390 and 1440 px, goes in the
+issue; the implementer builds it, screenshots it and revises it against the
+spec at least twice before opening the PR.
+
+**Design gate.** A diff that changes what a person sees gets a
+`design-reviewer` next to the `reviewer`, in the same round. It checks the
+built screens in a browser against the spec and the house design language, at
+390 and 1440 px, light and dark, with axe-core and the keyboard, and walks the
+main task as a first-time user. It blocks only for a departure from the
+approved spec or the design language, an accessibility failure, a broken
+layout or a task a first-time user cannot finish; taste nits come under
+**Not blocking**. The rest of the reviewer gate's rules (fix rounds, at most
+three verdicts, merging) apply to it unchanged.
+
 # Projects
 
 Each is `~/sync/code/<name>` and `github.com/spy4x/<name>`. Before working in
@@ -530,7 +577,8 @@ always exists, `[WIP]` in the title until done; `gh pr create --fill` right
 after push, never ask.
 
 **Reviewer gate** before push: one separate `reviewer` agent per diff, never
-self-review. Every test the diff adds or changes needs its `Mutation:` line in
+self-review, plus a `design-reviewer` when the diff changes what a person sees
+("Design" above). Every test the diff adds or changes needs its `Mutation:` line in
 the PR body; a missing one goes back to the implementer before any reviewer is
 spent. Whether a change needs a security review is decided when the work is
 requested, in its design (`start-task`) or its lane brief (`wave`): it does when
