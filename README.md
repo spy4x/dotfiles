@@ -64,6 +64,8 @@ How the rendering works, the file layout per harness and how to write a skill or
   repository.
 - **Limits for many agents.** [`system/`](docs/host-limits.md) raises inotify instances and zram
   swap, cleans `/tmp` sooner, and caps the tasks each app can start.
+- **VPN only while it works.** [`tools/vpn-guard/`](docs/vpn-guard.md) connects a full-tunnel VPN
+  at boot and every 30 minutes, and drops it when the internet does not work through it.
 - **Synced, not cloned.** The repository lives in a Syncthing folder, and agent worktrees are
   [ignored](docs/host-limits.md) so they never replicate.
 
