@@ -378,7 +378,9 @@ Work and production:
 
 - `template`: SaaS starting point. It owns how a product is hosted and deployed; a new product
   starts from it.
-- `financy`: self-hosted finance tracker for a person or a family.
+- `financy`: self-hosted finance tracker for a person or a family. Frozen until `template` (Seed)
+  is finished: no work, issues, comments or PRs there, even a `p1-critical` one; a finding about it
+  goes in the report.
 - `antonshubin.com`: my freelance site.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
