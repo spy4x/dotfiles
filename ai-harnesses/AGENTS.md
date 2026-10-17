@@ -121,7 +121,8 @@ another repository goes in your report. Before the final report:
      - a bug that the ordinary action hits, or that I or a person outside reported (a reviewer, an
        audit or another agent is not a report);
      - a gap that stops a lane running now: name the issue it blocks. It is the smallest change
-       that unblocks it.
+       that unblocks it;
+     - a small fix to what a person sees or reads (contrast, spacing, a wording, a wrong doc line).
    - `p4-low`, parked until I raise it: everything else that is true, such as a failure that needs
      unusual input, rare timing or two faults at once, a missing test, a refactor, tooling
      polish or a nicer name.
@@ -141,9 +142,8 @@ another repository goes in your report. Before the final report:
 4. **Group.** Findings that belong together go in one large issue, never one issue each: I don't
    want hundreds of small ones. An issue is one piece of work for one implementer and one review, in
    the "Issues and reports" shape; items of the same priority that touch the same files or the same
-   behaviour share it, and nothing else rides along. It takes that priority. Small fixes to what a
-   person sees or reads (contrast, spacing, a wording, a wrong doc line) are filed at `p3-medium`,
-   grouped by kind: five contrast fixes on five screens are one issue, "fix contrast".
+   behaviour share it, and nothing else rides along. It takes that priority. Small fixes are grouped
+   by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
 **Features are mine to ask for.** Never file or build a feature, component, export, option, package
 or integration that I did not ask for, wherever the idea came from; drop the idea. When I ask for
@@ -324,13 +324,13 @@ well-funded product team, from the first PR: a clear job, one primary action, re
 state drawn (empty, loading, error, success, long text, 390 px), and the taste of the house design
 language. "It works" is not done; "a person gets it in five seconds and it looks made with care" is.
 
-**One house style, a brand per app.** UI comes in two kinds, an app (every SPA, the admin panel
-included) and a website, and every one looks made by the same person: the same type scale, spacing,
-radius, motion, density, shell, page header and component choices, all from `preact-components`. An
-app varies only its brand hue, content and navigation items, and takes its whole shell from the
-library. A website varies only what `preact-components` `docs/design-language.md` lists. A screen
-that needs a pattern the language lacks adds it there first, as a library change, never as a one-app
-variant.
+**One house style, a brand per app or site.** UI comes in two kinds, an app (every SPA, the admin
+panel included) and a website, and every one looks made by the same person: the same type scale,
+spacing, radius, motion, density, shell, page header and component choices, all from
+`preact-components`. An app varies only its brand hue, content and navigation items, and takes its
+whole shell from the library. A website varies only what `preact-components`
+`docs/design-language.md` lists. A screen that needs a pattern the language lacks adds it there
+first, as a library change, never as a one-app variant.
 
 **The design phase.** New UI, a new screen or page, a redesign, or a change to what a person must
 understand or decide → the `design` skill before any code. It runs these roles in parallel, then the
