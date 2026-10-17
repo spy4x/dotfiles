@@ -46,7 +46,7 @@ In this order, each part only when it has content:
    open and why.
 2. **Needs you**: what only I can do or decide. An action of mine, a question, an issue waiting for
    a milestone or label of mine, an outside author's item, a rule found missing or wrong, and a
-   finding about a repository outside `spy4x/*`.
+   finding about a repository outside `spy4x/*` or about `financy`.
 3. **Issues**: one line with how many were filed or extended and a link that lists them, plus each
    issue set aside, with the label it had.
 4. **Decisions**: each decision of mine recorded in `ai-memory/decisions/`, with the file.
@@ -111,8 +111,8 @@ another repository goes in your report. Before the final report:
    or a consumer app does on a normal day, with normal input), the deliberate attack, or the report.
    Drop what is false or already fixed.
 2. **Give it a priority.** Every finding that survived step 1 is filed, grouped as step 4 says,
-   because a finding left in a report is lost. Only a finding about a repository outside `spy4x/*`
-   stays in the report. The priority says whether a wave builds it:
+   because a finding left in a report is lost. Only a finding about a repository outside `spy4x/*`,
+   or about frozen `financy`, stays in the report. The priority says whether a wave builds it:
    - `p3-medium`, or higher only for a security or data-loss hole:
      - a security hole that someone other than the data's owner can trigger on purpose, however
        unusual the input;
@@ -141,7 +141,8 @@ another repository goes in your report. Before the final report:
 4. **Group.** Findings that belong together go in one large issue, never one issue each: I don't
    want hundreds of small ones. An issue is one piece of work for one implementer and one review, in
    the "Issues and reports" shape; items of the same priority that touch the same files or the same
-   behaviour share it, and nothing else rides along. It takes that priority.
+   behaviour share it, and nothing else rides along. It takes that priority. Small fixes are filed
+   too, grouped by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
 **Features are mine to ask for.** Never file or build a feature, component, export, option, package
 or integration that I did not ask for, wherever the idea came from; drop the idea. When I ask for
@@ -378,7 +379,9 @@ Work and production:
 
 - `template`: SaaS starting point. It owns how a product is hosted and deployed; a new product
   starts from it.
-- `financy`: self-hosted finance tracker for a person or a family.
+- `financy`: self-hosted finance tracker for a person or a family. Frozen until `template` (Seed)
+  is finished: no work, issues, comments or PRs there, even a `p1-critical` one; a finding about it
+  goes in the report.
 - `antonshubin.com`: my freelance site.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
