@@ -158,9 +158,9 @@ blocking**, in a passing verdict as in a `needs-fix` one.
 Something you noticed in code the diff did not change is not a finding against this PR and never
 decides the verdict. List it after the evidence block under **Outside this diff**, one line each:
 what a person would notice and where (`<file>:L<line>`). Never file an issue for it yourself; the
-lead verifies, groups and files these by the "Filing issues" rule in the global `AGENTS.md`. Leave
-out what nobody would notice and what ordinary use never reaches. Mark a security or data-loss hole
-as such.
+lead verifies, groups and files these by the "Filing issues" rule in the global `AGENTS.md`. List
+small ones too, such as a contrast nit or a missing full stop. Mark a security or data-loss hole as
+such.
 
 `VERDICT: pass | needs-fix` goes in the visible body, as the last line. The lead
 must not have to expand anything to learn the outcome.

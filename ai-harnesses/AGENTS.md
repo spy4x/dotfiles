@@ -141,7 +141,8 @@ another repository goes in your report. Before the final report:
 4. **Group.** Findings that belong together go in one large issue, never one issue each: I don't
    want hundreds of small ones. An issue is one piece of work for one implementer and one review, in
    the "Issues and reports" shape; items of the same priority that touch the same files or the same
-   behaviour share it, and nothing else rides along. It takes that priority.
+   behaviour share it, and nothing else rides along. It takes that priority. Small fixes are filed
+   too, grouped by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
 **Features are mine to ask for.** Never file or build a feature, component, export, option, package
 or integration that I did not ask for, wherever the idea came from; drop the idea. When I ask for
