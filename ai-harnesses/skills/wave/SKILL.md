@@ -74,8 +74,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 ## Models and effort
 
 - Implementers start at `implementer` (`medium`): don't guess difficulty up front.
-- Every implementer lane runs on `opus` (the global `AGENTS.md`, "Implementers → `opus`"), and so
-  do its fix rounds and its reviewers.
+- Every implementer lane runs on `opus` (the global `AGENTS.md`, "Implementers and reviewers stay
+  on `opus`"), and so do its fix rounds and its reviewers.
 - Escalate once. When a PR's second `needs-fix` verdict, whatever the first was about, names a
   behaviour defect (the code does the wrong thing, not a false claim or a failing check),
   and the fix is bigger than the ones you apply yourself, send that one fix round one step up, to a
