@@ -46,7 +46,7 @@ In this order, each part only when it has content:
    open and why.
 2. **Needs you**: what only I can do or decide. An action of mine, a question, an issue waiting for
    a milestone or label of mine, an outside author's item, a rule found missing or wrong, and a
-   finding about a repository outside `spy4x/*`.
+   finding about a repository outside `spy4x/*` or about `financy`.
 3. **Issues**: one line with how many were filed or extended and a link that lists them, plus each
    issue set aside, with the label it had.
 4. **Decisions**: each decision of mine recorded in `ai-memory/decisions/`, with the file.
@@ -111,8 +111,8 @@ another repository goes in your report. Before the final report:
    or a consumer app does on a normal day, with normal input), the deliberate attack, or the report.
    Drop what is false or already fixed.
 2. **Give it a priority.** Every finding that survived step 1 is filed, grouped as step 4 says,
-   because a finding left in a report is lost. Only a finding about a repository outside `spy4x/*`
-   stays in the report. The priority says whether a wave builds it:
+   because a finding left in a report is lost. Only a finding about a repository outside `spy4x/*`,
+   or about frozen `financy`, stays in the report. The priority says whether a wave builds it:
    - `p3-medium`, or higher only for a security or data-loss hole:
      - a security hole that someone other than the data's owner can trigger on purpose, however
        unusual the input;
