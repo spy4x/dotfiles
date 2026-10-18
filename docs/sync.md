@@ -49,15 +49,16 @@ Syncthing does not copy age keys or plaintext env files out of `~/sync/code`
 user timer runs [`tools/secrets-backup.sh`](../tools/secrets-backup.sh) every night at 02:30; a
 night the machine was off is caught up at the next start. It backs up every `.age` folder and every
 plaintext env file, folder or symlink under `~/sync/code` (the names the Syncthing ignore list
-skips), leaving out
-worktrees, `node_modules`, `.volumes`, `.git` and `.stversions`. It keeps 7 daily, 4 weekly and 12
-monthly snapshots.
+skips), leaving out worktrees, `node_modules`, `.volumes`, `.git` and `.stversions`. It keeps 7
+daily, 4 weekly and 12 monthly snapshots.
 
 The restic repository is `~/sync/backups/workstation-secrets`, inside the `backups` Syncthing
-folder, so the other machines that share that folder hold an encrypted copy. The first run creates
-the password in `~/.config/restic/workstation-secrets.pass`, outside every synced folder. Save it
-in the password manager: without it, no copy of the backup can be read. A run that finds the
-repository but not the password file stops with an error instead of making a new password.
+folder, so the other machines that share that folder hold an encrypted copy. Its password is
+`BACKUPS_PASSWORD` from `~/sync/code/homelab/.env.root`, the password of every server's backups,
+read by restic at run time and never printed. Losing this machine does not lose it: the backup
+runner on each server holds it too. The other side of that: a server that receives this repository
+and holds that password can read every age key in it. A run that finds no `BACKUPS_PASSWORD` stops
+with an error.
 
 A failed run shows an error dialog that stays until you close it, with the command that shows why.
 
@@ -69,11 +70,13 @@ systemctl --user enable --now secrets-backup.timer
 systemctl --user start secrets-backup.service
 ```
 
-To restore, on any machine that holds the repository and the password:
+To restore, on any machine that holds the repository; restic asks for `BACKUPS_PASSWORD`. On a new
+machine, take it from the backup runner's `.env` on a server: the copy in homelab is inside this
+backup.
 
 ```bash
-restic -r ~/sync/backups/workstation-secrets -p <password file> snapshots
-restic -r ~/sync/backups/workstation-secrets -p <password file> restore latest --target /dev/shm/restore
+restic -r ~/sync/backups/workstation-secrets snapshots
+restic -r ~/sync/backups/workstation-secrets restore latest --target /dev/shm/restore
 ```
 
 The files come back under `/dev/shm/restore`, which is in memory, with their full original paths.

@@ -4,16 +4,15 @@
 # Syncthing does not copy these files to other machines (system/syncthing-code.stignore), so
 # without this backup a key made here exists on this disk only, and the `.env.age` it encrypts
 # could never be read again. The restic repository lives in the `backups` Syncthing folder, so the
-# other machines receive it, encrypted. The password stays on this machine, outside every synced
-# folder; keep a copy in the password manager. Runs nightly from secrets-backup.timer. Setup and
-# restore: docs/sync.md.
+# other machines receive it, encrypted. Its password is homelab's BACKUPS_PASSWORD, the one every
+# server's backups use. Runs nightly from secrets-backup.timer. Setup and restore: docs/sync.md.
 #
 #   --alert  show an error dialog that the backup failed, and back up nothing
 #            (secrets-backup-failed.service runs it when a nightly run fails)
 #
 # Environment, all optional: SECRETS_BACKUP_SOURCE (default ~/sync/code), RESTIC_REPOSITORY
-# (default ~/sync/backups/workstation-secrets), RESTIC_PASSWORD_FILE (default
-# ~/.config/restic/workstation-secrets.pass).
+# (default ~/sync/backups/workstation-secrets), SECRETS_BACKUP_ENV, the file that holds
+# BACKUPS_PASSWORD (default ~/sync/code/homelab/.env.root).
 set -Eeuo pipefail
 umask 077
 
@@ -36,18 +35,17 @@ fi
 
 SOURCE="${SECRETS_BACKUP_SOURCE:-$HOME/sync/code}"
 export RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-$HOME/sync/backups/workstation-secrets}"
-export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/restic/workstation-secrets.pass}"
+ENV_FILE="${SECRETS_BACKUP_ENV:-$HOME/sync/code/homelab/.env.root}"
 
-# The first run creates the password, never printed, and the repository. A repository without its
-# password file stops the run: a new password would not open it.
-if [ ! -s "$RESTIC_PASSWORD_FILE" ]; then
-  if [ -e "$RESTIC_REPOSITORY/config" ]; then
-    echo "secrets-backup: $RESTIC_PASSWORD_FILE is missing; restore it from the password manager" >&2
-    exit 1
-  fi
-  mkdir -p "$(dirname "$RESTIC_PASSWORD_FILE")"
-  head -c 32 /dev/urandom | base64 >"$RESTIC_PASSWORD_FILE"
+# restic runs the command to read the password, so the value is never printed, exported or written
+# anywhere else. Without it the run stops: a repository cannot be opened or made.
+if ! grep -q '^BACKUPS_PASSWORD=.' "$ENV_FILE" 2>/dev/null; then
+  echo "secrets-backup: no BACKUPS_PASSWORD in $ENV_FILE" >&2
+  exit 1
 fi
+unset RESTIC_PASSWORD RESTIC_PASSWORD_FILE
+export RESTIC_PASSWORD_COMMAND="sed -n 's/^BACKUPS_PASSWORD=//p' '$ENV_FILE'"
+
 if [ ! -e "$RESTIC_REPOSITORY/config" ]; then
   restic init --quiet
 fi
