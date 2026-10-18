@@ -153,8 +153,7 @@ existing issue; a subagent never writes it. An agent-filed feature issue without
 is built only once I put it in a milestone or, in a repo with no open milestone, say so in a comment
 of mine on it.
 
-A subagent files nothing: it lists what it noticed in its report, and its lead does the steps
-above.
+A subagent files nothing: it lists what it noticed in its report, and its lead does the steps above.
 
 Every issue you file gets a priority label, and `manual` or `needs-decision` too when it needs my
 hands or my answer. A repo without these labels → create them first, copying names, colours and
@@ -560,9 +559,10 @@ session's orphans, one per line: PID, elapsed time, CPU, command. It also lists 
 --scope` units (`run-*.scope`) older than an hour, with the unit name in place of the PID;
 `--min-age <seconds>` changes the hour. A subagent adds `--under <worktree> <scratch dir>`, reads
 the list, then reruns it with `--kill` to stop exactly those. Empty output = clean. The lead's final
-sweep adds `--all`, which shows other sessions' orphans too. One older than 24 hours is abandoned,
-whoever started it: stop it with `--stale --kill` and report what it stopped. Report a younger one,
-never kill it. The sweep misses Docker containers (own cgroup): clean those by name.
+sweep adds `--all`, which shows other sessions' orphans and unused anonymous Docker volumes and
+networks. One older than 24 hours is abandoned, whoever started it: stop it with `--stale --kill`
+and report what it stopped. Report a younger one, never kill it. It lists no containers: remove
+yours by name, with their volumes.
 
 **Killing processes.** Kill only a PID you started, or one `sweep-orphans.sh` listed first on its
 line; prefer its `--kill`. Never signal PID 1, any `systemd` process, the desktop (kwin,
