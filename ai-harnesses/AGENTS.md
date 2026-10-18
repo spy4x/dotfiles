@@ -327,9 +327,9 @@ language. "It works" is not done; "a person gets it in five seconds and it looks
 panel included) and a website, and every one looks made by the same person: the same type scale,
 spacing, radius, motion, density, shell, page header and component choices, all from
 `preact-components`. An app varies only its brand hue, content and navigation items, and takes its
-whole shell from the library. My site uses the rail's labels variant. A website varies only what
-`preact-components` `docs/design-language.md` lists. A screen that needs a pattern the language
-lacks adds it there first, as a library change, never as a one-app variant.
+whole shell from the library. antonshubin.com uses the app rail's labels variant. A website varies
+only what `preact-components` `docs/design-language.md` lists. A screen that needs a pattern the
+language lacks adds it there first, as a library change, never as a one-app variant.
 
 **The design phase.** New UI, a new screen or page, a redesign, or a change to what a person must
 understand or decide → the `design` skill before any code. It runs these roles in parallel, then the
