@@ -35,7 +35,7 @@ Deno.test(`restic is installed, so the backup tests below cannot pass by skippin
   assertEquals((await run(`restic`, [`version`], {})).code, 0)
 })
 
-Deno.test(`backs up age keys and plaintext env files, and skips ciphertext, examples and worktrees`, async () => {
+Deno.test(`backs up age keys and env files, folders and symlinks, and skips ciphertext, examples and worktrees`, async () => {
   await withTree(async (root) => {
     const code = join(root, `code`)
     const kept = [
@@ -44,6 +44,8 @@ Deno.test(`backs up age keys and plaintext env files, and skips ciphertext, exam
       `homelab/.env.accounts`,
       `rostok/servers/cloud/configs/mig.env`,
       `rostok/servers/cloud/configs/mig.env.bak-20260826`,
+      `app/.env.d/secret`,
+      `app/symlink/.env`,
     ]
     const skipped = [
       `homelab/.env.age`,
@@ -55,7 +57,11 @@ Deno.test(`backs up age keys and plaintext env files, and skips ciphertext, exam
       `app/node_modules/pkg/.env`,
       `app/.git/.env`,
     ]
-    for (const rel of [...kept, ...skipped]) await write(join(code, rel))
+    for (const rel of [...kept, ...skipped]) {
+      if (rel !== `app/symlink/.env`) await write(join(code, rel))
+    }
+    await Deno.mkdir(join(code, `app`, `symlink`))
+    await Deno.symlink(`real-target`, join(code, `app`, `symlink`, `.env`))
 
     const env = envOf(root)
     const backup = await run(`bash`, [SCRIPT], env)
@@ -80,5 +86,14 @@ Deno.test(`refuses to run when the repository exists but its password file is go
     await Deno.remove(env.RESTIC_PASSWORD_FILE)
     assertEquals((await run(`bash`, [SCRIPT], env)).code, 1)
     assertEquals(await Deno.stat(env.RESTIC_PASSWORD_FILE).catch(() => null), null)
+  })
+})
+
+Deno.test(`refuses an unknown argument instead of backing up`, async () => {
+  await withTree(async (root) => {
+    await write(join(root, `code`, `homelab`, `.env`))
+    const env = envOf(root)
+    assertEquals((await run(`bash`, [SCRIPT, `--alret`], env)).code, 2)
+    assertEquals(await Deno.stat(env.RESTIC_REPOSITORY).catch(() => null), null)
   })
 })

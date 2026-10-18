@@ -48,7 +48,8 @@ Syncthing does not copy age keys or plaintext env files out of `~/sync/code`
 ([host limits](host-limits.md)), so a key made on this machine exists on its disk only. A systemd
 user timer runs [`tools/secrets-backup.sh`](../tools/secrets-backup.sh) every night at 02:30; a
 night the machine was off is caught up at the next start. It backs up every `.age` folder and every
-plaintext env file under `~/sync/code` (the names the Syncthing ignore list skips), leaving out
+plaintext env file, folder or symlink under `~/sync/code` (the names the Syncthing ignore list
+skips), leaving out
 worktrees, `node_modules`, `.volumes`, `.git` and `.stversions`. It keeps 7 daily, 4 weekly and 12
 monthly snapshots.
 
@@ -58,8 +59,11 @@ the password in `~/.config/restic/workstation-secrets.pass`, outside every synce
 in the password manager: without it, no copy of the backup can be read. A run that finds the
 repository but not the password file stops with an error instead of making a new password.
 
+A failed run shows an error dialog that stays until you close it, with the command that shows why.
+
 ```bash
 systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/secrets-backup.service
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/secrets-backup-failed.service
 systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/secrets-backup.timer
 systemctl --user enable --now secrets-backup.timer
 systemctl --user start secrets-backup.service
@@ -69,8 +73,12 @@ To restore, on any machine that holds the repository and the password:
 
 ```bash
 restic -r ~/sync/backups/workstation-secrets -p <password file> snapshots
-restic -r ~/sync/backups/workstation-secrets -p <password file> restore latest --target /tmp/restore
+restic -r ~/sync/backups/workstation-secrets -p <password file> restore latest --target /dev/shm/restore
 ```
 
-The files come back under `/tmp/restore` with their full original paths. Copy the ones you need
-into place and delete the rest.
+The files come back under `/dev/shm/restore`, which is in memory, with their full original paths.
+Copy the ones you need into place, then delete the plaintext copies:
+
+```bash
+rm -rf /dev/shm/restore
+```
