@@ -303,7 +303,7 @@ export's exact signature, open the JSR docs of the package in its import specifi
   stays in the app.
 
 **Library first, never "move it later".** Reusable code is born in the library. Never write a local
-version in a consumer repo (template, financy, mig and the rest) and file an issue to move it later:
+version in a consumer repo (seed, financy, mig and the rest) and file an issue to move it later:
 that step is how copies pile up. Make the library change first, in the library's own worktree, by
 you or a subagent. Review, merge and release it there, then import the released version in the
 consumer. A consumer change that needs a library change waits for that release; it never ships a
@@ -378,10 +378,10 @@ Shared libraries, imported by the TypeScript projects below:
 
 Work and production:
 
-- `template`: SaaS starting point. It owns how a product is hosted and deployed; a new product
+- `seed`: Seed, the SaaS starting point. It owns how a product is hosted and deployed; a new product
   starts from it.
-- `financy`: self-hosted finance tracker for a person or a family. Frozen until `template` (Seed)
-  is finished: no work, issues, comments or PRs there, even a `p1-critical` one; a finding about it
+- `financy`: self-hosted finance tracker for a person or a family. Frozen until `seed` (Seed) is
+  finished: no work, issues, comments or PRs there, even a `p1-critical` one; a finding about it
   goes in the report.
 - `antonshubin.com`: my freelance site.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
@@ -390,7 +390,7 @@ Work and production:
 Homelab, for self-hosted services, never for hosting work or production projects:
 
 - `rostok`: CLI that scaffolds a homelab from a catalog of stacks (`stacks/`). Code that both it and
-  `template` need lives in `ts-libs`, never copied between the two.
+  `seed` need lives in `ts-libs`, never copied between the two.
 - `homelab`: my real rostok project: which stacks run on which server, with their encrypted
   settings.
 
