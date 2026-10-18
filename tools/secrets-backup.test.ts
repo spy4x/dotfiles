@@ -18,11 +18,17 @@ async function write(path: string): Promise<void> {
   await Deno.writeTextFile(path, `x\n`)
 }
 
-function envOf(root: string): Record<string, string> {
+const PASSWORD = `test-password`
+
+/** The script's environment, with an env file that holds BACKUPS_PASSWORD. */
+async function envOf(root: string): Promise<Record<string, string>> {
+  const envFile = join(root, `homelab`, `.env.root`)
+  await Deno.mkdir(dirname(envFile), { recursive: true })
+  await Deno.writeTextFile(envFile, `OTHER=x\nBACKUPS_PASSWORD=${PASSWORD}\n`)
   return {
     SECRETS_BACKUP_SOURCE: join(root, `code`),
+    SECRETS_BACKUP_ENV: envFile,
     RESTIC_REPOSITORY: join(root, `repo`),
-    RESTIC_PASSWORD_FILE: join(root, `config`, `pass`),
   }
 }
 
@@ -63,36 +69,33 @@ Deno.test(`backs up age keys and env files, folders and symlinks, and skips ciph
     await Deno.mkdir(join(code, `app`, `symlink`))
     await Deno.symlink(`real-target`, join(code, `app`, `symlink`, `.env`))
 
-    const env = envOf(root)
+    const env = await envOf(root)
     const backup = await run(`bash`, [SCRIPT], env)
     assertEquals(backup.code, 0, `the backup failed`)
 
-    const listed = (await run(`restic`, [`ls`, `latest`], env)).stdout.split(`\n`)
+    const opened = { ...env, RESTIC_PASSWORD: PASSWORD }
+    const listed = (await run(`restic`, [`ls`, `latest`], opened)).stdout.split(`\n`)
     for (const rel of kept) assert(listed.includes(join(code, rel)), `${rel} is not in the backup`)
     for (const rel of skipped) {
       assert(!listed.includes(join(code, rel)), `${rel} is in the backup`)
     }
-    const mode = (await Deno.stat(env.RESTIC_PASSWORD_FILE)).mode! & 0o777
-    assertEquals(mode, 0o600)
   })
 })
 
-Deno.test(`refuses to run when the repository exists but its password file is gone`, async () => {
+Deno.test(`refuses to run, and makes no repository, without BACKUPS_PASSWORD`, async () => {
   await withTree(async (root) => {
     await write(join(root, `code`, `homelab`, `.env`))
-    const env = envOf(root)
-    assertEquals((await run(`bash`, [SCRIPT], env)).code, 0)
-
-    await Deno.remove(env.RESTIC_PASSWORD_FILE)
+    const env = await envOf(root)
+    await Deno.writeTextFile(env.SECRETS_BACKUP_ENV, `OTHER=x\nBACKUPS_PASSWORD=\n`)
     assertEquals((await run(`bash`, [SCRIPT], env)).code, 1)
-    assertEquals(await Deno.stat(env.RESTIC_PASSWORD_FILE).catch(() => null), null)
+    assertEquals(await Deno.stat(env.RESTIC_REPOSITORY).catch(() => null), null)
   })
 })
 
 Deno.test(`refuses an unknown argument instead of backing up`, async () => {
   await withTree(async (root) => {
     await write(join(root, `code`, `homelab`, `.env`))
-    const env = envOf(root)
+    const env = await envOf(root)
     assertEquals((await run(`bash`, [SCRIPT, `--alret`], env)).code, 2)
     assertEquals(await Deno.stat(env.RESTIC_REPOSITORY).catch(() => null), null)
   })
