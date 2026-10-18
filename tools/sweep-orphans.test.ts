@@ -6,6 +6,82 @@ const ME = `sweep-test-me`
 const SIBLING = `sweep-test-sibling`
 
 /**
+ * A fake `docker` first on PATH for every sweep this file runs, so `--all` and `--stale --kill`
+ * never reach the machine's real volumes. It answers from the files in FAKE_DOCKER_DIR (`volumes`
+ * and `networks` hold `NAME CREATED` lines, `used` the networks a container joins) and logs each
+ * call to `calls`. It never calls the real `docker`, and exits non-zero when it finds itself nested.
+ */
+const FAKE_DOCKER = await Deno.realPath(await Deno.makeTempDir({ prefix: `sweep-docker-` }))
+await Deno.mkdir(join(FAKE_DOCKER, `bin`))
+await Deno.writeTextFile(
+  join(FAKE_DOCKER, `bin`, `docker`),
+  `#!/bin/sh
+[ -z "$FAKE_DOCKER_DEPTH" ] || exit 99
+export FAKE_DOCKER_DEPTH=1
+d=$FAKE_DOCKER_DIR
+echo "$*" >>"$d/calls"
+case "$1 $2" in
+  "volume ls") cut -d' ' -f1 "$d/volumes" ;;
+  "network ls") cut -d' ' -f1 "$d/networks" ;;
+  "volume inspect" | "network inspect")
+    f=$d/$1s
+    shift 4
+    for n; do grep "^$n " "$f" || exit 1; done
+    ;;
+  "ps -aq") [ -s "$d/used" ] && echo container-1 ;;
+  "inspect --format") cat "$d/used" ;;
+  "volume rm" | "network rm")
+    shift 2
+    for n; do echo "$n"; done
+    ;;
+  *) exit 1 ;;
+esac
+exit 0
+`,
+  { mode: 0o755 },
+)
+Deno.env.set(`PATH`, `${join(FAKE_DOCKER, `bin`)}:${Deno.env.get(`PATH`)}`)
+const NO_DOCKER = join(FAKE_DOCKER, `none`)
+await Deno.mkdir(NO_DOCKER)
+for (const file of [`volumes`, `networks`, `used`, `calls`]) {
+  await Deno.writeTextFile(join(NO_DOCKER, file), ``)
+}
+Deno.env.set(`FAKE_DOCKER_DIR`, NO_DOCKER)
+globalThis.addEventListener(`unload`, () => Deno.removeSync(FAKE_DOCKER, { recursive: true }))
+
+/** Gives the fake `docker` a fresh state for `body`: these volumes, networks and used networks. */
+async function withDocker(
+  state: { volumes?: string[]; networks?: string[]; used?: string[] },
+  body: (calls: () => Promise<string[]>) => Promise<void>,
+): Promise<void> {
+  const dir = await Deno.makeTempDir({ dir: FAKE_DOCKER })
+  for (const file of [`volumes`, `networks`, `used`] as const) {
+    await Deno.writeTextFile(join(dir, file), (state[file] ?? []).map((l) => `${l}\n`).join(``))
+  }
+  await Deno.writeTextFile(join(dir, `calls`), ``)
+  Deno.env.set(`FAKE_DOCKER_DIR`, dir)
+  try {
+    await body(async () =>
+      (await Deno.readTextFile(join(dir, `calls`))).split(`\n`).filter(Boolean)
+    )
+  } finally {
+    Deno.env.set(`FAKE_DOCKER_DIR`, NO_DOCKER)
+    await Deno.remove(dir, { recursive: true })
+  }
+}
+
+/** Runs the sweep as session `ME` and returns its stdout lines and exit code. */
+async function sweepLines(...args: string[]): Promise<{ lines: string[]; code: number }> {
+  const { code, stdout } = await new Deno.Command(`bash`, {
+    args: [SCRIPT, ...args],
+    env: { CLAUDE_CODE_SESSION_ID: ME },
+    stdout: `piped`,
+    stderr: `null`,
+  }).output()
+  return { lines: new TextDecoder().decode(stdout).split(`\n`).filter(Boolean), code }
+}
+
+/**
  * Starts a `sleep` that is orphaned the way a leaked agent process is: its parent exits, so it is
  * reparented to the user manager, and it stays in this test's cgroup. It runs in `cwd`, tagged
  * with `session` as its CLAUDE_CODE_SESSION_ID, and ends by itself after two minutes.
@@ -455,4 +531,71 @@ Deno.test({
       assertEquals(code, 0)
       assertEquals(new TextDecoder().decode(stdout), ``)
     }),
+})
+
+const OLD = `2020-01-01T00:00:00+00:00`
+const OLD_UNIX = 1577836800
+/** An ISO date `seconds` ago, as `docker volume inspect` prints it. */
+const ago = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOString()
+
+Deno.test(`--all lists the Docker volumes and networks no container uses`, async () => {
+  const hour = Math.floor(Date.now() / 1000) - 7200
+  await withDocker({
+    volumes: [`old-vol ${OLD}`, `new-vol ${ago(60)}`],
+    networks: [`old-net ${OLD_UNIX}`, `joined-net ${OLD_UNIX}`, `new-net ${hour + 7140}`],
+    used: [`joined-net bridge`],
+  }, async () => {
+    const { lines, code } = await sweepLines(`--all`)
+    assertEquals(code, 0)
+    const docker = lines.filter((l) => l.startsWith(`docker-`))
+    assertEquals(docker.map((l) => l.split(` `)[0]), [
+      `docker-volume/old-vol`,
+      `docker-network/old-net`,
+    ])
+    for (const line of docker) {
+      assert(/^docker-(volume|network)\/\S+ [\d:-]+ 0\.0 docker \w+$/.test(line), line)
+    }
+  })
+})
+
+Deno.test(`lists no Docker leftovers without --all`, async () => {
+  await withDocker(
+    { volumes: [`old-vol ${OLD}`], networks: [`old-net ${OLD_UNIX}`] },
+    async (calls) => {
+      const { lines } = await sweepLines()
+      assert(!lines.some((l) => l.startsWith(`docker-`)), lines.join(`\n`))
+      assertEquals(await calls(), [])
+    },
+  )
+})
+
+Deno.test(`fails loudly when Docker cannot list its volumes`, async () => {
+  // `ghost` is listed but has no line `docker volume inspect` can find, so the fake fails.
+  await withDocker({ volumes: [`old-vol ${OLD}`, `ghost`] }, async () => {
+    const { code } = await sweepLines(`--all`)
+    assertEquals(code, 1)
+  })
+})
+
+Deno.test(`--stale --kill removes only the Docker leftovers a day old`, async () => {
+  await withOrphans(async (dir) => {
+    await withDocker({
+      volumes: [`old-vol ${OLD}`, `hour-vol ${ago(7200)}`],
+      networks: [`old-net ${OLD_UNIX}`, `hour-net ${Math.floor(Date.now() / 1000) - 7200}`],
+    }, async (calls) => {
+      // --under an empty directory keeps every real orphan and scope of the machine out of reach,
+      // and --min-age 0 must not lower the day Docker leftovers need.
+      const { code } = await sweepLines(
+        `--stale`,
+        `--kill`,
+        `--min-age`,
+        `0`,
+        `--under`,
+        await dir(`empty`),
+      )
+      assertEquals(code, 0)
+      const removed = (await calls()).filter((c) => / rm /.test(` ${c} `))
+      assertEquals(removed, [`volume rm old-vol`, `network rm old-net`])
+    })
+  })
 })
