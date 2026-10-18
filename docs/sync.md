@@ -70,7 +70,9 @@ systemctl --user enable --now secrets-backup.timer
 systemctl --user start secrets-backup.service
 ```
 
-To restore, on any machine that holds the repository; restic asks for `BACKUPS_PASSWORD`:
+To restore, on any machine that holds the repository; restic asks for `BACKUPS_PASSWORD`. On a new
+machine, take it from the backup runner's `.env` on a server: the copy in homelab is inside this
+backup.
 
 ```bash
 restic -r ~/sync/backups/workstation-secrets snapshots
