@@ -26,8 +26,8 @@ Judge and design for:
   long text, no permission, offline.
 - **Interaction.** Fewest steps, safe defaults, undo over confirm where possible, confirm
   destructive actions, focus moves where the eye goes.
-- **Accessibility.** Labels, contrast in light and dark, keyboard paths, focus visibility, target
-  sizes, reduced motion.
+- **Accessibility.** Labels, contrast in every theme the app has, keyboard paths, focus visibility,
+  target sizes, reduced motion.
 - **Coherence.** Reuse the house components and patterns. A need the language does not cover is a
   proposal to add it to the library, never a one-off.
 

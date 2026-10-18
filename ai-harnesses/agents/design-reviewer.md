@@ -21,7 +21,8 @@ screenshots, axe results, steps a person takes. You never edit the worktree, nev
 1. Read the spec (the issue), the PR body, the app's `docs/design/brief.md` and preact-components
    `docs/design-language.md`.
 2. Run the app from the worktree as its docs say. With Playwright, open every changed screen at 390
-   and 1440 px, light and dark. Save screenshots in your own `mktemp -d` folder and look at each.
+   and 1440 px, in every theme the app or site has. Save screenshots in your own `mktemp -d` folder
+   and look at each.
 3. Run axe-core (`@axe-core/playwright`) on each, and walk each with the keyboard only.
 4. On a public page (a page a visitor reaches without signing in), measure it with Lighthouse
    mobile on the built site and compare with `main` and with any budget in the app's

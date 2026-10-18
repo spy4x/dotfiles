@@ -17,8 +17,8 @@ builds the right thing on the first try.
   app is for, its job, its voice, its brand hue, and three reference products whose quality bar it
   aims at), and preact-components `docs/design-language.md`, the house style every app shares.
 - Capture what exists: run the app and screenshot the affected screens with Playwright at 390 and
-  1440 px, light and dark. A screen that does not exist yet is reviewed as its nearest neighbour
-  plus the plan. Close the browser and server in a `finally`.
+  1440 px, in every theme the app has. A screen that does not exist yet is reviewed as its nearest
+  neighbour plus the plan. Close the browser and server in a `finally`.
 - Write one shared brief for the roles: the job of the screen (what a person must understand, then
   do), the audience, the constraints (house style, content rule: no invented claim, number or
   quote), the screenshots, and the reference products.
@@ -44,7 +44,7 @@ what a person notices. A role with nothing important to add says so in one line.
 ## 4. Build, look, revise
 
 The implementer builds from the spec, then screenshots every changed screen at 390 and 1440 px,
-light and dark, and critiques them against the spec and the house style: alignment, rhythm,
+in every theme, and critiques them against the spec and the house style: alignment, rhythm,
 hierarchy, contrast, truncation, focus order, what a first-time user sees first. Revise and look
 again, at least twice, before opening the PR. The PR traces each adopted recommendation to its role
 (designer 3, writer 1, …) and attaches the final screenshots.
