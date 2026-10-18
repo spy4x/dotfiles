@@ -7,9 +7,9 @@ const SIBLING = `sweep-test-sibling`
 
 /**
  * A fake `docker` first on PATH for every sweep this file runs, so `--all` and `--stale --kill`
- * never reach the machine's real volumes. It answers from the files in FAKE_DOCKER_DIR (`volumes`
- * and `networks` hold `NAME CREATED` lines, `used` the networks a container joins) and logs each
- * call to `calls`. It never calls the real `docker`, and exits non-zero when it finds itself nested.
+ * never reach the machine's real volumes. It answers from the files in FAKE_DOCKER_DIR and logs
+ * each call to `calls`: `volumes` (dangling) and `in-use` volumes and `networks` hold `NAME CREATED`
+ * lines, `named` the volumes that are not anonymous, `used` the networks a container joins. It never calls the real `docker`, and exits non-zero when it finds itself nested.
  */
 const FAKE_DOCKER = await Deno.realPath(await Deno.makeTempDir({ prefix: `sweep-docker-` }))
 await Deno.mkdir(join(FAKE_DOCKER, `bin`))
@@ -21,12 +21,23 @@ export FAKE_DOCKER_DEPTH=1
 d=$FAKE_DOCKER_DIR
 echo "$*" >>"$d/calls"
 case "$1 $2" in
-  "volume ls") cut -d' ' -f1 "$d/volumes" ;;
+  "volume ls")
+    {
+      cut -d' ' -f1 "$d/volumes"
+      case " $* " in *" dangling=true "*) ;; *) cut -d' ' -f1 "$d/in-use" ;; esac
+    } | case " $* " in
+      *" label=com.docker.volume.anonymous "*) grep -vxF -f "$d/named" ;;
+      *) cat ;;
+    esac
+    ;;
   "network ls") cut -d' ' -f1 "$d/networks" ;;
-  "volume inspect" | "network inspect")
-    f=$d/$1s
+  "volume inspect")
     shift 4
-    for n; do grep "^$n " "$f" || exit 1; done
+    for n; do grep -h "^$n " "$d/volumes" "$d/in-use" || exit 1; done
+    ;;
+  "network inspect")
+    shift 4
+    for n; do grep "^$n " "$d/networks" || exit 1; done
     ;;
   "ps -aq") [ -s "$d/used" ] && echo container-1 ;;
   "inspect --format") cat "$d/used" ;;
@@ -43,7 +54,7 @@ exit 0
 Deno.env.set(`PATH`, `${join(FAKE_DOCKER, `bin`)}:${Deno.env.get(`PATH`)}`)
 const NO_DOCKER = join(FAKE_DOCKER, `none`)
 await Deno.mkdir(NO_DOCKER)
-for (const file of [`volumes`, `networks`, `used`, `calls`]) {
+for (const file of [`volumes`, `in-use`, `named`, `networks`, `used`, `calls`]) {
   await Deno.writeTextFile(join(NO_DOCKER, file), ``)
 }
 Deno.env.set(`FAKE_DOCKER_DIR`, NO_DOCKER)
@@ -51,12 +62,21 @@ globalThis.addEventListener(`unload`, () => Deno.removeSync(FAKE_DOCKER, { recur
 
 /** Gives the fake `docker` a fresh state for `body`: these volumes, networks and used networks. */
 async function withDocker(
-  state: { volumes?: string[]; networks?: string[]; used?: string[] },
+  state: {
+    volumes?: string[]
+    inUse?: string[]
+    named?: string[]
+    networks?: string[]
+    used?: string[]
+  },
   body: (calls: () => Promise<string[]>) => Promise<void>,
 ): Promise<void> {
   const dir = await Deno.makeTempDir({ dir: FAKE_DOCKER })
-  for (const file of [`volumes`, `networks`, `used`] as const) {
-    await Deno.writeTextFile(join(dir, file), (state[file] ?? []).map((l) => `${l}\n`).join(``))
+  const files = { volumes: state.volumes, "in-use": state.inUse, named: state.named }
+  for (
+    const [file, lines] of Object.entries({ ...files, networks: state.networks, used: state.used })
+  ) {
+    await Deno.writeTextFile(join(dir, file), (lines ?? []).map((l) => `${l}\n`).join(``))
   }
   await Deno.writeTextFile(join(dir, `calls`), ``)
   Deno.env.set(`FAKE_DOCKER_DIR`, dir)
@@ -577,14 +597,17 @@ Deno.test(`fails loudly when Docker cannot list its volumes`, async () => {
   })
 })
 
-Deno.test(`--stale --kill removes only the Docker leftovers a day old`, async () => {
+Deno.test(`--stale --kill removes only unused anonymous Docker leftovers a day old`, async () => {
   await withOrphans(async (dir) => {
     await withDocker({
-      volumes: [`old-vol ${OLD}`, `hour-vol ${ago(7200)}`],
+      volumes: [`old-vol ${OLD}`, `hour-vol ${ago(7200)}`, `pgdata ${OLD}`],
+      inUse: [`busy-vol ${OLD}`],
+      named: [`pgdata`],
       networks: [`old-net ${OLD_UNIX}`, `hour-net ${Math.floor(Date.now() / 1000) - 7200}`],
     }, async (calls) => {
       // --under an empty directory keeps every real orphan and scope of the machine out of reach,
-      // and --min-age 0 must not lower the day Docker leftovers need.
+      // and --min-age 0 must not lower the day Docker leftovers need. `pgdata` is named, as a volume
+      // `docker compose down` keeps, and `busy-vol` belongs to a container: both stay.
       const { code } = await sweepLines(
         `--stale`,
         `--kill`,

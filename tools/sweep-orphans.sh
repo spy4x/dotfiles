@@ -29,8 +29,8 @@
 # A test container that died before its cleanup leaves its Docker volumes and
 # networks behind, and they fill the disk. They belong to no
 # session, so only `--all` (and `--stale`) lists them, and `--under` does not
-# narrow them: each volume no container uses and each custom network no
-# container joins, older than `--min-age`, as `docker-volume/NAME ELAPSED 0.0
+# narrow them: each anonymous volume no container uses and each custom network
+# no container joins, older than `--min-age`, as `docker-volume/NAME ELAPSED 0.0
 # docker volume` (or `docker-network/...`). `--kill` removes only those a day
 # old, whatever `--min-age` says, so it never takes a running test's volume.
 # Without a `docker` command this part is skipped.
@@ -257,7 +257,9 @@ if ((ALL)) && command -v docker >/dev/null 2>&1; then
   NOW=$(date +%s)
   AGE=$((10#$MIN_AGE))
   ((!KILL || AGE >= 86400)) || AGE=86400
-  vols=$(docker volume ls -q --filter dangling=true) || docker_failed
+  # Only anonymous volumes: `docker compose down` keeps a named one on purpose, for the next `up`.
+  vols=$(docker volume ls -q --filter dangling=true --filter label=com.docker.volume.anonymous) ||
+    docker_failed
   vols=$(xargs -r docker volume inspect --format '{{.Name}} {{.CreatedAt}}' <<<"$vols") ||
     docker_failed
   nets=$(docker network ls --filter type=custom --format '{{.Name}}') || docker_failed
