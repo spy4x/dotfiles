@@ -34,7 +34,8 @@ async function envOf(root: string): Promise<Record<string, string>> {
 
 async function run(cmd: string, args: string[], env: Record<string, string>) {
   const out = await new Deno.Command(cmd, { args, env, stdout: `piped`, stderr: `piped` }).output()
-  return { code: out.code, stdout: new TextDecoder().decode(out.stdout) }
+  const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes)
+  return { code: out.code, stdout: decode(out.stdout), stderr: decode(out.stderr) }
 }
 
 Deno.test(`restic is installed, so the backup tests below cannot pass by skipping`, async () => {
@@ -87,7 +88,9 @@ Deno.test(`refuses to run, and makes no repository, without BACKUPS_PASSWORD`, a
     await write(join(root, `code`, `homelab`, `.env`))
     const env = await envOf(root)
     await Deno.writeTextFile(env.SECRETS_BACKUP_ENV, `OTHER=x\nBACKUPS_PASSWORD=\n`)
-    assertEquals((await run(`bash`, [SCRIPT], env)).code, 1)
+    const result = await run(`bash`, [SCRIPT], env)
+    assertEquals(result.code, 1)
+    assert(result.stderr.includes(`no BACKUPS_PASSWORD`), result.stderr)
     assertEquals(await Deno.stat(env.RESTIC_REPOSITORY).catch(() => null), null)
   })
 })
