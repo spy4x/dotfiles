@@ -206,7 +206,7 @@ protecting a new repo's default branch, and a CI step for a check your task adds
   `dotfiles/ai-harnesses/`. `deno task ai` copies this file byte-for-byte to OpenCode, DSH and
   Claude Code (`~/.claude/CLAUDE.md`), and renders every skill, agent, command and DSH preset there
   into each harness's format (`~/.config/opencode`, `$DSH_HOME`); `--check` reports drift. Edit the
-  source, never a copy: the next `deno task ai` overwrites a hand edit.
+  source, never a copy: the next `deno task ai` overwrites a hand edit to what it copies or renders.
 - **One place per rule.** A rule that holds in every repo lives here. A repo's `AGENTS.md` holds
   what is true of that repo only: its facts, and rules stricter than these; a rule it shares with
   this file is deleted there. A skill or an agent holds the steps of its own job and names the
@@ -589,7 +589,7 @@ watches.
 
 Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR always exists,
 `[WIP]` in the title until done; `gh pr create --fill` right after push, never ask. Claim an issue
-before work on it, so no two agents build it at once: push an empty commit, open the PR with
+before working on it, so no two agents build it at once: push an empty commit, open the PR with
 `Closes #<n>`, and comment on the issue `Working on it in <PR link>. My session id is <id>.`
 (`$CLAUDE_CODE_HOST_SESSION_ID`, else `$CLAUDE_CODE_SESSION_ID`; a wave's lead posts its own). A
 claimed issue with an open PR is taken; to work next to it, message that session (`SendMessage`).
