@@ -236,9 +236,9 @@ Shared: Traefik, VictoriaMetrics, Woodpecker CI, Watchtower, Syncthing, NTFY, Ga
 Cost-aware: fixed price per month (Hetzner BM/VM) or usage-based with hard or prepaid caps (DeepSeek
 API). No wallet-attack risk like serverless functions.
 
-Go services (zond, oko): `gofmt`-clean, standard library first, errors wrapped with `%w`, `log/slog`
-for logs, no package globals or `init()` side effects (wire config through `main()`), and a
-distroless nonroot image.
+Rust or Go may speed up one CPU-heavy part (image processing, parsing). Go services (zond, oko):
+`gofmt`-clean, standard library first, errors wrapped with `%w`, `log/slog` for logs, no package
+globals or `init()` side effects (wire config through `main()`), and a distroless nonroot image.
 
 **Runtime-agnostic code.** Deno gets fixes only until about October 2027, so new code, and the old
 functions you change anyway, must run unchanged on Deno, Node and Bun. Use web standards (`fetch`,
