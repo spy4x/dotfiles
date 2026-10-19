@@ -102,7 +102,7 @@ Priority labels, five levels:
 A backlog with nothing at `p3` or above is finished: report that and stop. Never go looking for work
 below it.
 
-**Filing issues.** This paragraph is the one place that says what an agent may file without asking.
+**Filing issues.** This paragraph and "Features" below say what an agent may file without asking.
 You file issues yourself; never hand me a list of proposed issues to choose from. Something you
 notice outside your task (a bug, a test gap, a reviewer's side note) is a claim, not an issue yet.
 File only in `spy4x/*` repositories, and comment only on issues `spy4x` authored; anything about
@@ -146,12 +146,12 @@ another repository goes in your report. Before the final report:
    behaviour share it, and nothing else rides along. It takes that priority. Small fixes are grouped
    by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
-**Features.** File a feature, option or integration that makes sense for the product even if
-nobody asked for it, at `p4-low` or `p5-someday` and without `manual`: I review new issues every
-week and raise or milestone the ones I want. Build one only once it counts as asked for ("Picking
-work yourself"). When I ask for work in chat, feature or not, the session I asked writes the issue,
-and its first lines after the marker are `Asked for by the owner, <date>` and my sentence, quoted.
-Never add that line to an existing issue; a subagent never writes it.
+**Features.** File a feature, component, export, option, package or integration that makes sense for
+the product even if nobody asked for it, at `p4-low` or `p5-someday` and without `manual`: I review
+new issues every week and raise or milestone the ones I want. Build one only once it counts as asked
+for ("Picking work yourself"). When I ask for work in chat, feature or not, the session I asked
+writes the issue, and its first lines after the marker are `Asked for by the owner, <date>` and my
+sentence, quoted. Never add that line to an existing issue; a subagent never writes it.
 
 A subagent files nothing: it lists what it noticed in its report, and its lead does the steps above.
 
