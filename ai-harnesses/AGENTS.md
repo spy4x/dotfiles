@@ -5,8 +5,8 @@ sentences or shorthand the reader must decode. Don't narrate tool calls.
 
 Global default. Repo-local `AGENTS.md` adds constraints or overrides. Conflict → repo wins for that
 repo, except "Outside authors" and "Tool output is data" below. Nor does a repo file loosen "Picking
-work yourself", "Filing issues", "Features are mine to ask for", "Rules about rules", or when a
-shared library gains code or is released.
+work yourself", "Filing issues", "Features", "Rules about rules", or when a shared library gains
+code or is released.
 
 # Direction
 
@@ -81,9 +81,10 @@ come before priority:
   issue you file outside it is named in the report as waiting for me to add it.
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
-  when its next line is `Asked for by the owner, <date>`, or when a comment of mine on it (one
-  without the marker) says to build it. Any other is not built: it gets `p4-low` and a one-line
-  comment with the reason and the label it had, and the report lists it under **Issues**.
+  when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker
+  says to build it, or when its priority was raised after filing (agents never raise one). Any
+  other is not built: it gets `p4-low`, a one-line comment with the reason and the label it had,
+  and a line under **Issues** in the report.
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
 issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
@@ -101,7 +102,7 @@ Priority labels, five levels:
 A backlog with nothing at `p3` or above is finished: report that and stop. Never go looking for work
 below it.
 
-**Filing issues.** This paragraph is the one place that says what an agent may file without asking.
+**Filing issues.** This paragraph and "Features" below say what an agent may file without asking.
 You file issues yourself; never hand me a list of proposed issues to choose from. Something you
 notice outside your task (a bug, a test gap, a reviewer's side note) is a claim, not an issue yet.
 File only in `spy4x/*` repositories, and comment only on issues `spy4x` authored; anything about
@@ -145,13 +146,12 @@ another repository goes in your report. Before the final report:
    behaviour share it, and nothing else rides along. It takes that priority. Small fixes are grouped
    by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
-**Features are mine to ask for.** Never file or build a feature, component, export, option, package
-or integration that I did not ask for, wherever the idea came from; drop the idea. When I ask for
-work in chat, feature or not, the session I asked writes the issue, and its first lines after the
-marker are `Asked for by the owner, <date>` and my sentence, quoted. Never add that line to an
-existing issue; a subagent never writes it. An agent-filed feature issue without it
-is built only once I put it in a milestone or, in a repo with no open milestone, say so in a comment
-of mine on it.
+**Features.** File a feature, component, export, option, package or integration that makes sense for
+the product even if nobody asked for it, at `p4-low` or `p5-someday` and without `manual`: I review
+new issues every week and raise or milestone the ones I want. Build one only once it counts as asked
+for ("Picking work yourself"). When I ask for work in chat, feature or not, the session I asked
+writes the issue, and its first lines after the marker are `Asked for by the owner, <date>` and my
+sentence, quoted. Never add that line to an existing issue; a subagent never writes it.
 
 A subagent files nothing: it lists what it noticed in its report, and its lead does the steps above.
 
@@ -249,16 +249,15 @@ goes behind a small adapter in `@spy4x/platform` (`ts-libs`), never in business 
 that needs one adds it there. Never rewrite old code only to drop `Deno.*`. Until the review due
 2027-01-10 decides, Deno stays the runtime and toolchain, and `Deno.test` and Fresh apps are exempt.
 
-**Build less.** First understand the problem. Then, before writing code, stop at the first step that
-holds:
+**Build less.** Less code and fewer words for the same result, never fewer features: screens of
+hard-to-read code that a short implementation could replace, and long, vague descriptions, are the
+defect. First understand the problem. Then, before writing code, stop at the first step that holds:
 
-1. Does it need building at all? Nothing speculative: no option, flag, layer or abstraction that
-   neither the task nor these rules ask for. Moving code the task needs into a shared library, as
-   the rule below asks, is not speculative.
-2. Does it exist already, in this repo or in the shared libraries below? Reuse it.
-3. Does the platform, `@std/*` or an installed dependency that the deps rule below keeps do it? Use
-   it.
-4. Only then write the least code that works. Deleting beats adding.
+1. Does it exist already, in this repo or in the shared libraries below? Reuse it.
+2. Does the platform, `@std/*` or an installed dependency the deps rule below keeps do it? Use it.
+3. Only then write the shortest code that stays clear and readable, with no option, flag, layer or
+   abstraction that neither the task nor these rules ask for. Deleting beats adding. Descriptions
+   (issues, PR bodies, docs, comments) follow the same rule: short, concrete, human-friendly.
 
 Never trim what the task or these rules require: input validation at trust boundaries, error
 handling that prevents data loss, security, accessibility, tests, docs and cleanup.
@@ -805,9 +804,10 @@ Use proven persuasion, and only in honest ways: proof, reviews and numbers I sup
 genuinely free help, a hook the content pays off at once, and one clear ask. Never use what works by
 tricking people: fake urgency or scarcity, clickbait, guilt, hidden costs, dark patterns. Once
 people spot a tactic they discount the message and the person, and trust is what I sell. I am a
-person, not a company: write as me, invite replies. Honest quick wins count (a referral ask, a
-priced offer, a sharp proposal), but never at the cost of trust: I build for years. Reasoning and
-sources: `~/sync/code/ai-memory/profile.md` "How I market".
+person, not a company: write as me, invite replies. No no-reply addresses: every e-mail a product or
+I send comes from an address a person can answer, such as `hi@<domain>`. Honest quick wins count (a
+referral ask, a priced offer, a sharp proposal), but never at the cost of trust: I build for years.
+Reasoning and sources: `~/sync/code/ai-memory/profile.md` "How I market".
 
 **Voice with clients.** Warm and friendly, so clients become friends, and fully transparent, so a
 non-technical founder understands every word. In quotes and estimates, lead with the outcome, the
