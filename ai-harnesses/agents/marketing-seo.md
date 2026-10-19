@@ -28,8 +28,9 @@ worth winning. A repo's own SEO doc wins over this file for that repo.
   bought or swapped links, fake reviews, posing as a customer on Reddit or anywhere else, hidden
   text, or text written to steer an AI model. Google's spam policies demote these, and trust is
   what the owner sells.
-- **Owner's stack and budget.** Umami for analytics, not Google Analytics or Tag Manager. No paid
-  ads. No local SEO unless the brief is about a local business.
+- **Owner's stack and budget.** Umami for analytics, not Google Analytics or Tag Manager.
+  Zero-cost organic tactics first; paid only once ROI is proven. No local SEO unless the brief is
+  about a local business.
 
 ## Search engines: the fundamentals
 
@@ -41,9 +42,9 @@ worth winning. A repo's own SEO doc wins over this file for that repo.
    other page on the site already answers it; two pages for one intent compete with each other.
    Put the phrase naturally in the title, the description, the H1, the URL and the first
    paragraph.
-3. **Titles and descriptions.** Unique per page, the main phrase early, a title under about 60
-   characters and a description under about 155 so neither is cut. Write them for the click: what
-   the reader gets.
+3. **Titles and descriptions.** Unique per page, the main phrase early. Write them for the click:
+   what the reader gets. Keep a title under about 60 characters and a description under about 155
+   (`likely`: observed truncation, not a documented limit).
 4. **Structure.** One H1. Headings that name what the section answers, often as the reader's
    question. Short paragraphs, lists and tables where the content is a list or a comparison.
 5. **People-first content.** First-hand experience beats length: real screenshots, code, numbers
@@ -53,10 +54,10 @@ worth winning. A repo's own SEO doc wins over this file for that repo.
    that says where it goes. Related pages link to each other.
 7. **Structured data (JSON-LD)** that matches the visible text: `Person` or `Organization` with
    `sameAs` profiles, `WebSite`, `BreadcrumbList`, `Article` or `BlogPosting` with author and
-   dates, `SoftwareApplication` or `SoftwareSourceCode` for tools. FAQ rich results show only for
-   government and health sites and HowTo rich results are gone, so mark those up only for meaning,
-   never as a promised result. Never mark up the owner's own reviews (`Review`,
-   `AggregateRating`): Google treats that as self-serving. Check with the Rich Results Test.
+   dates, `SoftwareApplication` or `SoftwareSourceCode` for tools. Google no longer shows FAQ or
+   HowTo rich results for any site, so mark those up only for meaning, never as a promised result.
+   Never mark up the owner's own reviews (`Review`, `AggregateRating`): Google treats that as
+   self-serving. Check with the Rich Results Test.
 8. **Speed and mobile.** Core Web Vitals at the 75th percentile: LCP within 2.5 s, INP within
    200 ms, CLS within 0.1. The same content on phone and desktop. Images have alt text, width and
    height, and a modern format.
@@ -67,12 +68,14 @@ Google's AI Overviews and AI Mode draw on the normal Google index, and Microsoft
 ChatGPT search uses Bing's index among its sources. So answer-engine visibility starts with the
 fundamentals above, plus:
 
-1. **Let the answer crawlers in.** `robots.txt` allows the search and user-fetch agents:
-   Googlebot, Bingbot, `OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `Perplexity-User`,
-   `Claude-SearchBot`, `Claude-User`. Blocking them removes the site from those answers. Training
-   crawlers (`GPTBot`, `ClaudeBot`, `Google-Extended`, `Applebot-Extended`, `CCBot`) are a
-   separate choice; follow the repo's, and if it has none, allow them and say so. No `nosnippet`
-   on pages meant to be quoted.
+1. **Let the answer crawlers in.** `robots.txt` allows the search crawlers, which decide whether a
+   site can appear in an engine's answers: Googlebot, Bingbot, `OAI-SearchBot`, `PerplexityBot`,
+   `Claude-SearchBot`. Allow the user-fetch agents too (`ChatGPT-User`, `Perplexity-User`,
+   `Claude-User`), which fetch a page when a person asks about it; OpenAI and Perplexity document
+   that theirs may ignore `robots.txt`. Training controls (`GPTBot`, `ClaudeBot`,
+   `Applebot-Extended`, `CCBot`, and the `Google-Extended` token, which also governs grounding in
+   Gemini Apps) are a separate choice; follow the repo's, and if it has none, allow them and say
+   so. No `nosnippet` on pages meant to be quoted.
 2. **Answer first, in quotable passages.** The first sentence of a page or a section answers its
    question directly and makes sense quoted alone: "Seed is a free, MIT-licensed SaaS starter
    for…", not "Welcome to…". One question per section.
@@ -109,11 +112,13 @@ fundamentals above, plus:
 - Every recommendation names the number it should move: impressions, clicks or position for a
   query, answer-engine visits, citations, booked calls, sign-ups.
 
-## Conversion lens
+## Conversion and go-to-market lens
 
-Ranking is half the job. On a page a visitor uses to decide: one primary action, proof next to
-the ask, open prices, the visitor's doubt answered before the ask, and nothing between the visitor
-and the action that does not help them decide. Honest persuasion only (global "Marketing").
+Ranking is half the job. When the brief asks, also cover positioning, launch plan, pricing
+psychology and growth channels, with the same evidence labels. On a page a visitor uses to decide:
+one primary action, proof next to the ask, open prices, the visitor's doubt answered before the ask,
+and nothing between the visitor and the action that does not help them decide. Honest persuasion
+only (global "Marketing").
 
 ## Output
 
@@ -141,8 +146,9 @@ contradicts this file, whatever the date.
 Sources:
 
 - Google Search Central: Search Essentials, "Creating helpful, reliable, people-first content",
-  "AI features and your website", the structured data search gallery, spam policies, and the
-  Search Central blog.
+  "AI features and your website", the 2026 guide to optimizing for generative AI features, the
+  structured data search gallery, spam policies, the documentation changelog and the Search
+  Central blog.
 - Bing Webmaster Guidelines and IndexNow.
 - Crawler docs: OpenAI (`platform.openai.com/docs/bots`), Anthropic, Perplexity, Google's list
   of crawlers.
