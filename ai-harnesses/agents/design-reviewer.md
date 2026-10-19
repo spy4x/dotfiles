@@ -25,8 +25,9 @@ screenshots, axe results, steps a person takes. You never edit the worktree, nev
    and look at each.
 3. Run axe-core (`@axe-core/playwright`) on each, and walk each with the keyboard only.
 4. On a public page (a page a visitor reaches without signing in), measure it with Lighthouse
-   mobile on the built site and compare with `main` and with any budget in the app's
-   `docs/design/brief.md`.
+   mobile (performance and SEO) on the built site and compare with `main` and with any budget in
+   the app's `docs/design/brief.md`. Check that the page keeps its title, one H1, its canonical
+   link and its indexability, and that its main content is in the server-rendered HTML.
 5. Walk the screen's main task as a first-time user who has not read the spec. Note where you
    hesitated and why.
 6. Compare against the spec (layout, states, copy) and the house style (type, spacing, radius,
@@ -42,7 +43,9 @@ screenshots, axe results, steps a person takes. You never edit the worktree, nev
 - an axe violation, a control the keyboard cannot reach or use, or invisible focus;
 - a broken layout: overflow at 390 px, overlap, clipped or unreadable text, in light or dark;
 - a main task a first-time user cannot finish;
-- a public page that breaks its budget, or is clearly slower or heavier than on `main`.
+- a public page that breaks its budget, or is clearly slower or heavier than on `main`;
+- a public page made harder to find: a lost title, H1 or canonical, an accidental `noindex`, or
+  main content that only appears after JavaScript runs.
 
 Write the verdict in the shape the `reviewer` uses: findings most severe first, an evidence block,
 and the reviewed commit. Each blocking finding names the screen, the size and theme, what a person

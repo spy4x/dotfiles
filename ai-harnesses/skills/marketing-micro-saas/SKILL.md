@@ -256,7 +256,7 @@ Commercial license available for hosted resale.
 **Why each section matters:**
 
 - **Hero screenshot/GIF**: bounce in <5s without one
-- **"Open-source alternative to X"**: SEO goldmine — exact phrase people search
+- **"Open-source alternative to X"**: the exact phrase people search and ask AI assistants
 - **One-liner install**: self-hosters bounce if not 5-min simple
 - **Cloud CTA visible**: self-hosters might pay $9/mo to skip upgrade pain
 - **License at bottom**: trust signal for enterprise/regulated buyers
@@ -650,23 +650,29 @@ For cloud version:
 
 ## 20. SEO content calendar (week 4+)
 
-Post 1 SEO-optimized blog post per week. Each targets "[competitor] alternative" or "[problem] open source" search intent.
+Post 1 search-led blog post per week. Each targets one intent a real buyer has, such as
+"[competitor] alternative" or "[problem] open source". Run the `marketing-seo` agent on the
+brief and on the finished draft: it holds the search and answer-engine rules, with sources.
 
-**Week 4**: "[Product] vs [Main Competitor]" (1,500 words, comparison table, screenshots)
+**Week 4**: "[Product] vs [Main Competitor]" (comparison table, screenshots, a fair verdict)
 **Week 5**: "Why I switched from [BigSaaS] to [Product]" (personal story, before/after)
-**Week 6**: "Self-hosting [Product] on Hetzner" (technical tutorial, 1,500 words + screenshots)
+**Week 6**: "Self-hosting [Product] on Hetzner" (technical tutorial + screenshots)
 **Week 7**: "Open source [category] tools in 2026" (roundup post, link to competitors too)
 **Week 8**: "How we built [Product] with Deno + SQLite" (technical deep-dive, your authority)
 **Week 9**: "Why we use AGPLv3 (and you should too)" (license decision post)
 
-**SEO rules**:
+**Search rules** (detail and sources in the `marketing-seo` agent):
 
-- 1,500+ words per post
-- Title with primary keyword ("[Product] vs [Competitor]")
-- Comparison table (Google loves these)
-- Screenshots with alt text
-- Internal links to your other posts
-- Submit URL to Google Search Console after publish
+- One intent and one main phrase per post, in the title, description, URL and first paragraph
+- Open with the answer: the first two or three sentences answer the post's question on their own,
+  so search snippets and AI answers can quote them
+- Length follows the question; no word-count target
+- First-hand proof: real screenshots with alt text, code, numbers you measured
+- A comparison is a table, with sources and dates for the competitor's facts
+- Two or three internal links to related posts, the product and its docs
+- Named author, published and updated dates, `BlogPosting` JSON-LD that matches the page
+- After publishing: submit the URL in Google Search Console and Bing Webmaster Tools (or ping
+  IndexNow), then post it where its readers already are
 
 ---
 

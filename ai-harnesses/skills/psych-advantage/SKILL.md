@@ -15,7 +15,8 @@ Steps:
 
 1. Spawn TWO subagents IN PARALLEL (independent analyses):
    - psychologist agent: human nature, persuasion, influence, decision biases, emotional drivers
-   - marketing-seo agent: positioning, channels, CRO, SEO, growth loops, distribution
+   - marketing-seo agent: positioning, channels, CRO, SEO and answer engines, growth loops,
+     distribution
      Both get the same brief: $ARGUMENTS. Wait for both outputs before synthesizing.
 2. Synthesize into combined playbook:
    - Psychological dynamics: which biases/needs/principles drive behavior here
