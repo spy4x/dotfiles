@@ -204,8 +204,9 @@ protecting a new repo's default branch, and a CI step for a check your task adds
 
 - **One source.** Every harness gets its rules, skills, agents and settings from
   `dotfiles/ai-harnesses/`. `deno task ai` copies this file byte-for-byte to OpenCode, DSH and
-  Claude Code (`~/.claude/CLAUDE.md`), and renders every skill and agent there into each harness's
-  format; `--check` reports drift. Edit the source, never a copy.
+  Claude Code (`~/.claude/CLAUDE.md`), and renders every skill, agent, command and DSH preset there
+  into each harness's format (`~/.config/opencode`, `$DSH_HOME`); `--check` reports drift. Edit the
+  source, never a copy: the next `deno task ai` overwrites a hand edit.
 - **One place per rule.** A rule that holds in every repo lives here. A repo's `AGENTS.md` holds
   what is true of that repo only: its facts, and rules stricter than these; a rule it shares with
   this file is deleted there. A skill or an agent holds the steps of its own job and names the
@@ -216,9 +217,8 @@ protecting a new repo's default branch, and a CI step for a check your task adds
   browser quirk) goes in the doc of the tool it is about, linked from its `AGENTS.md` when needed.
 - **Trials.** A rule on trial names its review date and its experiment file. Only I move the date.
 - **Size.** This file stays within 850 lines and 56,000 bytes (a test checks it; DSH reads at most
-  64 KiB of rules, a repo's included), a repo's `AGENTS.md` under about 200 lines and
-  `direction.md` under about 150. A change that would pass the budget first moves history out or
-  merges duplicates.
+  64 KiB of rules, a repo's included), a repo's `AGENTS.md` under about 200 lines and `direction.md`
+  under about 150. A change that would pass the budget first moves history out or merges duplicates.
 - **Machines check what they can.** A rule a machine can check gets a hook (the `harness-rules`
   mod), a lint rule or a CI check, not prose alone. The prose stays the source the check enforces.
 - **Wording.** "Language style" applies: one rule per sentence or short paragraph, the action first,
@@ -588,7 +588,11 @@ Syncthing ignores `worktrees/` (per-machine step: `docs/host-limits.md`,
 watches.
 
 Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR always exists,
-`[WIP]` in the title until done; `gh pr create --fill` right after push, never ask.
+`[WIP]` in the title until done; `gh pr create --fill` right after push, never ask. Claim an issue
+before work on it, so no two agents build it at once: push an empty commit, open the PR with
+`Closes #<n>`, and comment on the issue `Working on it in <PR link>. My session id is <id>.`
+(`$CLAUDE_CODE_HOST_SESSION_ID`, else `$CLAUDE_CODE_SESSION_ID`; a wave's lead posts its own). A
+claimed issue with an open PR is taken; to work next to it, message that session (`SendMessage`).
 
 **Reviewer gate** before push: one separate `reviewer` agent per diff, never self-review, plus a
 `design-reviewer` when the diff changes what a person sees ("Design" above). Every test the diff
@@ -838,12 +842,8 @@ GitHub review record doesn't mean unreviewed — the gate runs before the PR. Ta
 
 # Harness notes
 
-**Claude Code.** Settings tracked in `dotfiles/ai-harnesses/settings/claude/`, merged by the same
-task. Runs in bypassPermissions mode: nothing prompts, so these rules are yours to hold.
+**Claude Code.** Runs in bypassPermissions mode: nothing prompts, so these rules are yours to hold.
 `permissions.deny` still blocks `.age` key material; `.env` stays readable under the carve-out
-above. Never use the built-in worktree features (`--worktree`, `EnterWorktree`, `isolation:
-worktree`, the desktop "worktree" option) — they nest in `<repo>/.claude/worktrees/`; use the Git
-Flow command.
-
-**OpenCode / DSH.** Agents, skills, commands and DSH presets are rendered into `~/.config/opencode`
-and `$DSH_HOME`; the next `deno task ai` overwrites a hand edit.
+above. Never use the built-in worktree features (`--worktree`, `EnterWorktree`,
+`isolation: worktree`, the desktop "worktree" option) — they nest in `<repo>/.claude/worktrees/`;
+use the Git Flow command.

@@ -16,8 +16,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - Take open issues by priority, `p1-critical` first; no priority label counts as `p3-medium`;
   oldest first within a level. Stop at `p3-medium`: `p4-low` and `p5-someday` are never
   candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual`
-  or `needs-decision`, and issues with an open PR by `spy4x`. This lists the candidates oldest
-  first; group them by priority label yourself:
+  or `needs-decision`, issues with an open PR by `spy4x`, and issues another session claimed
+  ("Claim an issue" in `AGENTS.md`, "Git Flow"). This lists the candidates oldest first; group
+  them by priority label yourself:
   `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:p4-low -label:p5-someday sort:created-asc'`.
 - Two limits in `AGENTS.md`, "Picking work yourself", come before priority. The repo has an open
   milestone (`gh api 'repos/{owner}/{repo}/milestones' --jq '.[] | "\(.due_on) \(.title)"'`) → add
