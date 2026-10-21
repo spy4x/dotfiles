@@ -24,8 +24,8 @@
  * })
  * ```
  */
-import { runCommand } from "jsr:@spy4x/platform@1.28.0/server/run-command"
-import { denoFileSystem as fs } from "jsr:@spy4x/platform@1.28.0/server/deno-fs"
+import { runCommand } from "jsr:@spy4x/platform@1.81.0/server/run-command"
+import { denoFileSystem as fs } from "jsr:@spy4x/platform@1.81.0/server/deno-fs"
 
 /** One caption: when it shows, in seconds of the finished video, and its line. */
 export interface Cue {
