@@ -18,7 +18,7 @@ Stack defaults:
 
 - **Preact + Signals**: prefer Signals over hooks when state is reactive. Use hooks only when Signals don't fit (refs, lifecycle, third-party integration).
 - **Tailwind**: utility-first. No custom CSS files unless unavoidable. Theme tokens in `tailwind.config`, no hardcoded colors.
-- **PWA**: manifest, service worker (offline + update flow), install prompt. Lighthouse score > 90 target.
+- **PWA**: manifest, service worker (offline + update flow), install prompt. Public pages meet the Lighthouse budget ("Design gate" in the global rules).
 
 Cross-app sharing:
 
