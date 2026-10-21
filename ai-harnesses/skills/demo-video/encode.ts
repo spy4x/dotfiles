@@ -66,6 +66,8 @@ export interface EncodeOptions {
   size?: { width: number; height: number }
   /** A font file for the captions and cards. Default: fontconfig's semibold sans-serif. */
   font?: string
+  /** ffmpeg's `-threads` for each encode, such as 2 on a shared machine. Default: ffmpeg's own. */
+  threads?: number
 }
 
 /** What one run produced. */
@@ -171,7 +173,9 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
   const font = options.font ?? (await run([`fc-match`, `-f`, `%{file}`, `sans-serif:semibold`]))
   const captions = options.captions ?? `${out}/captions.vtt`
   const music = options.music ?? `${out}/music.opus`
-  const takeSeconds = (await duration(take)) - trim
+  const list = take.endsWith(`.txt`) ? await fs.readText(take) : null
+  if (take.endsWith(`.txt`) && list === null) throw new Error(`${take} is missing`)
+  const takeSeconds = (list === null ? await duration(take) : listSeconds(list, take)) - trim
   const total = CARD_SECONDS.title + takeSeconds + CARD_SECONDS.end
   const vtt = await fs.readText(captions)
   if (vtt === null) throw new Error(`${captions} is missing`)
@@ -190,7 +194,11 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
   await fs.mkdirp(out)
   const work = `${out}/.encode-work`
   await fs.mkdirp(work)
-  const texts: string[] = []
+  // Beside the take, so the list's relative paths still resolve.
+  const source = list === null ? take : `${take.slice(0, -4)}.${FPS}fps.txt`
+  const texts: string[] = list === null ? [] : [source]
+  if (list !== null) await fs.writeText(source, atFps(list))
+  const threads = options.threads ? [`-threads`, `${options.threads}`] : []
   /** A drawtext filter for `text`, read from a file so no character needs escaping. */
   const text = async (line: string, style: string, enable?: string) => {
     const file = `${work}/${texts.length}.txt`
@@ -203,7 +211,9 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
     const scale = width / 1280
     const px = (n: number) => Math.round(n * scale)
     const band = px(84)
-    const fit = `scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=lanczos,` +
+    // out_range=tv: screencast JPEGs are full range, and the outputs are TV range like the cards.
+    const fit = `scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=lanczos:` +
+      `out_range=tv,` +
       `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${INK},setsar=1,format=yuv420p`
     const card = (seconds: number) =>
       `color=c=${INK}:s=${width}x${height}:r=${FPS}:d=${seconds},setsar=1,format=yuv420p`
@@ -231,19 +241,18 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
     }
     const graph = [
       `${titleCard}[title]`,
-      // setpts before fps: fps then holds each frame of a concat list for its listed duration.
-      `[0:v]trim=start=${trim},setpts=PTS-STARTPTS,fps=${FPS},${fit}[take]`,
+      // setpts before fps: fps then holds each frame of a concat list for its listed duration. The
+      // trim after fps ends the take on time: fps holds a list's last still as long as the one
+      // before it, which pushed the end card out of the video.
+      `[0:v]trim=start=${trim},setpts=PTS-STARTPTS,fps=${FPS},` +
+      `trim=duration=${takeSeconds.toFixed(3)},${fit}[take]`,
       `${endCard}[end]`,
       `[title][take][end]concat=n=3:v=1:a=0,${burned.join(`,`)}[v]`,
       `[1:a]${music0},volume=${gain}dB[a]`,
     ].join(`;`)
+    const inputs = [...input(source), `-i`, music]
     const encode = (file: string, codec: string[]) =>
-      run([
-        `ffmpeg`,
-        ...[`-y`, `-hide_banner`, `-loglevel`, `error`, ...input(take), `-i`, music],
-        ...[`-filter_complex`, graph, `-map`, `[v]`, `-map`, `[a]`, `-t`, total.toFixed(3)],
-        ...[`-map_metadata`, `-1`, ...codec, file],
-      ])
+      run(encodeCommand({ inputs, graph, seconds: total, threads: options.threads }, codec, file))
     const budget = Math.max(1, total / 45) * BUDGET_BYTES_PER_45_SECONDS
     const bytes = { webm: 0, mp4: 0 }
     for (const crf of [36, 40, 44]) {
@@ -278,16 +287,17 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
 
     const still = typeof options.poster === `string`
       ? [`-i`, options.poster]
-      : [...input(take), `-ss`, `${trim + (options.poster ?? 0)}`]
+      : [...input(source), `-ss`, `${trim + (options.poster ?? 0)}`]
     await run([
       `ffmpeg`,
       ...[`-y`, `-hide_banner`, `-loglevel`, `error`, ...still, `-frames:v`, `1`, `-vf`, fit],
-      ...[`-map_metadata`, `-1`, `-c:v`, `libwebp`, `-quality`, `82`, `${out}/poster.webp`],
+      ...[`-map_metadata`, `-1`, ...threads, `-c:v`, `libwebp`, `-quality`, `82`],
+      `${out}/poster.webp`,
     ])
     await run([
       `ffmpeg`,
       ...[`-y`, `-hide_banner`, `-loglevel`, `error`, `-i`, `${out}/poster.webp`],
-      ...[`-vf`, `scale=640:-2:flags=lanczos`, `-c:v`, `libwebp`, `-quality`, `82`],
+      ...[`-vf`, `scale=640:-2:flags=lanczos`, ...threads, `-c:v`, `libwebp`, `-quality`, `82`],
       `${out}/poster-640.webp`,
     ])
 
@@ -301,6 +311,43 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
     for (const file of texts) await fs.remove(file)
     await fs.remove(work)
   }
+}
+
+/** What one encode of the finished video reads, and how long the video runs. */
+export interface EncodeInputs {
+  /** ffmpeg's input arguments: the take, then the music. */
+  inputs: string[]
+  /** The filter graph, ending in `[v]` and `[a]`. */
+  graph: string
+  seconds: number
+  threads?: number
+}
+
+/** The ffmpeg command that encodes the video into `file` with the `codec` options. */
+export function encodeCommand(encode: EncodeInputs, codec: string[], file: string): string[] {
+  const { inputs, graph, seconds, threads } = encode
+  return [
+    `ffmpeg`,
+    ...[`-y`, `-hide_banner`, `-loglevel`, `error`, ...inputs],
+    ...[`-filter_complex`, graph, `-map`, `[v]`, `-map`, `[a]`, `-t`, seconds.toFixed(3)],
+    ...[`-map_metadata`, `-1`, ...(threads ? [`-threads`, `${threads}`] : []), ...codec, file],
+  ]
+}
+
+/** How long a concat list runs: the sum of its `duration` lines, since ffprobe reports N/A. */
+export function listSeconds(list: string, name = `the concat list`): number {
+  const total = [...list.matchAll(/^duration\s+([\d.]+)\s*$/gm)]
+    .reduce((sum, match) => sum + Number(match[1]), 0)
+  if (!total) throw new Error(`${name} lists no durations`)
+  return total
+}
+
+/**
+ * The concat list with `option framerate` set to {@link FPS} on every file. The image demuxer
+ * otherwise reads each still at 25 fps and shows the wrong still where one lasts under 1/25 s.
+ */
+export function atFps(list: string): string {
+  return list.replace(/^(file .*)$(?!\noption framerate )/gm, `$1\noption framerate ${FPS}`)
 }
 
 /** The input arguments for a take: a concat list of frames, or a video file. */
