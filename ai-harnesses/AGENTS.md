@@ -203,10 +203,8 @@ is not a rule: update it in the change that makes it true. What these rules orde
 protecting a new repo's default branch, and a CI step for a check your task adds.
 
 - **One source.** Every harness gets its rules, skills, agents and settings from
-  `dotfiles/ai-harnesses/`. `deno task ai` copies this file byte-for-byte to OpenCode, DSH and
-  Claude Code (`~/.claude/CLAUDE.md`), and renders every skill, agent, command and DSH preset there
-  into each harness's format (`~/.config/opencode`, `$DSH_HOME`); `--check` reports drift. Edit the
-  source, never a copy: the next `deno task ai` overwrites a hand edit to what it copies or renders.
+  `dotfiles/ai-harnesses/`; `deno task ai` renders it into each (`ai-harnesses/README.md`). Edit
+  the source, never a copy: the next `deno task ai` overwrites a hand edit to what it renders.
 - **One place per rule.** A rule that holds in every repo lives here. A repo's `AGENTS.md` holds
   what is true of that repo only: its facts, and rules stricter than these; a rule it shares with
   this file is deleted there. A skill or an agent holds the steps of its own job and names the
@@ -362,6 +360,10 @@ a sibling's shell and patterns (the product beside its admin, a site beside my o
 accessibility failure, a broken layout, a task a first-time user cannot finish, or a public page
 made slower or harder to find; taste nits come under **Not blocking**. The PR merges only when both
 reviewers pass, and both reviewers' `needs-fix` verdicts count toward the gate's three per PR.
+
+**Videos.** A demo video has one copy, in its project's repo under `media/demo/`, with the recipe
+that remakes it in one command; READMEs and sites pull it at a pinned commit. Burned-in captions
+say what happens on screen, over its own calm, quiet CC0 track. Steps: the `demo-video` skill.
 
 # Projects
 
@@ -843,7 +845,5 @@ GitHub review record doesn't mean unreviewed — the gate runs before the PR. Ta
 # Harness notes
 
 **Claude Code.** Runs in bypassPermissions mode: nothing prompts, so these rules are yours to hold.
-`permissions.deny` still blocks `.age` key material; `.env` stays readable under the carve-out
-above. Never use the built-in worktree features (`--worktree`, `EnterWorktree`,
-`isolation: worktree`, the desktop "worktree" option) — they nest in `<repo>/.claude/worktrees/`;
-use the Git Flow command.
+Never use the built-in worktree features (`--worktree`, `EnterWorktree`, `isolation: worktree`,
+the desktop "worktree" option) — they nest in `<repo>/.claude/worktrees/`; use the Git Flow command.
