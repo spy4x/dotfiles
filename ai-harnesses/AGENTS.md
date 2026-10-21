@@ -321,6 +321,9 @@ UI is designed, not just built. Every screen, page or flow a person uses ships t
 well-funded product team, from the first PR: a clear job, one primary action, real content, every
 state drawn (empty, loading, error, success, long text, 390 px), and the taste of the house design
 language. "It works" is not done; "a person gets it in five seconds and it looks made with care" is.
+I work from the keyboard, so my apps must excel at it: a hotkey or palette command per action, Tab
+order that follows the screen, visible focus. Search matches aliases on every entry and action, any
+word order, prefixes, a typo, Cyrillic or Latin ("GosUslugi" → "ГосУслуги") and the wrong layout.
 
 **One house style, a brand per app or site.** UI comes in two kinds, an app (every SPA, the admin
 panel included) and a website, and every one looks made by the same person: the same type scale,
@@ -763,9 +766,7 @@ Haiku 5.5 call costs five times as much (`~/sync/code/ai-memory/experiments/haik
 Architecture and final verdicts stay with the lead. Fresh subagents over forks (a fork copies the
 whole conversation).
 
-**Implementers and reviewers stay on `opus`, in every repo.** A Sonnet 5.5 implementer wrote worse
-pull requests, which cost the saving back in reviews and fixes, and a Sonnet 5.5 reviewer passed
-real bugs, a security hole among them
+**Implementers and reviewers stay on `opus`, in every repo:** Sonnet 5.5 did worse in both roles
 (`~/sync/code/ai-memory/experiments/sonnet55-vs-opus55-paired.md`, `sonnet55-implementer.md`,
 `sonnet55-reviewer.md`). The one escalation round in the `wave` skill goes to `implementer-xhigh`.
 
