@@ -393,8 +393,7 @@ Homelab, for self-hosted services, never for hosting work or production projects
 
 - `rostok`: CLI that scaffolds a homelab from a catalog of stacks (`stacks/`). Code that both it and
   `seed` need lives in `ts-libs`, never copied between the two.
-- `homelab`: my real rostok project: which stacks run on which server, with their encrypted
-  settings.
+- `homelab`: my real rostok project: which stacks run on which server, with encrypted settings.
 
 Open-source self-hosted tools, each a stack in the rostok catalog:
 

@@ -26,8 +26,8 @@ screenshots, axe results, steps a person takes. You never edit the worktree, nev
 3. Run axe-core (`@axe-core/playwright`) on each, and walk each with the keyboard only.
 4. On a public page (a page a visitor reaches without signing in), measure it with the repo's
    `deno task lighthouse` (Lighthouse mobile, all four categories, served compressed) on the built
-   site. Compare with `main` and with the budget in "Design gate" of the global rules, or a stricter
-   one in the app's `docs/design/brief.md`. Check that the page keeps its title, one H1, its canonical
+   site. Compare with `main` and with the budget in "Design gate" of the global rules, or a
+   stricter one in the app's `docs/design/brief.md`. Check that the page keeps its title, one H1, its canonical
    link and its indexability, and that its main content is in the server-rendered HTML.
 5. Walk the screen's main task as a first-time user who has not read the spec. Note where you
    hesitated and why.
