@@ -3,7 +3,7 @@
 # `clear` between scenes) skips the next rule. A leading space keeps a command out of history.
 shopt -s checkwinsize
 HISTCONTROL=ignorespace
-PS1='\[\e[38;2;249;115;22m\]~/dotfiles\[\e[0m\] $ '
+PS1='\[\e[38;2;249;115;22m\]$\[\e[0m\] '
 rule() {
   local line
   printf -v line '%*s' "${COLUMNS:-120}" ''

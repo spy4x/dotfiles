@@ -1,7 +1,7 @@
 " Minimal Neovim look for the clip: the terminal's own background, no plugins, no editorconfig,
 " each pane titled with the tool that reads it, and search matches highlighted in every pane.
 let g:editorconfig = v:false
-set termguicolors nowrap nonumber noshowmode laststatus=0 noruler shortmess+=I hlsearch noincsearch
+set splitright termguicolors nowrap nonumber noshowmode laststatus=0 noruler shortmess+=I hlsearch noincsearch
 set fillchars=vert:│,eob:\ 
 
 " "Claude Code  agents/reviewer.md" for a file in a harness home, the path for anything else.

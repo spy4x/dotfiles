@@ -1,7 +1,7 @@
 #!/bin/bash
 # Records the "Under the hood" demo and encodes it into media/demo/ (see README.md beside this).
 # Clones spy4x/dotfiles into a scratch dir with empty harness homes under a scratch /home/demo
-# (enter.sh), records demo.tape with vhs into media/demo/.raw/demo-raw.mp4, then runs encode.sh.
+# (enter.sh), records demo.tape with vhs into media/demo/.raw/demo-raw.mp4, then runs encode.ts.
 # The real ~/.claude, ~/.config and ~/.local are never read or written: bwrap hides /home.
 # Usage: media/demo/recipe/record.sh [git ref, default main]
 #   DOTFILES_REPO=<url or path> clones from somewhere other than GitHub.
@@ -27,6 +27,10 @@ cp "$here/demo.vim" "$here/demo.bashrc" "$home/"
 # Chromium's singleton socket path must stay short, so vhs gets /tmp whatever TMPDIR says.
 (cd "$work" && TMPDIR=/tmp systemd-run --user --scope --quiet -p TasksMax=4000 -p MemoryMax=8G \
   timeout 300 vhs demo.tape)
-mv "$work/demo-raw.mp4" "$raw_dir/demo-raw.mp4"
+# The 84 px caption band goes below the terminal, never over it: pad the take to 1280x800.
+ffmpeg -hide_banner -loglevel error -y -i "$work/demo-raw.mp4" \
+  -vf "pad=1280:800:0:0:color=0x15120f" -c:v libx264 -preset veryfast -crf 12 -pix_fmt yuv420p \
+  "$raw_dir/demo-raw.mp4"
 
-"$here/encode.sh"
+cd "$here/../../.."
+deno run -A media/demo/recipe/encode.ts
