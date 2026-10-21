@@ -267,12 +267,13 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
       webm: await loudness([`-i`, `${out}/demo.webm`]),
       mp4: await loudness([`-i`, `${out}/demo.mp4`]),
     }
-    for (const [file, measured] of Object.entries(sound)) {
-      const loud = loudnessProblems(measured)
-      if (loud.length) {
-        await fs.remove(`${out}/demo.${file}`)
-        throw new Error(`demo.${file} is too loud, so it was deleted: ${loud.join(`; `)}`)
-      }
+    const loud = Object.entries(sound).flatMap(([file, measured]) =>
+      loudnessProblems(measured).map((problem) => `demo.${file}: ${problem}`)
+    )
+    if (loud.length) {
+      await fs.remove(`${out}/demo.webm`)
+      await fs.remove(`${out}/demo.mp4`)
+      throw new Error(`the mix is too loud, so both videos were deleted: ${loud.join(`; `)}`)
     }
 
     const still = typeof options.poster === `string`
