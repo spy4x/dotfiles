@@ -356,8 +356,9 @@ the spec at least twice before opening the PR.
 `reviewer`, in the same round. It checks the built screens in a browser against the spec and the
 house design language, at 390 and 1440 px, in every theme the app or site has, with axe-core and the
 keyboard, and walks the main task as a first-time user. On a public page it also compares speed and
-SEO with `main`. It blocks only for a departure from the approved spec, the design language or a
-sibling's shell and patterns (the product beside its admin, a site beside my other sites), an
+SEO with `main`. Public pages score at least 95 for performance and 100 for the rest in Lighthouse
+mobile, checked in CI. It blocks only for a departure from the approved spec, the design language or
+a sibling's shell and patterns (the product beside its admin, a site beside my other sites), an
 accessibility failure, a broken layout, a task a first-time user cannot finish, or a public page
 made slower or harder to find; taste nits come under **Not blocking**. The PR merges only when both
 reviewers pass, and both reviewers' `needs-fix` verdicts count toward the gate's three per PR.
@@ -392,8 +393,7 @@ Homelab, for self-hosted services, never for hosting work or production projects
 
 - `rostok`: CLI that scaffolds a homelab from a catalog of stacks (`stacks/`). Code that both it and
   `seed` need lives in `ts-libs`, never copied between the two.
-- `homelab`: my real rostok project: which stacks run on which server, with their encrypted
-  settings.
+- `homelab`: my real rostok project: which stacks run on which server, with encrypted settings.
 
 Open-source self-hosted tools, each a stack in the rostok catalog:
 
