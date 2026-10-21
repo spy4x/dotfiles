@@ -11,15 +11,15 @@
 [Apps](docs/apps.md) · [Shell](docs/shell.md) · [Sync](docs/sync.md) ·
 [Host limits](docs/host-limits.md) · [Development](docs/development.md)
 
-![A terminal runs "deno task ai --check". It lists the three harness homes (Claude Code, OpenCode, DSH) and prints "All targets in sync."](docs/ai-check.gif)
+[![Demo video, 58 seconds: one reviewer agent from ai-harnesses/ shown side by side as Claude Code, OpenCode and DSH render it. One edit to the source reaches all three, and deno task ai --check catches a hand edit to one copy.](media/demo/poster.webp)](https://antonshubin.com/tools/dotfiles)
 
 </div>
 
 I run several AI coding agents at once, in Claude Code, OpenCode and DSH (a DeepSeek harness).
 Their rules, skills, agents and settings are written once, in `ai-harnesses/`, and
-`deno task ai` renders them into the format each harness reads. `deno task ai --check`, shown
-above, writes nothing: it compares what every harness on this machine reads with what is
-committed, and exits 1 if they differ.
+`deno task ai` renders them into the format each harness reads. `deno task ai --check` writes
+nothing: it compares what every harness on this machine reads with what is committed, and
+exits 1 if they differ.
 
 The rest of the repository is the workstation those agents run on: the apps, the shell, the
 config files synced into my home directory, and the kernel and systemd limits a dozen parallel
