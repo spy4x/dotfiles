@@ -2,7 +2,9 @@
 
 Claude Code, OpenCode and DSH (the DeepSeek harness) get their global rules, skills, agents and
 settings from this directory. Each skill and agent is written once, in a harness-neutral format.
-`deno task ai` converts it into the format each installed harness reads and copies it there.
+`deno task ai` converts it into the format each installed harness reads and copies it there. The
+rules file, `AGENTS.md`, is copied byte for byte to Claude Code's `~/.claude/CLAUDE.md` and to
+OpenCode's and DSH's `AGENTS.md`.
 
 ```bash
 deno task ai           # apply: copy this directory into every installed harness
