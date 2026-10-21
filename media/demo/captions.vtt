@@ -1,0 +1,28 @@
+WEBVTT
+
+00:00:02.000 --> 00:00:09.000
+One folder holds the rules, skills and agents for all my AI tools
+
+00:00:09.000 --> 00:00:14.000
+deno task ai renders it for Claude Code, OpenCode and DSH
+
+00:00:14.000 --> 00:00:21.500
+The same reviewer agent, written in each tool's own format
+
+00:00:21.500 --> 00:00:30.000
+Edit one line in the source: the reviewer becomes "strict"
+
+00:00:30.000 --> 00:00:34.000
+Render again: one file changes in each tool
+
+00:00:34.000 --> 00:00:39.000
+All three copies now say "strict"
+
+00:00:39.000 --> 00:00:43.000
+Now someone edits one copy by hand
+
+00:00:43.000 --> 00:00:48.500
+The check finds the drift and fails with exit 1
+
+00:00:48.500 --> 00:00:55.900
+deno task ai puts it back, and everything is in sync again

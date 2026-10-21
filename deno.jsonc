@@ -11,6 +11,8 @@
     "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts",
     "ai": "deno run -A ai-harnesses/manage.ts",
     "test": "deno test -A tools/ ai-harnesses/",
+    // Records and encodes the README demo video into media/demo/. See media/demo/recipe/README.md.
+    "demo-video": "media/demo/recipe/record.sh",
     // Experiment kit: lanes.jsonl from transcripts, then the analysis. See tools/experiments/README.md.
     "experiment:collect": "deno run -A tools/experiments/collect.ts",
     "experiment:analyse": "deno run -A tools/experiments/analyse.ts",

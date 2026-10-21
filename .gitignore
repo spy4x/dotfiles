@@ -124,3 +124,6 @@ volumes/
 # Claude Code project-local state for sessions opened in this repo
 .claude/settings.local.json
 .claude/worktrees/
+
+# Raw demo takes: media/demo/recipe/record.sh writes them, encode.sh reads them.
+media/demo/.raw/
