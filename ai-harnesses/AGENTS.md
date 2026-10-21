@@ -447,7 +447,7 @@ event (never the value) in `~/sync/code/ai-memory/incidents/rotation-log.md`.
 
 - `CLOUDFLARE_API_TOKEN`: Cloudflare API, DNS edit on my zones.
 - `HETZNER_CLOUD_API_TOKEN`: Hetzner Cloud API and `hcloud`.
-- `UMAMI_API_TOKEN`: my self-hosted Umami analytics (rostok `stacks/umami`, `stats.<domain>`).
+- `UMAMI_API_TOKEN`, `UMAMI_URL`: my self-hosted Umami, `https://stats.antonshubin.com` (homelab).
 - `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`: Docker Hub login and push.
 - `JSR_TOKEN`: `deno publish` to JSR.
 - `WOODPECKER_CI_TOKEN`: API of my Woodpecker CI (`https://ci.antonshubin.com`): pipelines, build
