@@ -78,18 +78,20 @@ come before priority:
 
 - A repo with an open milestone → the candidates are the issues in it (several open: the one due
   first), whatever their priority label, plus any `p1-critical` issue. Nothing else is picked. An
-  issue you file outside it is named in the report as waiting for me to add it.
+  issue you file outside it is reported as waiting for me to add it (the library exception aside).
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker
-  says to build it, or when its priority was raised after filing (agents never raise one). Any
-  other is not built: it gets `p4-low`, a one-line comment with the reason and the label it had,
-  and a line under **Issues** in the report.
+  says to build it, or when its priority was raised after filing (agents never raise one, the
+  library exception aside). Any other is not built: it gets `p4-low`, a one-line comment with the
+  reason and the label it had, and a line under **Issues** in the report.
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
 issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
-`p4-low`, `p5-someday`, `manual` or `needs-decision`. Setting an issue aside as above is the only
-label change you make on an existing issue, besides adding `manual` or `needs-decision`.
+`p4-low`, `p5-someday`, `manual` or `needs-decision`. Besides setting an issue aside as above, your
+only label change on an existing issue is adding `manual` or `needs-decision`. Library exception to
+this paragraph: a library issue an app needs is built now in the app's wave, or put at `p2-high` in
+the library's nearest milestone.
 
 Priority labels, five levels:
 
@@ -99,8 +101,7 @@ Priority labels, five levels:
 - `p4-low`: parked. An agent never picks it; I raise it when I want it.
 - `p5-someday`: ideas and nice-to-haves. Never picked either.
 
-A backlog with nothing at `p3` or above is finished: report that and stop. Never go looking for work
-below it.
+A backlog with nothing at `p3` or above is done: report it and stop. Never look for work below it.
 
 **Filing issues.** This paragraph and "Features" below say what an agent may file without asking.
 You file issues yourself; never hand me a list of proposed issues to choose from. Something you
@@ -114,7 +115,7 @@ another repository goes in your report. Before the final report:
 2. **Give it a priority.** Every finding that survived step 1 is filed, grouped as step 4 says,
    because a finding left in a report is lost. Only a finding about a repository outside `spy4x/*`
    stays in the report. The priority says whether a wave builds it:
-   - `p3-medium`, or higher only for a security or data-loss hole:
+   - `p3-medium`, or higher only for a security or data-loss hole or the library exception:
      - a security hole that someone other than the data's owner can trigger on purpose, however
        unusual the input;
      - data loss that the ordinary action reaches, or that happens under a condition the code
@@ -122,7 +123,7 @@ another repository goes in your report. Before the final report:
      - a bug that the ordinary action hits, or that I or a person outside reported (a reviewer, an
        audit or another agent is not a report);
      - a gap that stops a lane running now: name the issue it blocks. It is the smallest change
-       that unblocks it;
+       that unblocks it. A library gap an app needs: the library exception;
      - a small fix to what a person sees or reads (contrast, spacing, a wording, a wrong doc line).
    - `p4-low`, parked until I raise it: everything else that is true, such as a failure that needs
      unusual input, rare timing or two faults at once, a missing test, a refactor, tooling
@@ -759,18 +760,17 @@ and integrate, not implement. Small or cross-cutting change → do it yourself: 
 than the edit, and a subagent lacks the context that makes it safe.
 
 **Models.** Every `Agent` call passes `model`: an omitted one inherits the lead's tier, always the
-most expensive. Every subagent → `opus` (Opus 5.5), whatever the task, implementers included, except
-search/inventory → `haiku`. Opus 5.5 does the same work as Sonnet 5 and Fable 5.1, faster and
-cheaper (`~/sync/code/ai-memory/experiments/model-comparison/`). `fable` is paused until I re-enable
-it. A `haiku` brief names one directory or one question; an inventory of a whole repo gets one
-`haiku` agent per top-level directory, and the lead merges their lists: past 100,000 prompt tokens a
-Haiku 5.5 call costs five times as much (`~/sync/code/ai-memory/experiments/haiku55-and-mods.md`).
-Architecture and final verdicts stay with the lead. Fresh subagents over forks (a fork copies the
-whole conversation).
-
-**Implementers and reviewers stay on `opus`, in every repo:** Sonnet 5.5 did worse in both roles
+most expensive. Every subagent → `opus` (Opus 5.5), whatever the task, except search/inventory →
+`haiku`. Opus 5.5 does the same work as Sonnet 5 and Fable 5.1, faster and cheaper
+(`~/sync/code/ai-memory/experiments/model-comparison/`). Implementers and reviewers stay on `opus`
+in every repo: Sonnet 5.5 did worse at both
 (`~/sync/code/ai-memory/experiments/sonnet55-vs-opus55-paired.md`, `sonnet55-implementer.md`,
 `sonnet55-reviewer.md`). The one escalation round in the `wave` skill goes to `implementer-xhigh`.
+`fable` is paused until I re-enable it. A `haiku` brief names one directory or one question; an
+inventory of a whole repo gets one `haiku` agent per top-level directory, and the lead merges their
+lists: past 100,000 prompt tokens a Haiku 5.5 call costs five times as much
+(`~/sync/code/ai-memory/experiments/haiku55-and-mods.md`). Architecture and final verdicts stay with
+the lead. Fresh subagents over forks (a fork copies the whole conversation).
 
 **Effort.** `medium` for sessions, leads, implementers and every review. Effort belongs to the agent
 type, not to the call.
