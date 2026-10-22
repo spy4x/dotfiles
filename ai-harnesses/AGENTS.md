@@ -88,8 +88,9 @@ come before priority:
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
 issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
-`p4-low`, `p5-someday`, `manual` or `needs-decision`. Setting an issue aside as above is the only
-label change you make on an existing issue, besides adding `manual` or `needs-decision`.
+`p4-low`, `p5-someday`, `manual` or `needs-decision`. Besides setting an issue aside as above, your
+only label change on an existing issue is adding `manual` or `needs-decision`. Exception: a library
+issue an app needs is built now in the app's wave, or put at `p2-high` in its next milestone.
 
 Priority labels, five levels:
 
@@ -99,8 +100,7 @@ Priority labels, five levels:
 - `p4-low`: parked. An agent never picks it; I raise it when I want it.
 - `p5-someday`: ideas and nice-to-haves. Never picked either.
 
-A backlog with nothing at `p3` or above is finished: report that and stop. Never go looking for work
-below it.
+A backlog with nothing at `p3` or above is done: report it and stop. Never look for work below it.
 
 **Filing issues.** This paragraph and "Features" below say what an agent may file without asking.
 You file issues yourself; never hand me a list of proposed issues to choose from. Something you
