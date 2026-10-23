@@ -47,9 +47,11 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   `AGENTS.md` when a session starts or compacts, and every subagent gets its lead's copy. Run
   `git -C ~/sync/code/dotfiles log --oneline --since=<wave start> -- ai-harnesses/`. If it prints
   anything, read that diff, follow it, and put the changed rules a subagent needs into its brief.
-- **Usage.** Before each batch of agents, run `claude -p /usage`. At 90% of the 5-hour limit,
-  start no new agent: let the running ones finish, post the handoff and end the turn. A limit that
-  hits mid-review throws that review away.
+- **Usage.** Before each batch of agents, run `claude -p /usage`. At 90% of the 5-hour limit or
+  95% of the weekly limit, start no new agent: let the running ones finish, post the handoff and
+  end the turn. A limit that hits mid-review throws that review away. Never stop for the weekly
+  limit below 95%. When the owner tells a session in chat to use the rest of the week, it ignores
+  the 95% stop and works up to 100%.
 - **Machine health.** Check CPU and RAM, and keep checking while lanes run. Parallel sessions have
   left zombie processes and a RAM leak before. Report anything off (what, which process, how much);
   a separate session fixes the cause.
