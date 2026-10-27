@@ -98,9 +98,10 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   cap then applies as usual. A harness without `implementer-xhigh` uses `implementer`.
 - A fix round goes to a fresh `implementer`, not back to the author, when the author's context is
   past about 200K tokens: read the "PEAK CTX" column of its row in
-  `deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <your session id>`. Its brief is the same as
-  the escalation brief above. Reviewers are resumed as usual: their context stays small. Trial
-  until 2026-11-28 (`~/sync/code/ai-memory/experiments/fresh-lanes.md`).
+  `deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <your session id>`. Its brief is the
+  same as the escalation brief above. When the escalation applies too, `implementer-xhigh` takes
+  the round. Reviewers are resumed as usual: their context stays small. Trial until 2026-11-28
+  (`~/sync/code/ai-memory/experiments/fresh-lanes.md`).
 - Reviewers stay at `medium`: `xhigh` and `max` rounds cost 5–9 times as much and did not cut
   review rounds (2026-09-25..26, `~/sync/code/ai-memory/experiments/model-comparison/`).
 
@@ -112,8 +113,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
 - Verify confident claims. The best catches are overclaims ("caught 3 bugs" → 1, "one cast" → 8,
   "check passes" → it doesn't). Demand reproduction.
 - Stop a lane's agent (`TaskStop`) once its PR merges or stops, so any wait it left behind dies
-  with it, and so it never takes a second issue. A lane that reports "waiting" while `pgrep` shows none of its processes is stuck: tell it
-  to read its results.
+  with it, and so it never takes a second issue. A lane that reports "waiting" while `pgrep` shows
+  none of its processes is stuck: tell it to read its results.
 
 ## Wave files
 
