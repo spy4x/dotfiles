@@ -159,6 +159,18 @@ test(`resolves a body-file path through a variable the same command set`, () => 
   })
 })
 
+test(`leaves a variable unresolved when the command may change it or never set it`, () => {
+  for (
+    const command of [
+      `D=/tmp/good && D=$(mktemp -d) && gh pr comment 5 --body-file $D/b.md`,
+      `D=/tmp/good && D+=/x && gh pr comment 5 --body-file $D/b.md`,
+      `D=/tmp/good && read D < p && gh pr comment 5 --body-file $D/b.md`,
+      `echo D=/tmp/good; gh pr comment 5 --body-file $D/b.md`,
+      `D=/tmp/good X=1 cat f; gh pr comment 5 --body-file $D/b.md`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `file`, path: `$D/b.md` })
+})
+
 test(`reads only the gh command's own flags, not flags elsewhere or inside quotes`, () => {
   expect(ghPost(`git checkout -b fix/x && gh pr create --fill`)).toEqual({ kind: `none` })
   expect(ghPost(`gh pr edit 118 --title "docs: explain -b usage"`)).toEqual({ kind: `none` })

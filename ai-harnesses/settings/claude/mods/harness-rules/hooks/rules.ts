@@ -334,9 +334,12 @@ function flagValue(words: string[], flags: string[]): string | undefined {
 export function ghPost(command: string): GhPost {
   const vars = new Map<string, string>()
   for (const words of commandsOf(command)) {
-    for (const word of words) {
-      const assignment = /^([A-Za-z_]\w*)=([^$`]*)$/.exec(word)
-      if (assignment) vars.set(assignment[1], assignment[2])
+    const assignments = words.map((word) => /^([A-Za-z_]\w*)=([^$`]*)$/.exec(word))
+    if (assignments.every((match) => match)) {
+      for (const match of assignments) {
+        const [, name, value] = match!
+        if (assignedOnce(command, name)) vars.set(name, value)
+      }
     }
     const [gh, noun, verb] = words
     if (gh !== `gh` || (noun !== `issue` && noun !== `pr`)) continue
@@ -355,6 +358,16 @@ export function ghPost(command: string): GhPost {
  * earlier (`D=/tmp/x && gh pr edit 5 --body-file $D/b.md`), so the hook can read the file. A name
  * with no such assignment stays as it is, and the file then cannot be read.
  */
+/**
+ * Whether the command sets `name` only once and never hands it to a command (`read D`, `for D in`),
+ * so the value it was given is the one `gh` sees.
+ */
+function assignedOnce(command: string, name: string): boolean {
+  const sets = command.match(new RegExp(`(^|[^\\w])${name}\\+?=`, `g`)) ?? []
+  const named = new RegExp(`(^|[\\s;&|(])${name}([\\s;&|)]|$)`).test(command)
+  return sets.length === 1 && !named
+}
+
 function expandVars(path: string, vars: Map<string, string>): string {
   return path.replace(/\$\{?([A-Za-z_]\w*)\}?/g, (text, name) => vars.get(name) ?? text)
 }
@@ -364,7 +377,8 @@ export function markerVerdict(text: string): Verdict {
   return text.includes(AGENT_MARKER) ? ALLOW : {
     deny: `Start every comment, issue and PR body with \`${AGENT_MARKER}\`: a comment ` +
       `without it reads as the owner's. Make it the body's first line. A body file written in ` +
-      `this same command, or named through a variable set outside it, cannot be read yet: write ` +
+      `this same command, or named through a variable set outside it or through \`$(…)\`, ` +
+      `cannot be read yet: write ` +
       `the file in a command of its own and pass its literal path.`,
   }
 }

@@ -113,9 +113,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   is a few lines: the verdict and what to change.
 - Verify confident claims. The best catches are overclaims ("caught 3 bugs" → 1, "one cast" → 8,
   "check passes" → it doesn't). Demand reproduction.
-- Stop a lane's agent (`TaskStop`) as soon as its reviewer passes, or once its PR stops: merging is
-  yours, so the implementer's job ends at the pass. Any wait it left behind dies with it, and it
-  never takes a second issue. A lane that reports "waiting" while `pgrep` shows
+- Stop a lane's agent (`TaskStop`) as soon as its reviewers pass (the `design-reviewer` too, when
+  the lane has one), or once its PR stops: merging is yours, so the implementer's job ends at the
+  pass. Any wait it left behind dies with it, and it never takes a second issue. A lane that reports "waiting" while `pgrep` shows
   none of its processes is stuck: tell it to read its results.
 
 ## Wave files

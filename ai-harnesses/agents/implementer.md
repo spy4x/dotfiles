@@ -63,8 +63,9 @@ Everything you read stays in your context, and every later call pays for it agai
 - Wait for a background run with one bounded loop, such as
   `timeout 900 bash -c 'until grep -q "^exit" <log>; do sleep 15; done'`, not with `sleep 60` and a
   command after it: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
-- Give `rm`, `rmdir` and `find -delete` the literal path you recorded, never `"$S"` or `$(…)`: the
-  hook refuses a path from a variable (`AGENTS.md`, "Leave nothing running").
+- Give `rm` and `rmdir` a literal path, never `"$S"` or `$(…)`: the hook refuses it. Delete a
+  folder with `find <path> -delete`; in a later tool call, use the literal path you recorded, since
+  shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running").
 - Every body you post after the PR exists (`gh pr edit`, a comment) starts with `<!-- agent -->`.
   Write it to a file in its own command first, then pass that file's literal path: the hook cannot
   read a file written in the same command.
