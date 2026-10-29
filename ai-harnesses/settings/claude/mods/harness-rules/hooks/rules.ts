@@ -354,20 +354,21 @@ export function ghPost(command: string): GhPost {
 }
 
 /**
+ * Whether `name` appears in the command only as one assignment and as `$NAME` or `${NAME}`
+ * references. Any other mention (`D[0]=`, `eval D\\=`, `read D`, a second `D=`) may change it, so
+ * the value it was given would not be the one `gh` sees.
+ */
+function assignedOnce(command: string, name: string): boolean {
+  const bare = [...command.matchAll(new RegExp(`(\\$\\{?)?(?<![\\w])${name}(?!\\w)`, `g`))]
+    .filter((match) => !match[1])
+  return bare.length === 1
+}
+
+/**
  * Replaces `$NAME` and `${NAME}` in a body-file path with a literal value the same command assigned
  * earlier (`D=/tmp/x && gh pr edit 5 --body-file $D/b.md`), so the hook can read the file. A name
  * with no such assignment stays as it is, and the file then cannot be read.
  */
-/**
- * Whether the command sets `name` only once and never hands it to a command (`read D`, `for D in`),
- * so the value it was given is the one `gh` sees.
- */
-function assignedOnce(command: string, name: string): boolean {
-  const sets = command.match(new RegExp(`(^|[^\\w])${name}\\+?=`, `g`)) ?? []
-  const named = new RegExp(`(^|[\\s;&|(])${name}([\\s;&|)]|$)`).test(command)
-  return sets.length === 1 && !named
-}
-
 function expandVars(path: string, vars: Map<string, string>): string {
   return path.replace(/\$\{?([A-Za-z_]\w*)\}?/g, (text, name) => vars.get(name) ?? text)
 }
@@ -378,8 +379,7 @@ export function markerVerdict(text: string): Verdict {
     deny: `Start every comment, issue and PR body with \`${AGENT_MARKER}\`: a comment ` +
       `without it reads as the owner's. Make it the body's first line. A body file written in ` +
       `this same command, or named through a variable set outside it or through \`$(…)\`, ` +
-      `cannot be read yet: write ` +
-      `the file in a command of its own and pass its literal path.`,
+      `cannot be read yet: write the file in a command of its own and pass its literal path.`,
   }
 }
 

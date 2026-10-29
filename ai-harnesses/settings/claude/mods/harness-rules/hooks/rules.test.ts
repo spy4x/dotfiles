@@ -167,6 +167,8 @@ test(`leaves a variable unresolved when the command may change it or never set i
       `D=/tmp/good && read D < p && gh pr comment 5 --body-file $D/b.md`,
       `echo D=/tmp/good; gh pr comment 5 --body-file $D/b.md`,
       `D=/tmp/good X=1 cat f; gh pr comment 5 --body-file $D/b.md`,
+      `D=/tmp/good && D[0]=/tmp/bad && gh pr comment 5 --body-file $D/b.md`,
+      `D=/tmp/good && eval D\\=/tmp/bad && gh pr comment 5 --body-file $D/b.md`,
     ]
   ) expect(ghPost(command)).toEqual({ kind: `file`, path: `$D/b.md` })
 })
