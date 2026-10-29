@@ -19,6 +19,31 @@ sudo sysctl --system
 The watch limit (`fs.inotify.max_user_watches`) is a separate number and is already generous on
 Fedora — check it before assuming it is the one being hit.
 
+**Docker MTU behind the VPN.** Every packet this machine sends to the internet, forwarded
+container traffic included, leaves through the `wg2` WireGuard tunnel, whose MTU is 1420.
+Docker's networks default to 1500, so a container's large TLS packets do not fit the tunnel and
+the connection is reset:
+`git ls-remote https://github.com/…` failed from every container on the default bridge and worked
+on a network created with MTU 1420 (2026-10-30). That broke every CI clone when this machine ran a
+Woodpecker agent. `system/etc/docker/daemon.json` sets 1420 through `default-network-opts` for
+every bridge network created after a restart, such as each pipeline's own network, and through
+`mtu` for the default bridge. A restart would normally stop every running container (the shared
+integration-test services have no restart policy). `live-restore` keeps them running through it,
+and unlike the MTU it is applied by a reload, so reload first:
+
+```bash
+sudo mkdir -p /etc/docker
+sudo cp system/etc/docker/daemon.json /etc/docker/daemon.json
+sudo systemctl reload docker    # turns on live-restore
+sudo systemctl restart docker   # new networks get 1420; containers keep running
+```
+
+Networks that already exist keep MTU 1500 until they are recreated (`docker compose down` and
+`up`). The default bridge (`docker0`) changes only on a restart with no container running: while
+containers run, Docker logs that it kept the old network settings. So a plain `docker run` stays
+on 1500 until a restart with every container stopped. Live-restore is meant for restarts within
+one Docker release; a dnf upgrade to a new major version may still stop containers.
+
 **`/tmp` on tmpfs.** Fedora mounts `/tmp` as tmpfs and cleans it at an age of 10 days. Throwaway
 Deno caches from CI-emulation runs accumulate far faster than that, and because tmpfs is RAM
 they cost memory the whole time. `system/etc/tmpfiles.d/tmp.conf` shortens the age to 2 days;
