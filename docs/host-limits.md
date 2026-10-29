@@ -20,8 +20,9 @@ The watch limit (`fs.inotify.max_user_watches`) is a separate number and is alre
 Fedora — check it before assuming it is the one being hit.
 
 **Docker MTU behind the VPN.** Every packet this machine sends to the internet, forwarded
-container traffic included, leaves through the `wg2` WireGuard tunnel, whose MTU is 1420. Docker's networks default
-to 1500, so a container's large TLS packets do not fit the tunnel and the connection is reset:
+container traffic included, leaves through the `wg2` WireGuard tunnel, whose MTU is 1420.
+Docker's networks default to 1500, so a container's large TLS packets do not fit the tunnel and
+the connection is reset:
 `git ls-remote https://github.com/…` failed from every container on the default bridge and worked
 on a network created with MTU 1420 (2026-10-30). That broke every CI clone when this machine ran a
 Woodpecker agent. `system/etc/docker/daemon.json` sets 1420 through `default-network-opts` for
