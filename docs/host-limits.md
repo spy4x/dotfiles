@@ -19,6 +19,26 @@ sudo sysctl --system
 The watch limit (`fs.inotify.max_user_watches`) is a separate number and is already generous on
 Fedora — check it before assuming it is the one being hit.
 
+**Docker MTU behind the VPN.** Every packet this machine sends, forwarded container traffic
+included, leaves through the `wg2` WireGuard tunnel, whose MTU is 1420. Docker's networks default
+to 1500, so a container's large TLS packets do not fit the tunnel and the connection is reset:
+`git ls-remote https://github.com/…` failed from every container on the default bridge and worked
+on a network created with MTU 1420 (2026-10-30). That broke every CI clone when this machine ran a
+Woodpecker agent. `system/etc/docker/daemon.json` sets 1420 for the default bridge and, through
+`default-network-opts`, for every bridge network created later, such as each pipeline's own
+network. The MTU options take effect only on a restart, which would stop every running container
+(the shared integration-test services have no restart policy). `live-restore` keeps containers
+running through a daemon restart, and unlike the MTU it is applied by a reload, so reload first:
+
+```bash
+sudo mkdir -p /etc/docker
+sudo cp system/etc/docker/daemon.json /etc/docker/daemon.json
+sudo systemctl reload docker    # turns on live-restore
+sudo systemctl restart docker   # applies the MTU; containers keep running
+```
+
+Networks that already exist keep MTU 1500 until they are recreated.
+
 **`/tmp` on tmpfs.** Fedora mounts `/tmp` as tmpfs and cleans it at an age of 10 days. Throwaway
 Deno caches from CI-emulation runs accumulate far faster than that, and because tmpfs is RAM
 they cost memory the whole time. `system/etc/tmpfiles.d/tmp.conf` shortens the age to 2 days;
