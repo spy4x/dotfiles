@@ -332,24 +332,54 @@ function flagValue(words: string[], flags: string[]): string | undefined {
  * can check.
  */
 export function ghPost(command: string): GhPost {
+  const vars = new Map<string, string>()
   for (const words of commandsOf(command)) {
+    const assignments = words.map((word) => /^([A-Za-z_]\w*)=([^$`]*)$/.exec(word))
+    if (assignments.every((match) => match)) {
+      for (const match of assignments) {
+        const [, name, value] = match!
+        if (assignedOnce(command, name)) vars.set(name, value)
+      }
+    }
     const [gh, noun, verb] = words
     if (gh !== `gh` || (noun !== `issue` && noun !== `pr`)) continue
     if (!POSTING_VERBS.includes(verb ?? ``)) continue
     const path = flagValue(words, [`--body-file`, `-F`])
     if (path === `-`) return { kind: `stdin` }
-    if (path !== undefined) return { kind: `file`, path }
+    if (path !== undefined) return { kind: `file`, path: expandVars(path, vars) }
     const body = flagValue(words, [`--body`, `-b`])
     if (body !== undefined) return { kind: `inline`, body }
   }
   return { kind: `none` }
 }
 
+/**
+ * Whether `name` appears in the command only as one assignment and as `$NAME` or `${NAME}`
+ * references. Any other mention (`D[0]=`, `eval D\\=`, `read D`, a second `D=`) may change it, so
+ * the value it was given would not be the one `gh` sees.
+ */
+function assignedOnce(command: string, name: string): boolean {
+  const bare = [...command.matchAll(new RegExp(`(\\$\\{?)?(?<![\\w])${name}(?!\\w)`, `g`))]
+    .filter((match) => !match[1])
+  return bare.length === 1
+}
+
+/**
+ * Replaces `$NAME` and `${NAME}` in a body-file path with a literal value the same command assigned
+ * earlier (`D=/tmp/x && gh pr edit 5 --body-file $D/b.md`), so the hook can read the file. A name
+ * with no such assignment stays as it is, and the file then cannot be read.
+ */
+function expandVars(path: string, vars: Map<string, string>): string {
+  return path.replace(/\$\{?([A-Za-z_]\w*)\}?/g, (text, name) => vars.get(name) ?? text)
+}
+
 /** Judges a body we are about to post: it must carry the agent marker. */
 export function markerVerdict(text: string): Verdict {
   return text.includes(AGENT_MARKER) ? ALLOW : {
     deny: `Start every comment, issue and PR body with \`${AGENT_MARKER}\`: a comment ` +
-      `without it reads as the owner's.`,
+      `without it reads as the owner's. Make it the body's first line. A body file written in ` +
+      `this same command, or named through a variable set outside it or through \`$(…)\`, ` +
+      `cannot be read yet: write the file in a command of its own and pass its literal path.`,
   }
 }
 

@@ -138,8 +138,9 @@ export const register: Register = (on) => {
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const post = ghPost(e.command)
     if (post.kind === `none`) return next(e)
-    // A body file is often written earlier in this same command (a heredoc, `sed -i`) or named
-    // through a variable (`$D/b.md`), so it cannot be read yet; `--body-file -` reads a heredoc.
+    // A body file is often written earlier in this same command (a heredoc, `sed -i`), so it
+    // cannot be read yet; a variable in its path resolves only when this command sets it once to
+    // a literal (`ghPost`). `--body-file -` reads a heredoc.
     // The command text holds a heredoc body, so it counts for the marker and is always scanned.
     // A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out unscanned.
     const file = post.kind === `file` ? await readable($, post.path) : undefined

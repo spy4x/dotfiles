@@ -39,7 +39,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   answers in a comment and removes the label.
 - One session runs one wave. The next wave starts in a new session from the handoff. Never resume
   an old coordinator to run the next wave, write its prompt or answer a small question: resuming it
-  rewrites its whole cache.
+  rewrites its whole cache. The session ends with its handoff: a new request after it goes to a new
+  session, because every turn of a long-running lead re-reads its whole context.
 
 ## Before spawning
 
@@ -112,9 +113,11 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   is a few lines: the verdict and what to change.
 - Verify confident claims. The best catches are overclaims ("caught 3 bugs" → 1, "one cast" → 8,
   "check passes" → it doesn't). Demand reproduction.
-- Stop a lane's agent (`TaskStop`) once its PR merges or stops, so any wait it left behind dies
-  with it, and so it never takes a second issue. A lane that reports "waiting" while `pgrep` shows
-  none of its processes is stuck: tell it to read its results.
+- Stop a lane's agent (`TaskStop`) as soon as its reviewers pass (the `design-reviewer` too, when
+  the lane has one), or once its PR stops: merging is yours, so the implementer's job ends at the
+  pass. Any wait it left behind dies with it, and it never takes a second issue. A lane that
+  reports "waiting" while `pgrep` shows none of its processes is stuck: tell it to read its
+  results.
 
 ## Wave files
 
