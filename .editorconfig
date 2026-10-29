@@ -23,7 +23,8 @@ indent_size = 2
 
 # Markdown files
 [*.md]
-trim_trailing_whitespace = false  # Markdown can use trailing whitespace for line breaks
+# Markdown can use trailing whitespace for line breaks
+trim_trailing_whitespace = false
 max_line_length = off
 
 # YAML files
