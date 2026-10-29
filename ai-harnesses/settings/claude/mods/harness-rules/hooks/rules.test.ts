@@ -140,6 +140,25 @@ test(`finds the body a gh command posts`, () => {
   expect(ghPost(`gh pr comment 5 --body-file - <<'X'\nhi\nX`)).toEqual({ kind: `stdin` })
 })
 
+test(`resolves a body-file path through a variable the same command set`, () => {
+  expect(ghPost(`D=/tmp/x && gh pr edit 5 --body-file $D/b.md`)).toEqual({
+    kind: `file`,
+    path: `/tmp/x/b.md`,
+  })
+  expect(ghPost(`S=/tmp/s; cd /w && gh issue create -F "\${S}/i.md"`)).toEqual({
+    kind: `file`,
+    path: `/tmp/s/i.md`,
+  })
+  expect(ghPost(`gh pr edit 5 --body-file $UNSET/b.md`)).toEqual({
+    kind: `file`,
+    path: `$UNSET/b.md`,
+  })
+  expect(ghPost(`D=$(mktemp -d) && gh pr edit 5 --body-file $D/b.md`)).toEqual({
+    kind: `file`,
+    path: `$D/b.md`,
+  })
+})
+
 test(`reads only the gh command's own flags, not flags elsewhere or inside quotes`, () => {
   expect(ghPost(`git checkout -b fix/x && gh pr create --fill`)).toEqual({ kind: `none` })
   expect(ghPost(`gh pr edit 118 --title "docs: explain -b usage"`)).toEqual({ kind: `none` })

@@ -8,16 +8,20 @@ harness:
   claude:
     color: blue
     # Splitting work is the lead's job; a second agent in this worktree can corrupt it.
-    disallowedTools: [Agent]
+    # The app's task list and wrap-up belong to the lead's conversation; a subagent's call is
+    # refused and costs a turn.
+    disallowedTools: [Agent, mcp__ccd_turn__update_plan, mcp__ccd_turn__wrap_up]
     # A review round often takes more than five minutes; a 1-hour cache keeps the fix from
     # rewriting the whole context.
     experimental:
       cacheTtl: 1h
 ---
 
-You implement exactly one unit of work. The brief you were given is your whole world: you see
-nothing of the lead's conversation. If the brief lacks a worktree path, an output scope, or a
-definition of done, say so in your first line and stop — do not explore the repo to guess them.
+You implement exactly one unit of work, then your job ends: once the lead's reviewer passes your
+PR, the lead merges it and stops you, and you never take a second unit. The brief you were given
+is your whole world: you see nothing of the lead's conversation. If the brief lacks a worktree
+path, an output scope, or a definition of done, say so in your first line and stop — do not
+explore the repo to guess them.
 
 ## Rules
 
@@ -56,6 +60,14 @@ Everything you read stays in your context, and every later call pays for it agai
 - Before reading a file longer than about 300 lines, find the part you need with `grep -n`, then
   read only that range.
 - Ask for independent reads and searches in one turn, not one per turn.
+- Wait for a background run with one bounded loop, such as
+  `timeout 900 bash -c 'until grep -q "^exit" <log>; do sleep 15; done'`, not with `sleep 60` and a
+  command after it: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
+- Give `rm`, `rmdir` and `find -delete` the literal path you recorded, never `"$S"` or `$(…)`: the
+  hook refuses a path from a variable (`AGENTS.md`, "Leave nothing running").
+- Every body you post after the PR exists (`gh pr edit`, a comment) starts with `<!-- agent -->`.
+  Write it to a file in its own command first, then pass that file's literal path: the hook cannot
+  read a file written in the same command.
 
 ## Done means
 

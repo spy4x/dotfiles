@@ -332,24 +332,40 @@ function flagValue(words: string[], flags: string[]): string | undefined {
  * can check.
  */
 export function ghPost(command: string): GhPost {
+  const vars = new Map<string, string>()
   for (const words of commandsOf(command)) {
+    for (const word of words) {
+      const assignment = /^([A-Za-z_]\w*)=([^$`]*)$/.exec(word)
+      if (assignment) vars.set(assignment[1], assignment[2])
+    }
     const [gh, noun, verb] = words
     if (gh !== `gh` || (noun !== `issue` && noun !== `pr`)) continue
     if (!POSTING_VERBS.includes(verb ?? ``)) continue
     const path = flagValue(words, [`--body-file`, `-F`])
     if (path === `-`) return { kind: `stdin` }
-    if (path !== undefined) return { kind: `file`, path }
+    if (path !== undefined) return { kind: `file`, path: expandVars(path, vars) }
     const body = flagValue(words, [`--body`, `-b`])
     if (body !== undefined) return { kind: `inline`, body }
   }
   return { kind: `none` }
 }
 
+/**
+ * Replaces `$NAME` and `${NAME}` in a body-file path with a literal value the same command assigned
+ * earlier (`D=/tmp/x && gh pr edit 5 --body-file $D/b.md`), so the hook can read the file. A name
+ * with no such assignment stays as it is, and the file then cannot be read.
+ */
+function expandVars(path: string, vars: Map<string, string>): string {
+  return path.replace(/\$\{?([A-Za-z_]\w*)\}?/g, (text, name) => vars.get(name) ?? text)
+}
+
 /** Judges a body we are about to post: it must carry the agent marker. */
 export function markerVerdict(text: string): Verdict {
   return text.includes(AGENT_MARKER) ? ALLOW : {
     deny: `Start every comment, issue and PR body with \`${AGENT_MARKER}\`: a comment ` +
-      `without it reads as the owner's.`,
+      `without it reads as the owner's. Make it the body's first line. A body file written in ` +
+      `this same command, or named through a variable set outside it, cannot be read yet: write ` +
+      `the file in a command of its own and pass its literal path.`,
   }
 }
 
