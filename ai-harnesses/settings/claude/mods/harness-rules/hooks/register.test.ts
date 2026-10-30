@@ -313,6 +313,28 @@ test(`refuses a post when gitleaks fails with an error exit code`, async ($, on)
   expect(ran.deny).toContain(`failed (exit 2)`)
 })
 
+test(`refuses a post whose check breaks even when the log write outlasts the grace`, {
+  timeoutMs: 8000,
+}, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  mock.clock(on)
+  const logged: string[] = []
+  on(`process.run`, async (_$, e) => {
+    if (e.argv[0] === `gitleaks`) throw new Error(`gitleaks: not found`)
+    // Longer than the 1-second grace of a `.catch` handler (`HookBudget.catchMs`).
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    logged.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> ok"`,
+  })
+  expect(ran.deny).toContain(`It was not sent.`)
+  expect(logged.join(``)).toContain(`"event":"gh"`)
+})
+
 test(`refuses a gh post another hook makes beneath the guard's own call`, {
   plugins: [{
     name: `poster`,
