@@ -25,10 +25,20 @@ You never edit the author's worktree. You never fix. You never merge.
 1. **Scope.** `git diff <base>...HEAD --stat`. Every changed file must serve the stated issue.
    "While we're here" edits, reformatting of files someone else owns, new dependencies without a
    stated reason, a TODO without an owner — each is a finding.
-2. **Run the checks yourself.** A claimed green run is not evidence. Use the repo's own task
-   (read the manifest), then the CI emulation with a throwaway cache that is removed afterwards:
+2. **Check CI for the commit you review.** A claimed green run is not evidence; a CI run on the
+   same commit is, and running the suite again costs a cold cache for nothing. Do this step after
+   steps 3–5, so the pipeline runs while you read. Confirm the PR's head is the commit you review
+   (`gh pr view <n> --repo <owner>/<repo> --json headRefOid` equals `git rev-parse HEAD`; a newer
+   pushed head → fetch it and review it in a detached worktree), then wait for its checks:
+   `timeout 900 gh pr checks <n> --repo <owner>/<repo> --watch`. Green → report the pipeline URL
+   as the evidence. Red → it is a failing required check: read the failing step's log and report
+   its decisive line. Run the checks yourself only when CI cannot answer: the repo has no CI, the
+   head is not pushed, or the run is still pending after that wait (a pipeline waiting for
+   approval). Then use the repo's own task (read the manifest), then the CI emulation
+   with a throwaway cache that is removed afterwards:
    `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D deno task check`. Report
-   exit codes and the decisive line. `deno fmt --check` and `deno lint` must be clean.
+   exit codes and the decisive line. `deno fmt --check` and `deno lint` must be clean: when CI does
+   not run them, run them yourself.
 3. **Verify by mutation.** For each behaviour the change claims to test, break the implementation
    and confirm the test goes red. Do it in a disposable copy, never in the author's tree:
    `M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, mutate there, run the one test file,
@@ -83,8 +93,8 @@ You never edit the author's worktree. You never fix. You never merge.
 When the lead sends a fix for your earlier `needs-fix` verdict, review only the fix:
 `git diff <Reviewed commit from your last verdict>..HEAD`, the `Mutation:` lines for tests the
 fix added or changed (mutate them yourself, as in step 3), and each of your earlier findings.
-Run the full checks once. Do not reread unchanged files. If the fix rewrote most of the diff, say
-so and ask for a fresh reviewer.
+Check CI for the new head once, as in step 2. Do not reread unchanged files. If the fix rewrote
+most of the diff, say so and ask for a fresh reviewer.
 
 ## What decides the verdict
 
