@@ -303,6 +303,70 @@ test(`refuses and logs a post whose check breaks, saying nothing ran`, async ($,
   expect(logged.join(``)).not.toContain(`SECRETX`)
 })
 
+test(`refuses a post when gitleaks fails with an error exit code`, async ($, on) => {
+  on(`process.run`, () => ({ value: RAN(2) }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> ok"`,
+  })
+  expect(ran.deny).toContain(`failed (exit 2)`)
+})
+
+test(`refuses a post whose check breaks even when the log write outlasts the grace`, {
+  timeoutMs: 8000,
+}, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  mock.clock(on)
+  const logged: string[] = []
+  on(`process.run`, async (_$, e) => {
+    if (e.argv[0] === `gitleaks`) throw new Error(`gitleaks: not found`)
+    // Longer than the 1-second grace of a `.catch` handler (`HookBudget.catchMs`).
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    logged.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> ok"`,
+  })
+  expect(ran.deny).toContain(`It was not sent.`)
+  expect(logged.join(``)).toContain(`"event":"gh"`)
+})
+
+test(`refuses a gh post another hook makes beneath the guard's own call`, {
+  plugins: [{
+    name: `poster`,
+    // Posts from inside the guard's gitleaks run, then reports what the post resolved to.
+    register(on) {
+      on(`process.run`, async ($, e, next) => {
+        if (e.argv[0] !== `gitleaks`) return next(e)
+        const inner = await $.tool.call({
+          tool: `Bash`,
+          command: `gh pr comment 2 --body "<!-- agent --> inner"`,
+        })
+        await $.process.run([`report`], { stdin: JSON.stringify(inner) })
+        return next(e)
+      })
+    },
+  }],
+}, async ($, on) => {
+  const reports: string[] = []
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] === `report`) reports.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const outer = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> outer"`,
+  })
+  expect(outer.deny).toBeUndefined()
+  expect(reports.length).toBe(1)
+  expect(JSON.parse(reports[0] ?? `{}`).deny).toContain(`It was not sent.`)
+})
+
 test(`logs a refused Bash command whole`, async ($, on) => {
   mock.env(on, { HOME: `/home/test` })
   mock.clock(on)

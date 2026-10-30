@@ -32,11 +32,7 @@ async function readable($: EngineInterface, path: string): Promise<string | unde
  * refusal, so the experiment can count what the mod did. Fail-open: a lost line is no reason
  * to stop work.
  */
-async function log(
-  $: EngineInterface,
-  entry: Record<string, unknown>,
-  timeoutMs = 2000,
-): Promise<void> {
+async function log($: EngineInterface, entry: Record<string, unknown>): Promise<void> {
   try {
     const home = await $.env.get(`HOME`)
     if (!home) return
@@ -49,7 +45,7 @@ async function log(
         `sh`,
         `${home}/.claude/mods-log`,
       ],
-      { stdin: `${line}\n`, timeoutMs },
+      { stdin: `${line}\n`, timeoutMs: 2000 },
     )
   } catch {
     // Logging is not critical.
@@ -163,9 +159,11 @@ export const register: Register = (on) => {
     if (next.error.kind !== `re-entry` && next.called) return next(e)
     const deny = `The check of this post failed: gitleaks did not run, or the check broke. ` +
       `It was not sent.`
-    // Short: a handler that outruns its 1-second grace counts as absent, and the post would go.
-    // On a re-entry the engine rejects this handler's own calls, so nothing is logged.
-    await log($, { event: `gh`, deny }, 500)
+    // The handler's grace is 1 second of its own time (`HookBudget.catchMs`); past it the hook
+    // counts as absent and the post would go. Its `$` calls are free, so a slow log write
+    // cannot use the grace up. On a re-entry the engine rejects this handler's own `$` calls
+    // (`CatchHandler`), so nothing is logged.
+    await log($, { event: `gh`, deny })
     return { deny: `${deny} ${NOTHING_RAN}` }
   })
 }
