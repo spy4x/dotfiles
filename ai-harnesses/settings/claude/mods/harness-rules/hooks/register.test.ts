@@ -166,6 +166,19 @@ test(`checks a body file for the marker and secrets, then posts`, async ($, on) 
   expect(scanned[0]).toContain(`<!-- agent -->\nbody`)
 })
 
+test(`scans the command text too when the body file is readable`, async ($, on) => {
+  on(`fs.read`, () => ({ value: `<!-- agent -->\nbody` }))
+  on(`process.run`, (_$, e) => ({
+    value: RAN(e.argv[0] === `gitleaks` && (e.init?.stdin ?? ``).includes(`SECRETX`) ? 1 : 0),
+  }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh issue create --title "key=SECRETX" --body-file /abs/b.md`,
+  })
+  expect(ran.deny).toContain(`secret`)
+})
+
 /** A heredoc that writes a body file, then a gh call that posts it, in one command. */
 const HEREDOC_POST = (body: string) =>
   `cat > /abs/b.md <<'EOF'\n${body}\nEOF\ngh pr create --title t --body-file /abs/b.md`
@@ -236,15 +249,75 @@ test(`refuses an unreadable body file when the command lacks the marker`, async 
   expect(ran.deny).toContain(`<!-- agent -->`)
 })
 
-test(`posts a body file the same command gives the marker`, async ($, on) => {
+test(`refuses a readable body file without the marker, even when the command holds it`, async (
+  $,
+  on,
+) => {
   on(`fs.read`, () => ({ value: `no marker` }))
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  for (
+    const command of [
+      `sed -i '1i <!-- agent -->' /abs/b.md && gh pr edit 1 --body-file /abs/b.md`,
+      `gh pr edit 1 --body-file /abs/b.md # <!-- agent -->`,
+    ]
+  ) {
+    const ran = await $.tool.call({ tool: `Bash`, command })
+    expect(ran.deny).toContain(`<!-- agent -->`)
+  }
+})
+
+test(`refuses a wrapped gh post without the marker`, async ($, on) => {
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  for (
+    const command of [
+      `timeout 30 gh pr comment 5 --body x`,
+      `X=1 gh pr comment 5 --body x`,
+      `sudo gh pr comment 5 --body x`,
+      `env gh pr comment 5 --body x`,
+      `for i in 1; do gh pr comment 5 --body x; done`,
+    ]
+  ) {
+    const ran = await $.tool.call({ tool: `Bash`, command })
+    expect(ran.deny).toContain(`Start every comment`)
+  }
+})
+
+test(`scans a wrapped gh post that has the marker, then posts it`, async ($, on) => {
+  const scanned: string[] = []
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] === `gitleaks`) scanned.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const command = `timeout 30 gh pr comment 5 --body "<!-- agent --> hi"`
+  const ran = await $.tool.call({ tool: `Bash`, command })
+  expect(ran.deny).toBeUndefined()
+  expect(scanned).toEqual([command])
+})
+
+test(`refuses a gh post the guard cannot read, saying how to write it`, async ($, on) => {
   on(`process.run`, () => ({ value: RAN(0) }))
   on(`tool.call`, () => BASH_OK)
   const ran = await $.tool.call({
     tool: `Bash`,
-    command: `sed -i '1i <!-- agent -->' /abs/b.md && gh pr edit 1 --body-file /abs/b.md`,
+    command: `bash -c 'gh pr comment 5 --body "<!-- agent --> hi"'`,
   })
-  expect(ran.deny).toBeUndefined()
+  expect(ran.deny).toContain(`written plainly`)
+})
+
+test(`lets gh commands that only read through`, async ($, on) => {
+  const commands: string[] = []
+  on(`tool.call`, (_$, e) => {
+    commands.push(e.tool === `Bash` ? e.command : ``)
+    return BASH_OK
+  })
+  for (const command of [`gh pr view 5`, `gh issue list`, `timeout 30 gh pr view 5 --json body`]) {
+    const ran = await $.tool.call({ tool: `Bash`, command })
+    expect(ran.deny).toBeUndefined()
+  }
+  expect(commands.length).toBe(3)
 })
 
 test(`logs a gh refusal without the command, which may hold the secret`, async ($, on) => {

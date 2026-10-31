@@ -7,6 +7,7 @@ import {
   leakVerdict,
   markerVerdict,
   spawnVerdict,
+  UNPLACED_POST,
   uuidVerdict,
   type Where,
 } from "./rules.ts"
@@ -137,10 +138,15 @@ export const register: Register = (on) => {
     // A body file is often written earlier in this same command (a heredoc, `sed -i`), so it
     // cannot be read yet; a variable in its path resolves only when this command sets it once to
     // a literal (`ghPost`). `--body-file -` reads a heredoc.
-    // The command text holds a heredoc body, so it counts for the marker and is always scanned.
-    // A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out unscanned.
+    // A file that can be read is judged by its own text: a marker elsewhere in the command (a
+    // shell comment, a `sed -i` that has not run yet) does not count. Only when it cannot be read
+    // does the command text, which then holds a heredoc body, count for the marker; it is always
+    // scanned. A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out
+    // unscanned.
     const file = post.kind === `file` ? await readable($, post.path) : undefined
-    let verdict = markerVerdict(post.kind === `inline` ? post.body : `${file ?? ``}\n${e.command}`)
+    let verdict = post.kind === `unplaced`
+      ? UNPLACED_POST
+      : markerVerdict(post.kind === `inline` ? post.body : file ?? e.command)
     if (!verdict.deny) {
       const scan = await $.process.run(
         [`gitleaks`, `stdin`, `--no-banner`, `--redact`],
