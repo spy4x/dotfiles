@@ -19,7 +19,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   or `needs-decision`, issues with an open PR by `spy4x`, and issues another session claimed
   ("Claim an issue" in `AGENTS.md`, "Git Flow"). This lists the candidates oldest first; group
   them by priority label yourself:
-  `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:p4-low -label:p5-someday sort:created-asc'`.
+  `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:in-progress -label:p4-low -label:p5-someday sort:created-asc'`.
 - Two limits in `AGENTS.md`, "Picking work yourself", come before priority. The repo has an open
   milestone (listed due first, undated last:
   `gh api --paginate --slurp 'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`) → add
