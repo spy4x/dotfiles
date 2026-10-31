@@ -259,10 +259,10 @@ test(`sees no body in a close without a comment or a merge without a body`, () =
 })
 
 test(`expands home in a body-file path and gives up on any other shell expansion`, () => {
-  expect(bodyFilePath(`~/f.md`, `/home/t`)).toBe(`/home/t/f.md`)
-  expect(bodyFilePath(`$HOME/f.md`, `/home/t`)).toBe(`/home/t/f.md`)
-  expect(bodyFilePath(`\${HOME}/f.md`, `/home/t`)).toBe(`/home/t/f.md`)
-  expect(bodyFilePath(`/abs/f.md`, undefined)).toBe(`/abs/f.md`)
+  expect(bodyFilePath(`~/f.md`, { home: `/home/t` })).toBe(`/home/t/f.md`)
+  expect(bodyFilePath(`$HOME/f.md`, { home: `/home/t` })).toBe(`/home/t/f.md`)
+  expect(bodyFilePath(`\${HOME}/f.md`, { home: `/home/t` })).toBe(`/home/t/f.md`)
+  expect(bodyFilePath(`/abs/f.md`, {})).toBe(`/abs/f.md`)
   for (
     const [path, home] of [
       [`~/f.md`, undefined],
@@ -273,7 +273,65 @@ test(`expands home in a body-file path and gives up on any other shell expansion
       [`\`pwd\`/f.md`, `/home/t`],
       [`~root/f.md`, `/home/t`],
     ]
-  ) expect(bodyFilePath(path!, home)).toBeUndefined()
+  ) expect(bodyFilePath(path!, { home, cwd: `/w` })).toBeUndefined()
+})
+
+test(`joins a relative body-file path to the session's directory, and gives up without one`, () => {
+  expect(bodyFilePath(`f.md`, { cwd: `/w` })).toBe(`/w/f.md`)
+  expect(bodyFilePath(`sub/f.md`, { cwd: `/w` })).toBe(`/w/sub/f.md`)
+  expect(bodyFilePath(`$HOME/x/f.md`, { cwd: `/w`, home: `/home/t` })).toBe(`/home/t/x/f.md`)
+  expect(bodyFilePath(`f.md`, {})).toBeUndefined()
+})
+
+test(`resolves a relative body-file path against the folder a cd moved to`, () => {
+  for (
+    const [command, path] of [
+      [`cd /x && gh pr comment 5 -F f.md`, `/x/f.md`],
+      [`cd -- /x && gh pr comment 5 -F f.md`, `/x/f.md`],
+      [`pushd /x && gh pr comment 5 -F f.md`, `/x/f.md`],
+      [`cd /x; cd sub && gh pr comment 5 -F f.md`, `/x/sub/f.md`],
+      [`cd sub && gh pr comment 5 -F f.md`, `sub/f.md`],
+      [`cd && gh pr comment 5 -F f.md`, `$HOME/f.md`],
+      [`cd ~ && gh pr comment 5 -F f.md`, `$HOME/f.md`],
+      [`cd ~/x && gh pr comment 5 -F f.md`, `~/x/f.md`],
+      [`cd /x && gh pr comment 5 -F /abs/f.md`, `/abs/f.md`],
+      [`cd "$FOO" && gh pr comment 5 -F /abs/f.md`, `/abs/f.md`],
+      [`gh pr comment 5 -F f.md && cd /x`, `f.md`],
+    ]
+  ) expect(ghPost(command!)).toEqual({ kind: `file`, path: path! })
+})
+
+test(`refuses a relative body file after a cd it cannot follow`, () => {
+  for (
+    const command of [
+      `cd "$FOO" && gh pr comment 5 -F f.md`,
+      `cd "$FOO" && cd sub && gh pr comment 5 -F f.md`,
+      `cd "$(mktemp -d)" && gh pr comment 5 -F f.md`,
+      `cd \`pwd\` && gh pr comment 5 -F f.md`,
+      `cd - && gh pr comment 5 -F f.md`,
+      `cd -P /x && gh pr comment 5 -F f.md`,
+      `cd /x y && gh pr comment 5 -F f.md`,
+      `cd /x/* && gh pr comment 5 -F f.md`,
+      `cd ~root && gh pr comment 5 -F f.md`,
+      `pushd +1 && gh pr comment 5 -F f.md`,
+      `pushd /x && popd && gh pr comment 5 -F f.md`,
+      `(cd /x) && gh pr comment 5 -F f.md`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
+})
+
+test(`finds the comment a reopen posts`, () => {
+  expect(ghPost(`gh issue reopen 1 --comment x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr reopen 1 -c x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr reopen 1`)).toEqual({ kind: `none` })
+  expect(ghPost(`bash -c 'gh issue reopen 1 -c x'`)).toEqual({ kind: `unplaced` })
+})
+
+test(`sees a merge's commit subject as text to scan, not as a body`, () => {
+  expect(ghPost(`gh pr merge 1 --squash --subject x`)).toEqual({ kind: `subject` })
+  expect(ghPost(`gh pr merge 1 -t x`)).toEqual({ kind: `subject` })
+  expect(ghPost(`gh pr merge 1 -t x -b y`)).toEqual({ kind: `inline`, body: `y` })
+  expect(ghPost(`gh pr create -t x`)).toEqual({ kind: `none` })
 })
 
 test(`refuses a repeated body flag, since gh posts the last one`, () => {

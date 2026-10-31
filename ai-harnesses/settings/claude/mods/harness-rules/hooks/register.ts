@@ -1,5 +1,6 @@
 import type { EngineInterface, Register } from "claude-code"
 import {
+  ALLOW,
   bashVerdict,
   bodyFilePath,
   DIRECTION_PATH,
@@ -145,12 +146,15 @@ export const register: Register = (on) => {
     // scanned. A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out
     // unscanned.
     // The shell expands `~/` and `$HOME`; a path it would change in any other way is unplaced.
-    const path = post.kind === `file`
-      ? bodyFilePath(post.path, await $.env.get(`HOME`).catch(() => undefined))
-      : undefined
+    // A relative path is read from the folder a `cd` in the command moved to (`ghPost`), or else
+    // from the session's directory, where the shell runs.
+    const path = post.kind === `file` ? bodyFilePath(post.path, await whereOf($)) : undefined
     const file = path === undefined ? undefined : await readable($, path)
     let verdict = post.kind === `unplaced` || (post.kind === `file` && path === undefined)
       ? UNPLACED_POST
+      : post.kind === `subject`
+      // A commit subject is a title: it is scanned below, but a marker there would be wrong.
+      ? ALLOW
       : markerVerdict(post.kind === `inline` ? post.body : file ?? e.command)
     if (!verdict.deny) {
       const scan = await $.process.run(

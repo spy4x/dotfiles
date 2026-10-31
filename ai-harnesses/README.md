@@ -159,12 +159,15 @@ states, so the prose stays the source:
   the calls the file or the replaced text already had is not;
 - a `gh issue` or `gh pr` body must carry `<!-- agent -->`, and `gitleaks` scans the command and any
   body file it can read. That covers `create`, `comment`, `edit`, `review`, the `--comment` of
-  `close` and the body of `pr merge`. A `--body-file` the hook can read must hold the marker itself,
-  so a marker in a shell comment does not count, and a file the same command edits or rewrites (`sed
-  -i`, a heredoc over an existing file) is judged as it was before. The hook expands a leading `~/`,
-  `$HOME` or `${HOME}` in its path, and a variable the same command sets once to a literal; any
-  other `$` or backtick in the path refuses the post. Only a file it cannot read yet, one the same
-  command creates (a heredoc), or `-` (standard input), is judged and scanned through the command
+  `close` and `reopen`, and the body of `pr merge`; the `--subject` of `pr merge` is scanned but
+  needs no marker. A `--body-file` the hook can read must hold the marker itself, so a marker in a
+  shell comment does not count, and a file the same command edits or rewrites (`sed -i`, a heredoc
+  over an existing file) is judged as it was before. The hook expands a leading `~/`, `$HOME` or
+  `${HOME}` in its path, and a variable the same command sets once to a literal; any other `$` or
+  backtick in the path refuses the post. It reads a relative path from the folder an earlier `cd`
+  or `pushd` in the command moved to, or else from the session's directory; a relative path after
+  a `cd` it cannot follow (`cd "$D"`, `cd -`, `popd`, a `cd` inside `( … )`) refuses the post.
+  Only a file it cannot read yet, one the same command creates (a heredoc), or `-` (standard input), is judged and scanned through the command
   text. A body the command copies or redirects in from another file, a URL or a command's output
   goes out unscanned, as does `$(…)` in an inline body: the guard catches accidents, not deliberate
   leaks. A check that breaks refuses the post. It reads global flags before the noun (`gh -R a/b pr
