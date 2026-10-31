@@ -166,6 +166,19 @@ test(`checks a body file for the marker and secrets, then posts`, async ($, on) 
   expect(scanned[0]).toContain(`<!-- agent -->\nbody`)
 })
 
+test(`scans the command text too when the body file is readable`, async ($, on) => {
+  on(`fs.read`, () => ({ value: `<!-- agent -->\nbody` }))
+  on(`process.run`, (_$, e) => ({
+    value: RAN(e.argv[0] === `gitleaks` && (e.init?.stdin ?? ``).includes(`SECRETX`) ? 1 : 0),
+  }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh issue create --title "key=SECRETX" --body-file /abs/b.md`,
+  })
+  expect(ran.deny).toContain(`secret`)
+})
+
 /** A heredoc that writes a body file, then a gh call that posts it, in one command. */
 const HEREDOC_POST = (body: string) =>
   `cat > /abs/b.md <<'EOF'\n${body}\nEOF\ngh pr create --title t --body-file /abs/b.md`

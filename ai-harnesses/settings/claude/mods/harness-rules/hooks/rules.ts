@@ -321,26 +321,38 @@ const POSTING_VERBS = [`create`, `comment`, `edit`, `review`]
 
 const BODY_FLAGS = [`--body`, `-b`, `--body-file`, `-F`]
 
-/** `gh issue|pr <posting verb>` anywhere in a command's words, and what follows it. */
-const GH_POSTING = /(?:^|[^\w.-])gh\s+(?:issue|pr)\s+(?:create|comment|edit|review)(?:\s(.*))?$/s
+/**
+ * `gh issue|pr <posting verb>` anywhere in a command's words, global flags (`-R a/b`) allowed
+ * between `gh` and the noun, and what follows it.
+ */
+const GH_POSTING =
+  /(?:^|[^\w.-])gh(?:\s+-\S+(?:\s+[^\s-]\S*)?)*?\s+(?:issue|pr)\s+(?:create|comment|edit|review)(?:\s(.*))?$/s
 
-/** The value of `flag` in `words`, given as `flag value` or `--long=value`. */
-function flagValue(words: string[], flags: string[]): string | undefined {
+/**
+ * Every value of `flags` in `words`, given as `flag value`, `--long=value`, or a short flag with
+ * its value attached or after other short flags (`-bx`, `-F/abs/b.md`, `-wb x`).
+ */
+function flagValues(words: string[], flags: string[]): string[] {
+  const values: string[] = []
+  const letters = flags.filter((flag) => /^-\w$/.test(flag)).map((flag) => flag[1]).join(``)
+  const attached = new RegExp(`^-[A-Za-z]*?[${letters}](.*)$`, `s`)
   for (let i = 0; i < words.length; i++) {
     const word = words[i] ?? ``
-    if (flags.includes(word)) return words[i + 1] ?? ``
     const long = flags.find((flag) => flag.startsWith(`--`) && word.startsWith(`${flag}=`))
-    if (long) return word.slice(long.length + 1)
+    const short = letters && !word.startsWith(`--`) ? attached.exec(word) : null
+    if (flags.includes(word)) values.push(words[++i] ?? ``)
+    else if (long) values.push(word.slice(long.length + 1))
+    else if (short) values.push(short[1] || (words[++i] ?? ``))
   }
-  return undefined
+  return values
 }
 
 /**
  * Finds the body a `gh issue|pr create|comment|edit|review` command posts, reading only that
  * command's own words, after any prefix `commandProper` drops. One with no body flag (a
- * title-only edit, `--fill`) posts none this mod can check. Fails closed: a second post, or a
- * posting call with a body flag that does not start its command (inside quotes, `$(…)`, after an
- * unknown wrapper), is `unplaced`.
+ * title-only edit, `--fill`) posts none this mod can check. Fails closed: a second post, a
+ * repeated body flag, or a posting call with a body flag that does not start its command (inside
+ * quotes, `$(…)`, after an unknown wrapper), is `unplaced`.
  */
 export function ghPost(command: string): GhPost {
   const vars = new Map<string, string>()
@@ -354,20 +366,26 @@ export function ghPost(command: string): GhPost {
       }
     }
     const proper = commandProper(words)
+    // Global flags may sit between `gh` and the noun: `gh -R a/b pr comment`.
+    while (proper[1]?.startsWith(`-`)) {
+      proper.splice(1, [`-R`, `--repo`].includes(proper[1]) ? 2 : 1)
+    }
     const [gh, noun, verb] = proper
     const placed = gh?.replace(/^\\/, ``).split(`/`).pop() === `gh` &&
       (noun === `issue` || noun === `pr`) && POSTING_VERBS.includes(verb ?? ``)
     if (!placed) {
       const rest = GH_POSTING.exec(words.join(` `))?.[1]
-      if (rest !== undefined && flagValue(rest.split(/\s+/), BODY_FLAGS) !== undefined) {
+      if (rest !== undefined && flagValues(rest.split(/\s+/), BODY_FLAGS).length > 0) {
         return { kind: `unplaced` }
       }
       continue
     }
-    if (flagValue(proper, BODY_FLAGS) === undefined) continue
-    if (found.kind !== `none`) return { kind: `unplaced` }
-    const path = flagValue(proper, [`--body-file`, `-F`])
-    const body = flagValue(proper, [`--body`, `-b`])
+    const bodies = flagValues(proper, BODY_FLAGS)
+    if (bodies.length === 0) continue
+    // gh posts the last of repeated body flags; one body per command keeps the check exact.
+    if (bodies.length > 1 || found.kind !== `none`) return { kind: `unplaced` }
+    const [path] = flagValues(proper, [`--body-file`, `-F`])
+    const [body] = flagValues(proper, [`--body`, `-b`])
     if (path === `-`) found = { kind: `stdin` }
     else if (path !== undefined) found = { kind: `file`, path: expandVars(path, vars) }
     else found = { kind: `inline`, body: body ?? `` }
@@ -380,8 +398,8 @@ export const UNPLACED_POST: Verdict = {
   deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
     `after a wrapper it does not know, inside quotes or \`$(…)\`, or as a second post. Make it ` +
     `the only post, written plainly: \`gh pr comment <n> --body-file <literal path>\`, with at ` +
-    `most \`timeout <n>\`, \`sudo\`, \`env\` or \`X=1\` before it. A search for such text ` +
-    `can write the space as \`\\s\`.`,
+    `most \`timeout <n>\`, \`sudo\`, \`env\` or \`X=1\` before it, and one body flag. Write a ` +
+    `file whose text mentions such a call with the Write tool, not a heredoc.`,
 }
 
 /**

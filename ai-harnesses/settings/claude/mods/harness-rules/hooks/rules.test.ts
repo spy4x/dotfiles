@@ -202,6 +202,7 @@ test(`finds a gh post after wrappers, assignments and loop words`, () => {
       `for i in 1; do gh pr comment 5 --body x; done`,
       `if true; then gh pr comment 5 --body x; fi`,
       `/usr/bin/gh pr comment 5 --body x`,
+      `\\gh pr comment 5 --body x`,
     ]
   ) expect(ghPost(command)).toEqual({ kind: `inline`, body: `x` })
 })
@@ -210,10 +211,34 @@ test(`refuses to place a gh post it cannot read`, () => {
   for (
     const command of [
       `bash -c 'gh pr comment 5 --body x'`,
+      `bash -c 'gh -R a/b pr comment 5 -bx'`,
       `echo "$(gh issue create --title t --body x)"`,
       `xargs -I {} gh pr comment {} --body x`,
       `stdbuf -oL gh pr comment 5 --body-file /abs/b.md`,
       `gh pr comment 1 --body "<!-- agent --> a"; gh pr comment 2 --body b`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
+})
+
+test(`finds a gh post after global flags and with a short flag's value attached`, () => {
+  for (
+    const command of [
+      `gh -R a/b pr comment 5 --body x`,
+      `gh --repo a/b issue comment 1 --body x`,
+      `gh --repo=a/b pr comment 5 --body x`,
+      `gh pr comment 5 -bx`,
+      `gh pr comment 5 -wb x`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr comment 5 -F/abs/f`)).toEqual({ kind: `file`, path: `/abs/f` })
+  expect(ghPost(`gh pr comment 5 -Ff.md`)).toEqual({ kind: `file`, path: `f.md` })
+})
+
+test(`refuses a repeated body flag, since gh posts the last one`, () => {
+  for (
+    const command of [
+      `gh pr comment 5 --body-file a.md --body-file b.md`,
+      `gh pr comment 5 --body "<!-- agent --> a" -bx`,
     ]
   ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
 })
