@@ -90,6 +90,8 @@ export function commandsOf(command: string): string[][] {
 /** Words that run the command after them: `sudo rm`, `then rm`, `timeout 60 rm`. */
 const PREFIXES = [
   `sudo`,
+  `nice`,
+  `xargs`,
   `command`,
   `builtin`,
   `exec`,
@@ -111,8 +113,9 @@ const PREFIXES = [
 const VALUE_FLAGS = [`-u`, `-g`, `-s`, `-k`]
 
 /**
- * Drops what runs before the command proper: prefixes and their flags, a `timeout` duration,
- * `X=1` assignments, and a `(` or `{` that opens a group. So `do (X=1 sudo -n rm` reads as `rm`.
+ * Drops what runs before the command proper: prefixes and their flags, a `timeout` duration or
+ * another number after a prefix (`nice -n 10`, `xargs -n 1`), `X=1` assignments, and a `(` or `{`
+ * that opens a group. So `do (X=1 sudo -n rm` reads as `rm`.
  */
 function commandProper(words: string[]): string[] {
   const rest = [...words]
@@ -125,7 +128,7 @@ function commandProper(words: string[]): string[] {
     } else if (PREFIXES.includes(word)) {
       i++
       while (rest[i]?.startsWith(`-`)) i += VALUE_FLAGS.includes(rest[i] ?? ``) ? 2 : 1
-      if (word === `timeout`) i++
+      if (word === `timeout` || /^\d+$/.test(rest[i] ?? ``)) i++
     } else break
   }
   return rest.slice(i).map((word) => word.replace(/[)}]+$/, ``))
@@ -312,8 +315,14 @@ export type GhPost =
   | { readonly kind: `inline`; readonly body: string }
   | { readonly kind: `file`; readonly path: string }
   | { readonly kind: `stdin` }
+  | { readonly kind: `unplaced` }
 
 const POSTING_VERBS = [`create`, `comment`, `edit`, `review`]
+
+const BODY_FLAGS = [`--body`, `-b`, `--body-file`, `-F`]
+
+/** `gh issue|pr <posting verb>` anywhere in a command's words, and what follows it. */
+const GH_POSTING = /(?:^|[^\w.-])gh\s+(?:issue|pr)\s+(?:create|comment|edit|review)(?:\s(.*))?$/s
 
 /** The value of `flag` in `words`, given as `flag value` or `--long=value`. */
 function flagValue(words: string[], flags: string[]): string | undefined {
@@ -328,11 +337,14 @@ function flagValue(words: string[], flags: string[]): string | undefined {
 
 /**
  * Finds the body a `gh issue|pr create|comment|edit|review` command posts, reading only that
- * command's own words. One with no body flag (a title-only edit, `--fill`) posts none this mod
- * can check.
+ * command's own words, after any prefix `commandProper` drops. One with no body flag (a
+ * title-only edit, `--fill`) posts none this mod can check. Fails closed: a second post, or a
+ * posting call with a body flag that does not start its command (inside quotes, `$(…)`, after an
+ * unknown wrapper), is `unplaced`.
  */
 export function ghPost(command: string): GhPost {
   const vars = new Map<string, string>()
+  let found: GhPost = { kind: `none` }
   for (const words of commandsOf(command)) {
     const assignments = words.map((word) => /^([A-Za-z_]\w*)=([^$`]*)$/.exec(word))
     if (assignments.every((match) => match)) {
@@ -341,16 +353,35 @@ export function ghPost(command: string): GhPost {
         if (assignedOnce(command, name)) vars.set(name, value)
       }
     }
-    const [gh, noun, verb] = words
-    if (gh !== `gh` || (noun !== `issue` && noun !== `pr`)) continue
-    if (!POSTING_VERBS.includes(verb ?? ``)) continue
-    const path = flagValue(words, [`--body-file`, `-F`])
-    if (path === `-`) return { kind: `stdin` }
-    if (path !== undefined) return { kind: `file`, path: expandVars(path, vars) }
-    const body = flagValue(words, [`--body`, `-b`])
-    if (body !== undefined) return { kind: `inline`, body }
+    const proper = commandProper(words)
+    const [gh, noun, verb] = proper
+    const placed = gh?.replace(/^\\/, ``).split(`/`).pop() === `gh` &&
+      (noun === `issue` || noun === `pr`) && POSTING_VERBS.includes(verb ?? ``)
+    if (!placed) {
+      const rest = GH_POSTING.exec(words.join(` `))?.[1]
+      if (rest !== undefined && flagValue(rest.split(/\s+/), BODY_FLAGS) !== undefined) {
+        return { kind: `unplaced` }
+      }
+      continue
+    }
+    if (flagValue(proper, BODY_FLAGS) === undefined) continue
+    if (found.kind !== `none`) return { kind: `unplaced` }
+    const path = flagValue(proper, [`--body-file`, `-F`])
+    const body = flagValue(proper, [`--body`, `-b`])
+    if (path === `-`) found = { kind: `stdin` }
+    else if (path !== undefined) found = { kind: `file`, path: expandVars(path, vars) }
+    else found = { kind: `inline`, body: body ?? `` }
   }
-  return { kind: `none` }
+  return found
+}
+
+/** Judges a posting gh call the guard cannot read (`ghPost` returned `unplaced`). */
+export const UNPLACED_POST: Verdict = {
+  deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
+    `after a wrapper it does not know, inside quotes or \`$(…)\`, or as a second post. Make it ` +
+    `the only post, written plainly: \`gh pr comment <n> --body-file <literal path>\`, with at ` +
+    `most \`timeout <n>\`, \`sudo\`, \`env\` or \`X=1\` before it. A search for such text ` +
+    `can write the space as \`\\s\`.`,
 }
 
 /**
@@ -377,9 +408,11 @@ function expandVars(path: string, vars: Map<string, string>): string {
 export function markerVerdict(text: string): Verdict {
   return text.includes(AGENT_MARKER) ? ALLOW : {
     deny: `Start every comment, issue and PR body with \`${AGENT_MARKER}\`: a comment ` +
-      `without it reads as the owner's. Make it the body's first line. A body file written in ` +
-      `this same command, or named through a variable set outside it or through \`$(…)\`, ` +
-      `cannot be read yet: write the file in a command of its own and pass its literal path.`,
+      `without it reads as the owner's. Make it the body's first line. A body file that can be ` +
+      `read must hold it itself: a marker added in the same command (\`sed -i\`) or in a shell ` +
+      `comment does not count. One written in this same command, or named through a variable ` +
+      `set outside it or through \`$(…)\`, cannot be read yet: write the file in a command of ` +
+      `its own and pass its literal path.`,
   }
 }
 

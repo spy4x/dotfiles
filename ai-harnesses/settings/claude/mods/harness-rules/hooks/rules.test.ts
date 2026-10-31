@@ -190,6 +190,45 @@ test(`sees no body in a title-only edit, a --fill PR or another gh command`, () 
   expect(ghPost(`gh api repos/a/b -F x=1`)).toEqual({ kind: `none` })
 })
 
+test(`finds a gh post after wrappers, assignments and loop words`, () => {
+  for (
+    const command of [
+      `timeout 30 gh pr comment 5 --body x`,
+      `X=1 gh pr comment 5 --body x`,
+      `sudo -n gh pr comment 5 --body x`,
+      `env GH_HOST=h gh pr comment 5 --body x`,
+      `nice -n 10 gh pr comment 5 --body x`,
+      `echo 5 | xargs -n 1 gh pr comment 5 --body x`,
+      `for i in 1; do gh pr comment 5 --body x; done`,
+      `if true; then gh pr comment 5 --body x; fi`,
+      `/usr/bin/gh pr comment 5 --body x`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `inline`, body: `x` })
+})
+
+test(`refuses to place a gh post it cannot read`, () => {
+  for (
+    const command of [
+      `bash -c 'gh pr comment 5 --body x'`,
+      `echo "$(gh issue create --title t --body x)"`,
+      `xargs -I {} gh pr comment {} --body x`,
+      `stdbuf -oL gh pr comment 5 --body-file /abs/b.md`,
+      `gh pr comment 1 --body "<!-- agent --> a"; gh pr comment 2 --body b`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
+})
+
+test(`sees no post in a wrapped gh read or a quoted gh call without a body`, () => {
+  expect(ghPost(`timeout 30 gh pr view 5 --json body`)).toEqual({ kind: `none` })
+  expect(ghPost(`sudo gh issue list --state open`)).toEqual({ kind: `none` })
+  expect(ghPost(`bash -c 'gh pr create --fill'`)).toEqual({ kind: `none` })
+})
+
+test(`refuses rm of a variable path after nice or xargs`, () => {
+  expect(bashVerdict(`nice -n 10 rm -rf "$D"`).deny).toContain(`variable`)
+  expect(bashVerdict(`ls | xargs -n 1 rm -rf "$D"`).deny).toContain(`variable`)
+})
+
 test(`requires the agent marker in a body`, () => {
   expect(markerVerdict(`<!-- agent -->\nhello`).deny).toBeUndefined()
   expect(markerVerdict(`hello`).deny).toContain(`<!-- agent -->`)
