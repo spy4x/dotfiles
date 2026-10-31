@@ -164,9 +164,12 @@ states, so the prose stays the source:
   same command creates (a heredoc), one named through a variable (`$D/b.md`) or `-` (standard
   input), is judged and scanned through the command text. A body the command copies or redirects in
   from another file, a URL or a command's output goes out unscanned, as does `$(…)` in an inline
-  body: the guard catches accidents, not deliberate leaks. A check that breaks refuses the post. So
-  does a post with a body that the hook cannot place: one inside quotes (`bash -c '…'`), `$(…)` or
-  after a wrapper it does not know (`xargs -I {}`, `stdbuf`), and a second post in the same command.
+  body: the guard catches accidents, not deliberate leaks. A check that breaks refuses the post. It
+  reads global flags before the noun (`gh -R a/b pr comment`) and a short flag's attached value
+  (`-bx`, `-F/abs/b.md`). It refuses a post with a body that it cannot place: one inside quotes
+  (`bash -c '…'`), `$(…)` or after a wrapper it does not know (`xargs -I {}`, `stdbuf`), a repeated
+  body flag (gh posts the last), and a second post in the same command, which includes a heredoc
+  whose text mentions such a call: write that file with the Write tool.
 
 It reads a command's words, not what the shell would run. It sees `rm` and `gh` after `sudo`,
 `timeout`, `env`, `nice`, `xargs`, `X=1`, `do`, `then` or `(`, but misses `rm` inside `xargs -I`,
