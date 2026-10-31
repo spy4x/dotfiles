@@ -27,7 +27,7 @@ returns, after its skips: `manual`, `needs-decision`, an open PR by `spy4x`, a c
 session, an outside author, an agent-filed issue nobody asked for.
 
 1. **The nearest milestone.** List the open ones, due first; one without a date comes last:
-   `gh api 'repos/{owner}/{repo}/milestones?state=open' --jq 'sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`.
+   `gh api --paginate --slurp 'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`.
    Its candidates are its issues, whatever their priority label, plus every `p1-critical` issue.
 2. **The next milestone.** The nearest one has no candidate left, or the repository's `AGENTS.md`
    forbids it → take the next one in that list that the repository allows, the same way. Say in
