@@ -1,6 +1,6 @@
 ---
 name: kraken
-description: "Release the kraken: pick the next work yourself and start a wave on it — the nearest milestone, the next allowed one when that has nothing left to take, or else the most important backlog issues. Load when asked to release the kraken, or to start a wave without naming the issues."
+description: "Release the kraken: pick the next work yourself and start a wave on it — the nearest milestone, the next allowed one when that has nothing left to take, or else the most important backlog issues. Invoke it to start a wave without naming the issues."
 invocation: user
 argument-hint: "[repo …]"
 ---
@@ -27,14 +27,14 @@ returns, after its skips: `manual`, `needs-decision`, an open PR by `spy4x`, a c
 session, an outside author, an agent-filed issue nobody asked for.
 
 1. **The nearest milestone.** List the open ones, due first; one without a date comes last:
-   `gh api 'repos/{owner}/{repo}/milestones?state=open&sort=due_on&direction=asc' --jq '.[] | "\(.due_on) \(.open_issues) \(.title)"'`.
+   `gh api 'repos/{owner}/{repo}/milestones?state=open' --jq 'sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`.
    Its candidates are its issues, whatever their priority label, plus every `p1-critical` issue.
 2. **The next milestone.** The nearest one has no candidate left, or the repository's `AGENTS.md`
    forbids it → take the next one in that list that the repository allows, the same way. Say in
    the report which milestones you passed and why.
 3. **The backlog.** No milestone, or none with a candidate → the open issues at `p3-medium` and
-   above, `p1-critical` first, then the ones that rank highest by `direction.md`, "What matters",
-   oldest first within a tie.
+   above, highest priority level first. Within a level, the ones that rank highest by
+   `direction.md`, "What matters", come first, then the oldest.
 4. **Nothing.** No candidate anywhere → report that the backlog is done and stop. Never look below
    `p3-medium`, and never pick `p4-low` or `p5-someday` outside a milestone.
 
