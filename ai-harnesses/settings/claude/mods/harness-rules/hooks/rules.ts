@@ -307,22 +307,27 @@ export function directionBlock(text: string | undefined): ContextBlock | undefin
 }
 
 /**
- * What a `gh` command posts: nothing, an inline body, a body read from a file, or a body read
- * from standard input (`--body-file -`, usually a heredoc in the same command).
+ * What a `gh` command posts: nothing, an inline body, a body read from a file, a body read from
+ * standard input (`--body-file -`, usually a heredoc in the same command), or only a merge's
+ * commit subject, which is scanned but needs no marker.
  */
 export type GhPost =
   | { readonly kind: `none` }
   | { readonly kind: `inline`; readonly body: string }
   | { readonly kind: `file`; readonly path: string }
   | { readonly kind: `stdin` }
+  | { readonly kind: `subject` }
   | { readonly kind: `unplaced` }
 
 /** The body flags of `create`, `comment`, `edit`, `review` and `merge`. */
 const BODY = { inline: [`--body`, `-b`], file: [`--body-file`, `-F`] }
 
+/** The comment flags of `close` and `reopen`. */
+const COMMENT = { inline: [`--comment`, `-c`], file: [] }
+
 /**
  * Each posting verb's body flags: those whose value is the body, and those that name its file.
- * `close` posts its `--comment`, `merge` its commit body.
+ * `close` and `reopen` post their `--comment`, `merge` its commit body.
  */
 const BODY_FLAGS: Record<string, { inline: string[]; file: string[] }> = {
   create: BODY,
@@ -330,8 +335,12 @@ const BODY_FLAGS: Record<string, { inline: string[]; file: string[] }> = {
   edit: BODY,
   review: BODY,
   merge: BODY,
-  close: { inline: [`--comment`, `-c`], file: [] },
+  close: COMMENT,
+  reopen: COMMENT,
 }
+
+/** The flags of a merge's commit subject. */
+const SUBJECT = [`--subject`, `-t`]
 
 /** Every body flag of a posting verb, inline and file ones together. */
 function bodyFlags(verb: string): string[] {
@@ -344,7 +353,7 @@ function bodyFlags(verb: string): string[] {
  * between `gh` and the noun: the verb, and what follows it.
  */
 const GH_POSTING =
-  /(?:^|[^\w.-])gh(?:\s+-\S+(?:\s+[^\s-]\S*)?)*?\s+(?:issue|pr)\s+(create|comment|edit|review|merge|close)(?:\s(.*))?$/s
+  /(?:^|[^\w.-])gh(?:\s+-\S+(?:\s+[^\s-]\S*)?)*?\s+(?:issue|pr)\s+(create|comment|edit|review|merge|close|reopen)(?:\s(.*))?$/s
 
 /**
  * Every value of `flags` in `words`, given as `flag value`, `--long=value`, or a short flag with
@@ -376,6 +385,9 @@ function flagValues(words: string[], flags: string[]): string[] {
 export function ghPost(command: string): GhPost {
   const vars = new Map<string, string>()
   let found: GhPost = { kind: `none` }
+  // Where an earlier `cd` in this command moved: undefined while it has not, null once a `cd` the
+  // hook cannot follow ran.
+  let dir: string | null | undefined
   for (const words of commandsOf(command)) {
     const assignments = words.map((word) => /^([A-Za-z_]\w*)=([^$`]*)$/.exec(word))
     if (assignments.every((match) => match)) {
@@ -385,6 +397,10 @@ export function ghPost(command: string): GhPost {
       }
     }
     const proper = commandProper(words)
+    if ([`cd`, `pushd`, `popd`].includes(proper[0] ?? ``)) {
+      dir = words.some((word) => /[()]/.test(word)) ? null : movedTo(proper, dir)
+      continue
+    }
     // Global flags may sit between `gh` and the noun: `gh -R a/b pr comment`.
     while (proper[1]?.startsWith(`-`)) {
       proper.splice(1, [`-R`, `--repo`].includes(proper[1]) ? 2 : 1)
@@ -401,36 +417,70 @@ export function ghPost(command: string): GhPost {
     }
     const flags = BODY_FLAGS[verb!]
     const bodies = flagValues(proper, bodyFlags(verb!))
-    if (bodies.length === 0) continue
+    if (bodies.length === 0) {
+      const subject = verb === `merge` && flagValues(proper, SUBJECT).length > 0
+      if (subject && found.kind === `none`) found = { kind: `subject` }
+      continue
+    }
     // gh posts the last of repeated body flags; one body per command keeps the check exact.
     if (bodies.length > 1 || found.kind !== `none`) return { kind: `unplaced` }
     const [path] = flagValues(proper, flags.file)
     const [body] = flagValues(proper, flags.inline)
     if (path === `-`) found = { kind: `stdin` }
-    else if (path !== undefined) found = { kind: `file`, path: expandVars(path, vars) }
-    else found = { kind: `inline`, body: body ?? `` }
+    else if (path !== undefined) {
+      const full = expandVars(path, vars)
+      if (full.startsWith(`/`) || HOME_LEAD.test(full) || dir === undefined) {
+        found = { kind: `file`, path: full }
+      } else if (dir === null) return { kind: `unplaced` }
+      else found = { kind: `file`, path: `${dir}/${full}` }
+    } else found = { kind: `inline`, body: body ?? `` }
   }
   return found
 }
 
+/** A leading `~/`, `$HOME` or `${HOME}`, which the shell makes home. */
+const HOME_LEAD = /^(?:~(?=\/)|\$HOME(?!\w)|\$\{HOME\})/
+
 /**
- * The body-file path the shell hands `gh`, with a leading `~/`, `$HOME` or `${HOME}` made `home`.
- * Undefined when the shell would still change it (`$`, a backtick, `~user`) or home is unknown:
- * the hook could then read a different file from the one `gh` posts.
+ * Where a `cd` or `pushd` (`proper`, its words) moves from `dir`: a literal path, joined to `dir`
+ * when relative, or `$HOME` for a bare `cd`. Null for what the hook cannot follow: `popd`, a
+ * flag, `-`, `+1`, a second argument, a glob, or a `$`, a backtick or `~` other than home.
  */
-export function bodyFilePath(path: string, home: string | undefined): string | undefined {
-  const lead = /^(?:~(?=\/)|\$HOME(?!\w)|\$\{HOME\})/
-  if (lead.test(path) && !home) return undefined
-  const full = path.replace(lead, home ?? ``)
+function movedTo(proper: string[], dir: string | null | undefined): string | null {
+  const args = proper[1] === `--` ? proper.slice(2) : proper.slice(1)
+  if (proper[0] === `popd` || args.length > 1) return null
+  const to = args[0] === undefined || args[0] === `~` ? `$HOME` : args[0]
+  if (/^[-+]/.test(to) || /[$`*?[{]|^~/.test(to.replace(HOME_LEAD, ``))) return null
+  if (to.startsWith(`/`) || HOME_LEAD.test(to) || dir === undefined) return to
+  return dir === null ? null : `${dir}/${to}`
+}
+
+/** Expands a leading home in `path`; undefined when the shell would still change it. */
+function homeExpanded(path: string, home: string | undefined): string | undefined {
+  if (HOME_LEAD.test(path) && !home) return undefined
+  const full = path.replace(HOME_LEAD, home ?? ``)
   return /[$`]|^~/.test(full) ? undefined : full
+}
+
+/**
+ * The body-file path the shell hands `gh`, with a leading `~/`, `$HOME` or `${HOME}` made home
+ * and a relative path joined to the session's directory. Undefined when the shell would still
+ * change it (`$`, a backtick, `~user`) or the home or directory it needs is unknown: the hook
+ * could then read a different file from the one `gh` posts.
+ */
+export function bodyFilePath(path: string, { cwd, home }: Where): string | undefined {
+  const full = homeExpanded(path, home)
+  if (full === undefined || full.startsWith(`/`)) return full
+  return cwd?.startsWith(`/`) ? `${cwd}/${full}` : undefined
 }
 
 /** Judges a posting gh call the guard cannot read (`ghPost` returned `unplaced`). */
 export const UNPLACED_POST: Verdict = {
   deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
     `after a wrapper it does not know, inside quotes or \`$(…)\`, as a second post, or with a ` +
-    `body file named through a variable it cannot resolve. Make it the only post, written ` +
-    `plainly: \`gh pr comment <n> --body-file <literal path>\`, with at most \`timeout <n>\`, ` +
+    `body file named through a variable it cannot resolve or relative to a \`cd\` it cannot ` +
+    `follow. Make it the only post, written plainly: ` +
+    `\`gh pr comment <n> --body-file <literal path>\`, with at most \`timeout <n>\`, ` +
     `\`sudo\`, \`env\` or \`X=1\` before it, and one body flag. Write a file whose text mentions ` +
     `such a call with the Write tool, not a heredoc.`,
 }

@@ -284,6 +284,81 @@ test(`reads the body file of -F=/abs/f.md at /abs/f.md`, async ($, on) => {
   expect(read).toEqual([`/abs/f.md`])
 })
 
+test(`reads a relative body file from the folder the command cds to`, async ($, on) => {
+  on(`session.cwd`, () => ({ value: `/srv/app` }))
+  const read: string[] = []
+  let text = `no marker`
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    return { value: text }
+  })
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  const unmarked = `cd /x && gh pr comment 5 -F f.md # <!-- agent -->`
+  expect((await $.tool.call({ tool: `Bash`, command: unmarked })).deny)
+    .toContain(`Start every comment`)
+  text = `<!-- agent -->\nhi`
+  const marked = `cd /x && gh pr comment 5 -F f.md`
+  expect((await $.tool.call({ tool: `Bash`, command: marked })).deny).toBeUndefined()
+  expect(read).toEqual([`/x/f.md`, `/x/f.md`])
+})
+
+test(`reads a relative body file from the session's directory`, async ($, on) => {
+  on(`session.cwd`, () => ({ value: `/srv/app` }))
+  const read: string[] = []
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    return { value: `no marker` }
+  })
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 5 -F f.md # <!-- agent -->`,
+  })
+  expect(ran.deny).toContain(`Start every comment`)
+  expect(read).toEqual([`/srv/app/f.md`])
+})
+
+test(`refuses a relative body file after a cd it cannot follow`, async ($, on) => {
+  on(`session.cwd`, () => ({ value: `/srv/app` }))
+  const read: string[] = []
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    return { value: `<!-- agent -->\nhi` }
+  })
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd "$FOO" && gh pr comment 5 -F f.md` })
+  expect(ran.deny).toContain(`cannot follow`)
+  expect(read).toEqual([])
+})
+
+test(`refuses a reopen comment without the marker and posts one with it`, async ($, on) => {
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  for (const command of [`gh issue reopen 1 --comment x`, `gh pr reopen 1 -c x`]) {
+    expect((await $.tool.call({ tool: `Bash`, command })).deny).toContain(`Start every comment`)
+  }
+  const marked = `gh pr reopen 1 -c "<!-- agent --> x"`
+  expect((await $.tool.call({ tool: `Bash`, command: marked })).deny).toBeUndefined()
+})
+
+test(`scans a merge's commit subject for secrets and asks no marker of it`, async ($, on) => {
+  const scanned: string[] = []
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] !== `gitleaks`) return { value: RAN(0) }
+    scanned.push(e.init?.stdin ?? ``)
+    return { value: RAN((e.init?.stdin ?? ``).includes(`SECRETX`) ? 1 : 0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const leak = `gh pr merge 1 --repo a/b --squash --subject "fix: key=SECRETX"`
+  expect((await $.tool.call({ tool: `Bash`, command: leak })).deny).toContain(`secret`)
+  const clean = `gh pr merge 1 --repo a/b --squash -t "fix: a title"`
+  expect((await $.tool.call({ tool: `Bash`, command: clean })).deny).toBeUndefined()
+  expect(scanned).toEqual([leak, clean])
+})
+
 test(`refuses a close comment or a merge body without the marker and posts one with it`, async (
   $,
   on,
