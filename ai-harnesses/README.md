@@ -157,18 +157,23 @@ states, so the prose stays the source:
 - a `Write` or `Edit` that adds a version 4 UUID call (`crypto.randomUUID`, `gen_random_uuid`,
   `uuid_generate_v4`, `uuidv4`) to a JavaScript, TypeScript or SQL file is refused; one that keeps
   the calls the file or the replaced text already had is not;
-- a `gh issue` or `gh pr` body must carry `<!-- agent -->`, and `gitleaks` scans the command and
-  any body file it can read. With `--body-file`, the marker counts in the file or in the command
-  text: a file the same command writes or edits (a heredoc, `sed -i`), one named through a
-  variable (`$D/b.md`) and `-` (standard input) cannot be read before the command runs, so such a
-  body is scanned only through the command text. A body the command copies or redirects in from
-  another file, a URL or a command's output goes out unscanned, as does `$(…)` in an inline body:
-  the guard catches accidents, not deliberate leaks. A check that breaks refuses the post.
+- a `gh issue` or `gh pr` body must carry `<!-- agent -->`, and `gitleaks` scans the command and any
+  body file it can read. A `--body-file` the hook can read must hold the marker itself, so a marker
+  in a shell comment does not count, and a file the same command edits or rewrites (`sed -i`, a
+  heredoc over an existing file) is judged as it was before. Only a file it cannot read yet, one the
+  same command creates (a heredoc), one named through a variable (`$D/b.md`) or `-` (standard
+  input), is judged and scanned through the command text. A body the command copies or redirects in
+  from another file, a URL or a command's output goes out unscanned, as does `$(…)` in an inline
+  body: the guard catches accidents, not deliberate leaks. A check that breaks refuses the post. So
+  does a post with a body that the hook cannot place: one inside quotes (`bash -c '…'`), `$(…)` or
+  after a wrapper it does not know (`xargs -I {}`, `stdbuf`), and a second post in the same command.
 
-It reads a command's words, not what the shell would run. It sees `rm` after `sudo`, `timeout`,
-`env`, `X=1`, `do`, `then` or `(`, but misses it inside `xargs`, `find -exec`, `bash -c '…'` and
-`trap '…'`. It also misses bodies posted by `gh api`, `gh release` or `gh pr create --fill`, and it
-reads heredoc lines as commands of their own.
+It reads a command's words, not what the shell would run. It sees `rm` and `gh` after `sudo`,
+`timeout`, `env`, `nice`, `xargs`, `X=1`, `do`, `then` or `(`, but misses `rm` inside `xargs -I`,
+`find -exec`, `bash -c '…'` and `trap '…'`. It also misses bodies posted by `gh api`, `gh release`
+or `gh pr create --fill`, and it reads heredoc lines as commands of their own. A variable whose
+name the shell builds at run time (`eval "$(printf …)=…"`, `declare {C..E}=…`) can make it read a
+different body file than `gh` posts, and the file actually posted then goes out unchecked.
 
 A session reads `CLAUDE_CODE_PLUGIN_DIRS` when it starts: one started before the mod existed runs
 without it, and so do its subagents, until it is restarted. A desktop-app session also keeps the
