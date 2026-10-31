@@ -217,19 +217,99 @@ test(`refuses a heredoc body written in the same command that holds a secret`, a
   expect(ran.deny).toContain(`secret`)
 })
 
-test(
-  `posts a body file named through a variable when the command has the marker`,
-  async ($, on) => {
-    unreadable(on)
-    on(`process.run`, () => ({ value: RAN(0) }))
-    on(`tool.call`, () => BASH_OK)
+test(`refuses a body file named through a variable it cannot resolve`, async ($, on) => {
+  const read: string[] = []
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    return { value: `<!-- agent -->\nhi` }
+  })
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  for (
+    const command of [
+      `printf '<!-- agent -->\\nhi' > "$D/x.md" && gh issue create -t t -F "$D/x.md"`,
+      `gh pr comment 5 -F $FOO/f.md # <!-- agent -->`,
+    ]
+  ) {
+    const ran = await $.tool.call({ tool: `Bash`, command })
+    expect(ran.deny).toContain(`written plainly`)
+  }
+  expect(read).toEqual([])
+})
+
+test(`reads a body file under ~ or $HOME and refuses it without the marker`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  const read: string[] = []
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    if (e.path !== `/home/test/f.md`) throw new Error(`ENOENT`)
+    return { value: `key=SECRETX` }
+  })
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  for (const path of [`~/f.md`, `$HOME/f.md`, `"\${HOME}/f.md"`]) {
     const ran = await $.tool.call({
       tool: `Bash`,
-      command: `printf '<!-- agent -->\\nhi' > "$D/x.md" && gh issue create -t t -F "$D/x.md"`,
+      command: `gh pr comment 5 -F ${path} # <!-- agent -->`,
     })
-    expect(ran.deny).toBeUndefined()
-  },
-)
+    expect(ran.deny).toContain(`Start every comment`)
+  }
+  expect(read).toEqual([`/home/test/f.md`, `/home/test/f.md`, `/home/test/f.md`])
+})
+
+test(`scans a marked body file under ~ for secrets`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  on(`fs.read`, (_$, e) => {
+    if (e.path !== `/home/test/f.md`) throw new Error(`ENOENT`)
+    return { value: `<!-- agent -->\nkey=SECRETX` }
+  })
+  on(`process.run`, (_$, e) => ({
+    value: RAN(e.argv[0] === `gitleaks` && (e.init?.stdin ?? ``).includes(`SECRETX`) ? 1 : 0),
+  }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `gh pr comment 5 -F ~/f.md` })
+  expect(ran.deny).toContain(`secret`)
+})
+
+test(`reads the body file of -F=/abs/f.md at /abs/f.md`, async ($, on) => {
+  const read: string[] = []
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    return { value: `<!-- agent -->\nhi` }
+  })
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `gh pr comment 5 -F=/abs/f.md` })
+  expect(ran.deny).toBeUndefined()
+  expect(read).toEqual([`/abs/f.md`])
+})
+
+test(`refuses a close comment or a merge body without the marker and posts one with it`, async (
+  $,
+  on,
+) => {
+  const posted: string[] = []
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, (_$, e) => {
+    posted.push(e.tool === `Bash` ? e.command : ``)
+    return BASH_OK
+  })
+  const calls = [
+    (body: string) => `gh issue close 1 --comment "${body}"`,
+    (body: string) => `gh pr close 1 -c "${body}"`,
+    (body: string) => `gh pr merge 1 --repo a/b --squash --body "${body}"`,
+  ]
+  for (const call of calls) {
+    expect((await $.tool.call({ tool: `Bash`, command: call(`x`) })).deny).toContain(
+      `Start every comment`,
+    )
+    const marked = call(`<!-- agent --> x`)
+    expect((await $.tool.call({ tool: `Bash`, command: marked })).deny).toBeUndefined()
+  }
+  const squash = `gh pr merge 1 --repo a/b --squash`
+  expect((await $.tool.call({ tool: `Bash`, command: squash })).deny).toBeUndefined()
+  expect(posted).toEqual([...calls.map((call) => call(`<!-- agent --> x`)), squash])
+})
 
 test(`posts a heredoc body piped through --body-file - with the marker`, async ($, on) => {
   on(`process.run`, () => ({ value: RAN(0) }))

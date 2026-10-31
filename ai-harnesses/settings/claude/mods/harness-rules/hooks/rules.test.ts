@@ -1,6 +1,7 @@
 import { expect, test } from "claude-code/testing"
 import {
   bashVerdict,
+  bodyFilePath,
   directionBlock,
   ghPost,
   leakVerdict,
@@ -232,6 +233,47 @@ test(`finds a gh post after global flags and with a short flag's value attached`
   ) expect(ghPost(command)).toEqual({ kind: `inline`, body: `x` })
   expect(ghPost(`gh pr comment 5 -F/abs/f`)).toEqual({ kind: `file`, path: `/abs/f` })
   expect(ghPost(`gh pr comment 5 -Ff.md`)).toEqual({ kind: `file`, path: `f.md` })
+})
+
+test(`drops the = of a short flag's attached value, as gh does`, () => {
+  expect(ghPost(`gh pr comment 5 -F=/abs/f.md`)).toEqual({ kind: `file`, path: `/abs/f.md` })
+  expect(ghPost(`gh pr comment 5 -b=x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr comment 5 -wb=x`)).toEqual({ kind: `inline`, body: `x` })
+})
+
+test(`finds the comment a close posts and the body a merge posts`, () => {
+  expect(ghPost(`gh issue close 1 --comment x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr close 1 -c x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh issue close 1 -r completed --comment=x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr merge 1 --squash --body x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr merge 1 -b x`)).toEqual({ kind: `inline`, body: `x` })
+  expect(ghPost(`gh pr merge 1 --body-file /abs/b.md`)).toEqual({ kind: `file`, path: `/abs/b.md` })
+  expect(ghPost(`gh pr merge 1 -F /abs/b.md`)).toEqual({ kind: `file`, path: `/abs/b.md` })
+  expect(ghPost(`bash -c 'gh pr close 1 -c x'`)).toEqual({ kind: `unplaced` })
+})
+
+test(`sees no body in a close without a comment or a merge without a body`, () => {
+  expect(ghPost(`gh pr merge 1 --squash --delete-branch --repo a/b`)).toEqual({ kind: `none` })
+  expect(ghPost(`gh issue close 1 -r "not planned"`)).toEqual({ kind: `none` })
+  expect(ghPost(`gh pr close 1 -d`)).toEqual({ kind: `none` })
+})
+
+test(`expands home in a body-file path and gives up on any other shell expansion`, () => {
+  expect(bodyFilePath(`~/f.md`, `/home/t`)).toBe(`/home/t/f.md`)
+  expect(bodyFilePath(`$HOME/f.md`, `/home/t`)).toBe(`/home/t/f.md`)
+  expect(bodyFilePath(`\${HOME}/f.md`, `/home/t`)).toBe(`/home/t/f.md`)
+  expect(bodyFilePath(`/abs/f.md`, undefined)).toBe(`/abs/f.md`)
+  for (
+    const [path, home] of [
+      [`~/f.md`, undefined],
+      [`$HOME/f.md`, undefined],
+      [`$FOO/f.md`, `/home/t`],
+      [`$HOMEDIR/f.md`, `/home/t`],
+      [`/abs/$HOME/f.md`, `/home/t`],
+      [`\`pwd\`/f.md`, `/home/t`],
+      [`~root/f.md`, `/home/t`],
+    ]
+  ) expect(bodyFilePath(path!, home)).toBeUndefined()
 })
 
 test(`refuses a repeated body flag, since gh posts the last one`, () => {

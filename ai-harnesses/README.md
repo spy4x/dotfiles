@@ -158,18 +158,21 @@ states, so the prose stays the source:
   `uuid_generate_v4`, `uuidv4`) to a JavaScript, TypeScript or SQL file is refused; one that keeps
   the calls the file or the replaced text already had is not;
 - a `gh issue` or `gh pr` body must carry `<!-- agent -->`, and `gitleaks` scans the command and any
-  body file it can read. A `--body-file` the hook can read must hold the marker itself, so a marker
-  in a shell comment does not count, and a file the same command edits or rewrites (`sed -i`, a
-  heredoc over an existing file) is judged as it was before. Only a file it cannot read yet, one the
-  same command creates (a heredoc), one named through a variable (`$D/b.md`) or `-` (standard
-  input), is judged and scanned through the command text. A body the command copies or redirects in
-  from another file, a URL or a command's output goes out unscanned, as does `$(…)` in an inline
-  body: the guard catches accidents, not deliberate leaks. A check that breaks refuses the post. It
-  reads global flags before the noun (`gh -R a/b pr comment`) and a short flag's attached value
-  (`-bx`, `-F/abs/b.md`). It refuses a post with a body that it cannot place: one inside quotes
-  (`bash -c '…'`), `$(…)` or after a wrapper it does not know (`xargs -I {}`, `stdbuf`), a repeated
-  body flag (gh posts the last), and a second post in the same command, which includes a heredoc
-  whose text mentions such a call: write that file with the Write tool.
+  body file it can read. That covers `create`, `comment`, `edit`, `review`, the `--comment` of
+  `close` and the body of `pr merge`. A `--body-file` the hook can read must hold the marker itself,
+  so a marker in a shell comment does not count, and a file the same command edits or rewrites (`sed
+  -i`, a heredoc over an existing file) is judged as it was before. The hook expands a leading `~/`,
+  `$HOME` or `${HOME}` in its path, and a variable the same command sets once to a literal; any
+  other `$` or backtick in the path refuses the post. Only a file it cannot read yet, one the same
+  command creates (a heredoc), or `-` (standard input), is judged and scanned through the command
+  text. A body the command copies or redirects in from another file, a URL or a command's output
+  goes out unscanned, as does `$(…)` in an inline body: the guard catches accidents, not deliberate
+  leaks. A check that breaks refuses the post. It reads global flags before the noun (`gh -R a/b pr
+  comment`) and a short flag's attached value (`-bx`, `-F/abs/b.md`, `-F=/abs/b.md`). It refuses a
+  post with a body that it cannot place: one inside quotes (`bash -c '…'`), `$(…)` or after a
+  wrapper it does not know (`xargs -I {}`, `stdbuf`), a repeated body flag (gh posts the last), and
+  a second post in the same command, which includes a heredoc whose text mentions such a call: write
+  that file with the Write tool.
 
 It reads a command's words, not what the shell would run. It sees `rm` and `gh` after `sudo`,
 `timeout`, `env`, `nice`, `xargs`, `X=1`, `do`, `then` or `(`, but misses `rm` inside `xargs -I`,
