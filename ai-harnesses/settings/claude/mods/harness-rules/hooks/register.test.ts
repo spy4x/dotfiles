@@ -320,7 +320,7 @@ test(`reads a relative body file from the session's directory`, async ($, on) =>
   expect(read).toEqual([`/srv/app/f.md`])
 })
 
-test(`refuses a relative body file after a cd it cannot follow`, async ($, on) => {
+test(`refuses to post a relative body file after a cd it cannot follow`, async ($, on) => {
   on(`session.cwd`, () => ({ value: `/srv/app` }))
   const read: string[] = []
   on(`fs.read`, (_$, e) => {
