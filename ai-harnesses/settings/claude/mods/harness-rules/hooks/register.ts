@@ -1,6 +1,7 @@
 import type { EngineInterface, Register } from "claude-code"
 import {
   bashVerdict,
+  bodyFilePath,
   DIRECTION_PATH,
   directionBlock,
   ghPost,
@@ -137,14 +138,18 @@ export const register: Register = (on) => {
     if (post.kind === `none`) return next(e)
     // A body file is often written earlier in this same command (a heredoc, `sed -i`), so it
     // cannot be read yet; a variable in its path resolves only when this command sets it once to
-    // a literal (`ghPost`). `--body-file -` reads a heredoc.
+    // a literal (`ghPost`), or when it is `$HOME`. `--body-file -` reads a heredoc.
     // A file that can be read is judged by its own text: a marker elsewhere in the command (a
     // shell comment, a `sed -i` that has not run yet) does not count. Only when it cannot be read
     // does the command text, which then holds a heredoc body, count for the marker; it is always
     // scanned. A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out
     // unscanned.
-    const file = post.kind === `file` ? await readable($, post.path) : undefined
-    let verdict = post.kind === `unplaced`
+    // The shell expands `~/` and `$HOME`; a path it would change in any other way is unplaced.
+    const path = post.kind === `file`
+      ? bodyFilePath(post.path, await $.env.get(`HOME`).catch(() => undefined))
+      : undefined
+    const file = path === undefined ? undefined : await readable($, path)
+    let verdict = post.kind === `unplaced` || (post.kind === `file` && path === undefined)
       ? UNPLACED_POST
       : markerVerdict(post.kind === `inline` ? post.body : file ?? e.command)
     if (!verdict.deny) {

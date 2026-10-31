@@ -317,20 +317,38 @@ export type GhPost =
   | { readonly kind: `stdin` }
   | { readonly kind: `unplaced` }
 
-const POSTING_VERBS = [`create`, `comment`, `edit`, `review`]
+/** The body flags of `create`, `comment`, `edit`, `review` and `merge`. */
+const BODY = { inline: [`--body`, `-b`], file: [`--body-file`, `-F`] }
 
-const BODY_FLAGS = [`--body`, `-b`, `--body-file`, `-F`]
+/**
+ * Each posting verb's body flags: those whose value is the body, and those that name its file.
+ * `close` posts its `--comment`, `merge` its commit body.
+ */
+const BODY_FLAGS: Record<string, { inline: string[]; file: string[] }> = {
+  create: BODY,
+  comment: BODY,
+  edit: BODY,
+  review: BODY,
+  merge: BODY,
+  close: { inline: [`--comment`, `-c`], file: [] },
+}
+
+/** Every body flag of a posting verb, inline and file ones together. */
+function bodyFlags(verb: string): string[] {
+  const flags = BODY_FLAGS[verb]
+  return flags ? [...flags.inline, ...flags.file] : []
+}
 
 /**
  * `gh issue|pr <posting verb>` anywhere in a command's words, global flags (`-R a/b`) allowed
- * between `gh` and the noun, and what follows it.
+ * between `gh` and the noun: the verb, and what follows it.
  */
 const GH_POSTING =
-  /(?:^|[^\w.-])gh(?:\s+-\S+(?:\s+[^\s-]\S*)?)*?\s+(?:issue|pr)\s+(?:create|comment|edit|review)(?:\s(.*))?$/s
+  /(?:^|[^\w.-])gh(?:\s+-\S+(?:\s+[^\s-]\S*)?)*?\s+(?:issue|pr)\s+(create|comment|edit|review|merge|close)(?:\s(.*))?$/s
 
 /**
  * Every value of `flags` in `words`, given as `flag value`, `--long=value`, or a short flag with
- * its value attached or after other short flags (`-bx`, `-F/abs/b.md`, `-wb x`).
+ * its value attached or after other short flags (`-bx`, `-F/abs/b.md`, `-F=/abs/b.md`, `-wb x`).
  */
 function flagValues(words: string[], flags: string[]): string[] {
   const values: string[] = []
@@ -342,13 +360,14 @@ function flagValues(words: string[], flags: string[]): string[] {
     const short = letters && !word.startsWith(`--`) ? attached.exec(word) : null
     if (flags.includes(word)) values.push(words[++i] ?? ``)
     else if (long) values.push(word.slice(long.length + 1))
-    else if (short) values.push(short[1] || (words[++i] ?? ``))
+    // gh drops the `=` of an attached short value, as in `-F=/abs/f`.
+    else if (short) values.push(short[1] ? short[1].replace(/^=/, ``) : (words[++i] ?? ``))
   }
   return values
 }
 
 /**
- * Finds the body a `gh issue|pr create|comment|edit|review` command posts, reading only that
+ * Finds the body a `gh issue|pr create|comment|edit|review|close|merge` command posts, reading only that
  * command's own words, after any prefix `commandProper` drops. One with no body flag (a
  * title-only edit, `--fill`) posts none this mod can check. Fails closed: a second post, a
  * repeated body flag, or a posting call with a body flag that does not start its command (inside
@@ -372,20 +391,21 @@ export function ghPost(command: string): GhPost {
     }
     const [gh, noun, verb] = proper
     const placed = gh?.replace(/^\\/, ``).split(`/`).pop() === `gh` &&
-      (noun === `issue` || noun === `pr`) && POSTING_VERBS.includes(verb ?? ``)
+      (noun === `issue` || noun === `pr`) && Object.hasOwn(BODY_FLAGS, verb ?? ``)
     if (!placed) {
-      const rest = GH_POSTING.exec(words.join(` `))?.[1]
-      if (rest !== undefined && flagValues(rest.split(/\s+/), BODY_FLAGS).length > 0) {
+      const [, posting = ``, rest] = GH_POSTING.exec(words.join(` `)) ?? []
+      if (rest !== undefined && flagValues(rest.split(/\s+/), bodyFlags(posting)).length > 0) {
         return { kind: `unplaced` }
       }
       continue
     }
-    const bodies = flagValues(proper, BODY_FLAGS)
+    const flags = BODY_FLAGS[verb!]
+    const bodies = flagValues(proper, bodyFlags(verb!))
     if (bodies.length === 0) continue
     // gh posts the last of repeated body flags; one body per command keeps the check exact.
     if (bodies.length > 1 || found.kind !== `none`) return { kind: `unplaced` }
-    const [path] = flagValues(proper, [`--body-file`, `-F`])
-    const [body] = flagValues(proper, [`--body`, `-b`])
+    const [path] = flagValues(proper, flags.file)
+    const [body] = flagValues(proper, flags.inline)
     if (path === `-`) found = { kind: `stdin` }
     else if (path !== undefined) found = { kind: `file`, path: expandVars(path, vars) }
     else found = { kind: `inline`, body: body ?? `` }
@@ -393,13 +413,26 @@ export function ghPost(command: string): GhPost {
   return found
 }
 
+/**
+ * The body-file path the shell hands `gh`, with a leading `~/`, `$HOME` or `${HOME}` made `home`.
+ * Undefined when the shell would still change it (`$`, a backtick, `~user`) or home is unknown:
+ * the hook could then read a different file from the one `gh` posts.
+ */
+export function bodyFilePath(path: string, home: string | undefined): string | undefined {
+  const lead = /^(?:~(?=\/)|\$HOME(?!\w)|\$\{HOME\})/
+  if (lead.test(path) && !home) return undefined
+  const full = path.replace(lead, home ?? ``)
+  return /[$`]|^~/.test(full) ? undefined : full
+}
+
 /** Judges a posting gh call the guard cannot read (`ghPost` returned `unplaced`). */
 export const UNPLACED_POST: Verdict = {
   deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
-    `after a wrapper it does not know, inside quotes or \`$(…)\`, or as a second post. Make it ` +
-    `the only post, written plainly: \`gh pr comment <n> --body-file <literal path>\`, with at ` +
-    `most \`timeout <n>\`, \`sudo\`, \`env\` or \`X=1\` before it, and one body flag. Write a ` +
-    `file whose text mentions such a call with the Write tool, not a heredoc.`,
+    `after a wrapper it does not know, inside quotes or \`$(…)\`, as a second post, or with a ` +
+    `body file named through a variable it cannot resolve. Make it the only post, written ` +
+    `plainly: \`gh pr comment <n> --body-file <literal path>\`, with at most \`timeout <n>\`, ` +
+    `\`sudo\`, \`env\` or \`X=1\` before it, and one body flag. Write a file whose text mentions ` +
+    `such a call with the Write tool, not a heredoc.`,
 }
 
 /**
@@ -428,9 +461,8 @@ export function markerVerdict(text: string): Verdict {
     deny: `Start every comment, issue and PR body with \`${AGENT_MARKER}\`: a comment ` +
       `without it reads as the owner's. Make it the body's first line. A body file that can be ` +
       `read must hold it itself: a marker added in the same command (\`sed -i\`) or in a shell ` +
-      `comment does not count. One written in this same command, or named through a variable ` +
-      `set outside it or through \`$(…)\`, cannot be read yet: write the file in a command of ` +
-      `its own and pass its literal path.`,
+      `comment does not count. One written in this same command cannot be read yet: write the ` +
+      `file in a command of its own and pass its literal path.`,
   }
 }
 
