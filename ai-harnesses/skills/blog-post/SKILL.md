@@ -154,9 +154,8 @@ How:
 
 - **Written per language, for its searchers.** Find the phrase people actually type in that
   language; it is often not the translation. Adapt the examples, currencies, tools and channels the
-  reader knows. Never word for word, and never ship raw machine translation: Google lists automated
-  many pages that add no value, translated ones included, as scaled content abuse
-  ([spam policies][spam]).
+  reader knows. Never word for word, and never ship raw machine translation: Google lists many pages that add no value,
+  machine-translated ones included, as scaled content abuse ([spam policies][spam]).
 - **One set of facts.** Prices, numbers and names match in every language.
 - **Reviewed.** The reviewer (an agent) reads each language for wording that reads translated
   and for facts that differ from the source language.

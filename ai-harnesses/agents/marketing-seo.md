@@ -65,7 +65,7 @@ worth winning. A repo's own SEO doc wins over this file for that repo.
    whole page in that language, hreflang on every version listing itself and the others, plus
    `x-default`, and no automatic redirect by IP or browser language. Each version targets the
    phrase people type in that language and is written for them, never translated word for word:
-   Google counts automated translating that adds no value as scaled content abuse. Steps: the
+   Google counts many pages that add no value, machine-translated ones included, as scaled content abuse. Steps: the
    `blog-post` skill, "Languages".
 
 ## Answer engines (AEO)
