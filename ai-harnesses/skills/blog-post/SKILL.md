@@ -26,8 +26,9 @@ category), the month's changelog. Before any issue or draft, put the proposal in
 - the languages.
 
 Wait for the owner's yes. Then file the issue; its first line after `<!-- agent -->` is
-`Asked for by the owner, <date>`, then his answer quoted (global "Features"). A subagent never files: its proposal goes in its report.
-A post the owner asked for in chat skips the wait, not the proposal: show it, then go on.
+`Asked for by the owner, <date>`, then his answer quoted (global "Features"). A subagent follows
+global "Filing issues". A post the owner asked for in chat skips the wait, not the proposal: show
+it, then go on.
 
 ## 2. The brief: four lenses
 
@@ -145,8 +146,7 @@ Before the PR, check each; the `marketing-seo` agent has the detail and sources.
 
 Which languages:
 
-- A blog post: English and Russian.
-- A showcase post (a launch, the product's main explainer): every language the site has.
+- A blog post: the languages the owner picks from the proposal (step 1).
 - A question page ("Alternatives to ShipFast" / "Альтернативы ShipFast"): every language the site
   has, each answering one exact question.
 
@@ -155,10 +155,11 @@ How:
 - **Written per language, for its searchers.** Find the phrase people actually type in that
   language; it is often not the translation. Adapt the examples, currencies, tools and channels the
   reader knows. Never word for word, and never ship raw machine translation: Google lists automated
-  translating that adds no value among scaled content abuse ([spam policies][spam]).
+  many pages that add no value, translated ones included, as scaled content abuse
+  ([spam policies][spam]).
 - **One set of facts.** Prices, numbers and names match in every language.
-- **Reviewed.** A reviewer reads each language as a native reader of it and flags anything that
-  reads translated or misstates a fact.
+- **Reviewed.** The reviewer (an agent) reads each language for wording that reads translated
+  and for facts that differ from the source language.
 - **One URL per language**, the whole page in that language, navigation included; a visible
   language switcher; no automatic redirect by IP or browser language ([Google, multilingual][ml]).
 - **hreflang** on every version, listing itself and every other version that exists, reciprocal,
@@ -167,7 +168,7 @@ How:
 
 ## 11. Publish and the newsletter
 
-PR, reviewer gate (plus the `design-reviewer` for a new component or layout), merge, deploy, then
+PR, reviewer gate (plus the `design-reviewer`, global "Design gate"), merge, deploy, then
 the repo's publish task. Typical steps, each in the repo's own tool: check the post answers 200
 live; cross-post (Dev.to and the like) with `canonical_url` pointing at the original; ping IndexNow;
 send the newsletter. The newsletter goes out once per post (a rerun never mails anyone twice), from
