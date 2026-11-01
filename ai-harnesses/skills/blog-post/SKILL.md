@@ -80,6 +80,12 @@ A long post gets a contents list, so give it real headings.
 
 No "Welcome to", no background first, no stacked sales questions ("Are you tired of…?").
 
+Every post has a cover, shown in the post list and on the post page, so each post has a face of
+its own: a well-known meme whose joke is the post's point, or an AI-generated picture when an
+image model is at hand; never a plain screenshot or a text card. Its captions say only what the
+post says (section 6), and its alt text says what the picture shows and quotes any captions. Size, files and tooling:
+the repo's publishing doc (antonshubin.com: `docs/publishing.md` and `scripts/blog-cover.sh`).
+
 ## 5. Voice
 
 The site's voice guide decides; antonshubin.com `docs/voice.md` is the owner's, learned from his
