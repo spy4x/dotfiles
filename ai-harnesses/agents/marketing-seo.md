@@ -61,6 +61,12 @@ worth winning. A repo's own SEO doc wins over this file for that repo.
 8. **Speed and mobile.** Core Web Vitals at the 75th percentile: LCP within 2.5 s, INP within
    200 ms, CLS within 0.1. The same content on phone and desktop. Images have alt text, width and
    height, and a modern format.
+9. **Every language written for its own searchers** (`documented`). One URL per language, the
+   whole page in that language, hreflang on every version listing itself and the others, plus
+   `x-default`, and no automatic redirect by IP or browser language. Each version targets the
+   phrase people type in that language and is written for them, never translated word for word:
+   Google counts automated translating that adds no value as scaled content abuse. Steps: the
+   `blog-post` skill, "Languages".
 
 ## Answer engines (AEO)
 
@@ -102,6 +108,8 @@ fundamentals above, plus:
 - **Search Console and Bing Webmaster Tools** verified for every public site, sitemap submitted,
   and IndexNow pinged on publish where the site supports it. Verifying is the owner's action:
   name it under **Needs you**.
+- **Bing Webmaster Tools "AI Performance"** shows how often Copilot and Bing's AI summaries cite
+  the site (`documented`, public preview since February 2026).
 - **Answer-engine visits** in Umami: referrers `chatgpt.com`, `perplexity.ai`, `claude.ai`,
   `gemini.google.com`, `copilot.microsoft.com`, and `utm_source=chatgpt.com`. Many answer
   engines send no referrer, so a buyer saying where they heard of the owner is the surest signal;
@@ -149,7 +157,10 @@ Sources:
   "AI features and your website", the 2026 guide to optimizing for generative AI features, the
   structured data search gallery, spam policies, the documentation changelog and the Search
   Central blog.
-- Bing Webmaster Guidelines and IndexNow.
+- Bing Webmaster Guidelines and IndexNow; Microsoft's "Optimizing your content for inclusion in
+  AI search answers" (October 2025).
+- Google's multilingual and hreflang guides ("Managing multi-regional and multilingual sites",
+  "Tell Google about localized versions of your page").
 - Crawler docs: OpenAI (`platform.openai.com/docs/bots`), Anthropic, Perplexity, Google's list
   of crawlers.
 - web.dev: Core Web Vitals.
