@@ -86,12 +86,19 @@ image model is at hand; never a plain screenshot or a text card. Its captions sa
 post says (section 6), and its alt text says what the picture shows and quotes any captions. Size, files and tooling:
 the repo's publishing doc (antonshubin.com: `docs/publishing.md` and `scripts/blog-cover.sh`).
 
+The body gets pictures with jokes too: a meme or AI picture in most sections, one at least every
+few screens, each landing a point the text makes and with alt text that carries the joke. Its
+captions follow the same rule as the cover's. Real screenshots stay where the text shows the
+thing itself.
+
 ## 5. Voice
 
 The site's voice guide decides; antonshubin.com `docs/voice.md` is the owner's, learned from his
 own posts. A product site speaks as its maker, the same person. In short: "I" for what the owner
 did, "you" for the reader, short paragraphs, plain words, self-irony and mistakes owned, opinions
-stated. The post closes with a push to act and its one ask, never a summary or "In conclusion".
+stated. Be fun to read, not only useful: the owner's character is fun while doing tech, so
+every post carries jokes, self-irony and playful asides alongside the substance, never a dry
+manual. The post closes with a push to act and its one ask, never a summary or "In conclusion".
 Keep out the phrases that read as generated: "crucial", "It's important to", "powerful, flexible
 and easy to use", filler reassurance, lists where every item says nothing specific.
 
