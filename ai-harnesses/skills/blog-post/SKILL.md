@@ -86,8 +86,8 @@ image model is at hand; never a plain screenshot or a text card. Its captions sa
 post says (section 6), and its alt text says what the picture shows and quotes any captions. Size, files and tooling:
 the repo's publishing doc (antonshubin.com: `docs/publishing.md` and `scripts/blog-cover.sh`).
 
-The body gets pictures with jokes too: a meme or AI picture in most sections, one at least every
-few screens, each landing a point the text makes and with alt text that carries the joke. Its
+The body gets pictures with jokes too: about one meme or AI picture per section, each landing a
+point the text makes, with alt text that says what the picture shows and carries the joke. Its
 captions follow the same rule as the cover's. Real screenshots stay where the text shows the
 thing itself.
 
