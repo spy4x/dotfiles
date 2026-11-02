@@ -65,6 +65,10 @@ One canonical copy, in the repository of the thing it shows, under `media/demo/`
   1.5 s. Type at a human pace (50–70 ms a key). 30–60 s in total.
 - **Dark theme**, a visible pointer that moves like a person, a click mark on every click, a key
   cap for every shortcut, and no white flash between pages.
+- **One theme, one version.** Record every video, silent loop and clip once, in the theme most of
+  its audience uses: dark for developers, and for every project unless its audience is mostly
+  non-technical, which takes light. Never a second copy in the other theme. A dark clip reads well
+  on a light page, and one copy halves the recording, the bytes and the player code.
 - **Music**: its own calm, quiet track, under the whole video (below). No voice-over.
 
 ### Writing `captions.vtt`
