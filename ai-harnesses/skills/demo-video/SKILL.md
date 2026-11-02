@@ -63,8 +63,12 @@ One canonical copy, in the repository of the thing it shows, under `media/demo/`
   free of the action (scroll, zoom or lay out the shot for it).
 - **Pace for a first-time viewer.** One thing moves at a time. Hold every new state at least
   1.5 s. Type at a human pace (50–70 ms a key). 30–60 s in total.
-- **Dark theme**, a visible pointer that moves like a person, a click mark on every click, a key
-  cap for every shortcut, and no white flash between pages.
+- **One theme, one version.** Record every video, silent loop and clip once, in the theme most of
+  its audience uses: dark for developers, and for every project unless its audience is mostly
+  non-technical, which takes light. Never a second copy in the other theme: one copy halves the
+  recording, the bytes and the player code. The title and end cards stay dark in either theme.
+- **A visible pointer** that moves like a person, a click mark on every click, a key cap for every
+  shortcut, and no flash of the other theme between pages.
 - **Music**: its own calm, quiet track, under the whole video (below). No voice-over.
 
 ### Writing `captions.vtt`
@@ -118,16 +122,17 @@ class and `concatList()` are the model. `recordVideo` is fine for a quick clip; 
 lag (`reference.md`).
 
 1. **One context for the recording**, separate from any for stills. A fixed viewport (1280×800),
-   `colorScheme: "dark"`, a fixed `timezoneId` and `locale`. For a sharper picture, set
-   `deviceScaleFactor: 2` with the screencast; to make small text bigger, use `body { zoom }`, not a
-   smaller viewport (`reference.md`).
+   `colorScheme` set to the video's theme, a fixed `timezoneId` and `locale`. For a sharper
+   picture, set `deviceScaleFactor: 2` with the screencast; to make small text bigger, use
+   `body { zoom }`, not a smaller viewport (`reference.md`).
 2. **Sign in off the record**, in another context, and pass its `storageState`.
 3. **Init scripts**: `window.__demoPointerOptions = { x, y }` (and `iframes: "shield"` when the
    pointer must cross an iframe), then `pointer.js`, then `keys.js`. Load pages with `goto`, never
    `page.setContent`, whose `document.open` drops the init scripts' listeners.
 4. **Theme before first paint.** The app needs `<meta name="color-scheme" content="light dark">`
-   and an inline theme script in `<head>`; then `colorScheme` makes even the blank frame between
-   pages dark. A white flash means one of those is missing: fix the app, not the recording.
+   and an inline theme script in `<head>`; then `colorScheme` gives even the blank frame between
+   pages the video's theme. A flash of the other theme means one of those is missing: fix the app,
+   not the recording.
 5. **Drive it like a person.** `clickLike` for every click (`locator.click()` teleports),
    `typeLike` for fields, `scrollLike` to scroll, and `parkLike` after a click so the pointer
    leaves what the next caption talks about. Pause on each new state. For the poster, hide the
@@ -175,7 +180,7 @@ ffprobe -v error -show_entries stream=codec_name,avg_frame_rate -of csv=p=0 medi
 ```
 
 - **Contact sheet:** the title and end cards are there, every caption is readable and nothing it
-  describes sits under it, every step of the flow is there in the dark theme, and no frame shows
+  describes sits under it, every step of the flow is there in the video's theme, and no frame shows
   anything but staged data.
 - **Streams:** 30 fps video and an audio stream in both files; the length you expect.
 - **Pointer:** consecutive frames of one move advance a little each and never jump, including
