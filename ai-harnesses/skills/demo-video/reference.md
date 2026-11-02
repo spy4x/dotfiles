@@ -173,4 +173,5 @@ ffmpeg -i demo.mp4 -vf "select='between(n,90,113)',crop=400:300:0:0,tile=6x4" -f
 ```
 
 The brightest frame of a dark video stays dark (about 30/255 on a plain dark margin); a white flash
-shows as a jump of 100 or more.
+shows as a jump of 100 or more. In a light video, look at the darkest frame instead: a dark flash
+shows as a drop of 100 or more.
