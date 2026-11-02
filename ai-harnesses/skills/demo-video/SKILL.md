@@ -122,9 +122,9 @@ class and `concatList()` are the model. `recordVideo` is fine for a quick clip; 
 lag (`reference.md`).
 
 1. **One context for the recording**, separate from any for stills. A fixed viewport (1280×800),
-   `colorScheme` set to the video's theme, a fixed `timezoneId` and `locale`. For a sharper picture, set
-   `deviceScaleFactor: 2` with the screencast; to make small text bigger, use `body { zoom }`, not a
-   smaller viewport (`reference.md`).
+   `colorScheme` set to the video's theme, a fixed `timezoneId` and `locale`. For a sharper
+   picture, set `deviceScaleFactor: 2` with the screencast; to make small text bigger, use
+   `body { zoom }`, not a smaller viewport (`reference.md`).
 2. **Sign in off the record**, in another context, and pass its `storageState`.
 3. **Init scripts**: `window.__demoPointerOptions = { x, y }` (and `iframes: "shield"` when the
    pointer must cross an iframe), then `pointer.js`, then `keys.js`. Load pages with `goto`, never
