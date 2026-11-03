@@ -308,8 +308,8 @@ export function directionBlock(text: string | undefined): ContextBlock | undefin
 
 /**
  * What a `gh` command posts: nothing, an inline body, a body read from a file, a body read from
- * standard input (`--body-file -`, usually a heredoc in the same command), or only a merge's
- * commit subject, which is scanned but needs no marker.
+ * standard input (`--body-file -`, usually a heredoc in the same command), or only a title (a
+ * merge's commit subject, a create's or edit's `--title`), which is scanned but needs no marker.
  */
 export type GhPost =
   | { readonly kind: `none` }
@@ -339,8 +339,12 @@ const BODY_FLAGS: Record<string, { inline: string[]; file: string[] }> = {
   reopen: COMMENT,
 }
 
-/** The flags of a merge's commit subject. */
-const SUBJECT = [`--subject`, `-t`]
+/** Each titled verb's title flags: a merge's commit subject, a create's or edit's title. */
+const TITLE_FLAGS: Record<string, string[]> = {
+  create: [`--title`, `-t`],
+  edit: [`--title`, `-t`],
+  merge: [`--subject`, `-t`],
+}
 
 /** Every body flag of a posting verb, inline and file ones together. */
 function bodyFlags(verb: string): string[] {
@@ -376,11 +380,12 @@ function flagValues(words: string[], flags: string[]): string[] {
 }
 
 /**
- * Finds the body a `gh issue|pr create|comment|edit|review|close|merge` command posts, reading only that
- * command's own words, after any prefix `commandProper` drops. One with no body flag (a
- * title-only edit, `--fill`) posts none this mod can check. Fails closed: a second post, a
- * repeated body flag, or a posting call with a body flag that does not start its command (inside
- * quotes, `$(…)`, after an unknown wrapper), is `unplaced`.
+ * Finds the body a `gh issue|pr create|comment|edit|review|close|reopen|merge` command posts,
+ * reading only that command's own words, after any prefix `commandProper` drops. One with only a
+ * title flag (`--title`, a merge's `--subject`) posts a `subject`, placed or not; one with neither
+ * (`--fill` alone) posts none this mod can check. Fails closed: a second body, a repeated body
+ * flag, or a posting call with a body flag that does not start its command (inside quotes,
+ * `$(…)`, after an unknown wrapper), is `unplaced`.
  */
 export function ghPost(command: string): GhPost {
   const vars = new Map<string, string>()
@@ -410,20 +415,21 @@ export function ghPost(command: string): GhPost {
       (noun === `issue` || noun === `pr`) && Object.hasOwn(BODY_FLAGS, verb ?? ``)
     if (!placed) {
       const [, posting = ``, rest] = GH_POSTING.exec(words.join(` `)) ?? []
-      if (rest !== undefined && flagValues(rest.split(/\s+/), bodyFlags(posting)).length > 0) {
-        return { kind: `unplaced` }
-      }
+      const restWords = rest?.split(/\s+/) ?? []
+      if (flagValues(restWords, bodyFlags(posting)).length > 0) return { kind: `unplaced` }
+      // A title the hook cannot place still goes out; the whole command is scanned for it.
+      if (flagValues(restWords, TITLE_FLAGS[posting] ?? []).length > 0) found = titled(found)
       continue
     }
     const flags = BODY_FLAGS[verb!]
     const bodies = flagValues(proper, bodyFlags(verb!))
     if (bodies.length === 0) {
-      const subject = verb === `merge` && flagValues(proper, SUBJECT).length > 0
-      if (subject && found.kind === `none`) found = { kind: `subject` }
+      if (flagValues(proper, TITLE_FLAGS[verb!] ?? []).length > 0) found = titled(found)
       continue
     }
-    // gh posts the last of repeated body flags; one body per command keeps the check exact.
-    if (bodies.length > 1 || found.kind !== `none`) return { kind: `unplaced` }
+    // gh posts the last of repeated body flags; one body per command keeps the check exact. A
+    // title posted earlier in the command needs no marker, and the scan covers the whole command.
+    if (bodies.length > 1 || ![`none`, `subject`].includes(found.kind)) return { kind: `unplaced` }
     const [path] = flagValues(proper, flags.file)
     const [body] = flagValues(proper, flags.inline)
     if (path === `-`) found = { kind: `stdin` }
@@ -436,6 +442,11 @@ export function ghPost(command: string): GhPost {
     } else found = { kind: `inline`, body: body ?? `` }
   }
   return found
+}
+
+/** What a command posts once a title is found too: a title, unless a body was found already. */
+function titled(found: GhPost): GhPost {
+  return found.kind === `none` ? { kind: `subject` } : found
 }
 
 /** A leading `~/`, `$HOME` or `${HOME}`, which the shell makes home. */

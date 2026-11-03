@@ -176,7 +176,7 @@ test(`leaves a variable unresolved when the command may change it or never set i
 
 test(`reads only the gh command's own flags, not flags elsewhere or inside quotes`, () => {
   expect(ghPost(`git checkout -b fix/x && gh pr create --fill`)).toEqual({ kind: `none` })
-  expect(ghPost(`gh pr edit 118 --title "docs: explain -b usage"`)).toEqual({ kind: `none` })
+  expect(ghPost(`gh pr edit 118 --title "docs: explain -b usage"`)).toEqual({ kind: `subject` })
   expect(ghPost(`rg -n -F 'gh pr create --fill' ai-harnesses`)).toEqual({ kind: `none` })
   expect(ghPost(`gh issue create --title "Use -F flag" --body-file /abs/b.md`)).toEqual({
     kind: `file`,
@@ -184,8 +184,7 @@ test(`reads only the gh command's own flags, not flags elsewhere or inside quote
   })
 })
 
-test(`sees no body in a title-only edit, a --fill PR or another gh command`, () => {
-  expect(ghPost(`gh pr edit 5 --title x`)).toEqual({ kind: `none` })
+test(`sees no body in a --fill PR or another gh command`, () => {
   expect(ghPost(`gh pr create --fill --base main`)).toEqual({ kind: `none` })
   expect(ghPost(`gh pr view 5 --json body`)).toEqual({ kind: `none` })
   expect(ghPost(`gh api repos/a/b -F x=1`)).toEqual({ kind: `none` })
@@ -331,7 +330,25 @@ test(`sees a merge's commit subject as text to scan, not as a body`, () => {
   expect(ghPost(`gh pr merge 1 --squash --subject x`)).toEqual({ kind: `subject` })
   expect(ghPost(`gh pr merge 1 -t x`)).toEqual({ kind: `subject` })
   expect(ghPost(`gh pr merge 1 -t x -b y`)).toEqual({ kind: `inline`, body: `y` })
-  expect(ghPost(`gh pr create -t x`)).toEqual({ kind: `none` })
+})
+
+test(`sees a title-only create or edit as text to scan, not as a body`, () => {
+  for (
+    const command of [
+      `gh pr create --fill --title x`,
+      `gh pr create -t x`,
+      `gh pr edit 1 --title=x`,
+      `gh issue edit 1 -t x`,
+      `gh issue create --title x`,
+      `gh -R a/b pr edit 1 --title x`,
+      `bash -c 'gh pr edit 1 --title x'`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `subject` })
+  expect(ghPost(`gh pr create --fill`)).toEqual({ kind: `none` })
+  expect(ghPost(`gh pr comment 1 -t x`)).toEqual({ kind: `none` })
+  expect(ghPost(`gh pr edit 1 -t x -b y`)).toEqual({ kind: `inline`, body: `y` })
+  expect(ghPost(`gh pr edit 1 -t x && gh pr comment 1 -b y`)).toEqual({ kind: `inline`, body: `y` })
+  expect(ghPost(`gh pr comment 1 -b y && gh pr edit 1 -t x`)).toEqual({ kind: `inline`, body: `y` })
 })
 
 test(`refuses a repeated body flag, since gh posts the last one`, () => {

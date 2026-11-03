@@ -132,6 +132,7 @@ test(
   `lets a gh command through whose -b or -F belongs to another command or a title`,
   async ($, on) => {
     const commands: string[] = []
+    on(`process.run`, () => ({ value: RAN(0) }))
     on(`tool.call`, (_$, e) => {
       commands.push(e.tool === `Bash` ? e.command : ``)
       return BASH_OK
@@ -357,6 +358,26 @@ test(`scans a merge's commit subject for secrets and asks no marker of it`, asyn
   const clean = `gh pr merge 1 --repo a/b --squash -t "fix: a title"`
   expect((await $.tool.call({ tool: `Bash`, command: clean })).deny).toBeUndefined()
   expect(scanned).toEqual([leak, clean])
+})
+
+test(`scans a title-only create or edit for secrets and asks no marker of it`, async ($, on) => {
+  const scanned: string[] = []
+  on(`process.run`, (_$, e) => {
+    if (e.argv[0] !== `gitleaks`) return { value: RAN(0) }
+    scanned.push(e.init?.stdin ?? ``)
+    return { value: RAN((e.init?.stdin ?? ``).includes(`SECRETX`) ? 1 : 0) }
+  })
+  on(`tool.call`, () => BASH_OK)
+  const leaks = [
+    `gh pr create --fill --title "key=SECRETX"`,
+    `gh issue edit 1 --title "key=SECRETX"`,
+  ]
+  for (const leak of leaks) {
+    expect((await $.tool.call({ tool: `Bash`, command: leak })).deny).toContain(`secret`)
+  }
+  const clean = `gh pr edit 1 --title "fix x"`
+  expect((await $.tool.call({ tool: `Bash`, command: clean })).deny).toBeUndefined()
+  expect(scanned).toEqual([...leaks, clean])
 })
 
 test(`refuses a close comment or a merge body without the marker and posts one with it`, async (
