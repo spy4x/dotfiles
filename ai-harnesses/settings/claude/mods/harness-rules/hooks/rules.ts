@@ -605,12 +605,14 @@ function inMade(path: string, made: Map<string, Simple>): boolean {
 
 /**
  * Whether a command other than `poster`, the `mktemp` that made the folder, the literal writers
- * (`literalWriter`) and plain prints (`echo $D`) uses a `mktemp` variable, in its words or a heredoc's text. Such a command
- * (`ln -s ~ $D/h`, `cp -r x $D/`, `cat ~/.env >> $D/b.m?`) can put into the folder text the scan
- * of the command never sees, under a name the body-file check cannot match.
+ * (`literalWriter`) and plain prints (`echo $D`) uses a `mktemp` variable or a glob, in its words
+ * or a heredoc's text. Such a command (`ln -s ~ $D/h`, `cp -r x $D/`, `cat ~/.env >> $D/b.m?`,
+ * a glob reaching the folder from `/tmp`) can put into the folder text the scan of the command
+ * never sees, under a name the body-file check cannot match.
  */
 function usedOtherwise(commands: Simple[], poster: Simple, made: Map<string, Simple>): boolean {
   const uses = [...made.keys()].map((name) => new RegExp(`\\$\\{?${name}(?!\\w)`))
+    .concat(/[*?[]/)
   const exempt = new Set([poster, ...made.values()])
   return commands.some((simple) => {
     if (exempt.has(simple) || literalWriter(simple) || printsOnly(simple)) return false
