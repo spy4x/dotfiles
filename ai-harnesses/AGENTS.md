@@ -365,10 +365,6 @@ accessibility failure, a broken layout, a task a first-time user cannot finish, 
 made slower or harder to find; taste nits come under **Not blocking**. The PR merges only when both
 reviewers pass, and both reviewers' `needs-fix` verdicts count toward the gate's three per PR.
 
-**Videos.** A demo video has one copy, in its project's repo under `media/demo/`, with the recipe
-that remakes it in one command; READMEs and sites pull it at a pinned commit. Burned-in captions
-say what happens on screen, over its own calm, quiet CC0 track. Steps: the `demo-video` skill.
-
 # Projects
 
 Each is `~/sync/code/<name>` and `github.com/spy4x/<name>`. Before working in one or answering about
@@ -418,7 +414,9 @@ New repo, before first edit, read in parallel: repo-local `AGENTS.md` (unless pr
 `README.md`, manifest (`deno.jsonc`/`package.json`/etc) for exact task names, lint/fmt config.
 Everything else (other root `*.md`, `docs/`, `compose.yml`/`Dockerfile`, hooks) only when the task
 touches it. Never guess a command the manifest defines. Greenfield with none → say so. New worktree
-of a known repo → no re-read.
+of a known repo → no re-read. Read only what you need, since every turn re-reads the whole context:
+`wc -l` or `grep -n` first, then read that range, never several whole files in one `cat`. Put
+independent lookups (greps, ranges, `ls`) in one call.
 
 # Hard rule: no secrets anywhere they leave box
 
@@ -634,12 +632,13 @@ branch, fails while its worktree exists, and skips the remote delete.
 The default branch of every public repo with CI is protected, admins included: a merge needs the
 branch up to date with it and the Woodpecker pull-request check green, and nothing pushes to it
 directly or force-pushes. A branch behind it → `gh pr update-branch <n> --repo <owner>/<repo>` (a
-merge commit, never a rebase or force-push). A blocked merge → wait with `timeout 900 gh pr checks
-<n> --repo <owner>/<repo> --watch`; red → fix it; still pending after that (a pipeline waiting for
-approval) → leave the PR open and say so. Never approve a pipeline: approving runs code on my
-server, so that is my action. Never pass `--admin`, and never loosen or lift the protection, which
-is mine to change. Whoever adds CI to a public repo protects its default branch the same way once
-its first pull-request pipeline has run.
+merge commit, never a rebase or force-push), only for the PR merged next: merge one at a time, as
+each merge leaves every other updated branch behind. A blocked merge → wait with `timeout 900 gh
+pr checks <n> --repo <owner>/<repo> --watch`; red → fix it; still pending after that (a pipeline
+waiting for approval) → leave the PR open and say so. Never approve a pipeline: approving runs code
+on my server, so that is my action. Never pass `--admin`, and never loosen or lift the protection,
+which is mine to change. Whoever adds CI to a public repo protects its default branch the same way
+once its first pull-request pipeline has run.
 
 **Woodpecker pipelines.** A repository stays untrusted. Never add `volumes`, `privileged` or a
 Docker socket mount to a step, and never mark a repository trusted to make one work: that gives
@@ -700,7 +699,7 @@ that already makes a value that is no id (a password hash, a salt, a nonce, a ke
 `randomBase64Url()` token) stays as it is, without a question. A validator accepts any UUID version,
 and stored ids are never rewritten. Functions: named exports, async/await, default export for config
 objects. Errors: explicit throw on missing required env. Structured result `{ success, output, error
-}` from commands. Tests: colocated, deterministic, behavior-named (`t("rejects expired token")`).
+}` from commands. Tests: deterministic, behavior-named (`t("rejects expired token")`).
 JSDoc on non-trivial or >10-line functions/classes/interfaces.
 
 **Local green is not CI evidence** — it hides `$HOME`, `DENO_DIR` and cache assumptions. Emulate CI,
