@@ -161,27 +161,35 @@ states, so the prose stays the source:
   body file it can read. That covers `create`, `comment`, `edit`, `review`, the `--comment` of
   `close` and `reopen`, and the body of `pr merge`; the `--subject` of `pr merge` is scanned but
   needs no marker. A `--body-file` the hook can read must hold the marker itself, so a marker in a
-  shell comment does not count, and a file the same command edits or rewrites (`sed -i`, a heredoc
-  over an existing file) is judged as it was before. The hook expands a leading `~/`, `$HOME` or
-  `${HOME}` in its path, and a variable the same command sets once to a literal; any other `$` or
-  backtick in the path refuses the post. It reads a relative path from the folder an earlier `cd`
-  or `pushd` in the command moved to, or else from the session's directory; a relative path after
-  a `cd` it cannot follow (`cd "$D"`, `cd -`, `popd`, a `cd` inside `( … )`) refuses the post.
-  Only a file it cannot read yet, one the same command creates (a heredoc), or `-` (standard input), is judged and scanned through the command
-  text. A body the command copies or redirects in from another file, a URL or a command's output
-  goes out unscanned, as does `$(…)` in an inline body: the guard catches accidents, not deliberate
-  leaks. A check that breaks refuses the post. It reads global flags before the noun (`gh -R a/b pr
-  comment`) and a short flag's attached value (`-bx`, `-F/abs/b.md`, `-F=/abs/b.md`). It refuses a
-  post with a body that it cannot place: one inside quotes (`bash -c '…'`), `$(…)` or after a
-  wrapper it does not know (`xargs -I {}`, `stdbuf`), a repeated body flag (gh posts the last), and
-  a second post in the same command, which includes a heredoc whose text mentions such a call: write
-  that file with the Write tool.
+  shell comment does not count, and a file a heredoc in the same command rewrites is judged as it
+  was before. The hook expands a leading `~/`, `$HOME` or `${HOME}` in its path, and a variable
+  the same command sets once to a literal. A path inside a folder or file that `D=$(mktemp …)`
+  made in the same command (literal arguments only, no `..`) is new, so it is judged through the
+  command without being read. Any other `$` or backtick in the path refuses the post. It reads a
+  relative path from the folder an earlier `cd` or `pushd` in the command moved to, or else from
+  the session's directory; a relative path after a `cd` it cannot follow (`cd "$D"`, `cd -`,
+  `popd`, a `cd` inside `( … )`) refuses the post. A file it cannot read yet (one a heredoc in the
+  same command writes), a `mktemp` one, or `-` (standard input) is judged and scanned through the
+  command text. The command may write the body file only with a heredoc into `cat > <file>` (an
+  unquoted one without `$` or backtick), or `printf` or `echo` of literal text; any other step that
+  names the file (`cat .env >> b.md`, `cp`, `ln`, `sed -i`, a script whose heredoc names it)
+  refuses the post. A body filled without naming its file, through `-`, or by `$(…)` in an inline
+  body goes out unscanned: the guard catches accidents, not deliberate leaks. A check that breaks
+  refuses the post. It reads heredoc lines as the heredoc's body, a backslash as an escape and a
+  `#` that starts a word as a comment; global flags before the noun (`gh -R a/b pr comment`); and
+  a short flag's attached value (`-bx`, `-F/abs/b.md`, `-F=/abs/b.md`). Several inline posts in one
+  command (`gh issue close 1 -c …; gh issue close 2 -c …`) must each carry the marker. It refuses a
+  post with a body that it cannot place: one inside quotes (`bash -c '…'`), `$(…)`, a shell
+  function or after a wrapper it does not know (`xargs -I {}`, `stdbuf`), a repeated body flag (gh
+  posts the last), a second post next to a body file, and a heredoc whose text mentions such a
+  call: write that file with the Write tool. The refusal names the one plain command to send
+  instead.
 
 It reads a command's words, not what the shell would run. It sees `rm` and `gh` after `sudo`,
 `timeout`, `env`, `nice`, `xargs`, `X=1`, `do`, `then` or `(`, but misses `rm` inside `xargs -I`,
 `find -exec`, `bash -c '…'` and `trap '…'`. It also misses bodies posted by `gh api`, `gh release`
-or `gh pr create --fill`, and it reads heredoc lines as commands of their own. A variable whose
-name the shell builds at run time (`eval "$(printf …)=…"`, `declare {C..E}=…`) can make it read a
+or `gh pr create --fill`; the `rm` rule reads heredoc lines as commands of their own. A variable
+whose name the shell builds at run time (`eval "$(printf …)=…"`, `declare {C..E}=…`) can make it read a
 different body file than `gh` posts, and the file actually posted then goes out unchecked.
 
 A session reads `CLAUDE_CODE_PLUGIN_DIRS` when it starts: one started before the mod existed runs
