@@ -632,12 +632,14 @@ commits → the same with `--rebase`. Always pass `--repo`: without it, gh tries
 branch, fails while its worktree exists, and skips the remote delete.
 
 The default branch of every public repo with CI is protected, admins included: a merge needs the
-Woodpecker pull-request check green, and nothing pushes to it directly or force-pushes. A blocked
-merge → wait with `timeout 900 gh pr checks <n> --repo <owner>/<repo> --watch`; red → fix it; still
-pending after that (a pipeline waiting for approval) → leave the PR open and say so. Never approve a
-pipeline: approving runs code on my server, so that is my action. Never pass `--admin`, and never
-loosen or lift the protection, which is mine to change. Whoever adds CI to a public repo protects
-its default branch the same way once its first pull-request pipeline has run.
+branch up to date with it and the Woodpecker pull-request check green, and nothing pushes to it
+directly or force-pushes. A branch behind it → `gh pr update-branch <n> --repo <owner>/<repo>` (a
+merge commit, never a rebase or force-push). A blocked merge → wait with `timeout 900 gh pr checks
+<n> --repo <owner>/<repo> --watch`; red → fix it; still pending after that (a pipeline waiting for
+approval) → leave the PR open and say so. Never approve a pipeline: approving runs code on my
+server, so that is my action. Never pass `--admin`, and never loosen or lift the protection, which
+is mine to change. Whoever adds CI to a public repo protects its default branch the same way once
+its first pull-request pipeline has run.
 
 **Woodpecker pipelines.** A repository stays untrusted. Never add `volumes`, `privileged` or a
 Docker socket mount to a step, and never mark a repository trusted to make one work: that gives
