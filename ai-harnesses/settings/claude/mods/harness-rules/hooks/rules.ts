@@ -59,8 +59,45 @@ export function spawnVerdict(spawn: Spawn, fiveHourPercent: number | undefined):
  * the word `$D`. Best effort, not a shell: a heredoc's lines read as commands of their own.
  */
 export function commandsOf(command: string): string[][] {
-  const commands: string[][] = []
+  return simpleCommands(command, false).map((simple) => simple.words)
+}
+
+/** A heredoc a command reads: its body, and whether a quoted delimiter keeps it unexpanded. */
+interface Heredoc {
+  readonly quoted: boolean
+  body: string
+  /** Where the body sits in the command text, so it can be cut out. */
+  start: number
+  end: number
+}
+
+/** A simple command: its words, and the heredocs it reads. */
+interface Simple {
+  readonly words: string[]
+  readonly heredocs: Heredoc[]
+}
+
+/**
+ * `<<DELIM`, `<<-DELIM`, `<<'DELIM'`, `<<"DELIM"` or `<<\DELIM` at the start of a word: a heredoc
+ * whose body starts on the next line. A `<<<` here-string and a `<<` inside a word (`x<<y`) do
+ * not match. One the shell would not read as a heredoc (`$(( x << y ))`) hides the lines after it,
+ * so `ghPost` still looks for posts and the body file's name in its text.
+ */
+const HEREDOC_START =
+  /^<<(-?)[ \t]*(?:'([A-Za-z_][\w-]*)'|"([A-Za-z_][\w-]*)"|(\\?)([A-Za-z_][\w-]*))(?=[\s;&|<>)]|$)/
+
+/**
+ * `commandsOf` with each command's heredocs. With `shell`, it reads closer to the shell: a
+ * heredoc's lines are its body, up to the line that holds only its delimiter (after leading tabs
+ * for `<<-`); a backslash escapes the next character; a `#` that starts a word starts a comment.
+ * Without it, heredoc lines read as commands of their own, and backslashes and `#` as text.
+ */
+function simpleCommands(command: string, shell: boolean): Simple[] {
+  const commands: Simple[] = []
   let words: string[] = []
+  let heredocs: Heredoc[] = []
+  // Heredocs opened on the current line, whose bodies start after it.
+  let pending: { doc: Heredoc; delimiter: string; tabs: boolean }[] = []
   let word: string | undefined
   let quote: string | undefined
   const endWord = () => {
@@ -69,21 +106,72 @@ export function commandsOf(command: string): string[][] {
   }
   const endCommand = () => {
     endWord()
-    if (words.length > 0) commands.push(words)
+    if (words.length > 0 || heredocs.length > 0) commands.push({ words, heredocs })
     words = []
+    heredocs = []
   }
-  for (const char of command) {
-    if (quote) {
+  // Reads the pending heredocs' bodies from `from`, and returns where the command goes on.
+  const readBodies = (from: number): number => {
+    let at = from
+    for (const { doc, delimiter, tabs } of pending) {
+      // Without its delimiter line, a body runs to the end of the command, as in the shell.
+      doc.start = at
+      doc.end = command.length
+      while (at < command.length) {
+        const newline = command.indexOf(`\n`, at)
+        const lineEnd = newline === -1 ? command.length : newline
+        const line = command.slice(at, lineEnd)
+        if ((tabs ? line.replace(/^\t+/, ``) : line) === delimiter) {
+          doc.end = at
+          at = lineEnd + 1
+          break
+        }
+        at = lineEnd + 1
+      }
+      doc.body = command.slice(doc.start, doc.end).replace(/\n$/, ``)
+    }
+    pending = []
+    return at
+  }
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i] ?? ``
+    const next = command[i + 1] ?? ``
+    const start = shell && !quote && word === undefined && char === `<`
+      ? HEREDOC_START.exec(command.slice(i, i + 200))
+      : null
+    if (start) {
+      const [text, dash, single, double, slash, bare] = start
+      const doc: Heredoc = { quoted: !bare || slash === `\\`, body: ``, start: 0, end: 0 }
+      heredocs.push(doc)
+      pending.push({ doc, delimiter: single ?? double ?? bare ?? ``, tabs: dash === `-` })
+      i += text.length - 1
+    } else if (shell && char === `\\` && quote !== `'` && i + 1 < command.length) {
+      // A backslash keeps the next character literal, as the shell does: `\"` ends no string. An
+      // escaped `$` or backtick keeps its backslash, so the word never reads as an expansion.
+      // Inside double quotes it escapes only `$`, a backtick, `"`, `\` and a newline.
+      i++
+      if (next === `\n`) continue
+      else if (next === `$` || next === `\``) word = `${word ?? ``}\\${next}`
+      else if (quote && !`"\\`.includes(next)) word = `${word ?? ``}\\${next}`
+      else word = (word ?? ``) + next
+    } else if (quote) {
       if (char === quote) quote = undefined
       else word = (word ?? ``) + char
     } else if (char === `"` || char === `'`) {
       quote = char
       word = word ?? ``
-    } else if (/[;&|\n]/.test(char)) endCommand()
-    else if (/\s/.test(char)) endWord()
+    } else if (shell && char === `#` && word === undefined) {
+      // A comment runs to the end of its line, and its text is no command or heredoc.
+      const newline = command.indexOf(`\n`, i)
+      i = (newline === -1 ? command.length : newline) - 1
+    } else if (/[;&|\n]/.test(char)) {
+      endCommand()
+      if (char === `\n` && pending.length > 0) i = readBodies(i + 1) - 1
+    } else if (/\s/.test(char)) endWord()
     else word = (word ?? ``) + char
   }
   endCommand()
+  if (pending.length > 0) readBodies(command.length)
   return commands
 }
 
@@ -310,13 +398,18 @@ export function directionBlock(text: string | undefined): ContextBlock | undefin
  * What a `gh` command posts: nothing, an inline body, a body read from a file, a body read from
  * standard input (`--body-file -`, usually a heredoc in the same command), or only a title (a
  * merge's commit subject, a create's or edit's `--title`), which is scanned but needs no marker.
+ * `fresh` is a body file inside what a `mktemp` in the same command made, so the command alone
+ * writes it. `built` is a body file the command also writes or edits with something the guard
+ * cannot read (`cat .env >> b.md`, `cp`, `sed -i`, a script).
  */
 export type GhPost =
   | { readonly kind: `none` }
   | { readonly kind: `inline`; readonly body: string }
   | { readonly kind: `file`; readonly path: string }
+  | { readonly kind: `fresh` }
   | { readonly kind: `stdin` }
   | { readonly kind: `subject` }
+  | { readonly kind: `built` }
   | { readonly kind: `unplaced` }
 
 /** The body flags of `create`, `comment`, `edit`, `review` and `merge`. */
@@ -383,24 +476,40 @@ function flagValues(words: string[], flags: string[]): string[] {
  * Finds the body a `gh issue|pr create|comment|edit|review|close|reopen|merge` command posts,
  * reading only that command's own words, after any prefix `commandProper` drops. One with only a
  * title flag (`--title`, a merge's `--subject`) posts a `subject`, placed or not; one with neither
- * (`--fill` alone) posts none this mod can check. Fails closed: a second body, a repeated body
- * flag, or a posting call with a body flag that does not start its command (inside quotes,
- * `$(…)`, after an unknown wrapper), is `unplaced`.
+ * (`--fill` alone) posts none this mod can check. Heredoc lines are bodies, not commands. Fails
+ * closed: a second body, a repeated body flag, or a posting call with a body flag that does not
+ * start its command (inside quotes, `$(…)`, a shell function, a heredoc's text, after an unknown
+ * wrapper), is `unplaced`; a body file the command also writes in a way the guard cannot read is
+ * `built`.
  */
 export function ghPost(command: string): GhPost {
+  const commands = simpleCommands(command, true)
+  // A quoted heredoc's text cannot change a variable, so it does not count as a mention.
+  const text = withoutQuotedBodies(command, commands)
   const vars = new Map<string, string>()
+  const made = new Set<string>()
   let found: GhPost = { kind: `none` }
+  let poster: { readonly command: Simple; readonly paths: string[] } | undefined
   // Where an earlier `cd` in this command moved: undefined while it has not, null once a `cd` the
   // hook cannot follow ran.
   let dir: string | null | undefined
-  for (const words of commandsOf(command)) {
+  for (const simple of commands) {
+    const { words } = simple
+    // The shell might run what reads as a heredoc's text here, so a posting call in it counts.
+    for (const doc of simple.heredocs) {
+      const mention = postingMention(doc.body)
+      if (mention === `body`) return { kind: `unplaced` }
+      if (mention === `title`) found = titled(found)
+    }
     const assignments = words.map((word) => /^([A-Za-z_]\w*)=([^$`]*)$/.exec(word))
-    if (assignments.every((match) => match)) {
+    if (words.length > 0 && assignments.every((match) => match)) {
       for (const match of assignments) {
         const [, name, value] = match!
-        if (assignedOnce(command, name)) vars.set(name, value)
+        if (assignedOnce(text, name)) vars.set(name, value)
       }
     }
+    const fresh = MKTEMP.exec(words.join(` `))
+    if (fresh && assignedOnce(text, fresh[1]!)) made.add(fresh[1]!)
     const proper = commandProper(words)
     if ([`cd`, `pushd`, `popd`].includes(proper[0] ?? ``)) {
       dir = words.some((word) => /[()]/.test(word)) ? null : movedTo(proper, dir)
@@ -414,11 +523,10 @@ export function ghPost(command: string): GhPost {
     const placed = gh?.replace(/^\\/, ``).split(`/`).pop() === `gh` &&
       (noun === `issue` || noun === `pr`) && Object.hasOwn(BODY_FLAGS, verb ?? ``)
     if (!placed) {
-      const [, posting = ``, rest] = GH_POSTING.exec(words.join(` `)) ?? []
-      const restWords = rest?.split(/\s+/) ?? []
-      if (flagValues(restWords, bodyFlags(posting)).length > 0) return { kind: `unplaced` }
+      const mention = postingMention(words.join(` `))
+      if (mention === `body`) return { kind: `unplaced` }
       // A title the hook cannot place still goes out; the whole command is scanned for it.
-      if (flagValues(restWords, TITLE_FLAGS[posting] ?? []).length > 0) found = titled(found)
+      if (mention === `title`) found = titled(found)
       continue
     }
     const flags = BODY_FLAGS[verb!]
@@ -427,21 +535,134 @@ export function ghPost(command: string): GhPost {
       if (flagValues(proper, TITLE_FLAGS[verb!] ?? []).length > 0) found = titled(found)
       continue
     }
+    const [path] = flagValues(proper, flags.file)
+    const [body] = flagValues(proper, flags.inline)
+    // Several inline posts (`gh issue close 1 -c …; gh issue close 2 -c …`) hold all their text in
+    // the command, which is scanned whole: they read as one whose body is the first without the
+    // marker, so each must carry it.
+    if (found.kind === `inline` && bodies.length === 1 && path === undefined) {
+      if (found.body.includes(AGENT_MARKER)) found = { kind: `inline`, body: body ?? `` }
+      continue
+    }
     // gh posts the last of repeated body flags; one body per command keeps the check exact. A
     // title posted earlier in the command needs no marker, and the scan covers the whole command.
     if (bodies.length > 1 || ![`none`, `subject`].includes(found.kind)) return { kind: `unplaced` }
-    const [path] = flagValues(proper, flags.file)
-    const [body] = flagValues(proper, flags.inline)
     if (path === `-`) found = { kind: `stdin` }
     else if (path !== undefined) {
       const full = expandVars(path, vars)
-      if (full.startsWith(`/`) || HOME_LEAD.test(full) || dir === undefined) {
+      poster = { command: simple, paths: [path, full] }
+      if (inMade(full, made)) found = { kind: `fresh` }
+      else if (full.startsWith(`/`) || HOME_LEAD.test(full) || dir === undefined) {
         found = { kind: `file`, path: full }
       } else if (dir === null) return { kind: `unplaced` }
       else found = { kind: `file`, path: `${dir}/${full}` }
     } else found = { kind: `inline`, body: body ?? `` }
   }
+  // A path still holding a variable is refused by the caller, which names that cause.
+  const resolvable = found.kind === `fresh` || (found.kind === `file` && !/[$`]/.test(
+    found.path.replace(HOME_LEAD, ``),
+  ))
+  if (poster && resolvable && writtenOtherwise(commands, poster.command, poster.paths)) {
+    return { kind: `built` }
+  }
   return found
+}
+
+/**
+ * Whether `text` holds a `gh issue|pr` posting call, and with what: a body flag, only a title
+ * flag, or neither (undefined).
+ */
+function postingMention(text: string): `body` | `title` | undefined {
+  const [, posting = ``, rest] = GH_POSTING.exec(text) ?? []
+  const restWords = rest?.split(/\s+/) ?? []
+  if (flagValues(restWords, bodyFlags(posting)).length > 0) return `body`
+  if (flagValues(restWords, TITLE_FLAGS[posting] ?? []).length > 0) return `title`
+  return undefined
+}
+
+/** `command` with the bodies of its quoted heredocs cut out. */
+function withoutQuotedBodies(command: string, commands: Simple[]): string {
+  const docs = commands.flatMap((simple) => simple.heredocs).filter((doc) => doc.quoted)
+  let text = ``
+  let at = 0
+  for (const doc of docs.sort((a, b) => a.start - b.start)) {
+    text += command.slice(at, doc.start)
+    at = Math.max(at, doc.end)
+  }
+  return text + command.slice(at)
+}
+
+/**
+ * `NAME=$(mktemp …)` as a whole command, with only literal arguments: `-d`, `-q`, `-t`, `-p
+ * <dir>`, `--tmpdir[=<dir>]`, a template. Each run makes a new, empty file or folder, so what is
+ * inside it when `gh` runs, the command itself wrote. `-u` makes nothing and does not match.
+ */
+const MKTEMP =
+  /^([A-Za-z_]\w*)=\$\(mktemp(?:\s+(?:-[dqt]+|-p\s+[^\s$`()]+|--tmpdir(?:=[^\s$`()]+)?|--directory|--quiet|[^\s$`()-][^\s$`()]*))*\s*\)$/
+
+/**
+ * Whether `path` is `$NAME` or `${NAME}/a/b` for a `NAME` that a `mktemp` in this command made:
+ * inside it, with no `..`, glob or other expansion that could reach a file made before.
+ */
+function inMade(path: string, made: Set<string>): boolean {
+  const match = /^\$(?:\{([A-Za-z_]\w*)\}|([A-Za-z_]\w*))((?:\/[^/$`*?[\]{}~]+)*)$/.exec(path)
+  if (!match || !made.has(match[1] ?? match[2] ?? ``)) return false
+  return !match[3]!.split(`/`).includes(`..`)
+}
+
+/** A redirect word: `>`, `>>`, `2>`, `&>`, or one with its target attached (`>b.md`). */
+const REDIRECT = /^(?:\d*|&)>>?/
+
+/**
+ * Whether a command other than `poster` names the body file at `paths` (by its last part, as the
+ * shell might reach it from another folder) and is not a writer whose text the command itself
+ * holds: `cat` fed only by a heredoc the shell does not expand, or `echo` or `printf` with literal
+ * text. Such a command (`cat .env >> b.md`, `cp`, `sed -i`, a script that opens the file) can put
+ * text in the body that the scan of the command never sees.
+ */
+function writtenOtherwise(commands: Simple[], poster: Simple, paths: string[]): boolean {
+  const names = [...new Set(paths.map((path) => braceless(path).split(`/`).pop() ?? ``))]
+    .filter((name) => name !== ``)
+  const named = (word: string) => {
+    const target = braceless(word.replace(REDIRECT, ``))
+    return names.some((name) => target === name || target.endsWith(`/${name}`))
+  }
+  const mentioned = (body: string) =>
+    names.some((name) =>
+      new RegExp(`(?<![\\w.$-])${name.replace(/[.*+?^${}()|[\]\\]/g, `\\$&`)}(?![\\w.-])`)
+        .test(braceless(body))
+    )
+  return commands.some((simple) => {
+    if (simple === poster || literalWriter(simple)) return false
+    const words = simple.words.filter((word) => !/^[A-Za-z_]\w*=[^$`]*$/.test(word))
+    return words.some(named) || simple.heredocs.some((doc) => mentioned(doc.body))
+  })
+}
+
+/** `${NAME}` written as `$NAME`, so both spellings of a path compare equal. */
+function braceless(text: string): string {
+  return text.replace(/\$\{([A-Za-z_]\w*)\}/g, `$$$1`)
+}
+
+/**
+ * Whether `simple` writes only text the command holds: `cat` whose only arguments are output
+ * redirects, fed by heredocs the shell does not expand (a quoted delimiter, or no `$` or backtick
+ * in the body), or `echo` or `printf` with no `$` or backtick outside its redirects.
+ */
+function literalWriter(simple: Simple): boolean {
+  const [name, ...args] = commandProper(simple.words)
+  const text: string[] = []
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] ?? ``
+    if (REDIRECT.test(arg)) i += arg.replace(REDIRECT, ``) === `` ? 1 : 0
+    else text.push(arg)
+  }
+  if (name === `cat`) {
+    return text.length === 0 && simple.heredocs.length > 0 &&
+      simple.heredocs.every((doc) => doc.quoted || !/[$`]/.test(doc.body))
+  }
+  return (name === `echo` || name === `printf`) && simple.heredocs.length === 0 &&
+    text.every((arg) => !/[$`]/.test(arg))
 }
 
 /** What a command posts once a title is found too: a title, unless a body was found already. */
@@ -485,15 +706,47 @@ export function bodyFilePath(path: string, { cwd, home }: Where): string | undef
   return cwd?.startsWith(`/`) ? `${cwd}/${full}` : undefined
 }
 
+/** The first `gh issue|pr <posting verb>` a command names, for the command a refusal suggests. */
+const GH_NOUN_VERB = /\bgh\b.*?\b(issue|pr)\s+(create|comment|edit|review|merge|close|reopen)\b/s
+
+/**
+ * The one command to send instead of `command`'s post: the same noun and verb, written plainly,
+ * with its body in a file (a `close` or `reopen` takes its comment inline).
+ */
+function plainPost(command: string): string {
+  const [, noun = `pr`, verb = `comment`] = GH_NOUN_VERB.exec(command) ?? []
+  if (verb === `create`) {
+    return `gh ${noun} create --repo <owner>/<repo> --title "<title>" --body-file <absolute path>`
+  }
+  if (verb === `close` || verb === `reopen`) {
+    return `gh ${noun} ${verb} <n> --repo <owner>/<repo> --comment "${AGENT_MARKER} <text>"`
+  }
+  return `gh ${noun} ${verb} <n> --repo <owner>/<repo> --body-file <absolute path>`
+}
+
 /** Judges a posting gh call the guard cannot read (`ghPost` returned `unplaced`). */
-export const UNPLACED_POST: Verdict = {
-  deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
-    `after a wrapper it does not know, inside quotes or \`$(…)\`, as a second post, or with a ` +
-    `body file named through a variable it cannot resolve or relative to a \`cd\` it cannot ` +
-    `follow. Make it the only post, written plainly: ` +
-    `\`gh pr comment <n> --body-file <literal path>\`, with at most \`timeout <n>\`, ` +
-    `\`sudo\`, \`env\` or \`X=1\` before it, and one body flag. Write a file whose text mentions ` +
-    `such a call with the Write tool, not a heredoc.`,
+export function unplacedVerdict(command: string): Verdict {
+  return {
+    deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
+      `after a wrapper it does not know or inside a shell function, inside quotes or \`$(…)\`, ` +
+      `as a second post, in a heredoc's text, or with a body file named through a variable it ` +
+      `cannot resolve or relative to a \`cd\` it cannot follow. Make it the only post, written ` +
+      `plainly, with at most \`timeout <n>\`, \`sudo\`, \`env\` or \`X=1\` before it and one ` +
+      `body flag: \`${plainPost(command)}\`. The body file may be written earlier in the same ` +
+      `command by \`cat > <path> <<'EOF'\`, in a folder from \`D=$(mktemp -d)\`. Write a file ` +
+      `whose text mentions such a call with the Write tool, not a heredoc.`,
+  }
+}
+
+/** Judges a post whose body file the command also writes another way (`ghPost`: `built`). */
+export function builtVerdict(command: string): Verdict {
+  return {
+    deny: `This command also writes or edits the body file with something other than ` +
+      `\`cat > <path> <<'EOF'\`, \`printf\` or \`echo\` (\`cat <file> >>\`, \`cp\`, \`sed -i\`, ` +
+      `a script), so the guard cannot see all that \`gh\` would post. Write or edit the file in a ` +
+      `command of its own, starting with \`${AGENT_MARKER}\`, then post it with ` +
+      `\`${plainPost(command)}\`.`,
+  }
 }
 
 /**
@@ -513,7 +766,8 @@ function assignedOnce(command: string, name: string): boolean {
  * with no such assignment stays as it is, and the file then cannot be read.
  */
 function expandVars(path: string, vars: Map<string, string>): string {
-  return path.replace(/\$\{?([A-Za-z_]\w*)\}?/g, (text, name) => vars.get(name) ?? text)
+  // An escaped `\$D` is the text `$D` to the shell, so it is left as it is.
+  return path.replace(/(?<!\\)\$\{?([A-Za-z_]\w*)\}?/g, (text, name) => vars.get(name) ?? text)
 }
 
 /** Judges a body we are about to post: it must carry the agent marker. */

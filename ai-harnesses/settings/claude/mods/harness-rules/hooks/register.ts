@@ -3,13 +3,14 @@ import {
   ALLOW,
   bashVerdict,
   bodyFilePath,
+  builtVerdict,
   DIRECTION_PATH,
   directionBlock,
   ghPost,
   leakVerdict,
   markerVerdict,
   spawnVerdict,
-  UNPLACED_POST,
+  unplacedVerdict,
   uuidVerdict,
   type Where,
 } from "./rules.ts"
@@ -137,21 +138,25 @@ export const register: Register = (on) => {
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const post = ghPost(e.command)
     if (post.kind === `none`) return next(e)
-    // A body file is often written earlier in this same command (a heredoc, `sed -i`), so it
-    // cannot be read yet; a variable in its path resolves only when this command sets it once to
-    // a literal (`ghPost`), or when it is `$HOME`. `--body-file -` reads a heredoc.
+    // A body file is often written earlier in this same command (a heredoc), so it cannot be
+    // read yet; a variable in its path resolves only when this command sets it once to a literal
+    // (`ghPost`), or when it is `$HOME`. A file inside what a `mktemp` in the command made
+    // (`fresh`) cannot exist yet, so it is never read. `--body-file -` reads a heredoc.
     // A file that can be read is judged by its own text: a marker elsewhere in the command (a
-    // shell comment, a `sed -i` that has not run yet) does not count. Only when it cannot be read
-    // does the command text, which then holds a heredoc body, count for the marker; it is always
-    // scanned. A body the command fills from elsewhere (`cat f >>`, `cp`, `curl >`) goes out
-    // unscanned.
+    // shell comment) does not count. Only when it cannot be read does the command text, which
+    // then holds a heredoc body, count for the marker; it is always scanned. A command that also
+    // writes the body file with anything but a literal heredoc, `printf` or `echo` (`cat f >>`,
+    // `cp`, `sed -i`, a script naming it) is refused (`built`); a body filled without naming the
+    // file, or through `--body-file -`, goes out unscanned.
     // The shell expands `~/` and `$HOME`; a path it would change in any other way is unplaced.
     // A relative path is read from the folder a `cd` in the command moved to (`ghPost`), or else
     // from the session's directory, where the shell runs.
     const path = post.kind === `file` ? bodyFilePath(post.path, await whereOf($)) : undefined
     const file = path === undefined ? undefined : await readable($, path)
     let verdict = post.kind === `unplaced` || (post.kind === `file` && path === undefined)
-      ? UNPLACED_POST
+      ? unplacedVerdict(e.command)
+      : post.kind === `built`
+      ? builtVerdict(e.command)
       : post.kind === `subject`
       // A commit subject is a title: it is scanned below, but a marker there would be wrong.
       ? ALLOW
