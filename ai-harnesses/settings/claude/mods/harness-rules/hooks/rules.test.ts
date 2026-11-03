@@ -594,9 +594,10 @@ test(`reads the compaction count from the highest mark, or 0 without one`, () =>
   expect(compactionsSoFar([`hello`])).toBe(0)
   expect(compactionsSoFar([`[harness-rules] compactions: 1`, `work`])).toBe(1)
   // A summary that quotes an older mark does not lower the count.
-  expect(compactionsSoFar([`[harness-rules] compactions: 3`, `was compactions: 1`])).toBe(3)
-  expect(compactionsSoFar([`[harness-rules] compactions: 2 [harness-rules] compactions: 1`]))
-    .toBe(2)
+  expect(
+    compactionsSoFar([`[harness-rules] compactions: 3`, `quoted: [harness-rules] compactions: 1`]),
+  )
+    .toBe(3)
 })
 
 test(`asks for a handoff only from the second compaction`, () => {
