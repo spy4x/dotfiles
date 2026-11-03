@@ -479,8 +479,7 @@ deploy` copies both to the server.
 # Sudo
 
 Every agent may run `sudo` on this machine. It is passwordless and unrestricted, so use `sudo -n`
-(it fails instead of hanging on a prompt) and only for what the task needs. The final report lists
-what `sudo` changed that stays ("Autonomy"), not each command.
+(it fails instead of hanging on a prompt) and only for what the task needs.
 
 # Fail-open
 
@@ -609,17 +608,16 @@ the work is requested, in its design (`start-task`) or its lane brief (`wave`): 
 touches sign-in, sessions, roles or permissions, tenant boundaries, secrets, crypto, billing,
 payments, webhooks, uploads, raw SQL, dynamic imports or what a host exposes. The reviewer brief
 then says so, and the same reviewer does the security review in the same pass (its step 6); it is
-never recommended on to me. Pass → merge your own PR without asking (never an outside author's).
-`needs-fix` → the fix goes back to the author with the cause the verdict names, and the same
-reviewer re-reviews it (`SendMessage`: it keeps its findings, and its cache lasts an hour); a new PR
-or a rework of most of the diff → a fresh reviewer. At most three `needs-fix` verdicts per PR. A
-wording fix, or one of about ten lines or fewer, you apply yourself from the first round: show the
-test red then green, and have the same reviewer confirm. After the third verdict, do that if about
-ten lines remain; otherwise leave the PR open with a comment on what is left, and move on. After a
-second `needs-fix` that names a behaviour defect, the `wave` skill says when and how to escalate
-that fix round. Never count rejections in a summary, PR body or issue. A PR body or issue says what
-the review found and what changed; the final report to me gives only the end state ("Autonomy").
-Gate failed, or a revert can't undo it → leave the PR open and say so.
+never recommended on to me. Pass → merge your own PR without asking. `needs-fix` → the fix goes back
+to the author with the cause the verdict names, and the same reviewer re-reviews it (`SendMessage`:
+it keeps its findings, and its cache lasts an hour); a new PR or a rework of most of the diff → a
+fresh reviewer. At most three `needs-fix` verdicts per PR. A wording fix, or one of about ten lines
+or fewer, you apply yourself from the first round: show the test red then green, and have the same
+reviewer confirm. After the third verdict, do that if about ten lines remain; otherwise leave the PR
+open with a comment on what is left, and move on. After a second `needs-fix` that names a behaviour
+defect, the `wave` skill says when and how to escalate that fix round. Never count rejections in a
+summary, PR body or issue. A PR body or issue says what the review found and what changed. Gate
+failed, or a revert can't undo it → leave the PR open and say so.
 
 A reviewer rejects only for a bug, a security or data-loss risk, a false claim, a failing required
 check, or code these rules forbid outright (the `reviewer` agent lists which). Its other findings
