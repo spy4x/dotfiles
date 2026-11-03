@@ -42,6 +42,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   an old coordinator to run the next wave, write its prompt or answer a small question: resuming it
   rewrites its whole cache. The session ends with its handoff: a new request after it goes to a new
   session, because every turn of a long-running lead re-reads its whole context.
+- A lead whose session has compacted twice hands off to a new session now, even mid-wave: it lets
+  the running agents finish, posts the handoff (below) with the unfinished issues as the next wave,
+  and ends. Each compaction leaves a context that every later turn still re-reads.
 
 ## Before spawning
 
@@ -76,6 +79,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   and that lane's reviewer brief asks for it. A lane that changes what a person sees carries
   its `design` spec in the brief and gets a `design-reviewer` next to its `reviewer`. The agent
   owns its worktree, temp dirs and processes, and leaves nothing running.
+- The brief names the files and the line ranges the lane needs, so the agent reads those parts
+  instead of searching whole files for them.
 - The brief names the e2e specs the lane runs: those for the screens and routes it changed, never
   the whole suite. CI runs the whole suite, and parallel full runs on one machine time out and get
   rerun.
