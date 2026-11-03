@@ -141,8 +141,8 @@ export const register: Register = (on) => {
     // A body file is often written earlier in this same command (a heredoc), so it cannot be
     // read yet; a variable in its path resolves only when this command sets it once to a literal
     // (`ghPost`), or when it is `$HOME`. A file inside what a `mktemp` in the command made
-    // (`fresh`), whose variable no other command but literal writers and prints uses, holds what
-    // the command wrote, unless a command reaches it without the variable; it is never read.
+    // (`fresh`), beside only the allowlisted commands of `freshSafe`, holds only what the command
+    // wrote; it is never read.
     // `--body-file -` reads a heredoc.
     // A file that can be read is judged by its own text: a marker elsewhere in the command (a
     // shell comment) does not count. Only when it cannot be read does the command text, which

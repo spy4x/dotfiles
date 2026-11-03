@@ -567,7 +567,10 @@ export function ghPost(command: string): GhPost {
   if (poster && resolvable && writtenOtherwise(commands, poster.command, poster.paths)) {
     return { kind: `built` }
   }
-  if (found.kind === `fresh` && poster && usedOtherwise(commands, poster.command, made)) {
+  if (
+    found.kind === `fresh` && poster &&
+    !commands.every((simple) => freshSafe(simple, poster.command, made))
+  ) {
     return { kind: `built` }
   }
   return found
@@ -603,29 +606,51 @@ function inMade(path: string, made: Map<string, Simple>): boolean {
   return !match[3]!.split(`/`).includes(`..`)
 }
 
-/**
- * Whether a command other than `poster`, the `mktemp` that made the folder, the literal writers
- * (`literalWriter`) and plain prints (`echo $D`) uses a `mktemp` variable or a glob, in its words
- * or a heredoc's text. Such a command (`ln -s ~ $D/h`, `cp -r x $D/`, `cat ~/.env >> $D/b.m?`,
- * a glob reaching the folder from `/tmp`) can put into the folder text the scan of the command
- * never sees, under a name the body-file check cannot match.
- */
-function usedOtherwise(commands: Simple[], poster: Simple, made: Map<string, Simple>): boolean {
-  const uses = [...made.keys()].map((name) => new RegExp(`\\$\\{?${name}(?!\\w)`))
-    .concat(/[*?[]/)
-  const exempt = new Set([poster, ...made.values()])
-  return commands.some((simple) => {
-    if (exempt.has(simple) || literalWriter(simple) || printsOnly(simple)) return false
-    const texts = [...simple.words, ...simple.heredocs.map((doc) => doc.body)]
-    return texts.some((text) => uses.some((use) => use.test(text)))
-  })
-}
+/** A word the shell passes as it is: no expansion, substitution, glob, brace or redirect. */
+const LITERAL_WORD = /^[^$`*?[\]{}()<>|;&~]*$/
 
-/** Whether `simple` is `echo` or `printf` that only prints: no redirect, heredoc or substitution. */
-function printsOnly(simple: Simple): boolean {
-  const [name, ...args] = commandProper(simple.words)
-  return (name === `echo` || name === `printf`) && simple.heredocs.length === 0 &&
-    args.every((arg) => !REDIRECT.test(arg) && !/[<>`(]/.test(arg))
+/**
+ * Whether `simple` may run beside a post of a `mktemp` body file, so that the folder holds only
+ * text the command itself holds. An allowlist, because any other command (`ln -s`, `cp -r`, `find
+ * -exec`, `sh`, a script, `eval`, a glob) can reach the folder in ways no reading of the words
+ * can rule out: the `mktemp` itself; the post, with no substitution in its words; a literal
+ * assignment; `cd` and `mkdir -p` to a literal path or one inside the folder; `cat` whose only
+ * input is a quoted heredoc; `echo` or `printf` with no substitution or glob, whose text is literal
+ * when it is redirected. A redirect's target must be literal or inside the folder.
+ */
+function freshSafe(simple: Simple, poster: Simple, made: Map<string, Simple>): boolean {
+  const { words, heredocs } = simple
+  if ([...made.values()].includes(simple)) return true
+  if (simple === poster) return words.every((word) => !/`|[$<>]\(/.test(word))
+  const placed = (word: string) => LITERAL_WORD.test(word) || inMade(word, made)
+  const [name, ...args] = words
+  if (
+    words.length > 0 && words.every((word) => /^[A-Za-z_]\w*=[^$`*?[\]{}()<>|;&~]*$/.test(word))
+  ) {
+    return heredocs.length === 0
+  }
+  if (name === `cd`) return heredocs.length === 0 && args.length <= 1 && args.every(placed)
+  if (name === `mkdir`) {
+    return heredocs.length === 0 && args.length > 0 &&
+      args.every((arg) => arg === `-p` || placed(arg))
+  }
+  if (name !== `cat` && name !== `echo` && name !== `printf`) return false
+  const text: string[] = []
+  const targets: string[] = []
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] ?? ``
+    if (!REDIRECT.test(arg)) text.push(arg)
+    else if (arg.replace(REDIRECT, ``) !== ``) targets.push(arg.replace(REDIRECT, ``))
+    else targets.push(args[++i] ?? ``)
+  }
+  if (!targets.every(placed)) return false
+  if (name === `cat`) {
+    return text.length === 0 && heredocs.length > 0 && heredocs.every((doc) => doc.quoted)
+  }
+  return heredocs.length === 0 &&
+    text.every((arg) =>
+      !/`|[$<>]\(|[*?[]/.test(arg) && (targets.length === 0 || !arg.includes(`$`))
+    )
 }
 
 /** A redirect word: `>`, `>>`, `2>`, `&>`, or one with its target attached (`>b.md`). */
