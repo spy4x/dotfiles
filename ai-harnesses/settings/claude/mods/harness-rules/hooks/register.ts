@@ -4,6 +4,8 @@ import {
   bashVerdict,
   bodyFilePath,
   builtVerdict,
+  compactionNotice,
+  compactionsSoFar,
   DIRECTION_PATH,
   directionBlock,
   ghPost,
@@ -94,6 +96,24 @@ export const register: Register = (on) => {
     const context = await next(e)
     const block = await direction($)
     return block ? { ...context, blocks: [...context.blocks, block] } : context
+  })
+
+  // After each compaction of the main conversation, a message counts it, and from the second on
+  // tells the session to hand off. The count lives in that message, so the next compaction reads
+  // it back from `e.messages`. Fail-open: it never vetoes, and any error keeps the compaction as
+  // the engine made it. A subagent's compaction and a precompute (which installs nothing) pass.
+  on(`session.compact`, async (_$, e, next) => {
+    const compacted = await next(e)
+    if (e.agentId !== undefined || e.trigger === `precompute` || compacted.skip !== undefined) {
+      return compacted
+    }
+    try {
+      const count = compactionsSoFar(e.messages.map((message) => message.text)) + 1
+      const notice = { role: `user` as const, text: compactionNotice(count), toolUses: [] }
+      return { ...compacted, messages: [...compacted.messages, notice] }
+    } catch {
+      return compacted
+    }
   })
 
   on(`tool.call`, { tool: `Write` }, async ($, e, next) => {

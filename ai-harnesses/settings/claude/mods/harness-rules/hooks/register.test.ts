@@ -1,4 +1,13 @@
-import type { AgentSpawnInput, On, SessionRateLimit } from "claude-code"
+import type {
+  AgentSpawnInput,
+  EngineInterface,
+  On,
+  SessionCompactArgs,
+  SessionCompactInput,
+  SessionCompactResult,
+  SessionMessage,
+  SessionRateLimit,
+} from "claude-code"
 import { expect, mock, test } from "claude-code/testing"
 
 /** A finished child process with this exit code and no output. */
@@ -812,4 +821,62 @@ test(`lets a Write through that keeps the file's existing call`, async ($, on) =
     content: `// keep\nexport const id = ${V4_CALL}`,
   })
   expect(ran.deny).toBeUndefined()
+})
+
+/** A transcript message with this text, as the engine hands one to a compaction hook. */
+function said(text: string): SessionMessage {
+  return { role: `user`, text, toolUses: [] }
+}
+
+/** Answers every compaction the mod lets through with a one-message summary. */
+function summarizes(on: On): void {
+  on(`session.compact`, () => ({ messages: [said(`summary`)] }))
+}
+
+/**
+ * Compacts this transcript as the engine raises it. `$.session.compact` takes only a plugin's
+ * arguments, so the engine's own fields (`messages`, `trigger`, `agentId`) go in by a cast.
+ */
+function compact(
+  $: EngineInterface,
+  input: Omit<SessionCompactInput, `trigger`> & {
+    trigger?: SessionCompactInput[`trigger`]
+  },
+) {
+  return $.session.compact({ trigger: `auto`, ...input } as SessionCompactArgs)
+}
+
+/** The texts of a compaction's messages. */
+function textsOf(compacted: SessionCompactResult): string[] {
+  return (compacted.messages ?? []).map((message) => message.text)
+}
+
+test(`counts the first compaction without asking for a handoff`, async ($, on) => {
+  summarizes(on)
+  const compacted = await compact($, { messages: [said(`hello`)] })
+  expect(textsOf(compacted)).toEqual([`summary`, `[harness-rules] compactions: 1`])
+})
+
+test(`asks for a handoff from the second compaction on`, async ($, on) => {
+  summarizes(on)
+  const compacted = await compact($, {
+    messages: [said(`summary`), said(`[harness-rules] compactions: 1`), said(`more work`)],
+  })
+  const notice = textsOf(compacted).at(-1) ?? ``
+  expect(notice).toContain(`[harness-rules] compactions: 2`)
+  expect(notice).toContain(`hand_off_to_session`)
+})
+
+test(`leaves a subagent's compaction and a precompute as the engine made them`, async ($, on) => {
+  summarizes(on)
+  const messages = [said(`[harness-rules] compactions: 3`)]
+  expect(textsOf(await compact($, { messages, agentId: `a1` }))).toEqual([`summary`])
+  expect(textsOf(await compact($, { messages, trigger: `precompute` }))).toEqual([`summary`])
+})
+
+test(`never vetoes a compaction and passes a skip through`, async ($, on) => {
+  on(`session.compact`, () => ({ skip: `busy` }))
+  const compacted = await compact($, { messages: [said(`hello`)] })
+  expect(compacted.skip).toBe(`busy`)
+  expect(compacted.messages).toBeUndefined()
 })

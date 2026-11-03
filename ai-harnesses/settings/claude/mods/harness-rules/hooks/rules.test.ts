@@ -2,6 +2,8 @@ import { expect, test } from "claude-code/testing"
 import {
   bashVerdict,
   bodyFilePath,
+  compactionNotice,
+  compactionsSoFar,
   directionBlock,
   ghPost,
   leakVerdict,
@@ -586,4 +588,22 @@ test(`frames direction.md as a context block and skips a missing or empty one`, 
   expect(block?.text).toContain(`Ship often.`)
   expect(directionBlock(undefined)).toBeUndefined()
   expect(directionBlock(`  \n`)).toBeUndefined()
+})
+
+test(`reads the compaction count from the highest mark, or 0 without one`, () => {
+  expect(compactionsSoFar([`hello`])).toBe(0)
+  expect(compactionsSoFar([`[harness-rules] compactions: 1`, `work`])).toBe(1)
+  // A summary that quotes an older mark does not lower the count.
+  expect(compactionsSoFar([`[harness-rules] compactions: 3`, `was compactions: 1`])).toBe(3)
+  expect(compactionsSoFar([`[harness-rules] compactions: 2 [harness-rules] compactions: 1`]))
+    .toBe(2)
+})
+
+test(`asks for a handoff only from the second compaction`, () => {
+  expect(compactionNotice(1)).toBe(`[harness-rules] compactions: 1`)
+  const second = compactionNotice(2)
+  expect(second.startsWith(`[harness-rules] compactions: 2`)).toBe(true)
+  expect(second).toContain(`handoff`)
+  expect(second).toContain(`hand_off_to_session`)
+  expect(compactionsSoFar([compactionNotice(5)])).toBe(5)
 })
