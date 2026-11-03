@@ -395,6 +395,43 @@ export function directionBlock(text: string | undefined): ContextBlock | undefin
 }
 
 /**
+ * Starts the message the mod appends to the conversation after each compaction. The count after
+ * it is the state: the next compaction reads it back from the transcript, so nothing is stored.
+ */
+export const COMPACTIONS_MARK = `[harness-rules] compactions: `
+
+/** From this compaction on, the appended message tells the session to hand off. */
+export const HANDOFF_AFTER = 2
+
+/**
+ * How many times this conversation has compacted so far: the highest count a mark in these
+ * texts holds, or 0. The highest, so a summary that quotes an older mark cannot lower it.
+ */
+export function compactionsSoFar(texts: readonly string[]): number {
+  let most = 0
+  for (const text of texts) {
+    for (const match of text.matchAll(/\[harness-rules\] compactions: (\d+)/g)) {
+      most = Math.max(most, Number(match[1]))
+    }
+  }
+  return most
+}
+
+/**
+ * The text appended after compaction number `count`: the mark alone, and from the second one on
+ * the order to hand off (the `wave` skill's rule for a lead that compacted twice).
+ */
+export function compactionNotice(count: number): string {
+  const mark = `${COMPACTIONS_MARK}${count}`
+  if (count < HANDOFF_AFTER) return mark
+  return `${mark}\n\nThis session has now compacted ${count} times, and every later turn ` +
+    `re-reads what is left. Finish the step in hand, then write the handoff the \`wave\` ` +
+    `skill describes ("The handoff") and hand the rest of the work to a new session: in the ` +
+    `Claude desktop app with \`mcp__ccd_session__hand_off_to_session\`; in a terminal, end your ` +
+    `reply with the next session's prompt, ready to paste. Start nothing new in this session.`
+}
+
+/**
  * What a `gh` command posts: nothing, an inline body, a body read from a file, a body read from
  * standard input (`--body-file -`, usually a heredoc in the same command), or only a title (a
  * merge's commit subject, a create's or edit's `--title`), which is scanned but needs no marker.
