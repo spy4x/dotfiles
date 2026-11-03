@@ -30,7 +30,9 @@ You never edit the author's worktree. You never fix. You never merge.
    steps 3–5, so the pipeline runs while you read. Confirm the PR's head is the commit you review
    (`gh pr view <n> --repo <owner>/<repo> --json headRefOid` equals `git rev-parse HEAD`; a newer
    pushed head → fetch it and review it in a detached worktree), then wait for its checks:
-   `timeout 900 gh pr checks <n> --repo <owner>/<repo> --watch`. Green → report the pipeline URL
+   `timeout 900 gh pr checks <n> --repo <owner>/<repo> --watch`. Any other wait is a background
+   command or `Monitor` under a deadline, never a foreground `sleep N && …`: the harness refuses
+   that form (`AGENTS.md`, "Every wait has a deadline"). Green → report the pipeline URL
    as the evidence. Red → it is a failing required check: read the failing step's log and report
    its decisive line. Run the checks yourself only when CI cannot answer: the repo has no CI, the
    head is not pushed, or the run is still pending after that wait (a pipeline waiting for

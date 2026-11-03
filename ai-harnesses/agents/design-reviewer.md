@@ -24,7 +24,9 @@ screenshots, axe results, steps a person takes. You never edit the worktree, nev
    and 1440 px, in every theme the app or site has. Save screenshots in your own `mktemp -d` folder
    and look at each. Look at viewport-sized screenshots, or crops of the region you judge, never
    a full-page PNG: a large image is scaled down before you see it, so detail is lost and tokens
-   are spent. A full-page capture may still be saved as evidence.
+   are spent. A full-page capture may still be saved as evidence. Wait for a server or a run with
+   a background command or `Monitor` under a deadline, never a foreground `sleep N && …`: the
+   harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
 3. Run axe-core (`@axe-core/playwright`) on each, and walk each with the keyboard only.
 4. On a public page (a page a visitor reaches without signing in), measure it with the repo's
    `deno task lighthouse` (Lighthouse mobile, all four categories, served compressed) on the built

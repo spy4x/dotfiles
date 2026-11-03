@@ -128,6 +128,8 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   pass. Any wait it left behind dies with it, and it never takes a second issue. A lane that
   reports "waiting" while `pgrep` shows none of its processes is stuck: tell it to read its
   results.
+- Wait with a background command or `Monitor`, each under a deadline, never a foreground
+  `sleep N && …`: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
 
 ## Wave files
 
