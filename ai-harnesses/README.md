@@ -164,8 +164,11 @@ states, so the prose stays the source:
   shell comment does not count, and a file a heredoc in the same command rewrites is judged as it
   was before. The hook expands a leading `~/`, `$HOME` or `${HOME}` in its path, and a variable
   the same command sets once to a literal. A path inside a folder or file that `D=$(mktemp …)`
-  made in the same command (literal arguments only, no `..`) is new, so it is judged through the
-  command without being read. Any other `$` or backtick in the path refuses the post. It reads a
+  made in the same command (literal arguments only, no `..`, glob or other expansion) is judged
+  through the command without being read, as long as no other command uses that variable except
+  literal `cat`, `echo` or `printf` writers and plain prints (`echo "$D"`); one that does (`ln -s`,
+  `cp -r`, `cat ~/.env >> $D/b.m?`, a script) refuses the post. Every mention of the variable
+  counts toward "sets once", heredoc text included, since what reads as a heredoc may run. Any other `$` or backtick in the path refuses the post. It reads a
   relative path from the folder an earlier `cd` or `pushd` in the command moved to, or else from
   the session's directory; a relative path after a `cd` it cannot follow (`cd "$D"`, `cd -`,
   `popd`, a `cd` inside `( … )`) refuses the post. A file it cannot read yet (one a heredoc in the
