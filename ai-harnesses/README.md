@@ -165,10 +165,13 @@ states, so the prose stays the source:
   was before. The hook expands a leading `~/`, `$HOME` or `${HOME}` in its path, and a variable
   the same command sets once to a literal. A path inside a folder or file that `D=$(mktemp …)`
   made in the same command (literal arguments only, no `..`, glob or other expansion) is judged
-  through the command without being read, as long as no other command uses that variable except
-  literal `cat`, `echo` or `printf` writers and plain prints (`echo "$D"`); one that does (`ln -s`,
-  `cp -r`, `cat ~/.env >> $D/b.m?`, a script) refuses the post. Every mention of the variable
-  counts toward "sets once", heredoc text included, since what reads as a heredoc may run. Any other `$` or backtick in the path refuses the post. It reads a
+  through the command without being read, but only when every other command in it is on a short
+  allowlist: a literal assignment, `cd` or `mkdir -p` to a literal path or one inside the folder,
+  `cat` fed only by a quoted heredoc, `echo` or `printf` with no substitution or glob (literal text
+  when redirected), and redirects only to literal paths or ones inside the folder. Any other
+  command (`ln -s`, `cp -r`, `find -exec`, `sh`, `xargs`, a script, a glob) refuses the post. Every
+  mention of the variable counts toward "sets once", heredoc text included, since what reads as a
+  heredoc may run. Any other `$` or backtick in the path refuses the post. It reads a
   relative path from the folder an earlier `cd` or `pushd` in the command moved to, or else from
   the session's directory; a relative path after a `cd` it cannot follow (`cd "$D"`, `cd -`,
   `popd`, a `cd` inside `( … )`) refuses the post. A file it cannot read yet (one a heredoc in the
