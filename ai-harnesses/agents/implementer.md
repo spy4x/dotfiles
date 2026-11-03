@@ -57,9 +57,9 @@ Everything you read stays in your context, and every later call pays for it agai
   Never pipe a check into `tail`, `head` or `grep`: the pipe replaces the check's exit code with
   the filter's.
 - When a check fails, find the failing test in the log with `grep -n` and print only that part.
-- Before reading a file longer than about 300 lines, find the part you need with `grep -n`, then
-  read only that range.
-- Ask for independent reads and searches in one turn, not one per turn.
+- Read by range and batch independent lookups into one call (`AGENTS.md`, "Session bootstrap").
+  Grep before reading a file longer than about 300 lines.
+- Never run Lighthouse locally: CI measures it, and the `design-reviewer` checks it by hand.
 - Wait for a background run with one bounded loop, such as
   `timeout 900 bash -c 'until grep -q "^exit" <log>; do sleep 15; done'`, not with `sleep 60` and a
   command after it: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").

@@ -7,8 +7,7 @@ description: Make, remake or fix a demo video of a product or tool, web UI or te
 
 A demo video shows a first-time viewer what the thing does, in 30–60 seconds, without sound being
 needed. It is remade often, as features land, so the recipe matters as much as the video: anyone
-must be able to remake it with one command. The global rule (`AGENTS.md`, "Design", "Videos") says
-where it lives; this skill says how to make it.
+must be able to remake it with one command. This skill says where it lives and how to make it.
 
 Reference implementation: Seed's admin panel video, `spy4x/seed`, `docs/screenshots/admin-video.ts`
 and `MUSIC.md` beside it (screencast frames, ffmpeg joins and lays the music, a loudness refusal).
