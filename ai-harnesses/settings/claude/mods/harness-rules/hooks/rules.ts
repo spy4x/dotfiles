@@ -484,10 +484,12 @@ function flagValues(words: string[], flags: string[]): string[] {
  */
 export function ghPost(command: string): GhPost {
   const commands = simpleCommands(command, true)
-  // A quoted heredoc's text cannot change a variable, so it does not count as a mention.
-  const text = withoutQuotedBodies(command, commands)
+  // Every mention counts, a quoted heredoc's text too: what reads as a heredoc (`(( 1 <<X ))`)
+  // may be lines the shell runs.
+  const text = command
   const vars = new Map<string, string>()
-  const made = new Set<string>()
+  // The variables a `mktemp` in this command assigned, with the command that did.
+  const made = new Map<string, Simple>()
   let found: GhPost = { kind: `none` }
   let poster: { readonly command: Simple; readonly paths: string[] } | undefined
   // Where an earlier `cd` in this command moved: undefined while it has not, null once a `cd` the
@@ -509,7 +511,7 @@ export function ghPost(command: string): GhPost {
       }
     }
     const fresh = MKTEMP.exec(words.join(` `))
-    if (fresh && assignedOnce(text, fresh[1]!)) made.add(fresh[1]!)
+    if (fresh && assignedOnce(text, fresh[1]!)) made.set(fresh[1]!, simple)
     const proper = commandProper(words)
     if ([`cd`, `pushd`, `popd`].includes(proper[0] ?? ``)) {
       dir = words.some((word) => /[()]/.test(word)) ? null : movedTo(proper, dir)
@@ -565,6 +567,9 @@ export function ghPost(command: string): GhPost {
   if (poster && resolvable && writtenOtherwise(commands, poster.command, poster.paths)) {
     return { kind: `built` }
   }
+  if (found.kind === `fresh` && poster && usedOtherwise(commands, poster.command, made)) {
+    return { kind: `built` }
+  }
   return found
 }
 
@@ -580,18 +585,6 @@ function postingMention(text: string): `body` | `title` | undefined {
   return undefined
 }
 
-/** `command` with the bodies of its quoted heredocs cut out. */
-function withoutQuotedBodies(command: string, commands: Simple[]): string {
-  const docs = commands.flatMap((simple) => simple.heredocs).filter((doc) => doc.quoted)
-  let text = ``
-  let at = 0
-  for (const doc of docs.sort((a, b) => a.start - b.start)) {
-    text += command.slice(at, doc.start)
-    at = Math.max(at, doc.end)
-  }
-  return text + command.slice(at)
-}
-
 /**
  * `NAME=$(mktemp …)` as a whole command, with only literal arguments: `-d`, `-q`, `-t`, `-p
  * <dir>`, `--tmpdir[=<dir>]`, a template. Each run makes a new, empty file or folder, so what is
@@ -604,10 +597,33 @@ const MKTEMP =
  * Whether `path` is `$NAME` or `${NAME}/a/b` for a `NAME` that a `mktemp` in this command made:
  * inside it, with no `..`, glob or other expansion that could reach a file made before.
  */
-function inMade(path: string, made: Set<string>): boolean {
+function inMade(path: string, made: Map<string, Simple>): boolean {
   const match = /^\$(?:\{([A-Za-z_]\w*)\}|([A-Za-z_]\w*))((?:\/[^/$`*?[\]{}~]+)*)$/.exec(path)
   if (!match || !made.has(match[1] ?? match[2] ?? ``)) return false
   return !match[3]!.split(`/`).includes(`..`)
+}
+
+/**
+ * Whether a command other than `poster`, the `mktemp` that made the folder, the literal writers
+ * (`literalWriter`) and plain prints (`echo $D`) uses a `mktemp` variable, in its words or a heredoc's text. Such a command
+ * (`ln -s ~ $D/h`, `cp -r x $D/`, `cat ~/.env >> $D/b.m?`) can put into the folder text the scan
+ * of the command never sees, under a name the body-file check cannot match.
+ */
+function usedOtherwise(commands: Simple[], poster: Simple, made: Map<string, Simple>): boolean {
+  const uses = [...made.keys()].map((name) => new RegExp(`\\$\\{?${name}(?!\\w)`))
+  const exempt = new Set([poster, ...made.values()])
+  return commands.some((simple) => {
+    if (exempt.has(simple) || literalWriter(simple) || printsOnly(simple)) return false
+    const texts = [...simple.words, ...simple.heredocs.map((doc) => doc.body)]
+    return texts.some((text) => uses.some((use) => use.test(text)))
+  })
+}
+
+/** Whether `simple` is `echo` or `printf` that only prints: no redirect, heredoc or substitution. */
+function printsOnly(simple: Simple): boolean {
+  const [name, ...args] = commandProper(simple.words)
+  return (name === `echo` || name === `printf`) && simple.heredocs.length === 0 &&
+    args.every((arg) => !REDIRECT.test(arg) && !/[<>`(]/.test(arg))
 }
 
 /** A redirect word: `>`, `>>`, `2>`, `&>`, or one with its target attached (`>b.md`). */
