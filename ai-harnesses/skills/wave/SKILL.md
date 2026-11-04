@@ -27,9 +27,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   owner put the issue there, and that outranks its priority label. Run it once more with
   `label:p1-critical` in place of the milestone. A milestone with no candidate left → the next
   one, and after the last, the search without a milestone. Nothing else is a candidate. An issue
-  outside a milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
-  (the `Asked for by the owner` line, a comment of theirs without the marker that says to build it,
-  or a priority raised after filing: "Picking work yourself" in `AGENTS.md`), or when step 2 of
+  outside a milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner
+  asked for it (the `Asked for by the owner` line, a comment of theirs without the marker that says
+  to build it, or a priority raised after filing: "Picking work yourself" in `AGENTS.md`), or when step 2 of
   "Filing issues" gives it `p3-medium` or higher. Otherwise set it aside as that rule says, and the
   next issue takes its place.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
