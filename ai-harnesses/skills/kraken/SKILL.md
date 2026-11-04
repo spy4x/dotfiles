@@ -7,7 +7,7 @@ argument-hint: "[repo …]"
 
 # /kraken $ARGUMENTS
 
-You choose the issues, then run them as one wave. Picking follows `AGENTS.md`, "Picking work
+You choose the issues, then run them as one wave. Picking follows the `issues` skill, "Picking work
 yourself"; running follows the `wave` skill. This skill adds the order in which you look, and one
 override: when no open milestone has a candidate, step 3 below takes the backlog, although
 "Picking work yourself" picks only an open milestone's issues and `p1-critical` ones. The owner
@@ -17,7 +17,7 @@ asked for this so a milestone of only `manual` or `needs-decision` issues does n
 
 - `$ARGUMENTS` names repositories → those, each by its `~/sync/code/<name>` checkout.
 - None, and the working directory is a `spy4x/*` checkout → that repository.
-- None, and no checkout → every project in `AGENTS.md`, "Projects". Find each one's first pick
+- None, and no checkout → every project in the `workspace` skill, "Projects". Find each one's first pick
   with the steps below, then keep the repositories whose picks rank highest by `direction.md`,
   "What matters". A wave stays in one repository, plus the libraries its lanes need.
 

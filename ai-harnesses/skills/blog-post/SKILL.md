@@ -5,7 +5,7 @@ description: 'How to propose, brief, write, translate and publish a blog post, c
 
 # Blog post
 
-The global `AGENTS.md` "Marketing" section sets the values: the most value in the least time, the
+The `owner-voice` skill, "Marketing", sets the values: the most value in the least time, the
 point first, honest persuasion only, one clear ask, written as the owner. This skill is the steps.
 A site's mechanics (where posts live, their front matter, the tasks that build, publish and send
 them) are in that repo's `AGENTS.md` and the docs it names; where they differ from a step here, the
@@ -26,8 +26,8 @@ category), the month's changelog. Before any issue or draft, put the proposal in
 - the languages.
 
 Wait for the owner's yes. Then file the issue; its first line after `<!-- agent -->` is
-`Asked for by the owner, <date>`, then his answer quoted (global "Features"). A subagent follows
-global "Filing issues". A post the owner asked for in chat skips the wait, not the proposal: show
+`Asked for by the owner, <date>`, then his answer quoted (the `issues` skill, "Features"). A subagent follows
+`AGENTS.md`, "Issues". A post the owner asked for in chat skips the wait, not the proposal: show
 it, then go on.
 
 ## 2. The brief: four lenses
@@ -105,7 +105,7 @@ and easy to use", filler reassurance, lists where every item says nothing specif
 ## 6. Proof and numbers
 
 - No client, number, quote, testimonial, prize, guarantee or result unless the owner gave it as
-  fact in this session or the repo holds it as data (global "Marketing", the site's content rule).
+  fact in this session or the repo holds it as data (the `owner-voice` skill, the site's content rule).
   Missing one → ask, or write the post without it. Never estimate one.
 - A measurement states its method, date and versions, and commits its raw data where the site
   supports that. Real statistics and cited sources raise a page's share of AI answers
@@ -180,7 +180,7 @@ How:
 
 ## 11. Publish and the newsletter
 
-PR, reviewer gate (plus the `design-reviewer`, global "Design gate"), merge, deploy, then
+PR, reviewer gate (plus the `design-reviewer`, the `design` skill, "Design gate"), merge, deploy, then
 the repo's publish task. Typical steps, each in the repo's own tool: check the post answers 200
 live; cross-post (Dev.to and the like) with `canonical_url` pointing at the original; ping IndexNow;
 send the newsletter. The newsletter goes out once per post (a rerun never mails anyone twice), from
