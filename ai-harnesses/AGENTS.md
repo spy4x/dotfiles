@@ -192,13 +192,13 @@ repo owns.
 
 # Session bootstrap
 
-New repo, before first edit, read in parallel: repo-local `AGENTS.md` (unless preloaded),
-`README.md`, manifest (`deno.jsonc`/`package.json`/etc) for exact task names, lint/fmt config.
-Everything else (other root `*.md`, `docs/`, `compose.yml`/`Dockerfile`, hooks) only when the task
-touches it. Never guess a command the manifest defines. Greenfield with none → say so. New worktree
-of a known repo → no re-read. Read only what you need, since every turn re-reads the whole context:
-`wc -l` or `grep -n` first, then read that range, never several whole files in one `cat`. Put
-independent lookups (greps, ranges, `ls`) in one call.
+New repo, before first edit: read its `AGENTS.md` (unless preloaded). Read `README.md`, the manifest
+(`deno.jsonc`/`package.json`/etc) and lint/fmt config only when `AGENTS.md` names no commands or the
+task needs them; everything else (other root `*.md`, `docs/`, `compose.yml`/`Dockerfile`, hooks)
+only when the task touches it. Never guess a command the manifest defines. Greenfield with none →
+say so. New worktree of a known repo → no re-read. Read only what you need, since every turn
+re-reads the whole context: `wc -l` or `grep -n` first, then read that range, never several whole
+files in one `cat`. Put independent lookups (greps, ranges, `ls`) in one call.
 
 # Hard rule: no secrets anywhere they leave box
 
