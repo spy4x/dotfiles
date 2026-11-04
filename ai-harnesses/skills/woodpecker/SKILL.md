@@ -1,6 +1,6 @@
 ---
 name: woodpecker
-description: "The owner's security rules for Woodpecker CI pipelines: untrusted repositories, image builds without secrets, the registry login, pinned images, variable escaping. Load before you write or change a Woodpecker pipeline (`.woodpecker/*.yml`, `.woodpecker.yml`) or a CI step that builds or publishes an image."
+description: "Security rules for Woodpecker CI pipelines. Load before you write or change a Woodpecker pipeline or a CI step that builds or publishes an image."
 ---
 
 # Woodpecker pipelines

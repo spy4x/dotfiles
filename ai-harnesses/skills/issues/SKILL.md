@@ -1,6 +1,6 @@
 ---
 name: issues
-description: "The owner's rules for GitHub issues: which issues an agent may pick and build, milestones and labels, the five priority labels, how to verify, prioritise, group and file what you noticed outside your task, and when a feature counts as asked for. Load before you pick work yourself, file, label or comment on an issue, judge whether something was asked for, and before the final report of a session that noticed anything outside its task."
+description: "Which GitHub issues an agent may pick or file, labels, milestones, priorities, and when a feature counts as asked for. Load before you pick work yourself, file, label or comment on an issue, and before the final report of a session that noticed anything outside its task."
 ---
 
 # Issues

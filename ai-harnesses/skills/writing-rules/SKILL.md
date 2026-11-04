@@ -1,6 +1,6 @@
 ---
 name: writing-rules
-description: "How the owner's agent rules are kept: one source rendered into every harness, one place per rule, current state not history, trials, the size budgets, machine checks, wording, and the rule-by-rule review. Load before you add, remove, reword or move a rule or a check (the global AGENTS.md, a repo's AGENTS.md or CLAUDE.md, a skill, an agent definition, harness settings, lint or format config, a check task, a CI step), and when you review such a change."
+description: "How agent rules are kept: one source, one place per rule, no history, trials, size budgets, machine checks, review. Load before you add, remove, reword or move a rule or a check (AGENTS.md, CLAUDE.md, a skill, an agent, harness settings, lint config, a check task, a CI step), or review such a change."
 ---
 
 # Writing rules

@@ -1,6 +1,6 @@
 ---
 name: git-flow
-description: "The owner's Git Flow beyond the basics: creating a worktree and its env setup, claiming an issue, the full reviewer gate (mutation lines, security reviews, fix rounds, what blocks a PR), merging, branch protection, releases and the cleanup after a merge. Load before you create a worktree, start work on an issue, spawn a reviewer or act on its verdict, merge a PR, tag or publish a release, and right after a merge."
+description: "Creating a worktree and its env, claiming an issue, the full reviewer gate, merging, branch protection, releases and the cleanup after a merge. Load before you create a worktree, start on an issue, spawn a reviewer or act on its verdict, merge, tag or publish, and right after a merge."
 ---
 
 # Git Flow

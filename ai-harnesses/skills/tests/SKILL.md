@@ -1,6 +1,6 @@
 ---
 name: tests
-description: "The owner's rules for test code and test tooling: integration tests that share Postgres, Redis or a mail server with other runs, fake binaries on PATH, Playwright for browser tests, axe-core for accessibility checks, and when test tooling may change at all. Load before you write or change a test, a test helper, a fake binary, a browser or accessibility check, or a check runner."
+description: "Rules for test code and tooling: shared services, fake binaries, Playwright, axe-core, when tooling may change. Load before you write or change a test, a test helper, a fake binary, a browser or accessibility check, or a check runner."
 ---
 
 # Tests

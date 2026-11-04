@@ -1,6 +1,6 @@
 ---
 name: leave-nothing-running
-description: "The owner's rules for processes this session starts or stops: the orphan sweep and its flags, killing processes safely, the process and memory cap, containers, browsers and cloud servers. Load before you run a fan-out or a test that spawns processes, start a container, a browser or a cloud server, kill or signal any process (kill, pkill, killall), and before reporting done (the sweep)."
+description: "The orphan sweep, killing processes safely, the process cap, containers, browsers and cloud servers. Load before a fan-out or a test that spawns processes, a container, a browser or a cloud server, before you kill or signal any process, and before reporting done."
 ---
 
 # Leave nothing running

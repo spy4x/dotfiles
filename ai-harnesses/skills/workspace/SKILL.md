@@ -1,6 +1,6 @@
 ---
 name: workspace
-description: "The owner's repositories (what each is for, what may be hosted where), the files in ai-memory and when to read each, and the account-wide tokens (Cloudflare, Hetzner Cloud, Umami, Docker Hub, JSR, Woodpecker CI) with how to load one safely. Load before you look for or choose a project, read or write ai-memory, decide where something is hosted or deployed, or need, add or rotate an account-wide token."
+description: "The owner's repositories and what may be hosted where, the ai-memory files, and the account-wide API tokens. Load before you look for or choose a project, read or write ai-memory, decide where something is hosted or deployed, or need, add or rotate an account-wide token."
 ---
 
 # Workspace

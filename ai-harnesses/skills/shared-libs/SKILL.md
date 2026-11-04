@@ -1,6 +1,6 @@
 ---
 name: shared-libs
-description: "How to search the shared libraries ts-libs and preact-components (export lists and exact signatures), what belongs in which, why reusable code is born in the library first, and how a consumer takes a fresh release. Load in any spy4x TypeScript repo before you write a component, helper or library, before you add to ts-libs or preact-components, and before a consumer imports a new library release."
+description: "Searching ts-libs and preact-components, what belongs in which, library first, and taking a fresh release. Load in any spy4x TypeScript repo before you write a component, helper or library, add to either library, or import a new library release."
 ---
 
 # Shared libraries

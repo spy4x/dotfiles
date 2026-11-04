@@ -1,6 +1,6 @@
 ---
 name: owner-voice
-description: "The owner's rules for anything public and anything to a client: the most value in the least time, honest persuasion only, written as a person, reply-able sender addresses, and the warm, transparent voice for quotes, estimates and proposals. Load before you write a post, an email, a public page, a video script, launch or social texts, or any message, quote, estimate or proposal for a client, and before you set the sender address of an email a product sends."
+description: "The owner's rules for public writing and for clients: value first, honest persuasion, reply-able senders, the voice for quotes and proposals. Load before you write a post, an email, a public page, a video script, launch or social texts, anything for a client, or set the sender of a product's email."
 ---
 
 # The owner's voice
