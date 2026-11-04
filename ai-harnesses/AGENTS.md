@@ -77,8 +77,9 @@ I can do) or `needs-decision` (waits on my answer): skip those until I remove th
 come before priority:
 
 - A repo with an open milestone → the candidates are the issues in it (several open: the one due
-  first), whatever their priority label, plus any `p1-critical` issue. Nothing else is picked. An
-  issue you file outside it is reported as waiting for me to add it (the library exception aside).
+  first; none left to take there → the next, then the backlog), whatever their priority label, plus
+  any `p1-critical` issue. Nothing else is picked. An issue you file outside it is reported as
+  waiting for me to add it (the library exception aside).
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker
@@ -767,7 +768,7 @@ most expensive. Every subagent → `opus` (Opus 5.5), whatever the task, except 
 (`model-comparison/`, `sonnet55-*.md`). The one escalation round in the `wave` skill goes to
 `implementer-xhigh`. `fable` is paused until I re-enable it. A `haiku` brief names one directory or
 one question; an inventory of a whole repo gets one `haiku` agent per top-level directory, and the
-lead merges their lists: past 100,000 prompt tokens a Haiku 5.5 call costs five times as much
+lead merges their lists: a long prompt costs Haiku five times as much
 (`ai-memory/experiments/haiku55-and-mods.md`). Architecture and final verdicts stay with the lead.
 Fresh subagents over forks (a fork copies the whole conversation).
 

@@ -25,8 +25,9 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   `gh api --paginate --slurp 'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`) → add
   `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
   owner put the issue there, and that outranks its priority label. Run it once more with
-  `label:p1-critical` in place of the milestone. Nothing else is a candidate. An issue outside a
-  milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
+  `label:p1-critical` in place of the milestone. A milestone with no candidate left → the next
+  one, and after the last, the search without a milestone. Nothing else is a candidate. An issue
+  outside a milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
   (the `Asked for by the owner` line, a comment of theirs without the marker that says to build it,
   or a priority raised after filing: "Picking work yourself" in `AGENTS.md`), or when step 2 of
   "Filing issues" gives it `p3-medium` or higher. Otherwise set it aside as that rule says, and the
