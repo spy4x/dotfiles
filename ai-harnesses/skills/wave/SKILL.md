@@ -159,18 +159,20 @@ what remains before the next milestone, and the wave's total cost
 (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`).
 
 After the report, the lead hands the next wave, or the rest of the work, to a new session itself
-instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__hand_off_to_session`
-with the next wave's prompt as the remaining plan, or `mcp__ccd_session__start_session` with that
-prompt as a complete brief. Where the app only lets it propose a session, the proposal card is the
-handoff. A harness without these tools, such as a plain terminal, ends the report with the prompt
-instead, ready to paste. Write no prompt file. With no next wave, it starts nothing.
-
-A session the lead started that stops before its task is done is still the lead's work: the lead
-tells it to carry on, or starts a new session from its handoff note. Relaying its report to the
-owner is not enough. The app refuses to start or hand off a session during a turn that another
-session's message started, so a stopped session that needs a successor gets it from the lead.
+instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__hand_off_to_session` with
+the next wave's prompt as the remaining plan, or `mcp__ccd_session__start_session` with that prompt
+as a complete brief. It always makes one of those calls first; only when the app refuses it does a
+proposal card for that session become the handoff. A harness without these tools, such as a plain
+terminal, ends the report with the prompt instead, ready to paste. Write no prompt file. With no
+next wave, it starts nothing.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
 or this skill, such as model tiers, review limits or cleanup: a copied rule overrides the live one
 and goes stale. A pasted prompt that names a model or an effort is stale: ignore those lines.
+
+A session the lead started that stops before its task is done is still the lead's work. One that
+stopped to hand off, because it compacted twice or reached the usage stop ("Usage" above), gets a
+new session started from its handoff note; any other is told to carry on. Relaying its report to the
+owner is not enough. The app refuses to start or hand off a session during a turn that another
+session's message started, so a stopped session that needs a successor gets it from the lead.
