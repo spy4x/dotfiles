@@ -165,6 +165,11 @@ prompt as a complete brief. Where the app only lets it propose a session, the pr
 handoff. A harness without these tools, such as a plain terminal, ends the report with the prompt
 instead, ready to paste. Write no prompt file. With no next wave, it starts nothing.
 
+A session the lead started that stops before its task is done is still the lead's work: the lead
+tells it to carry on, or starts a new session from its handoff note. Relaying its report to the
+owner is not enough. The app refuses to start or hand off a session during a turn that another
+session's message started, so a stopped session that needs a successor gets it from the lead.
+
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
 or this skill, such as model tiers, review limits or cleanup: a copied rule overrides the live one
