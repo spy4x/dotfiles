@@ -429,8 +429,8 @@ export function compactionNotice(count: number): string {
     `skill describes ("The handoff") and hand the rest of the work to a new session: in the ` +
     `Claude desktop app with \`mcp__ccd_session__hand_off_to_session\`; in a terminal, end your ` +
     `reply with the next session's prompt, ready to paste. Start nothing new in this session. ` +
-    `If the app refuses to start the session, keep working here and try again on the owner's ` +
-    `next message.`
+    `If the app refuses to start the session, keep working here on the issues already in hand ` +
+    `and try again on the owner's next message.`
 }
 
 /**

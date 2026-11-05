@@ -44,7 +44,8 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
   session, because every turn of a long-running lead re-reads its whole context.
 - A lead whose session has compacted twice hands off to a new session now, even mid-wave: it lets
   the running agents finish, posts the handoff (below) with the unfinished issues as the next wave,
-  and ends. Each compaction leaves a context that every later turn still re-reads. In Claude Code
+  and ends, unless the app refuses the handoff ("The handoff" below). Each compaction leaves a
+  context that every later turn still re-reads. In Claude Code
   the `harness-rules` mod says so in the conversation after the second compaction.
 
 ## Before spawning
@@ -162,12 +163,14 @@ After the report, the lead hands the next wave, or the rest of the work, to a ne
 instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__hand_off_to_session` with
 the next wave's prompt as the remaining plan, or `mcp__ccd_session__start_session` with that prompt
 as a complete brief. It always makes one of those calls first. The app refuses it on a turn that
-the owner's own message did not start (an Auto-fix event, a session's note): then the lead proposes
-the session as a card, tells the owner in one line that the card waits for a click, and keeps
-working on the wave in this session, so a refused handoff never stops the work. On the owner's next
-message it makes the call again, and drops the card once a session starts. A harness without these
-tools, such as a plain terminal, ends the report with the prompt instead, ready to paste. Write no
-prompt file. With no next wave, it starts nothing.
+the owner's own message did not start, such as an Auto-fix event or another session's message. Then
+the lead proposes the session as a card and tells the owner in one line that the card waits for a
+click. After a second compaction, it keeps working on this wave's unfinished issues in this session,
+so a refused handoff does not stop the wave; every other limit still holds. At the usage stop or
+after the last issue, it starts nothing and waits. On the owner's next message it makes the call
+again, unless the owner has started the card. A harness without these tools, such as a plain
+terminal, ends the report with the prompt instead, ready to paste. Write no prompt file. With no
+next wave, it starts nothing.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
@@ -175,7 +178,8 @@ or this skill, such as model tiers, review limits or cleanup: a copied rule over
 and goes stale. A pasted prompt that names a model or an effort is stale: ignore those lines.
 
 A session the lead started that stops before its task is done is still the lead's work. One that
-stopped to hand off, because it compacted twice or reached the usage stop ("Usage" above), gets a
-new session started from its handoff note; any other is told to carry on. Relaying its report to the
-owner is not enough. The app refuses to start or hand off a session during a turn that another
-session's message started, so a stopped session that needs a successor gets it from the lead.
+stopped to hand off, because it compacted twice or reached the usage stop ("Usage" above), or that
+reports a refused handoff, gets a new session started from its handoff note; any other is told to
+carry on. Relaying its report to the owner is not enough. The app refuses to start or hand off a
+session during a turn that another session's message started, so a stopped session that needs a
+successor gets it from the lead.

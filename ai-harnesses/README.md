@@ -151,8 +151,8 @@ states, so the prose stays the source:
   appended to what the compaction kept, and the next compaction reads N back from it, so no state
   is stored. From the second compaction on, the message tells the session to finish the step in
   hand, write the `wave` skill's handoff and hand the rest to a new session, and, when the app
-  refuses that, to keep working and try again on the owner's next message. It never vetoes a
-  compaction and leaves a subagent's and a precompute untouched;
+  refuses that, to keep working on the issues in hand and try again on the owner's next message.
+  It never vetoes a compaction and leaves a subagent's and a precompute untouched;
 - an Agent call without `model` is refused, and so is a reviewer on anything but Opus;
 - at 90% of the 5-hour limit, no new agent starts;
 - `rm` and `rmdir` of a variable or a command substitution (`$`, `$(…)`, backticks), recursive or

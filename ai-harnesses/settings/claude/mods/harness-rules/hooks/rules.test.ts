@@ -606,6 +606,6 @@ test(`asks for a handoff only from the second compaction`, () => {
   expect(second.startsWith(`[harness-rules] compactions: 2`)).toBe(true)
   expect(second).toContain(`handoff`)
   expect(second).toContain(`hand_off_to_session`)
-  expect(second).toContain(`keep working here and try again on the owner's next message`)
+  expect(second).toContain(`keep working here on the issues already in hand`)
   expect(compactionsSoFar([compactionNotice(5)])).toBe(5)
 })
