@@ -22,7 +22,7 @@ where to stop.
 
 ## 1. Understand, then ask once
 
-- Bootstrap the repo as `AGENTS.md` describes: repo-local `AGENTS.md`, `README.md`, the manifest.
+- Bootstrap the repo as `AGENTS.md`, "Session bootstrap", describes.
 - Read the code the work touches. For a bug, reproduce it first and keep the reproduction: it
   becomes the evidence and, later, the test.
 - Then, before writing the spec, ask me one batch of questions. This is the cheapest moment to
@@ -60,8 +60,8 @@ where to stop.
 - **Risks:** security, data, migrations, anything irreversible. Something a revert cannot undo is a
   question for me (step 1), not a decision.
 - **Security review:** whether the change needs one, by the list in "Reviewer gate" in
-  `AGENTS.md`. Say it in the issue; the reviewer's brief then asks for it.
-- **UI:** a change to what a person sees runs the `design` skill here ("Design" in `AGENTS.md`).
+  the `git-flow` skill. Say it in the issue; the reviewer's brief then asks for it.
+- **UI:** a change to what a person sees runs the `design` skill here.
   Its spec, wireframes and copy go in the issue with the rest of the design.
 - **Test plan:** which behaviours get tests, and how each test will be shown to fail when the code
   breaks.
@@ -81,12 +81,12 @@ Create it with `gh issue create`, in the **Issues and reports** shape from `AGEN
 
 The first lines of the body, after the `<!-- agent -->` marker, are `Asked for by the owner, <date>`
 and my sentence, quoted: without them a later wave treats the issue as an agent's own claim and may
-set it aside ("Picking work yourself" in `AGENTS.md`). If the repo has an open milestone, say in the
+set it aside ("Picking work yourself" in the `issues` skill). If the repo has an open milestone, say in the
 report that the issue is outside it and that no wave picks it until I add it, unless it is
 `p1-critical`.
 
-Label it with its priority (`p1-critical` to `p5-someday`, defined in `AGENTS.md`), its type
-(`bug`, `enhancement` and the rest, "Filing issues" in `AGENTS.md`), and with `manual` or
+Label it with its priority (`p1-critical` to `p5-someday`, defined in the `issues` skill), its type
+(`bug`, `enhancement` and the rest, "Filing issues" in the `issues` skill), and with `manual` or
 `needs-decision` when it needs the owner's hands or answer. Scrub secrets before
 sending (the hard rule). If the repo has no GitHub remote, keep the same text
 for the PR body and say so in the report.
@@ -99,7 +99,7 @@ for the PR body and say so in the report.
 
 ## 6. Implement
 
-Follow Git Flow from `AGENTS.md`:
+Follow Git Flow from `AGENTS.md` and the `git-flow` skill:
 
 1. Create the worktree and a `<type>/<slug>` branch from the latest default branch.
 2. Implement, then run the repo's checks and the CI emulation.

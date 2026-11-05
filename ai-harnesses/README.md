@@ -133,7 +133,8 @@ delete it from `opencode.json` by hand.
 
 ## Hooks and mods
 
-Rules live in `AGENTS.md`, which every harness reads, not in hooks that only Claude Code runs. The
+Rules live in `AGENTS.md` and in the skills it names, which every harness reads, not in hooks that
+only Claude Code runs. The
 Claude Code adapter would still ship a `settings/claude/hooks/` directory if one came back with a
 `hooks` key in `settings/claude/settings.json`.
 
@@ -216,7 +217,7 @@ rejects every `$` call that handler makes, writing the log included (`CatchHandl
 `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`; `deno task test` skips it.
 
 Claude Code's built-in worktree features nest checkouts under `<repo>/.claude/worktrees/`, which
-repo tooling then walks. `AGENTS.md` tells the agent to create worktrees by hand instead; don't tick
+repo tooling then walks. The `git-flow` skill tells the agent to create worktrees by hand instead; don't tick
 the worktree option when starting a desktop session.
 
 OpenCode and DSH pick up changes on the next session start.

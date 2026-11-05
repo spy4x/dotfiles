@@ -9,7 +9,7 @@ argument-hint: "[issues or wave prompt]"
 
 A wave is one coordinator session: a fixed list of issues, its subagents, and a handoff at the end.
 You brief, review and integrate; implementers implement. The global `AGENTS.md` still applies in
-full, including the reviewer loop in its Git Flow section; this skill adds what only a lead needs.
+full, including the reviewer loop in the `git-flow` skill; this skill adds what only a lead needs.
 
 ## Picking the work
 
@@ -17,10 +17,10 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   oldest first within a level. Stop at `p3-medium`: `p4-low` and `p5-someday` are never
   candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual`
   or `needs-decision`, issues with an open PR by `spy4x`, and issues another session claimed
-  ("Claim an issue" in `AGENTS.md`, "Git Flow"). This lists the candidates oldest first; group
+  ("Claim an issue" in the `git-flow` skill). This lists the candidates oldest first; group
   them by priority label yourself:
   `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:in-progress -label:p4-low -label:p5-someday sort:created-asc'`.
-- Two limits in `AGENTS.md`, "Picking work yourself", come before priority. The repo has an open
+- Two limits in the `issues` skill, "Picking work yourself", come before priority. The repo has an open
   milestone (listed due first, undated last:
   `gh api --paginate --slurp 'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`) → add
   `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
@@ -28,7 +28,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   `label:p1-critical` in place of the milestone. Nothing else is a candidate. An issue outside a
   milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
   (the `Asked for by the owner` line, a comment of theirs without the marker that says to build it,
-  or a priority raised after filing: "Picking work yourself" in `AGENTS.md`), or when step 2 of
+  or a priority raised after filing: "Picking work yourself" in the `issues` skill), or when step 2 of
   "Filing issues" gives it `p3-medium` or higher. Otherwise set it aside as that rule says, and the
   next issue takes its place.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
@@ -79,7 +79,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   A library change that two lanes need belongs to the serial spine.
 - The brief is all the agent sees. Write it in full sentences: worktree path, read-only sources,
   output paths, house style, the issue, why the lane matters ("Direction" in `AGENTS.md`), and
-  what to do when stuck (decide and document, don't stop). It also says whether the lane needs a security review ("Reviewer gate" in `AGENTS.md`),
+  what to do when stuck (decide and document, don't stop). It also says whether the lane needs a security review ("Reviewer gate" in the `git-flow` skill),
   and that lane's reviewer brief asks for it. A lane that changes what a person sees carries
   its `design` spec in the brief and gets a `design-reviewer` next to its `reviewer`. The agent
   owns its worktree, temp dirs and processes, and leaves nothing running.
@@ -149,7 +149,7 @@ survives a reboot; its `/tmp` files do not.
 
 The wave's final report follows "The final report" in `AGENTS.md`. Before writing it, handle
 every reviewer's "Not blocking", "Rare cases, not blocking" and "Outside this diff" lines and
-anything else the wave noticed by the "Filing issues" rule: verified, given a priority,
+anything else the wave noticed by the `issues` skill, "Filing issues": verified, given a priority,
 deduplicated, grouped and filed by you, never proposed to the owner. Keep the running list in
 `.wave<N>/noticed.md`, since your context compacts, and file once, at the end, so one issue can
 hold a whole group. A security or data-loss hole does not wait: file it when you learn of it.

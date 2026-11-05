@@ -112,18 +112,20 @@ The verdict is `needs-fix` only when the diff holds at least one of these:
 - code the global rules forbid outright, because no issue can hold it: a local copy of code that
   belongs in a shared library, a new version 4 UUID, a dependency the deps rule rejects, or a
   feature, component, export, option, package or integration that does not count as asked for
-  ("Features" in the global `AGENTS.md`), or a shared-library addition nobody asked for (step 5,
+  ("Features" in the `issues` skill,
+  `~/sync/code/dotfiles/ai-harnesses/skills/issues/SKILL.md`), or a shared-library addition nobody asked for (step 5,
   Architecture);
 - a rule lost, weakened or changed in meaning in `AGENTS.md` (global or a repo's), a skill, an
   agent or harness settings, or a check removed or weakened, that the owner did not ask for in
-  chat ("Rules about rules" in the global `AGENTS.md`). Compare the old and new text rule by rule;
+  chat ("Rules about rules" in the global `AGENTS.md`, and the `writing-rules` skill,
+  `~/sync/code/dotfiles/ai-harnesses/skills/writing-rules/SKILL.md`). Compare the old and new text rule by rule;
   a reflow or a move that keeps every rule is no change.
 
 Everything else never decides the verdict: a 🟡 risk outside security and data loss, a missing
 test or one that stays green when you break the code, another house-rule breach, a 🔵 nit, a ❓
 question. List each under **Not blocking**, after the evidence block and before **Outside this
-diff**, one line each in the evidence format. The lead files these by the "Filing issues" rule in
-the global `AGENTS.md` or, for a question, answers it; the author may leave them alone.
+diff**, one line each in the evidence format. The lead files these by "Filing issues" in
+the `issues` skill or, for a question, answers it; the author may leave them alone.
 
 A rare case never decides the verdict either: a failure that needs unusual input, rare timing or
 two faults at once, and is neither a security hole that someone can trigger on purpose nor data
@@ -174,7 +176,7 @@ blocking**, in a passing verdict as in a `needs-fix` one.
 Something you noticed in code the diff did not change is not a finding against this PR and never
 decides the verdict. List it after the evidence block under **Outside this diff**, one line each:
 what a person would notice and where (`<file>:L<line>`). Never file an issue for it yourself; the
-lead verifies, groups and files these by the "Filing issues" rule in the global `AGENTS.md`. List
+lead verifies, groups and files these by "Filing issues" in the `issues` skill. List
 small ones too, such as a contrast nit or a missing full stop. Mark a security or data-loss hole as
 such.
 

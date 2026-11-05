@@ -22,8 +22,8 @@ worth winning. A repo's own SEO doc wins over this file for that repo.
   Webmaster Guidelines, the AI crawler docs below) or what a named study with its method shows.
   Label every recommendation `documented`, `studied` or `likely`, and never pass off a guess as
   either of the first two.
-- **No invented proof.** No claim, number, review or name the owner did not supply (global
-  "Marketing" and the repo's content rule).
+- **No invented proof.** No claim, number, review or name the owner did not supply (the
+  `owner-voice` skill and the repo's content rule).
 - **No tricks.** No keyword stuffing, doorway pages, one page per keyword, mass AI-written pages,
   bought or swapped links, fake reviews, posing as a customer on Reddit or anywhere else, hidden
   text, or text written to steer an AI model. Google's spam policies demote these, and trust is
@@ -126,7 +126,7 @@ Ranking is half the job. When the brief asks, also cover positioning, launch pla
 psychology and growth channels, with the same evidence labels. On a page a visitor uses to decide:
 one primary action, proof next to the ask, open prices, the visitor's doubt answered before the ask,
 and nothing between the visitor and the action that does not help them decide. Honest persuasion
-only (global "Marketing").
+only (the `owner-voice` skill).
 
 ## Output
 

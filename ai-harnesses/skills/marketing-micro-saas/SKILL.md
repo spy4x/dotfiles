@@ -27,7 +27,7 @@ Do NOT load for: domain purchasing, payment processor setup, hosting basics, dep
 
 Writing a blog post, changelog post or question page → the `blog-post` skill. Search and answer
 engines in detail → the `marketing-seo` agent. The values every piece keeps (value first, honest
-persuasion, one ask, written as the owner) → the global `AGENTS.md` "Marketing" section.
+persuasion, one ask, written as the owner) → the `owner-voice` skill.
 
 ---
 
@@ -53,7 +53,7 @@ The output is one sentence used everywhere, with the same facts on every page, i
 the structured data (the `marketing-seo` agent, "One set of facts"): "<Product> is a <category>
 for <best-fit customers> who <alternative falls short>; unlike <alternative>, it <value>."
 
-**Values in practice.** Honest persuasion only (global "Marketing"; the reasoning and the research
+**Values in practice.** Honest persuasion only (the `owner-voice` skill; the reasoning and the research
 behind it are in `profile.md` "How I market"). Beyond trust, fake proof is unlawful in the US: the
 FTC rule on consumer reviews and testimonials bans fake or bought reviews, undisclosed insider
 reviews and bought follower counts, with civil penalties
@@ -403,7 +403,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa @tony_dinh), join conversations
 - **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer quotes
 
-**Your authentic angle** (per "Voice with clients" in the global rules):
+**Your authentic angle** (per "Voice with clients" in the `owner-voice` skill):
 
 - Show the work: screenshots, numbers and shipped features
 - Warm, plain and transparent: explain the trade-offs you chose, invite replies, no fluff

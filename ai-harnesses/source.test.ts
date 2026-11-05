@@ -22,11 +22,11 @@ Deno.test(`the real source validates and renders for every harness`, async () =>
 })
 
 /**
- * The global rules' budget ("Rules about rules" in AGENTS.md): DSH renders at most 64 KiB of rules,
+ * The global rules' budget (the `writing-rules` skill, "Size"): DSH renders at most 64 KiB of rules,
  * the repo's own `AGENTS.md` included, and drops whole files past that.
  */
-const RULES_MAX_LINES = 850
-const RULES_MAX_BYTES = 56_000
+const RULES_MAX_LINES = 475
+const RULES_MAX_BYTES = 30_000
 
 Deno.test(`the global rules stay within their size budget`, async () => {
   const rules = await Deno.readFile(join(ROOT, `AGENTS.md`))
