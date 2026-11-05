@@ -7,14 +7,14 @@ argument-hint: "[repo …]"
 
 # /kraken $ARGUMENTS
 
-You choose the issues, then run them as one wave. Picking follows `AGENTS.md`, "Picking work
+You choose the issues, then run them as one wave. Picking follows the `issues` skill, "Picking work
 yourself"; running follows the `wave` skill. This skill adds only the order in which you look.
 
 ## Which repository
 
 - `$ARGUMENTS` names repositories → those, each by its `~/sync/code/<name>` checkout.
 - None, and the working directory is a `spy4x/*` checkout → that repository.
-- None, and no checkout → every project in `AGENTS.md`, "Projects". Find each one's first pick
+- None, and no checkout → every project in the `workspace` skill, "Projects". Find each one's first pick
   with the steps below, then keep the repositories whose picks rank highest by `direction.md`,
   "What matters". A wave stays in one repository, plus the libraries its lanes need.
 

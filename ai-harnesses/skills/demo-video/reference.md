@@ -135,7 +135,7 @@ Show
 - **Long steps** (an install, a deploy): record them in parts and join them, or play the wait
   faster under a caption ("Sped up 4x").
 - **vhs leaves `ttyd --once` running** after a timeout. Run vhs under `timeout` and the process cap
-  from the global rules, and kill the run's `ttyd` in a `trap`.
+  from the `leave-nothing-running` skill, and kill the run's `ttyd` in a `trap`.
 
 ## Joining parts
 

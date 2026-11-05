@@ -9,7 +9,7 @@ argument-hint: "[issues or wave prompt]"
 
 A wave is one coordinator session: a fixed list of issues, its subagents, and a handoff at the end.
 You brief, review and integrate; implementers implement. The global `AGENTS.md` still applies in
-full, including the reviewer loop in its Git Flow section; this skill adds what only a lead needs.
+full, including the reviewer loop in the `git-flow` skill; this skill adds what only a lead needs.
 
 ## Picking the work
 
@@ -17,21 +17,21 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   oldest first within a level. Stop at `p3-medium`: `p4-low` and `p5-someday` are never
   candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual`
   or `needs-decision`, issues with an open PR by `spy4x`, and issues another session claimed
-  ("Claim an issue" in `AGENTS.md`, "Git Flow"). This lists the candidates oldest first; group
+  ("Claim an issue" in the `git-flow` skill). This lists the candidates oldest first; group
   them by priority label yourself:
   `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:in-progress -label:p4-low -label:p5-someday sort:created-asc'`.
-- Two limits in `AGENTS.md`, "Picking work yourself", come before priority. The repo has an open
+- Two limits in the `issues` skill, "Picking work yourself", come before priority. The repo has an open
   milestone (listed due first, undated last:
   `gh api --paginate --slurp 'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`) → add
   `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
   owner put the issue there, and that outranks its priority label. Run it once more with
   `label:p1-critical` in place of the milestone. A milestone with no candidate left → the next
-  one, and after the last, the first search above. Nothing else is a candidate. An issue
-  outside a milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner
-  asked for it (the `Asked for by the owner` line, a comment of theirs without the marker that says
-  to build it, or a priority raised after filing: "Picking work yourself" in `AGENTS.md`), or when
-  step 2 of "Filing issues" gives it `p3-medium` or higher. Otherwise set it aside as that rule
-  says, and the next issue takes its place.
+  one, and after the last, the first search above. Nothing else is a candidate. An issue outside a
+  milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
+  (the `Asked for by the owner` line, a comment of theirs without the marker that says to build it,
+  or a priority raised after filing: "Picking work yourself" in the `issues` skill), or when step 2
+  of "Filing issues" gives it `p3-medium` or higher. Otherwise set it aside as that rule says, and
+  the next issue takes its place.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
   never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
   `gh pr list --state open --limit 500 -S '-author:spy4x'` and
@@ -80,7 +80,7 @@ full, including the reviewer loop in its Git Flow section; this skill adds what 
   A library change that two lanes need belongs to the serial spine.
 - The brief is all the agent sees. Write it in full sentences: worktree path, read-only sources,
   output paths, house style, the issue, why the lane matters ("Direction" in `AGENTS.md`), and
-  what to do when stuck (decide and document, don't stop). It also says whether the lane needs a security review ("Reviewer gate" in `AGENTS.md`),
+  what to do when stuck (decide and document, don't stop). It also says whether the lane needs a security review ("Reviewer gate" in the `git-flow` skill),
   and that lane's reviewer brief asks for it. A lane that changes what a person sees carries
   its `design` spec in the brief and gets a `design-reviewer` next to its `reviewer`. The agent
   owns its worktree, temp dirs and processes, and leaves nothing running.
@@ -150,7 +150,7 @@ survives a reboot; its `/tmp` files do not.
 
 The wave's final report follows "The final report" in `AGENTS.md`. Before writing it, handle
 every reviewer's "Not blocking", "Rare cases, not blocking" and "Outside this diff" lines and
-anything else the wave noticed by the "Filing issues" rule: verified, given a priority,
+anything else the wave noticed by the `issues` skill, "Filing issues": verified, given a priority,
 deduplicated, grouped and filed by you, never proposed to the owner. Keep the running list in
 `.wave<N>/noticed.md`, since your context compacts, and file once, at the end, so one issue can
 hold a whole group. A security or data-loss hole does not wait: file it when you learn of it.
@@ -160,18 +160,20 @@ what remains before the next milestone, and the wave's total cost
 (`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`).
 
 After the report, the lead hands the next wave, or the rest of the work, to a new session itself
-instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__hand_off_to_session`
-with the next wave's prompt as the remaining plan, or `mcp__ccd_session__start_session` with that
-prompt as a complete brief. Where the app only lets it propose a session, the proposal card is the
-handoff. A harness without these tools, such as a plain terminal, ends the report with the prompt
-instead, ready to paste. Write no prompt file. With no next wave, it starts nothing.
-
-A session the lead started that stops before its task is done is still the lead's work: the lead
-tells it to carry on, or starts a new session from its handoff note. Relaying its report to the
-owner is not enough. The app refuses to start or hand off a session during a turn that another
-session's message started, so a stopped session that needs a successor gets it from the lead.
+instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__hand_off_to_session` with
+the next wave's prompt as the remaining plan, or `mcp__ccd_session__start_session` with that prompt
+as a complete brief. It always makes one of those calls first; only when the app refuses it does a
+proposal card for that session become the handoff. A harness without these tools, such as a plain
+terminal, ends the report with the prompt instead, ready to paste. Write no prompt file. With no
+next wave, it starts nothing.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
 or this skill, such as model tiers, review limits or cleanup: a copied rule overrides the live one
 and goes stale. A pasted prompt that names a model or an effort is stale: ignore those lines.
+
+A session the lead started that stops before its task is done is still the lead's work. One that
+stopped to hand off, because it compacted twice or reached the usage stop ("Usage" above), gets a
+new session started from its handoff note; any other is told to carry on. Relaying its report to the
+owner is not enough. The app refuses to start or hand off a session during a turn that another
+session's message started, so a stopped session that needs a successor gets it from the lead.
