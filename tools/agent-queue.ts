@@ -69,10 +69,13 @@ export function focusSection(direction: string): string {
   return direction.slice(start, next < 0 ? undefined : next)
 }
 
-/** `spy4x/<first bold word of "## Focus now", lower-cased>`, or `null` when there is none. */
-export function focusRepo(direction: string): string | null {
-  const bold = /\*\*([A-Za-z0-9_.-]+)/.exec(focusSection(direction))
-  return bold ? `spy4x/${bold[1].toLowerCase()}` : null
+/**
+ * `spy4x/<name>` for every one-word bold name of "## Focus now" (`**Financy**`), lower-cased, in
+ * the order listed and each once; bold phrases with a space are prose, not projects.
+ */
+export function focusRepos(direction: string): string[] {
+  const names = [...focusSection(direction).matchAll(/\*\*([A-Za-z0-9_.-]+)\*\*/g)]
+  return [...new Set(names.map((bold) => `spy4x/${bold[1].toLowerCase()}`))]
 }
 
 /** Hex SHA-256 of `text`. */
@@ -206,7 +209,7 @@ export function listMilestones(
   return gh(deps, [`api`, `repos/${repo}/milestones?state=${state}&per_page=100`])
 }
 
-/** The focus repository's open issues and milestones. */
+/** One focus repository's open issues and milestones. */
 export async function readFocus(deps: Deps, repo: string): Promise<FocusState> {
   return {
     repo,
@@ -345,28 +348,37 @@ export async function failAttempt(
   await setItem(db, deps, item.issue, { status, reason, attempts })
 }
 
-/** Claim an item for a run until `leaseUntil`. */
+/**
+ * Claim a queued item for a run until `leaseUntil`. Returns whether this call won it: the one
+ * `UPDATE` changes nothing when another tick claimed the item first.
+ */
 export async function claim(
   db: SqliteDb,
   deps: Deps,
   issue: string,
   runId: string,
   leaseUntil: Date,
-): Promise<void> {
-  await db.execute(
+): Promise<boolean> {
+  const { changes } = await db.execute(
     `UPDATE queue SET status = 'claimed', lease_until = ?, run_id = ?, updated_at = ?
-      WHERE issue = ?`,
+      WHERE issue = ? AND status = 'queued'`,
     leaseUntil.toISOString(),
     runId,
     deps.now().toISOString(),
     issue,
   )
+  return Number(changes) === 1
 }
 
-/** The "## Focus now" hash, the focus repository and the text, from `direction.md`. */
+/** The "## Focus now" hash and its focus repositories, from `direction.md`. */
 export async function readDirection(deps: Deps) {
   const text = await deps.fs.readText(join(deps.memory, `direction.md`)) ?? ``
-  return { repo: focusRepo(text), focusHash: await sha256(focusSection(text)) }
+  return { repos: focusRepos(text), focusHash: await sha256(focusSection(text)) }
+}
+
+/** Every focus repository's milestone hash, in order; one repository's alone is its own hash. */
+async function milestoneHashes(focus: FocusState[]): Promise<string> {
+  return (await Promise.all(focus.map(milestoneHash))).join(`,`)
 }
 
 /**
@@ -377,11 +389,11 @@ export async function replanReason(
   db: SqliteDb,
   deps: Deps,
   focusHash: string,
-  focus: FocusState,
+  focus: FocusState[],
 ): Promise<string | null> {
   if ((await queueItems(db, `queued`)).length === 0) return `no queued item`
   if (await getMeta(db, `plan_focus_hash`) !== focusHash) return `"Focus now" changed`
-  if (await getMeta(db, `plan_milestone_hash`) !== await milestoneHash(focus)) {
+  if (await getMeta(db, `plan_milestone_hash`) !== await milestoneHashes(focus)) {
     return `the milestone's issues changed`
   }
   const planned = await getMeta(db, `planned_at`)
@@ -389,6 +401,24 @@ export async function replanReason(
     return `the plan is 7 days old`
   }
   return null
+}
+
+/**
+ * One plan for several focus repositories: each one's `buildPlan` in the order listed, the
+ * tooling groups with the first only, and no issue twice. One repository's plan is its own.
+ */
+export function buildPlans(
+  focus: FocusState[],
+  tooling: Issue[],
+  statuses: Map<string, string>,
+  ours: Set<string>,
+): Candidate[] {
+  const plan = focus.flatMap((state, index) =>
+    buildPlan(state, index === 0 ? tooling : [], statuses, ours)
+  )
+  return plan.filter((candidate, index) =>
+    plan.findIndex((other) => other.issue === candidate.issue) === index
+  )
 }
 
 /**
@@ -400,13 +430,13 @@ export async function replan(
   db: SqliteDb,
   deps: Deps,
   focusHash: string,
-  focus: FocusState,
+  focus: FocusState[],
 ): Promise<number> {
   const items = await queueItems(db)
   const statuses = new Map(items.map((item) => [item.issue, item.status]))
   const ours = new Set(items.filter((item) => item.runId !== null).map((item) => item.issue))
-  const tooling = focus.repo === TOOLING_REPO ? [] : await listIssues(deps, TOOLING_REPO)
-  const plan = buildPlan(focus, tooling, statuses, ours)
+  const tooling = focus[0].repo === TOOLING_REPO ? [] : await listIssues(deps, TOOLING_REPO)
+  const plan = buildPlans(focus, tooling, statuses, ours)
   const now = deps.now().toISOString()
   for (const [index, candidate] of plan.entries()) {
     if (statuses.has(candidate.issue)) {
@@ -444,7 +474,7 @@ export async function replan(
     }
   }
   await setMeta(db, `plan_focus_hash`, focusHash)
-  await setMeta(db, `plan_milestone_hash`, await milestoneHash(focus))
+  await setMeta(db, `plan_milestone_hash`, await milestoneHashes(focus))
   await setMeta(db, `planned_at`, now)
   return plan.length
 }
