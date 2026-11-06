@@ -9,15 +9,16 @@ Part of the global rules (`AGENTS.md`, "Leave nothing running"); they bind as if
 
 ## Sweep
 
-Sweep before reporting done: `~/sync/code/dotfiles/tools/sweep-orphans.sh`. It lists this
-session's orphans, one per line: PID, elapsed time, CPU, command. It also lists `systemd-run --user
---scope` units (`run-*.scope`) older than an hour, with the unit name in place of the PID;
-`--min-age <seconds>` changes the hour. A subagent adds `--under <worktree> <scratch dir>`, reads
-the list, then reruns it with `--kill` to stop exactly those. Empty output = clean. The lead's final
-sweep adds `--all`, which shows other sessions' orphans and unused anonymous Docker volumes and
-networks. One older than 24 hours is abandoned, whoever started it: stop it with `--stale --kill`
-and report what it stopped. Report a younger one, never kill it. It lists no containers: remove
-yours by name, with their volumes.
+Sweep before reporting done: `~/sync/code/dotfiles/tools/sweep-orphans.sh`. It lists this session's
+orphans, one per line: PID, elapsed time, CPU, command. It also lists `systemd-run --user --scope`
+units (`run-*.scope`) older than an hour, with the unit name in place of the PID; `--min-age
+<seconds>` changes the hour. A subagent adds `--under <worktree> <scratch dir>`, reads the list,
+then reruns it with `--kill` to stop exactly those. Empty output = clean. The lead's final sweep
+adds `--all`, which shows other sessions' orphans and unused anonymous Docker volumes and networks,
+and reads `tools/agent-run.ts status --active`: each headless run it started that its handoff does
+not name is stopped with `agent-run stop <id>`. One older than 24 hours is abandoned, whoever
+started it: stop it with `--stale --kill` and report what it stopped. Report a younger one, never
+kill it. It lists no containers: remove yours by name, with their volumes.
 
 ## Killing processes
 

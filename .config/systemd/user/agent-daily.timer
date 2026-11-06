@@ -1,0 +1,11 @@
+# Starts the daily background lead at 01:00, while the owner sleeps. Persistent catches up a night
+# the machine was off. See docs/headless-runs.md.
+[Unit]
+Description=Start the daily background lead nightly
+
+[Timer]
+OnCalendar=*-*-* 01:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
