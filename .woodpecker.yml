@@ -16,3 +16,5 @@ steps:
       - deno fmt --check
       - deno lint
       - deno task test
+      # Fails when the run changed deno.lock: a new dependency needs its lockfile committed.
+      - git diff --exit-code deno.lock
