@@ -85,3 +85,50 @@ Copy the ones you need into place, then delete the plaintext copies:
 ```bash
 rm -rf /dev/shm/restore
 ```
+
+## Run database backup
+
+`~/.local/state/agent-run/runs.sqlite` holds every Claude Code session's prompts, tool output and
+costs, and the background lead's queue ([headless runs](headless-runs.md)). It lives outside
+Syncthing, so a systemd user timer backs it up with
+[`tools/agent-backup.sh`](../tools/agent-backup.sh) every night at 03:15; a night the machine was
+off is caught up at the next start. The backup is encrypted because the database holds prompt text
+and tool output, which can quote anything a session read.
+
+Each run writes a consistent copy with `VACUUM INTO` while sessions keep reading and writing the
+live file, so nothing has to stop. The copy goes to `~/.local/state/agent-run/snapshots/` (folder
+mode 0700, files 0600), must pass `PRAGMA integrity_check`, and is then backed up with restic. The
+live file, its `-wal` and its `-shm` are never copied. The last 3 copies stay on disk; the
+repository keeps 14 daily and 8 weekly snapshots. A machine without the database exits with
+"nothing to back up".
+
+The restic repository is `~/sync/backups/agent-runs`, in the `backups` Syncthing folder, with the
+same password as the [secrets backup](#secrets-backup): `BACKUPS_PASSWORD` from
+`~/sync/code/homelab/.env.root`, read by restic at run time and never printed. A run that finds no
+`BACKUPS_PASSWORD` stops before it writes anything. A failed run sends an urgent push with the
+command that shows why (`agent-run push`).
+
+```bash
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/agent-backup.service
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/agent-backup-failed.service
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/agent-backup.timer
+systemctl --user enable --now agent-backup.timer
+systemctl --user start agent-backup.service
+```
+
+To restore, on any machine that holds the repository; restic asks for `BACKUPS_PASSWORD`:
+
+```bash
+restic -r ~/sync/backups/agent-runs snapshots
+restic -r ~/sync/backups/agent-runs restore latest --target /dev/shm/restore
+```
+
+The copies come back under `/dev/shm/restore` with their full original paths. While no run, tick
+or import is active (stop `agent-tick.timer` and the importer's timer first), delete the database's
+`runs.sqlite-wal` and `runs.sqlite-shm`, which belong to the old file and would damage the restored
+one, copy the newest `runs-*.sqlite` over `runs.sqlite`, start the timers again, then delete the
+plaintext copies:
+
+```bash
+rm -rf /dev/shm/restore
+```
