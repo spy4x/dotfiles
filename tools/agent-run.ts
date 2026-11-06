@@ -961,7 +961,8 @@ async function finish(deps: Deps, id: string): Promise<Outcome> {
     if (!run) return { code: 1, output: `no run ${id}` }
     await ingest(db, deps, id).catch(() => {})
     const text = await deps.fs.readText(join(stateHome(deps), id, `events.jsonl`)) ?? ``
-    const { result } = readEvents(text.split(`\n`))
+    const lines = text.split(`\n`)
+    const { result } = readEvents(lines)
     const stopped = await db.queryOne(`SELECT 1 FROM events WHERE run_id = ? AND kind = 'stop'`, id)
     const status = finalStatus(deps.env(`SERVICE_RESULT`), result, stopped ? `stopped` : null)
     const answer: RunResult = {
@@ -973,7 +974,8 @@ async function finish(deps: Deps, id: string): Promise<Outcome> {
         WHERE id = ?`,
       status,
       deps.now().toISOString(),
-      result ? Math.round(Number(result.total_cost_usd ?? 0) * 1e6) : null,
+      // No `result` (a timeout, crash or stop): the estimate keeps the run in the day's budget.
+      Math.round((result ? Number(result.total_cost_usd ?? 0) : estimateUsd(lines)) * 1e6) || null,
       result ? Number(result.num_turns ?? 0) : null,
       JSON.stringify(answer),
       id,

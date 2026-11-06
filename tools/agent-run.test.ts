@@ -957,6 +957,29 @@ Deno.test(`a non-ASCII title is sent as a UTF-8 encoded word`, async () => {
   }
 })
 
+Deno.test(`a tick run that ends with no result counts its estimated cost toward the budget`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    const id = started((await main([`tick`], m.deps)).output)
+    // 11M output tokens on opus is $220: past the $100 warning and the $200 daily budget.
+    await Deno.writeTextFile(
+      join(m.env.AGENT_RUN_HOME, id, `events.jsonl`),
+      spend(`a`, 6_000_000) + `\n` + spend(`b`, 5_000_000) + `\n`,
+    )
+    m.env.SERVICE_RESULT = `timeout`
+    await main([`finish`, id], m.deps)
+    assertEquals(m.sql(`SELECT cost_micros FROM runs WHERE id = '${id}'`), [{
+      cost_micros: 220_000_000,
+    }])
+    assertEquals(m.titles(), [`tick: over $100`])
+    m.dead.add(`agent-run-${id}.service`)
+    assertMatch((await main([`tick`], m.deps)).output, /tick: today's \$220\.00 reached/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
 Deno.test(`retro starts one read-only run at effort high with only its allowed tools`, async () => {
   const m = await machine()
   try {
