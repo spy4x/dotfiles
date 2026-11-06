@@ -10,9 +10,11 @@ steps:
     image: denoland/deno:2.9.7
     commands:
       # The image has neither `git` nor `ps`; the env-key-copy and sweep-orphans tests run both.
-      # The secrets-backup test runs `restic`; the demo-video encoder test runs ffmpeg and fc-match.
-      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git procps restic ffmpeg fontconfig
+      # The secrets-backup and agent-backup tests run `restic`, agent-backup also `sqlite3`; the demo-video encoder test runs ffmpeg and fc-match.
+      - apt-get update -qq && apt-get install -y -qq --no-install-recommends git procps restic sqlite3 ffmpeg fontconfig
       - deno --version
       - deno fmt --check
       - deno lint
       - deno task test
+      # Fails when the run changed deno.lock: a new dependency needs its lockfile committed.
+      - git diff --exit-code deno.lock

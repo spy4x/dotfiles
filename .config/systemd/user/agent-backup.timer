@@ -1,0 +1,11 @@
+# Runs agent-backup.service every night. Persistent catches up a night the machine was off or
+# asleep at the next start. Setup: docs/sync.md.
+[Unit]
+Description=Back up the agent-run database nightly
+
+[Timer]
+OnCalendar=*-*-* 03:15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

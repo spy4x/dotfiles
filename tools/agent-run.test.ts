@@ -1,26 +1,52 @@
 import { assert, assertEquals, assertMatch } from "jsr:@std/assert@1.0.19"
 import { join } from "jsr:@std/path@^1.0.0"
+import { DatabaseSync } from "node:sqlite"
 import { type RunCommandResult, runtimeFileSystem } from "@spy4x/platform/server"
 import {
   claudeArgs,
   type Deps,
+  estimateUsd,
   finalStatus,
   main,
   Mode,
+  openDb,
   parseUsage,
   readEvents,
   type Run,
   unitCommand,
-  weeklyLeft,
+  watchOnce,
 } from "./agent-run.ts"
+import type { Issue, Milestone } from "./agent-queue.ts"
 
 const USAGE = (weekly: number, reset = `Nov 11, 2am (Asia/Ho_Chi_Minh)`, session = 4) =>
   `Current session: ${session}% used · resets Nov 6, 5:20pm (Asia/Ho_Chi_Minh)\n` +
   `Current week (all models): ${weekly}% used · resets ${reset}\n`
 
-/** A fake machine: a temp state home, canned `claude /usage` and `gh`, every command recorded. */
+const DIRECTION = `# Direction\n\n## Focus now\n\n- **Financy**, with the libraries.\n\n## Next\n`
+
+/** An open issue by spy4x, created on day `day` of November. */
+function issue(
+  number: number,
+  options: { labels?: string[]; milestone?: string; author?: string; day?: number } = {},
+): Issue {
+  return {
+    number,
+    title: `Issue ${number}`,
+    labels: (options.labels ?? []).map((name) => ({ name })),
+    author: { login: options.author ?? `spy4x` },
+    milestone: options.milestone ? { title: options.milestone } : null,
+    createdAt: `2026-11-${String(options.day ?? number).padStart(2, `0`)}T00:00:00Z`,
+  }
+}
+
+type GhMilestone = Milestone & { open_issues: number }
+
+/**
+ * A fake machine: a temp state home and ai-memory, canned `claude /usage`, a fake GitHub (`gh`
+ * answers from `github`), every command recorded, pushes captured.
+ */
 async function machine(
-  options: { weekly?: number; author?: string; env?: Record<string, string> },
+  options: { weekly?: number; author?: string; env?: Record<string, string> } = {},
 ) {
   const home = await Deno.makeTempDir()
   const commands: string[][] = []
@@ -28,6 +54,12 @@ async function machine(
   const dead = new Set<string>()
   const pushes: { url: string; init: RequestInit }[] = []
   const state = { weekly: options.weekly ?? 40, now: new Date(`2026-11-06T18:00:00Z`) }
+  const github = {
+    issues: {} as Record<string, Issue[]>,
+    milestones: {} as Record<string, GhMilestone[]>,
+    closed: new Set<string>(),
+    failGit: ``,
+  }
   const env: Record<string, string> = {
     AGENT_RUN_HOME: join(home, `state`),
     PATH: `/usr/bin`,
@@ -35,17 +67,35 @@ async function machine(
     SSH_AUTH_SOCK: `/run/agent.sock`,
     ...options.env,
   }
-  const result = (stdout: string): RunCommandResult => ({
-    success: true,
-    code: 0,
+  const result = (stdout: string, success = true): RunCommandResult => ({
+    success,
+    code: success ? 0 : 1,
     stdout,
-    stderr: ``,
+    stderr: success ? `` : `failed`,
   })
+  const gh = (args: string[]): RunCommandResult => {
+    if (args[0] === `api` && args[2] === `--jq`) return result(`${options.author ?? `spy4x`}\n`)
+    if (args[0] === `api`) {
+      const repo = /^repos\/([^/]+\/[^/]+)\/milestones/.exec(args[1])![1]
+      return result(JSON.stringify(github.milestones[repo] ?? []))
+    }
+    const repo = args[args.indexOf(`-R`) + 1]
+    if (args[1] === `list`) {
+      const open = (github.issues[repo] ?? []).filter((i) =>
+        !github.closed.has(`${repo}#${i.number}`)
+      )
+      return result(JSON.stringify(open))
+    }
+    const found = (github.issues[repo] ?? []).find((i) => String(i.number) === args[2])
+    const closed = !found || github.closed.has(`${repo}#${args[2]}`)
+    return result(JSON.stringify({ ...found, state: closed ? `CLOSED` : `OPEN` }))
+  }
   const deps: Deps = {
     run: (command) => {
       commands.push(command)
       if (command[0] === `claude`) return Promise.resolve(result(USAGE(state.weekly)))
-      if (command[0] === `gh`) return Promise.resolve(result(`${options.author ?? `spy4x`}\n`))
+      if (command[0] === `gh`) return Promise.resolve(gh(command.slice(1)))
+      if (command[0] === `git`) return Promise.resolve(result(``, command[3] !== github.failGit))
       // Stopping a unit removes it; `finish` does not run in the tests.
       if (command[0] === `systemctl` && command[2] === `stop`) dead.add(command[3])
       if (command[0] === `systemctl` && command[2] === `is-active`) {
@@ -53,7 +103,7 @@ async function machine(
       }
       if (command[0] === `gitleaks`) {
         const flagged = Deno.readTextFileSync(command.at(-1)!).includes(`LEAKED`)
-        return Promise.resolve({ ...result(``), success: !flagged, code: flagged ? 1 : 0 })
+        return Promise.resolve(result(``, !flagged))
       }
       return Promise.resolve(result(``))
     },
@@ -67,6 +117,7 @@ async function machine(
     out: () => {},
     home,
     ntfyEnv: join(home, `ntfy.env`),
+    memory: join(home, `memory`),
   }
   const brief = join(home, `brief.md`)
   await Deno.writeTextFile(brief, `Do the thing.`)
@@ -74,12 +125,81 @@ async function machine(
     join(home, `ntfy.env`),
     `NTFY_URL=https://ntfy.example.com\nNTFY_TOPIC=runs\nNTFY_TOKEN=tk\n`,
   )
+  await Deno.mkdir(join(home, `memory`))
+  await Deno.writeTextFile(join(home, `memory`, `direction.md`), DIRECTION)
+  /** Let `minutes` pass. */
+  const later = (minutes: number) => {
+    state.now = new Date(state.now.getTime() + minutes * 60_000)
+  }
+  /** Write a run's final `result` event and run `finish` as systemd would. */
+  const end = async (
+    id: string,
+    answer: Record<string, unknown>,
+    cost = 1,
+    subtype = `success`,
+  ) => {
+    await Deno.writeTextFile(
+      join(env.AGENT_RUN_HOME, id, `events.jsonl`),
+      JSON.stringify({
+        type: `result`,
+        subtype,
+        total_cost_usd: cost,
+        num_turns: 3,
+        structured_output: {
+          status: `done`,
+          summary: `s`,
+          prs: [],
+          needs_owner: null,
+          injection: null,
+          noticed: [],
+          alert: null,
+          good_news: null,
+          ...answer,
+        },
+      }) + `\n`,
+    )
+    env.SERVICE_RESULT = `success`
+    return (await main([`finish`, id], deps)).output
+  }
+  const sql = (query: string) => {
+    const db = new DatabaseSync(join(env.AGENT_RUN_HOME, `runs.sqlite`))
+    try {
+      return db.prepare(query).all() as Record<string, unknown>[]
+    } finally {
+      db.close()
+    }
+  }
+  const titles = () => pushes.map((p) => (p.init.headers as Record<string, string>).Title)
   const cleanup = () => Deno.remove(home, { recursive: true })
-  return { deps, commands, pushes, state, env, brief, home, dead, cleanup }
+  return {
+    deps,
+    commands,
+    pushes,
+    state,
+    env,
+    brief,
+    home,
+    dead,
+    github,
+    later,
+    end,
+    sql,
+    titles,
+    cleanup,
+  }
 }
 
 function lead(brief: string, extra: string[] = []): string[] {
   return [`start`, `--mode`, `lead`, `--model`, `opus`, `--cwd`, `/tmp`, `--brief`, brief, ...extra]
+}
+
+function read(brief: string): string[] {
+  return [`start`, `--mode`, `read`, `--model`, `haiku`, `--cwd`, `/tmp`, `--brief`, brief]
+}
+
+/** The id the last tick started, from its output. */
+function started(output: string): string {
+  return JSON.parse(output.split(`\n`).at(-1)!).id
 }
 
 const RUN: Run = {
@@ -95,16 +215,12 @@ const RUN: Run = {
   budgetUsd: 1,
   maxTurns: 5,
   allow: [`Bash(git log:*)`],
-  weeklyCap: 5,
-  weeklyStart: 40,
-  weeklyReset: `Nov 11`,
   startedAt: ``,
   endedAt: null,
   status: `running`,
   activity: null,
   costMicros: null,
   turns: null,
-  weeklyEnd: null,
   result: null,
 }
 
@@ -117,16 +233,6 @@ Deno.test(`parseUsage reads session and weekly levels`, () => {
   assertEquals(parseUsage(`Something else`), null)
 })
 
-Deno.test(`weeklyLeft counts from the start, and again from now in a new week`, () => {
-  assertEquals(weeklyLeft(RUN, { session: 0, weekly: 43, weeklyReset: `Nov 11` }), 2)
-  assertEquals(weeklyLeft(RUN, { session: 0, weekly: 46, weeklyReset: `Nov 11` }), -1)
-  assertEquals(weeklyLeft(RUN, { session: 0, weekly: 3, weeklyReset: `Nov 18` }), 5)
-  assertEquals(
-    weeklyLeft({ ...RUN, weeklyCap: null }, { session: 0, weekly: 3, weeklyReset: `` }),
-    null,
-  )
-})
-
 Deno.test(`a read run cannot write and no run drops the rules`, () => {
   const args = claudeArgs(RUN, false)
   assert(args.includes(`dontAsk`))
@@ -136,6 +242,15 @@ Deno.test(`a read run cannot write and no run drops the rules`, () => {
   const resumed = claudeArgs({ ...RUN, mode: Mode.Lead }, true)
   assertEquals(resumed[resumed.indexOf(`--resume`) + 1], RUN.id)
   assert(resumed.includes(`bypassPermissions`))
+})
+
+Deno.test(`a budget or turn cap of 0 leaves the flag out`, () => {
+  const capped = claudeArgs(RUN, false)
+  assertEquals(capped[capped.indexOf(`--max-budget-usd`) + 1], `1`)
+  assertEquals(capped[capped.indexOf(`--max-turns`) + 1], `5`)
+  const free = claudeArgs({ ...RUN, budgetUsd: 0, maxTurns: 0 }, false)
+  assert(!free.includes(`--max-budget-usd`))
+  assert(!free.includes(`--max-turns`))
 })
 
 Deno.test(`the unit keeps only the allowed variables`, () => {
@@ -183,43 +298,72 @@ Deno.test(`readEvents logs tool descriptions, never commands`, () => {
 Deno.test(`finalStatus prefers a stop, then systemd, then the run's own answer`, () => {
   const success = { subtype: `success`, structured_output: { status: `blocked` } }
   assertEquals(finalStatus(`success`, success, null), `blocked`)
-  assertEquals(finalStatus(`success`, success, `quota`), `quota`)
+  assertEquals(finalStatus(`success`, success, `stopped`), `stopped`)
   assertEquals(finalStatus(`timeout`, success, null), `timeout`)
   assertEquals(finalStatus(`success`, { subtype: `error_max_budget_usd` }, null), `budget`)
   assertEquals(finalStatus(`exit-code`, null, null), `failed`)
 })
 
-Deno.test(`start refuses a second lead, but a handoff from the active one is fine`, async () => {
-  const m = await machine({})
+/** One stream-json assistant event of `output` tokens on Opus 5.5 ($20 per million). */
+const spend = (id: string, output: number) =>
+  JSON.stringify({
+    type: `assistant`,
+    message: { id, model: `claude-opus-5-5`, usage: { output_tokens: output }, content: [] },
+  })
+
+Deno.test(`estimateUsd prices each API call once`, () => {
+  // One call written as two lines (one per content block) counts once: $20, not $40.
+  assertEquals(estimateUsd([spend(`a`, 1_000_000), spend(`a`, 1_000_000), `not json`]), 20)
+  assertEquals(estimateUsd([spend(`a`, 1_000_000), spend(`b`, 500_000)]), 30)
+})
+
+Deno.test(`an old database loses its weekly columns and keeps its rows`, async () => {
+  const m = await machine()
   try {
-    const first = await main(lead(m.brief, [`--weekly-cap`, `5`]), m.deps)
-    assertEquals(first.code, 0)
-    const id = JSON.parse(first.output).id
-    const second = await main(lead(m.brief), m.deps)
-    assertEquals(second.code, 2)
-    assertMatch(second.output, /lead run\(s\) already active/)
-    m.state.weekly = 43
-    const handoff = await main([`start`, `--handoff-from`, id, `--brief`, m.brief], m.deps)
-    assertEquals(handoff.code, 0)
-    const status = await main([`status`, JSON.parse(handoff.output).id, `--json`], m.deps)
-    const [run] = JSON.parse(status.output)
-    // The handoff keeps the day's share: same cap, same starting level.
-    assertEquals([run.weeklyCap, run.weeklyStart, run.mode], [5, 40, Mode.Lead])
+    await Deno.mkdir(m.env.AGENT_RUN_HOME, { recursive: true })
+    const old = new DatabaseSync(join(m.env.AGENT_RUN_HOME, `runs.sqlite`))
+    old.exec(`CREATE TABLE runs (id TEXT PRIMARY KEY, name TEXT NOT NULL, mode INTEGER NOT NULL,
+      model TEXT NOT NULL, effort TEXT NOT NULL, cwd TEXT NOT NULL, parent TEXT, issue TEXT,
+      deadline_sec INTEGER NOT NULL, budget_usd REAL NOT NULL, max_turns INTEGER NOT NULL,
+      allow TEXT NOT NULL, weekly_cap REAL, weekly_start INTEGER, weekly_reset TEXT,
+      started_at TEXT NOT NULL, ended_at TEXT, status TEXT NOT NULL, activity TEXT,
+      cost_micros INTEGER, turns INTEGER, weekly_end INTEGER, result TEXT,
+      events_offset INTEGER NOT NULL DEFAULT 0) STRICT`)
+    old.exec(`INSERT INTO runs (id, name, mode, model, effort, cwd, deadline_sec, budget_usd,
+      max_turns, allow, weekly_cap, weekly_start, started_at, status, cost_micros)
+      VALUES ('r1', 'daily-focus', 3, 'opus', 'medium', '/tmp', 60, 50, 500, '[]', 5, 40,
+      '2026-11-05T01:00:00Z', 'done', 2500000)`)
+    old.close()
+    const [run] = JSON.parse((await main([`status`, `r1`, `--json`], m.deps)).output)
+    assertEquals([run.name, run.status, run.costMicros], [`daily-focus`, `done`, 2500000])
+    const columns = m.sql(`PRAGMA table_info(runs)`).map((c) => String(c.name))
+    assertEquals(columns.filter((name) => name.startsWith(`weekly_`)), [])
+    assert(columns.includes(`cost_micros`))
   } finally {
     await m.cleanup()
   }
 })
 
-Deno.test(`start refuses near the weekly limit and when the share is used up`, async () => {
+Deno.test(`start refuses a second lead, but a handoff from the active one is fine`, async () => {
+  const m = await machine()
+  try {
+    const first = await main(lead(m.brief), m.deps)
+    assertEquals(first.code, 0)
+    const id = JSON.parse(first.output).id
+    const second = await main(lead(m.brief), m.deps)
+    assertEquals(second.code, 2)
+    assertMatch(second.output, /lead run\(s\) already active/)
+    const handoff = await main([`start`, `--handoff-from`, id, `--brief`, m.brief], m.deps)
+    assertEquals(handoff.code, 0)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`start refuses near the weekly limit`, async () => {
   const m = await machine({ weekly: 95 })
   try {
     assertMatch((await main(lead(m.brief), m.deps)).output, /weekly usage at 95%/)
-    m.state.weekly = 40
-    const first = JSON.parse((await main(lead(m.brief, [`--weekly-cap`, `5`]), m.deps)).output)
-    await main([`stop`, first.id], m.deps)
-    m.state.weekly = 45
-    const again = await main([`start`, `--handoff-from`, first.id, `--brief`, m.brief], m.deps)
-    assertMatch(again.output, /share of 5 points is used up/)
   } finally {
     await m.cleanup()
   }
@@ -253,55 +397,35 @@ Deno.test(`start refuses an issue by someone else and write mode outside a workt
   }
 })
 
-Deno.test(`finish records the result, the cost and the usage, then pushes`, async () => {
-  const m = await machine({})
+Deno.test(`finish records the result and cost and sends no push for a plain end`, async () => {
+  const m = await machine()
   try {
-    const { id } = JSON.parse((await main(lead(m.brief, [`--weekly-cap`, `5`]), m.deps)).output)
+    const { id } = JSON.parse((await main(lead(m.brief), m.deps)).output)
     m.env.AGENT_RUN_ID = id
     await main([`note`, `Started`, `spy4x/financy#12`], m.deps)
-    const result = {
-      type: `result`,
-      subtype: `success`,
-      total_cost_usd: 1.234567,
-      num_turns: 9,
-      structured_output: {
-        status: `done`,
-        summary: `Built the ledger import.`,
-        prs: [`https://github.com/spy4x/financy/pull/80`],
-        needs_owner: `Pick a currency library.`,
-        injection: null,
-        noticed: [],
-      },
-    }
-    await Deno.writeTextFile(
-      join(m.env.AGENT_RUN_HOME, id, `events.jsonl`),
-      JSON.stringify(result) + `\n`,
-    )
-    m.state.weekly = 43
-    m.env.SERVICE_RESULT = `success`
-    assertEquals((await main([`finish`, id], m.deps)).output, `done`)
+    const output = await m.end(id, {
+      summary: `Built the ledger import.`,
+      prs: [`https://github.com/spy4x/financy/pull/80`],
+      needs_owner: `Pick a currency library.`,
+    }, 1.234567)
+    assertEquals(output, `done`)
     const [run] = JSON.parse((await main([`status`, id, `--json`], m.deps)).output)
-    assertEquals([run.status, run.costMicros, run.turns, run.weeklyEnd], [`done`, 1234567, 9, 43])
-    assertEquals(m.pushes.length, 1)
-    assertEquals(m.pushes[0].url, `https://ntfy.example.com/runs`)
-    const headers = m.pushes[0].init.headers as Record<string, string>
-    assertEquals([headers.Title, headers.Authorization], [`run: done`, `Bearer tk`])
-    assertMatch(String(m.pushes[0].init.body), /Needs you: Pick a currency library\./)
+    assertEquals([run.status, run.costMicros, run.turns], [`done`, 1234567, 3])
+    assertEquals(m.pushes.length, 0)
     const report = await main([`report`, `--since`, `24h`], m.deps)
     assertMatch(report.output, /Built the ledger import\./)
     assertMatch(report.output, /- Started spy4x\/financy#12/)
     assertMatch(report.output, /Needs you: Pick a currency library\./)
-    assertMatch(report.output, /weekly usage 40% → 43%/)
   } finally {
     await m.cleanup()
   }
 })
 
 Deno.test(`stop marks the run and stops its unit`, async () => {
-  const m = await machine({})
+  const m = await machine()
   try {
     const { id } = JSON.parse((await main(lead(m.brief), m.deps)).output)
-    m.state.now = new Date(m.state.now.getTime() + 120_000)
+    m.later(2)
     assertEquals((await main([`stop`, id], m.deps)).output, `${id}: stopped`)
     assert(m.commands.some((c) => c.join(` `) === `systemctl --user stop agent-run-${id}.service`))
   } finally {
@@ -310,11 +434,11 @@ Deno.test(`stop marks the run and stops its unit`, async () => {
 })
 
 Deno.test(`resume refuses while another lead is active`, async () => {
-  const m = await machine({})
+  const m = await machine()
   try {
     const old = JSON.parse((await main(lead(m.brief), m.deps)).output).id
     m.dead.add(`agent-run-${old}.service`)
-    m.state.now = new Date(m.state.now.getTime() + 120_000)
+    m.later(2)
     const today = await main(lead(m.brief), m.deps)
     assertEquals(today.code, 0)
     const resumed = await main([`resume`, old, `--brief`, m.brief], m.deps)
@@ -326,17 +450,17 @@ Deno.test(`resume refuses while another lead is active`, async () => {
 })
 
 Deno.test(`a run whose unit died no longer blocks a start, and stop closes it`, async () => {
-  const m = await machine({})
+  const m = await machine()
   try {
     const first = JSON.parse((await main(lead(m.brief), m.deps)).output).id
     assertMatch((await main(lead(m.brief), m.deps)).output, /already active/)
     m.dead.add(`agent-run-${first}.service`)
-    m.state.now = new Date(m.state.now.getTime() + 120_000)
+    m.later(2)
     assertEquals((await main([`stop`, first], m.deps)).output, `${first}: failed`)
     const again = await main(lead(m.brief), m.deps)
     assertEquals(again.code, 0)
     const id = JSON.parse(again.output).id
-    m.state.now = new Date(m.state.now.getTime() + 120_000)
+    m.later(2)
     await main([`stop`, id], m.deps)
     const [run] = JSON.parse((await main([`status`, id, `--json`], m.deps)).output)
     assertEquals(run.status, `stopped`)
@@ -345,24 +469,557 @@ Deno.test(`a run whose unit died no longer blocks a start, and stop closes it`, 
   }
 })
 
-Deno.test(`a push the secret scan flags carries no model text`, async () => {
-  const m = await machine({})
+Deno.test(`an alert push that the secret scan flags carries no model text`, async () => {
+  const m = await machine()
   try {
     const { id } = JSON.parse((await main(lead(m.brief), m.deps)).output)
-    const result = {
-      type: `result`,
-      subtype: `success`,
-      structured_output: { status: `blocked`, summary: `s`, prs: [], needs_owner: `LEAKED` },
-    }
-    await Deno.writeTextFile(
-      join(m.env.AGENT_RUN_HOME, id, `events.jsonl`),
-      JSON.stringify(result) + `\n`,
-    )
-    await main([`finish`, id], m.deps)
+    await m.end(id, { status: `blocked`, alert: `LEAKED` })
     assertEquals(m.pushes.length, 1)
     const body = String(m.pushes[0].init.body)
     assert(!body.includes(`LEAKED`))
     assertMatch(body, /held back/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+// ===== The tick loop =====
+
+const FINANCY = `spy4x/financy`
+const DOTFILES = `spy4x/dotfiles`
+
+Deno.test(`the plan takes p1, then tooling, then the due-first open milestone, then the backlog`, async () => {
+  const m = await machine()
+  try {
+    m.github.milestones[FINANCY] = [
+      { number: 1, title: `Later`, due_on: null, open_issues: 1 },
+      { number: 2, title: `Blocked`, due_on: `2026-11-10T00:00:00Z`, open_issues: 1 },
+      { number: 3, title: `Next`, due_on: `2026-11-20T00:00:00Z`, open_issues: 2 },
+    ]
+    m.github.issues[FINANCY] = [
+      issue(9, { labels: [`p1-critical`] }),
+      issue(2, { milestone: `Blocked` }),
+      issue(6, { milestone: `Next`, labels: [`p4-low`] }),
+      issue(5, { milestone: `Next` }),
+      issue(7, { milestone: `Later` }),
+      issue(8, { labels: [`p3-medium`] }),
+      issue(1, { labels: [`p4-low`] }),
+      issue(10, { author: `stranger` }),
+      issue(11, { labels: [`manual`] }),
+    ]
+    m.github.issues[DOTFILES] = [
+      issue(4, { labels: [`p1-critical`] }),
+      issue(3, { labels: [`p2-high`] }),
+      issue(12, { labels: [`p3-medium`] }),
+    ]
+    // A queue that holds the first milestone's only issue as blocked moves on to the next one.
+    await main([`pause`], m.deps)
+    m.sql(`INSERT INTO queue (issue, title, source, rank, status, planned_at, updated_at)
+      VALUES ('spy4x/financy#2', 'Issue 2', 'milestone:Blocked', 99, 'blocked', 'x', 'x')`)
+    await main([`unpause`], m.deps)
+    assertEquals((await main([`tick`], m.deps)).code, 0)
+    const plan = m.sql(`SELECT issue, source, status FROM queue ORDER BY rank`)
+    assertEquals(plan.map((row) => `${row.issue} ${row.source}`), [
+      `spy4x/dotfiles#4 p1`,
+      `spy4x/financy#9 p1`,
+      `spy4x/dotfiles#3 tooling`,
+      `spy4x/financy#5 milestone:Next`,
+      `spy4x/financy#6 milestone:Next`,
+      `spy4x/financy#2 backlog`,
+      `spy4x/financy#7 backlog`,
+      `spy4x/financy#8 backlog`,
+    ])
+    // Planned again, the blocked item keeps its status.
+    assertEquals(plan[5].status, `blocked`)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`tick starts one uncapped opus lead on the first item and claims it`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    m.env.AGENT_RUN_ID = `earlier-run`
+    await main([`lesson`, `--kind`, `ci-wait`, `--minutes`, `25`, `Waited`, `on`, `CI`], m.deps)
+    delete m.env.AGENT_RUN_ID
+    const out = await main([`tick`], m.deps)
+    assertEquals(out.code, 0)
+    const id = started(out.output)
+    const [run] = JSON.parse((await main([`status`, id, `--json`], m.deps)).output)
+    assertEquals(
+      [run.name, run.mode, run.model, run.effort, run.issue, run.deadlineSec],
+      [`tick`, Mode.Lead, `opus`, `medium`, `spy4x/financy#1`, 3 * 3600],
+    )
+    assertEquals(run.cwd, join(m.home, `sync`, `code`))
+    assertEquals([run.budgetUsd, run.maxTurns], [0, 0])
+    const args = claudeArgs(run, false)
+    assert(!args.includes(`--max-budget-usd`) && !args.includes(`--max-turns`))
+    const [item] = m.sql(
+      `SELECT status, run_id, lease_until FROM queue WHERE issue = '${FINANCY}#1'`,
+    )
+    assertEquals([item.status, item.run_id], [`claimed`, id])
+    assertEquals(item.lease_until, new Date(m.state.now.getTime() + 195 * 60_000).toISOString())
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, id, `prompt.md`))
+    assertMatch(prompt, /# Background lead: one issue/)
+    assertMatch(prompt, /- Issue: spy4x\/financy#1/)
+    assertMatch(prompt, /\[ci-wait\] 25 min: Waited on CI/)
+    // The next tick sees the lead and stops.
+    assertMatch((await main([`tick`], m.deps)).output, /tick: a lead run is active/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`tick stops when paused, over the day's budget or near the usage limit`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    await main([`pause`, `owner`, `away`], m.deps)
+    assertEquals((await main([`tick`], m.deps)).output, `tick: paused: owner away`)
+    await main([`unpause`], m.deps)
+    const { id } = JSON.parse((await main(read(m.brief), m.deps)).output)
+    await m.end(id, {}, 200)
+    const budget = await main([`tick`], m.deps)
+    assertEquals(budget.code, 0)
+    assertMatch(budget.output, /tick: today's \$200\.00 reached the \$200 budget/)
+    assertEquals(m.commands.filter((c) => c[0] === `systemd-run`).length, 1)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`tick stops at the session usage limit before planning`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    m.deps.run = ((run) => (command: string[]) =>
+      command[0] === `claude`
+        ? Promise.resolve({ success: true, code: 0, stdout: USAGE(10, `x`, 91), stderr: `` })
+        : run(command))(m.deps.run)
+    assertEquals((await main([`tick`], m.deps)).output, `tick: session usage at 91%`)
+    assertEquals(m.sql(`SELECT * FROM queue`).length, 0)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`tick drops an item GitHub no longer confirms and takes the next`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2), issue(3), issue(4)]
+    await m.end(started((await main([`tick`], m.deps)).output), {})
+    m.github.closed.add(`${FINANCY}#2`)
+    m.github.issues[FINANCY][2] = issue(3, { labels: [`needs-decision`] })
+    m.later(31)
+    const out = await main([`tick`], m.deps)
+    assertMatch(out.output, /dropped spy4x\/financy#2: closed\ndropped spy4x\/financy#3: no longer/)
+    const [run] = JSON.parse((await main([`status`, started(out.output), `--json`], m.deps)).output)
+    assertEquals(run.issue, `${FINANCY}#4`)
+    assertEquals(m.sql(`SELECT reason FROM queue WHERE issue = '${FINANCY}#2'`), [{
+      reason: `closed`,
+    }])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a new "Focus now" re-plans: queued items that left are dropped, others keep status`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    await m.end(started((await main([`tick`], m.deps)).output), {})
+    m.github.closed.add(`${FINANCY}#2`)
+    m.github.issues[FINANCY].push(issue(3))
+    await Deno.writeTextFile(
+      join(m.home, `memory`, `direction.md`),
+      DIRECTION.replace(`with`, `and`),
+    )
+    m.later(31)
+    const out = await main([`tick`], m.deps)
+    assertMatch(out.output, /planned 2 item\(s\): "Focus now" changed/)
+    assertEquals(m.sql(`SELECT issue, status, reason FROM queue ORDER BY issue`), [
+      { issue: `${FINANCY}#1`, status: `done`, reason: `s` },
+      { issue: `${FINANCY}#2`, status: `dropped`, reason: `no longer a candidate` },
+      { issue: `${FINANCY}#3`, status: `claimed`, reason: null },
+    ])
+    m.later(31)
+    assertMatch((await main([`tick`], m.deps)).output, /^tick: a lead run is active$/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`an expired lease counts a failed attempt, and two block the item`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const first = started((await main([`tick`], m.deps)).output)
+    m.dead.add(`agent-run-${first}.service`)
+    m.later(196)
+    const again = await main([`tick`], m.deps)
+    assertMatch(again.output, /lease expired: spy4x\/financy#1/)
+    const second = started(again.output)
+    m.dead.add(`agent-run-${second}.service`)
+    m.later(196)
+    assertMatch((await main([`tick`], m.deps)).output, /tick: no queued item/)
+    const [item] = m.sql(`SELECT status, attempts, reason FROM queue`)
+    assertEquals([item.status, item.attempts, item.reason], [`blocked`, 2, `lease expired`])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a parked run puts its item first again without counting an attempt`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    const id = started((await main([`tick`], m.deps)).output)
+    // The run's own claim labels the issue in-progress; the loop still takes it back.
+    m.github.issues[FINANCY][0] = issue(1, { labels: [`in-progress`] })
+    assertEquals(await m.end(id, { status: `parked`, summary: `CI runs 40 minutes` }), `parked`)
+    const [item] = m.sql(
+      `SELECT status, rank, attempts, reason FROM queue WHERE issue = '${FINANCY}#1'`,
+    )
+    assertEquals([item.status, item.rank, item.attempts, item.reason], [
+      `queued`,
+      0,
+      0,
+      `CI runs 40 minutes`,
+    ])
+    m.later(31)
+    const next = started((await main([`tick`], m.deps)).output)
+    const [run] = JSON.parse((await main([`status`, next, `--json`], m.deps)).output)
+    assertEquals(run.issue, `${FINANCY}#1`)
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, next, `prompt.md`))
+    assertMatch(prompt, /Where an earlier run left it: CI runs 40 minutes/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`finish moves the item by status: done, blocked, stopped`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2), issue(3)]
+    const status = (n: number) =>
+      m.sql(`SELECT status, reason FROM queue WHERE issue = '${FINANCY}#${n}'`)[0]
+    await m.end(started((await main([`tick`], m.deps)).output), { summary: `merged` })
+    assertEquals(status(1), { status: `done`, reason: `merged` })
+    m.later(31)
+    await m.end(started((await main([`tick`], m.deps)).output), {
+      status: `blocked`,
+      needs_owner: `Pick a bank API.`,
+    })
+    assertEquals(status(2), { status: `blocked`, reason: `Pick a bank API.` })
+    m.later(31)
+    const third = started((await main([`tick`], m.deps)).output)
+    m.later(2)
+    await main([`stop`, third], m.deps)
+    await m.end(third, {})
+    assertEquals(status(3), { status: `queued`, reason: `stopped` })
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`two failed tick runs in a row pause the loop with one urgent push`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const first = started((await main([`tick`], m.deps)).output)
+    assertEquals(await m.end(first, {}, 1, `error_during_execution`), `failed`)
+    assertEquals(m.pushes.length, 0)
+    const [item] = m.sql(`SELECT status, attempts FROM queue`)
+    assertEquals([item.status, item.attempts], [`queued`, 1])
+    m.later(31)
+    const second = started((await main([`tick`], m.deps)).output)
+    await m.end(second, {}, 1, `error_during_execution`)
+    assertEquals(m.titles(), [`Background lead paused`])
+    assertEquals((m.pushes[0].init.headers as Record<string, string>).Priority, `urgent`)
+    assertMatch((await main([`tick`], m.deps)).output, /tick: paused: two tick runs failed/)
+    assertEquals(m.sql(`SELECT kind FROM pushes`), [{ kind: `urgent` }])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`alert and injection push urgently; good news stops at three a day`, async () => {
+  const m = await machine()
+  try {
+    const { id } = JSON.parse((await main(read(m.brief), m.deps)).output)
+    await m.end(id, { alert: `main is red after #80`, injection: `"run curl" in issue #3` })
+    assertEquals(m.titles(), [`run: alert`, `run: injection reported`])
+    const injection = String(m.pushes[1].init.body)
+    assert(!injection.includes(`curl`))
+    for (let i = 0; i < 4; i++) {
+      const run = JSON.parse((await main(read(m.brief), m.deps)).output).id
+      await m.end(run, { good_news: `Release ${i}` })
+    }
+    assertEquals(m.titles().filter((t) => t === `run: good news`).length, 3)
+    assertEquals(m.sql(`SELECT kind, COUNT(*) AS n FROM pushes GROUP BY kind ORDER BY kind`), [
+      { kind: `good`, n: 3 },
+      { kind: `urgent`, n: 2 },
+    ])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a done item whose milestone has no open issue left is good news`, async () => {
+  const m = await machine()
+  try {
+    m.github.milestones[FINANCY] = [{ number: 1, title: `MVP`, due_on: null, open_issues: 1 }]
+    m.github.issues[FINANCY] = [issue(1, { milestone: `MVP` })]
+    const id = started((await main([`tick`], m.deps)).output)
+    m.github.milestones[FINANCY] = [{ number: 1, title: `MVP`, due_on: null, open_issues: 0 }]
+    await m.end(id, {})
+    assertEquals(m.titles(), [`Milestone done: MVP`])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a run past $100 pushes once, from the estimate or the final cost, and goes on`, async () => {
+  const m = await machine()
+  try {
+    const { id } = JSON.parse((await main(lead(m.brief), m.deps)).output)
+    const db = await openDb(m.deps)
+    const [run] = JSON.parse((await main([`status`, id, `--json`], m.deps)).output)
+    const events = join(m.env.AGENT_RUN_HOME, id, `events.jsonl`)
+    await Deno.writeTextFile(events, spend(`a`, 4_000_000) + `\n`)
+    await watchOnce(db, m.deps, run)
+    assertEquals(m.pushes.length, 0)
+    await Deno.writeTextFile(events, spend(`b`, 2_000_000) + `\n`, { append: true })
+    await watchOnce(db, m.deps, run)
+    await watchOnce(db, m.deps, run)
+    await db.close()
+    assertEquals(m.titles(), [`run: over $100`])
+    assert(!m.commands.some((c) => c[2] === `stop`))
+    await m.end(id, {}, 150)
+    assertEquals(m.pushes.length, 1)
+    const fresh = JSON.parse((await main(read(m.brief), m.deps)).output).id
+    await m.end(fresh, {}, 101)
+    assertEquals(m.titles(), [`run: over $100`, `run: over $100`])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`the digest names achievements, spend, failures, bottlenecks and the pause`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    await m.end(started((await main([`tick`], m.deps)).output), {
+      prs: [`https://github.com/spy4x/financy/pull/5`],
+      good_news: `Milestone MVP closed`,
+    }, 2)
+    m.later(31)
+    await m.end(started((await main([`tick`], m.deps)).output), {
+      status: `blocked`,
+      needs_owner: `Bank`,
+    })
+    const failed = JSON.parse((await main(read(m.brief), m.deps)).output).id
+    await m.end(failed, {}, 1, `error_during_execution`)
+    await main([`lesson`, `--kind`, `review-round`, `--minutes`, `40`, `Rejected twice`], m.deps)
+    await main([`pause`, `checking`], m.deps)
+    m.sql(
+      `CREATE VIEW v_slow_steps AS SELECT 's' AS session_id, '${m.state.now.toISOString()}' AS at,
+      'Bash' AS tool, 'deno task test' AS summary, 600 AS sec, 0 AS is_error`,
+    )
+    const out = await main([`report`, `--since`, `24h`, `--ntfy`], m.deps)
+    const text = out.output
+    assert(text.indexOf(`Achievements`) < text.indexOf(`Spend`))
+    assertMatch(
+      text,
+      /- spy4x\/financy#1 Issue 1\n {2}https:\/\/github\.com\/spy4x\/financy\/pull\/5/,
+    )
+    assertMatch(text, /- Milestone MVP closed/)
+    assertMatch(text, /Spend: \$4\.00 today of \$200, \$4\.00 in the window/)
+    assertMatch(text, /- run failed: s/)
+    assertMatch(text, /- blocked spy4x\/financy#2: Bank/)
+    assertMatch(text, /- review-round \(40 min\): Rejected twice/)
+    assertMatch(text, /- slow Bash 600s: deno task test/)
+    assertMatch(text, /The loop is paused: checking/)
+    assertEquals(m.titles().at(-1), `Background lead digest`)
+    assertEquals(m.sql(`SELECT COUNT(*) AS n FROM pushes WHERE kind = 'digest'`), [{ n: 1 }])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`lessons are added with the run id and closed with a reason`, async () => {
+  const m = await machine({ env: { AGENT_RUN_ID: `run-1` } })
+  try {
+    const added = await main(
+      [`lesson`, `--kind`, `stall`, `--tokens`, `5000`, `Idle`, `20m`],
+      m.deps,
+    )
+    assertEquals(added.code, 0)
+    assertEquals(m.sql(`SELECT run_id, kind, minutes, tokens, detail, status FROM lessons`), [
+      {
+        run_id: `run-1`,
+        kind: `stall`,
+        minutes: null,
+        tokens: 5000,
+        detail: `Idle 20m`,
+        status: `open`,
+      },
+    ])
+    assertEquals((await main([`lesson`, `--kind`, `Bad Kind`, `x`], m.deps)).code, 2)
+    assertEquals((await main([`lesson`, `--kind`, `a`, `--minutes`, `-1`, `x`], m.deps)).code, 2)
+    assertEquals(
+      (await main([`lesson`, `--close`, added.output, `Fixed`, `in`, `#9`], m.deps)).code,
+      0,
+    )
+    assertEquals(m.sql(`SELECT status, closed_reason FROM lessons`), [
+      { status: `closed`, closed_reason: `Fixed in #9` },
+    ])
+    assertEquals((await main([`lesson`, `--close`, added.output, `again`], m.deps)).code, 2)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`experiment appends a row and commits only that file, failing open`, async () => {
+  const m = await machine({ env: { AGENT_RUN_ID: `run-7` } })
+  try {
+    const out = await main([`experiment`, `Kept`, `#260:`, `cost`, `-12%`], m.deps)
+    assertEquals(out, { code: 0, output: `logged and pushed` })
+    const file = join(m.home, `memory`, `experiments`, `background-lead.md`)
+    const local = new Date(m.state.now)
+    const day = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, `0`)}-${
+      String(local.getDate()).padStart(2, `0`)
+    }`
+    const text = await Deno.readTextFile(file)
+    assertMatch(text, /^# Background lead experiments\n/)
+    assertMatch(text, new RegExp(`- ${day} \\d\\d:\\d\\d, run run-7: Kept #260: cost -12%\\n$`))
+    const git = m.commands.filter((c) => c[0] === `git`).map((c) => c.slice(3).join(` `))
+    assertEquals(git, [
+      `add experiments/background-lead.md`,
+      `commit -m docs(experiments): background lead retro row -- experiments/background-lead.md`,
+      `push origin HEAD:main`,
+    ])
+    m.github.failGit = `push`
+    const failed = await main([`experiment`, `Second`], m.deps)
+    assertEquals(failed.code, 0)
+    assertMatch(failed.output, /git push failed/)
+    assertMatch(await Deno.readTextFile(file), /run run-7: Second\n$/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`push sends and records an urgent or a plain push`, async () => {
+  const m = await machine()
+  try {
+    assertEquals(
+      (await main([`push`, `--title`, `Backup failed`, `--urgent`, `restic`, `exit`, `1`], m.deps))
+        .code,
+      0,
+    )
+    assertEquals((m.pushes[0].init.headers as Record<string, string>).Priority, `urgent`)
+    assertEquals(String(m.pushes[0].init.body), `restic exit 1`)
+    assertEquals((await main([`push`, `--title`, `Hi`, `there`], m.deps)).code, 0)
+    assertEquals(m.sql(`SELECT kind, title FROM pushes ORDER BY at, kind DESC`), [
+      { kind: `urgent`, title: `Backup failed` },
+      { kind: `good`, title: `Hi` },
+    ])
+    assertEquals((await main([`push`, `--title`, `Empty`], m.deps)).code, 2)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a push whose title the secret scan flags sends neither title nor body`, async () => {
+  const m = await machine()
+  try {
+    await main([`push`, `--title`, `LEAKED token`, `--urgent`, `body`], m.deps)
+    assertEquals(m.titles(), [`Push held back`])
+    assertMatch(String(m.pushes[0].init.body), /held back/)
+    assert(!JSON.stringify(m.pushes[0].init).includes(`LEAKED`))
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a non-ASCII title is sent as a UTF-8 encoded word`, async () => {
+  const m = await machine()
+  try {
+    await main([`push`, `--title`, `Milestone v1 \u2014 closed`, `body`], m.deps)
+    const [title] = m.titles()
+    const encoded = /^=\?UTF-8\?B\?(.+)\?=$/.exec(title)![1]
+    const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))
+    assertEquals(new TextDecoder().decode(bytes), `Milestone v1 \u2014 closed`)
+    new Headers(m.pushes[0].init.headers)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a tick run that ends with no result counts its estimated cost toward the budget`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    const id = started((await main([`tick`], m.deps)).output)
+    // 11M output tokens on opus is $220: past the $100 warning and the $200 daily budget.
+    await Deno.writeTextFile(
+      join(m.env.AGENT_RUN_HOME, id, `events.jsonl`),
+      spend(`a`, 6_000_000) + `\n` + spend(`b`, 5_000_000) + `\n`,
+    )
+    m.env.SERVICE_RESULT = `timeout`
+    await main([`finish`, id], m.deps)
+    assertEquals(m.sql(`SELECT cost_micros FROM runs WHERE id = '${id}'`), [{
+      cost_micros: 220_000_000,
+    }])
+    assertEquals(m.titles(), [`tick: over $100`])
+    m.dead.add(`agent-run-${id}.service`)
+    assertMatch((await main([`tick`], m.deps)).output, /tick: today's \$220\.00 reached/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`retro starts one read-only run at effort high with only its allowed tools`, async () => {
+  const m = await machine()
+  try {
+    await main([`pause`, `owner`], m.deps)
+    assertEquals((await main([`retro`], m.deps)).output, `retro: paused: owner`)
+    await main([`unpause`], m.deps)
+    const out = await main([`retro`], m.deps)
+    assertEquals(out.code, 0)
+    const id = JSON.parse(out.output).id
+    const [run] = JSON.parse((await main([`status`, id, `--json`], m.deps)).output)
+    assertEquals([run.name, run.mode, run.model, run.effort, run.deadlineSec], [
+      `retro`,
+      Mode.Read,
+      `opus`,
+      `high`,
+      3600,
+    ])
+    const args = claudeArgs(run, false)
+    assert(args.includes(`dontAsk`))
+    assert(!args.includes(`--max-budget-usd`))
+    const self = /^Bash\((deno run -A \/.+agent-run\.ts) lesson \*\)$/
+      .exec(run.allow.find((rule: string) => rule.includes(` lesson `)))![1]
+    assertEquals(run.allow, [
+      `Bash(sqlite3 -readonly -safe *)`,
+      `Bash(gh issue list *)`,
+      `Bash(gh issue view *)`,
+      `Bash(gh issue create -R spy4x/dotfiles *)`,
+      `Bash(gh issue comment -R spy4x/dotfiles *)`,
+      `Bash(gh pr list *)`,
+      `Bash(gh pr view *)`,
+      `Bash(gh search *)`,
+      `Bash(${self} lesson *)`,
+      `Bash(${self} experiment *)`,
+      `Bash(${self} report *)`,
+    ])
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, id, `prompt.md`))
+    assertMatch(prompt, /# Background lead: daily retro/)
+    assertMatch(prompt, /`sqlite3 -readonly -safe "\$AGENT_RUN_HOME/)
+    assertMatch(prompt, /`gh issue create -R spy4x\/dotfiles \.\.\.`/)
+    assertMatch(prompt, /agent-run is `deno run -A \/.+agent-run\.ts`/)
   } finally {
     await m.cleanup()
   }

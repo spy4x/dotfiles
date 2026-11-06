@@ -1,7 +1,7 @@
-# Pushes what the headless runs of the last day achieved, spent and got stuck on. Runs from
+# Pushes the digest of the last day: achievements, spend, failures and bottlenecks. Runs from
 # agent-report.timer. See docs/headless-runs.md.
 [Unit]
-Description=Push the daily headless-run report
+Description=Push the background lead digest
 
 [Service]
 Type=oneshot
