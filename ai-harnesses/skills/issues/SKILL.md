@@ -16,8 +16,9 @@ priority:
 
 - A repo with an open milestone → the candidates are the issues in it (several open: the one due
   first; none left to take there → the next, then the backlog), whatever their priority label, plus
-  any `p1-critical` issue. Nothing else is picked. An issue you file outside it is reported as
-  waiting for me to add it (the library exception aside).
+  any `p1-critical` issue, plus, in `spy4x/dotfiles`, any `p2-high` tooling or flow fix. Nothing
+  else is picked. An issue you file outside it is reported as waiting for me to add it (the library
+  exception and dotfiles tooling aside).
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker
@@ -36,7 +37,9 @@ nearest milestone.
 Priority labels, five levels:
 
 - `p1-critical`: urgent tasks and critical bugs.
-- `p2-high`: work a project or consumer app needs.
+- `p2-high`: work a project or consumer app needs, and tooling and flow fixes in `spy4x/dotfiles`
+  (the tools, skills, hooks and settings agents work with), because better tools get more work
+  done.
 - `p3-medium`: the default. An issue with no priority label is `p3-medium`.
 - `p4-low`: parked. An agent never picks it; I raise it when I want it.
 - `p5-someday`: ideas and nice-to-haves. Never picked either.
@@ -57,7 +60,8 @@ repository goes in your report. Before the final report:
 2. **Give it a priority.** Every finding that survived step 1 is filed, grouped as step 4 says,
    because a finding left in a report is lost. Only a finding about a repository outside `spy4x/*`
    stays in the report. The priority says whether a wave builds it:
-   - `p3-medium`, or higher only for a security or data-loss hole or the library exception:
+   - `p3-medium`, or higher only for a security or data-loss hole, the library exception or the
+     tooling case below:
      - a security hole that someone other than the data's owner can trigger on purpose, however
        unusual the input;
      - data loss that the ordinary action reaches, or that happens under a condition the code
@@ -67,9 +71,11 @@ repository goes in your report. Before the final report:
      - a gap that stops a lane running now: name the issue it blocks. It is the smallest change
        that unblocks it. A library gap an app needs: the library exception;
      - a small fix to what a person sees or reads (contrast, spacing, a wording, a wrong doc line).
+   - `p2-high`: a tooling or flow fix in `spy4x/dotfiles` that makes agents' work faster or
+     cheaper, tooling polish included.
    - `p4-low`, parked until I raise it: everything else that is true, such as a failure that needs
-     unusual input, rare timing or two faults at once, a missing test, a refactor, tooling
-     polish or a nicer name.
+     unusual input, rare timing or two faults at once, a missing test, a refactor or a nicer
+     name.
 
    Name what is at stake, or it is none of the `p3-medium` kinds. A security hole lets someone read
    or change data that is not theirs, act as another user, get in without credentials, run code, or

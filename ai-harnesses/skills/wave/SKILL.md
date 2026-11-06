@@ -26,7 +26,8 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
   `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
   owner put the issue there, and that outranks its priority label. Run it once more with
   `label:p1-critical` in place of the milestone. A milestone with no candidate left → the next
-  one, and after the last, the first search above. Nothing else is a candidate. An issue outside a
+  one, and after the last, the first search above. In `spy4x/dotfiles`, `p2-high` tooling and flow
+  fixes are candidates too, milestone or not. Nothing else is a candidate. An issue outside a
   milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
   (the `Asked for by the owner` line, a comment of theirs without the marker that says to build it,
   or a priority raised after filing: "Picking work yourself" in the `issues` skill), or when step 2

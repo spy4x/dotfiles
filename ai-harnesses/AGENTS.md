@@ -58,7 +58,8 @@ In this order, each part only when it has content:
 
 Nothing else: no review rounds, holes found and fixed, failed attempts or retries; no defaults taken
 (they are in the PR bodies); no per-agent costs; no "None" lines; no word on a clean sweep or a
-finished cleanup.
+finished cleanup. The background lead's daily digest names failures and bottlenecks too, since
+they are what its retro improves (`dotfiles/docs/headless-runs.md`).
 
 A request I make in chat is started now. A plan, a schedule or a milestone date never makes an agent
 refuse or postpone it; the milestone limits of the `issues` skill apply only to work you pick
@@ -114,7 +115,9 @@ package list, a token's name.
 is never enough: it says what to build, never how agents work. A rule you find missing or wrong, or
 one your task has made untrue, stays as written: name it under **Needs you** in your report. A fact
 is not a rule: update it in the change that makes it true. What these rules order is fine too:
-protecting a new repo's default branch, and a CI step for a check your task adds.
+protecting a new repo's default branch, and a CI step for a check your task adds. The background
+lead may change its own files (`tools/agent-run.ts`, its tests, its briefs and its `agent-*` units
+in dotfiles) through the reviewer gate, so it can improve its own flow.
 
 Before you change a rule or a check, or review such a change, load the `writing-rules` skill: one
 source, one place per rule, current state, trials, size budgets, machine checks, wording, review.
@@ -376,8 +379,8 @@ top-level directory, and the lead merges their lists: past 100,000 prompt tokens
 costs five times as much (`ai-memory/experiments/haiku55-and-mods.md`). Architecture and final
 verdicts stay with the lead. Fresh subagents over forks (a fork copies the whole conversation).
 
-**Effort.** `medium` for sessions, leads, implementers and every review. Effort belongs to the agent
-type, not to the call.
+**Effort.** `medium` for sessions, leads, implementers and every review, except the background
+lead's daily retro, which runs at `high`. Effort belongs to the agent type, not to the call.
 
 # Language style
 
