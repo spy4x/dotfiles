@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@spy4x/platform": "jsr:@spy4x/platform@1.116.0",
+    "@spy4x/platform": "jsr:@spy4x/platform@1.118.0",
     "@spy4x/preact-charts": "jsr:@spy4x/preact-charts@14.0.0",
     "@spy4x/preact-theme": "jsr:@spy4x/preact-theme@14.0.0",
     "@spy4x/preact-ui": "jsr:@spy4x/preact-ui@14.0.0",

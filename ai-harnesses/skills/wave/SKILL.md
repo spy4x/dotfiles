@@ -167,7 +167,10 @@ as a complete brief. It always makes one of those calls first. When the app refu
 starts the next wave with `tools/agent-run.ts start --mode lead` and names the run id in the report;
 only when that refuses too does a proposal card for that session become the handoff. A harness
 without these tools, such as a plain terminal, ends the report with the prompt instead, ready to
-paste. Write no prompt file. With no next wave, it starts nothing.
+paste. Write no prompt file. A headless run (`AGENT_RUN_ID` set, nobody watching) makes none of
+these calls: it ends with status `parked` and the handoff in its result's `handoff` field, and the
+next tick continues from it (dotfiles `docs/headless-runs.md`). With no next wave, it starts
+nothing.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`

@@ -419,13 +419,21 @@ export function compactionsSoFar(texts: readonly string[]): number {
 
 /**
  * The text appended after compaction number `count`: the mark alone, and from the second one on
- * the order to hand off (the `wave` skill's rule for a lead that compacted twice).
+ * the order to hand off (the `wave` skill's rule for a lead that compacted twice). A headless
+ * run (`AGENT_RUN_ID` set, `tools/agent-run.ts`) has nobody to paste a prompt, so it parks with
+ * the handoff in its final answer, which the next tick continues from.
  */
-export function compactionNotice(count: number): string {
+export function compactionNotice(count: number, headless = false): string {
   const mark = `${COMPACTIONS_MARK}${count}`
   if (count < HANDOFF_AFTER) return mark
-  return `${mark}\n\nThis session has now compacted ${count} times, and every later turn ` +
-    `re-reads what is left. Finish the step in hand, then write the handoff the \`wave\` ` +
+  const intro = `${mark}\n\nThis session has now compacted ${count} times, and every later turn ` +
+    `re-reads what is left.`
+  if (headless) {
+    return `${intro} Finish the step in hand, then end the run with status \`parked\` and the ` +
+      `handoff the \`wave\` skill describes ("The handoff") in the \`handoff\` field of your ` +
+      `final answer: the next tick continues from it. Start nothing new in this run.`
+  }
+  return `${intro} Finish the step in hand, then write the handoff the \`wave\` ` +
     `skill describes ("The handoff") and hand the rest of the work to a new session: in the ` +
     `Claude desktop app with \`mcp__ccd_session__hand_off_to_session\`; in a terminal, end your ` +
     `reply with the next session's prompt, ready to paste. Start nothing new in this session.`

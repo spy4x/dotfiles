@@ -15,8 +15,9 @@ import {
   type Run,
   unitCommand,
   watchOnce,
+  whyNot,
 } from "./agent-run.ts"
-import type { Issue, Milestone } from "./agent-queue.ts"
+import { claim, type Issue, type Milestone } from "./agent-queue.ts"
 
 const USAGE = (weekly: number, reset = `Nov 11, 2am (Asia/Ho_Chi_Minh)`, session = 4) =>
   `Current session: ${session}% used · resets Nov 6, 5:20pm (Asia/Ho_Chi_Minh)\n` +
@@ -693,6 +694,235 @@ Deno.test(`a parked run puts its item first again without counting an attempt`, 
     assertEquals(run.issue, `${FINANCY}#1`)
     const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, next, `prompt.md`))
     assertMatch(prompt, /Where an earlier run left it: CI runs 40 minutes/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+const HANDOFF = `Branch feat/x, PR #7 open, CI red on lint.\nNext: fix lint, then merge.`
+
+Deno.test(`a parked tick run's handoff reaches the next tick's brief once, verbatim, then clears`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const id = started((await main([`tick`], m.deps)).output)
+    await m.end(id, { status: `parked`, summary: `Compacted twice`, handoff: HANDOFF })
+    m.later(31)
+    const next = started((await main([`tick`], m.deps)).output)
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, next, `prompt.md`))
+    assert(prompt.includes(`## The last run's handoff\n\n${HANDOFF}\n\n## Open lessons`))
+    await m.end(next, { status: `done` })
+    const [item] = m.sql(`SELECT status, handoff FROM queue WHERE issue = '${FINANCY}#1'`)
+    assertEquals([item.status, item.handoff], [`done`, null])
+    // The parked tick run no longer owns the item, yet its handoff travelled there: never continued.
+    m.later(31)
+    const after = await main([`tick`], m.deps)
+    assert(!after.output.includes(`continue`), after.output)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`tick continues a parked lead run without a queue item once, from its handoff`, async () => {
+  const m = await machine()
+  try {
+    const id = JSON.parse((await main(lead(m.brief, [`--name`, `wave`]), m.deps)).output).id
+    await m.end(id, { status: `parked`, handoff: HANDOFF })
+    const units = () => m.commands.filter((c) => c[0] === `systemd-run`).length
+    const before = units()
+    const out = await main([`tick`], m.deps)
+    assertMatch(out.output, new RegExp(`tick: continue ${id}`))
+    assertEquals(units(), before + 1)
+    const next = started(out.output)
+    const [run] = JSON.parse((await main([`status`, next, `--json`], m.deps)).output)
+    assertEquals([run.name, run.mode, run.cwd, run.parent], [`wave`, Mode.Lead, `/tmp`, null])
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, next, `prompt.md`))
+    assertEquals(prompt, HANDOFF)
+    await m.end(next, { status: `done` })
+    m.later(31)
+    const second = await main([`tick`], m.deps)
+    assert(!second.output.includes(`continue`), second.output)
+    assertEquals(units(), before + 1)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`limit stores the lead limit, status shows it, and a bad value is refused`, async () => {
+  const m = await machine()
+  try {
+    assertEquals((await main([`limit`], m.deps)).output, `leads: 1`)
+    assertEquals((await main([`limit`, `--leads`, `0`], m.deps)).code, 2)
+    assertEquals((await main([`limit`, `--leads`, `3`], m.deps)).output, `leads: 3`)
+    assertEquals((await main([`status`], m.deps)).output, `lead limit: 3`)
+    for (let i = 0; i < 3; i++) assertEquals((await main(lead(m.brief), m.deps)).code, 0)
+    assertMatch((await main(lead(m.brief), m.deps)).output, /3 lead run\(s\) already active/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`with the limit at 2, tick fills the free slot and starts none when both are taken`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2), issue(3)]
+    await main([`limit`, `--leads`, `2`], m.deps)
+    const first = started((await main(lead(m.brief), m.deps)).output)
+    const out = await main([`tick`], m.deps)
+    // Both tick leads share the cwd ~/sync/code; only another writing run's cwd blocks a start.
+    const second = started(out.output)
+    const [run] = JSON.parse((await main([`status`, second, `--json`], m.deps)).output)
+    assertEquals(run.issue, `${FINANCY}#1`)
+    m.later(31)
+    assertMatch((await main([`tick`], m.deps)).output, /^tick: 2 lead runs are active$/)
+    await m.end(first, {})
+    await m.end(second, {})
+    m.later(31)
+    const both = await main([`tick`], m.deps)
+    assertMatch(both.output, /tick: spy4x\/financy#2\n.*\ntick: spy4x\/financy#3\n/)
+    const claimed = m.sql(`SELECT issue FROM queue WHERE status = 'claimed' ORDER BY issue`)
+    assertEquals(claimed.map((row) => row.issue), [`${FINANCY}#2`, `${FINANCY}#3`])
+    const ticks = m.sql(`SELECT DISTINCT cwd FROM runs WHERE name = 'tick'`)
+    assertEquals(ticks, [{ cwd: join(m.home, `sync`, `code`) }])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`two leads may share a cwd, but a write run shares it with no writing run`, async () => {
+  const m = await machine()
+  try {
+    const tree = join(m.home, `tree`)
+    await Deno.mkdir(tree)
+    await Deno.writeTextFile(join(tree, `.git`), `gitdir: /elsewhere\n`)
+    const at = (mode: Mode, id: string): Run => ({ ...RUN, id, mode, model: `opus`, cwd: tree })
+    const leadRun = at(Mode.Lead, `lead`)
+    assertEquals(await whyNot(at(Mode.Lead, `other`), [leadRun], m.deps, null, 2), null)
+    const held = /another writing run holds/
+    assertMatch((await whyNot(at(Mode.Write, `w`), [leadRun], m.deps, null, 2))!, held)
+    assertMatch((await whyNot(at(Mode.Lead, `l`), [at(Mode.Write, `w`)], m.deps, null, 2))!, held)
+    assertMatch((await whyNot(at(Mode.Write, `w2`), [at(Mode.Write, `w`)], m.deps, null))!, held)
+    assertEquals(await whyNot(at(Mode.Write, `w`), [at(Mode.Read, `r`)], m.deps, null), null)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`of two claims on one queued item exactly one wins`, async () => {
+  const m = await machine()
+  try {
+    const [a, b] = [await openDb(m.deps), await openDb(m.deps)]
+    try {
+      m.sql(`INSERT INTO queue (issue, title, source, rank, status, planned_at, updated_at)
+        VALUES ('${FINANCY}#1', 'Issue 1', 'backlog', 1, 'queued', 'x', 'x')`)
+      const until = new Date(m.state.now.getTime() + 60_000)
+      const won = await Promise.all([
+        claim(a, m.deps, `${FINANCY}#1`, `run-a`, until),
+        claim(b, m.deps, `${FINANCY}#1`, `run-b`, until),
+      ])
+      assertEquals(won.filter(Boolean).length, 1)
+      const [item] = m.sql(`SELECT status, run_id FROM queue`)
+      assertEquals([item.status, item.run_id], [`claimed`, won[0] ? `run-a` : `run-b`])
+    } finally {
+      await a.close()
+      await b.close()
+    }
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`two bold names under "Focus now" plan items from both repositories`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(
+      join(m.home, `memory`, `direction.md`),
+      DIRECTION.replace(`the libraries`, `**Seed**`),
+    )
+    m.github.issues[FINANCY] = [issue(1)]
+    m.github.issues[`spy4x/seed`] = [issue(2)]
+    assertMatch((await main([`tick`], m.deps)).output, /planned 2 item\(s\)/)
+    assertEquals(m.sql(`SELECT issue FROM queue ORDER BY rank`).map((row) => row.issue), [
+      `${FINANCY}#1`,
+      `spy4x/seed#2`,
+    ])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a refused continuation is skipped for the queue, and given up after two refusals`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    const id = JSON.parse((await main(lead(m.brief, [`--name`, `wave`]), m.deps)).output).id
+    await m.end(id, { status: `parked`, handoff: HANDOFF })
+    // Its model left `MODELS`: no later tick can continue it.
+    m.sql(`UPDATE runs SET model = 'sonnet' WHERE id = '${id}'`)
+    const skipped = new RegExp(`skipped continue ${id}: --model must be one of`)
+    const first = await main([`tick`], m.deps)
+    assertMatch(first.output, skipped)
+    assertMatch(first.output, /tick: spy4x\/financy#1\n/)
+    await m.end(started(first.output), {})
+    m.later(31)
+    const second = await main([`tick`], m.deps)
+    assertMatch(second.output, skipped)
+    await m.end(started(second.output), {})
+    m.later(31)
+    assert(!(await main([`tick`], m.deps)).output.includes(`skipped`))
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`tick skips a queued item another run works on and starts the next`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    await main([...read(m.brief), `--issue`, `${FINANCY}#1`], m.deps)
+    const out = await main([`tick`], m.deps)
+    assertMatch(out.output, /skipped spy4x\/financy#1: another run works on spy4x\/financy#1\n/)
+    const [run] = JSON.parse((await main([`status`, started(out.output), `--json`], m.deps)).output)
+    assertEquals(run.issue, `${FINANCY}#2`)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`with free slots, tick checks the usage again before each start`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    await main([`limit`, `--leads`, `2`], m.deps)
+    const units = () => m.commands.filter((c) => c[0] === `systemd-run`).length
+    m.deps.run = ((run) => (command: string[]) =>
+      command[0] === `claude` && units() > 0
+        ? Promise.resolve({ success: true, code: 0, stdout: USAGE(10, `x`, 91), stderr: `` })
+        : run(command))(m.deps.run)
+    const out = await main([`tick`], m.deps)
+    assertMatch(out.output, /tick: spy4x\/financy#1\n.*\ntick: session usage at 91%$/)
+    assertEquals(units(), 1)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`an old queue gains the handoff column and keeps its rows`, async () => {
+  const m = await machine()
+  try {
+    await Deno.mkdir(m.env.AGENT_RUN_HOME, { recursive: true })
+    const old = new DatabaseSync(join(m.env.AGENT_RUN_HOME, `runs.sqlite`))
+    old.exec(`CREATE TABLE queue (issue TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL,
+      rank INTEGER NOT NULL, status TEXT NOT NULL, reason TEXT, attempts INTEGER NOT NULL DEFAULT 0,
+      lease_until TEXT, run_id TEXT, planned_at TEXT NOT NULL, updated_at TEXT NOT NULL) STRICT`)
+    old.exec(`INSERT INTO queue (issue, title, source, rank, status, planned_at, updated_at)
+      VALUES ('spy4x/financy#1', 'One', 'p1', 1, 'queued', 'x', 'x')`)
+    old.close()
+    await main([`status`], m.deps)
+    await main([`status`], m.deps)
+    assertEquals(m.sql(`SELECT issue, handoff FROM queue`), [
+      { issue: `spy4x/financy#1`, handoff: null },
+    ])
   } finally {
     await m.cleanup()
   }

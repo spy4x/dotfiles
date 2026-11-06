@@ -102,14 +102,17 @@ export const register: Register = (on) => {
   // tells the session to hand off. The count lives in that message, so the next compaction reads
   // it back from `e.messages`. Fail-open: it never vetoes, and any error keeps the compaction as
   // the engine made it. A subagent's compaction and a precompute (which installs nothing) pass.
-  on(`session.compact`, async (_$, e, next) => {
+  // A headless run (`AGENT_RUN_ID` set) is told to park with its handoff instead.
+  on(`session.compact`, async ($, e, next) => {
     const compacted = await next(e)
     if (e.agentId !== undefined || e.trigger === `precompute` || compacted.skip !== undefined) {
       return compacted
     }
     try {
       const count = compactionsSoFar(e.messages.map((message) => message.text)) + 1
-      const notice = { role: `user` as const, text: compactionNotice(count), toolUses: [] }
+      const headless = Boolean(await $.env.get(`AGENT_RUN_ID`).catch(() => undefined))
+      const text = compactionNotice(count, headless)
+      const notice = { role: `user` as const, text, toolUses: [] }
       return { ...compacted, messages: [...compacted.messages, notice] }
     } catch {
       return compacted
