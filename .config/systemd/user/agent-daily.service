@@ -1,9 +1,0 @@
-# Starts the day's background lead on the focus project, capped at 5 points of the weekly limit.
-# Runs from agent-daily.timer; the lead itself runs in its own agent-run-<id> unit. See
-# docs/headless-runs.md.
-[Unit]
-Description=Start the daily background lead
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/env deno run -A %h/sync/code/dotfiles/tools/agent-run.ts start --mode lead --model opus --effort medium --cwd %h/sync/code --name daily-focus --deadline 20h --budget-usd 50 --max-turns 500 --weekly-cap 5 --brief %h/sync/code/dotfiles/tools/agent-daily-brief.md
