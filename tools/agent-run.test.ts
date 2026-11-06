@@ -24,6 +24,8 @@ async function machine(
 ) {
   const home = await Deno.makeTempDir()
   const commands: string[][] = []
+  /** Units that died without `finish`; every other unit is active. */
+  const dead = new Set<string>()
   const pushes: { url: string; init: RequestInit }[] = []
   const state = { weekly: options.weekly ?? 40, now: new Date(`2026-11-06T18:00:00Z`) }
   const env: Record<string, string> = {
@@ -44,6 +46,15 @@ async function machine(
       commands.push(command)
       if (command[0] === `claude`) return Promise.resolve(result(USAGE(state.weekly)))
       if (command[0] === `gh`) return Promise.resolve(result(`${options.author ?? `spy4x`}\n`))
+      // Stopping a unit removes it; `finish` does not run in the tests.
+      if (command[0] === `systemctl` && command[2] === `stop`) dead.add(command[3])
+      if (command[0] === `systemctl` && command[2] === `is-active`) {
+        return Promise.resolve(result(dead.has(command[3]) ? `inactive\n` : `active\n`))
+      }
+      if (command[0] === `gitleaks`) {
+        const flagged = Deno.readTextFileSync(command.at(-1)!).includes(`LEAKED`)
+        return Promise.resolve({ ...result(``), success: !flagged, code: flagged ? 1 : 0 })
+      }
       return Promise.resolve(result(``))
     },
     fs: runtimeFileSystem,
@@ -64,7 +75,7 @@ async function machine(
     `NTFY_URL=https://ntfy.example.com\nNTFY_TOPIC=runs\nNTFY_TOKEN=tk\n`,
   )
   const cleanup = () => Deno.remove(home, { recursive: true })
-  return { deps, commands, pushes, state, env, brief, home, cleanup }
+  return { deps, commands, pushes, state, env, brief, home, dead, cleanup }
 }
 
 function lead(brief: string, extra: string[] = []): string[] {
@@ -139,6 +150,10 @@ Deno.test(`the unit keeps only the allowed variables`, () => {
   assert(!joined.includes(`SSH_AUTH_SOCK`))
   assert(!joined.includes(`GH_TOKEN`))
   assert(!joined.includes(`undefined`))
+  assertEquals(
+    command.slice(command.indexOf(`/usr/bin/env`), command.indexOf(`/usr/bin/env`) + 2),
+    [`/usr/bin/env`, `-i`],
+  )
   assert(command.includes(`HOME=/h`))
   assert(command.includes(`AGENT_RUN_ID=${RUN.id}`))
   assert(command.includes(`RuntimeMaxSec=60`))
@@ -286,8 +301,68 @@ Deno.test(`stop marks the run and stops its unit`, async () => {
   const m = await machine({})
   try {
     const { id } = JSON.parse((await main(lead(m.brief), m.deps)).output)
+    m.state.now = new Date(m.state.now.getTime() + 120_000)
     assertEquals((await main([`stop`, id], m.deps)).output, `${id}: stopped`)
     assert(m.commands.some((c) => c.join(` `) === `systemctl --user stop agent-run-${id}.service`))
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`resume refuses while another lead is active`, async () => {
+  const m = await machine({})
+  try {
+    const old = JSON.parse((await main(lead(m.brief), m.deps)).output).id
+    m.dead.add(`agent-run-${old}.service`)
+    m.state.now = new Date(m.state.now.getTime() + 120_000)
+    const today = await main(lead(m.brief), m.deps)
+    assertEquals(today.code, 0)
+    const resumed = await main([`resume`, old, `--brief`, m.brief], m.deps)
+    assertEquals(resumed.code, 2)
+    assertMatch(resumed.output, /lead run\(s\) already active/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a run whose unit died no longer blocks a start, and stop closes it`, async () => {
+  const m = await machine({})
+  try {
+    const first = JSON.parse((await main(lead(m.brief), m.deps)).output).id
+    assertMatch((await main(lead(m.brief), m.deps)).output, /already active/)
+    m.dead.add(`agent-run-${first}.service`)
+    m.state.now = new Date(m.state.now.getTime() + 120_000)
+    assertEquals((await main([`stop`, first], m.deps)).output, `${first}: failed`)
+    const again = await main(lead(m.brief), m.deps)
+    assertEquals(again.code, 0)
+    const id = JSON.parse(again.output).id
+    m.state.now = new Date(m.state.now.getTime() + 120_000)
+    await main([`stop`, id], m.deps)
+    const [run] = JSON.parse((await main([`status`, id, `--json`], m.deps)).output)
+    assertEquals(run.status, `stopped`)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a push the secret scan flags carries no model text`, async () => {
+  const m = await machine({})
+  try {
+    const { id } = JSON.parse((await main(lead(m.brief), m.deps)).output)
+    const result = {
+      type: `result`,
+      subtype: `success`,
+      structured_output: { status: `blocked`, summary: `s`, prs: [], needs_owner: `LEAKED` },
+    }
+    await Deno.writeTextFile(
+      join(m.env.AGENT_RUN_HOME, id, `events.jsonl`),
+      JSON.stringify(result) + `\n`,
+    )
+    await main([`finish`, id], m.deps)
+    assertEquals(m.pushes.length, 1)
+    const body = String(m.pushes[0].init.body)
+    assert(!body.includes(`LEAKED`))
+    assertMatch(body, /held back/)
   } finally {
     await m.cleanup()
   }

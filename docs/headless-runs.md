@@ -84,6 +84,10 @@ systemd-run --user --unit=agent-run-<id>.service --collect \
   `stopped`. It stores the cost, turns, weekly level and answer, then sends the push.
 - `env -i` drops the rest of the user manager's environment (`SSH_AUTH_SOCK` among it). `gh` signs
   in through the keyring over D-Bus, so the bus address stays.
+- A row still marked running whose unit is gone (it died before `finish`, or the machine lost
+  power) is closed as `failed`, or `stopped` after `agent-run stop`, the next time any command
+  lists the active runs, so it never blocks the next night's lead. `resume` runs the same checks as
+  `start`.
 - Stopping the unit kills its cgroup. Docker containers, child runs and units a run starts itself
   escape it, so `stop` stops child runs first.
 
@@ -116,7 +120,8 @@ The result schema every run fills:
 The push uses `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from `ai-harnesses/.env` and fails open.
 Its title is `<name>: <status>`, priority high unless the run is done. The body holds the issue,
 the PRs, the cost and weekly usage, `needs_owner`, and `claude --resume <id>` to step in; an
-injection report says only to look at the run.
+injection report says only to look at the run. Before sending, `gitleaks` scans the title and body;
+when it flags something or cannot run, the body says only to read the run on the machine.
 
 To step in: answer through a lead, which runs `agent-run resume <id> --brief -`; or take the run
 over with `agent-run stop <id>`, then `claude --resume <id>`.

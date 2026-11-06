@@ -67,6 +67,9 @@ const SELF = fromFileUrl(import.meta.url)
 const DOTFILES = dirname(dirname(SELF))
 const USAGE_POLL_MS = 5 * 60_000
 const INGEST_POLL_MS = 60_000
+const USAGE_TIMEOUT_MS = 60_000
+/** `systemctl is-active` states of a unit that still exists. */
+const ALIVE = [`active`, `activating`, `deactivating`, `reloading`, `refreshing`]
 
 /** The schema every run's final answer must fill (`--json-schema`). */
 export const RESULT_SCHEMA = {
@@ -304,7 +307,10 @@ export function finalStatus(
   return `failed`
 }
 
-/** The push title, priority and body for an ended run. No tool output and no model prose. */
+/**
+ * The push title, priority and body for an ended run. No tool output; the only model text is
+ * `needs_owner`, and `notify` scans the body for secrets before it is sent.
+ */
 export function pushFor(run: Run): { title: string; priority: string; body: string } {
   const urgent = [`blocked`, `failed`, `timeout`, `budget`, `turns`].includes(run.status)
   const lines = [
@@ -384,7 +390,8 @@ CREATE TABLE IF NOT EXISTS runs (
   cost_micros INTEGER,
   turns INTEGER,
   weekly_end INTEGER,
-  result TEXT
+  result TEXT,
+  events_offset INTEGER NOT NULL DEFAULT 0
 ) STRICT;
 CREATE TABLE IF NOT EXISTS events (
   run_id TEXT NOT NULL REFERENCES runs(id),
@@ -399,6 +406,7 @@ CREATE INDEX IF NOT EXISTS events_by_run ON events(run_id, at);
 export async function openDb(deps: Deps): Promise<SqliteDb> {
   const home = stateHome(deps)
   await deps.fs.mkdirp(home)
+  await deps.run([`chmod`, `700`, home])
   const db = await openSqliteDb({
     path: join(home, `runs.sqlite`),
     createDriver: ({ path }) => new DatabaseSync(path),
@@ -442,9 +450,37 @@ async function getRun(db: SqliteDb, id: string): Promise<Run | null> {
   return row ? rowToRun(row) : null
 }
 
-async function activeRuns(db: SqliteDb): Promise<Run[]> {
+/**
+ * The runs still going. A row marked running whose unit is gone (it died before `finish` ran) is
+ * closed here as stopped or failed, so it never blocks later starts.
+ */
+async function activeRuns(db: SqliteDb, deps: Deps): Promise<Run[]> {
   const rows = await db.queryAll(`SELECT * FROM runs WHERE status = 'running' ORDER BY started_at`)
-  return rows.map(rowToRun)
+  const active: Run[] = []
+  for (const run of rows.map(rowToRun)) {
+    const state = (await deps.run([`systemctl`, `--user`, `is-active`, unitName(run.id)])).stdout
+      .trim()
+    // No answer means systemd could not be asked, and a row a minute old may still be starting
+    // its unit: keep both rather than guess.
+    const young = deps.now().getTime() - Date.parse(run.startedAt) < 60_000
+    if (state === `` || young || ALIVE.includes(state)) {
+      active.push(run)
+      continue
+    }
+    const stopped = await db.queryOne(
+      `SELECT 1 FROM events WHERE run_id = ? AND kind = 'stop'`,
+      run.id,
+    )
+    const status = stopped ? `stopped` : `failed`
+    await db.execute(
+      `UPDATE runs SET status = ?, ended_at = ? WHERE id = ? AND status = 'running'`,
+      status,
+      deps.now().toISOString(),
+      run.id,
+    )
+    await addEvent(db, deps, run.id, `end`, `${status} (unit ${state} without finish)`)
+  }
+  return active
 }
 
 async function insertRun(db: SqliteDb, run: Run): Promise<void> {
@@ -502,7 +538,9 @@ export function parseFlags(args: string[]): { flags: Map<string, string[]>; rest
 }
 
 async function readUsage(deps: Deps): Promise<Usage | null> {
-  const out = await deps.run([`claude`, `-p`, `/usage`, `--no-session-persistence`])
+  const out = await deps.run([`claude`, `-p`, `/usage`, `--no-session-persistence`], {
+    signal: AbortSignal.timeout(USAGE_TIMEOUT_MS),
+  })
   return out.success ? parseUsage(out.stdout) : null
 }
 
@@ -577,7 +615,7 @@ async function startRun(deps: Deps, flags: Map<string, string[]>): Promise<Outco
       cwd,
       parent: from ? from.parent : deps.env(`AGENT_RUN_ID`) ?? null,
       issue: one(`issue`) ?? null,
-      deadlineSec: parseDuration(one(`deadline`) ?? `2h`),
+      deadlineSec: one(`deadline`) ? parseDuration(one(`deadline`)!) : from?.deadlineSec ?? 7200,
       budgetUsd: Number(one(`budget-usd`) ?? from?.budgetUsd ?? 20),
       maxTurns: Number(one(`max-turns`) ?? from?.maxTurns ?? 300),
       allow: flags.get(`allow`) ?? from?.allow ?? [],
@@ -593,24 +631,38 @@ async function startRun(deps: Deps, flags: Map<string, string[]>): Promise<Outco
       weeklyEnd: null,
       result: null,
     }
-    const why = await whyNot(run, await activeRuns(db), deps, handoffFrom)
+    const why = await checkStart(db, deps, run, handoffFrom)
     if (why) return refuse(why)
-    const usage = await readUsage(deps)
-    if (usage && usage.session >= SESSION_STOP) return refuse(`session usage at ${usage.session}%`)
-    if (usage && usage.weekly >= WEEKLY_STOP) return refuse(`weekly usage at ${usage.weekly}%`)
-    if (run.weeklyCap !== null) {
-      if (!usage) return refuse(`--weekly-cap needs a readable usage, and /usage printed none`)
-      if (run.weeklyStart === null) {
-        run.weeklyStart = usage.weekly
-        run.weeklyReset = usage.weeklyReset
-      }
-      const left = weeklyLeft(run, usage)!
-      if (left <= 0) return refuse(`the weekly share of ${run.weeklyCap} points is used up`)
-    }
     return await launch(db, deps, run, brief, false)
   } finally {
     await db.close()
   }
+}
+
+/**
+ * Why `run` may not start or resume now, or `null`: the limits of `whyNot` plus the usage stops.
+ * Sets the weekly baseline of a capped run that has none. `exclude` is a run that ends as this one
+ * starts (a handoff's source, or the resumed run itself).
+ */
+async function checkStart(
+  db: SqliteDb,
+  deps: Deps,
+  run: Run,
+  exclude: string | null,
+): Promise<string | null> {
+  const why = await whyNot(run, await activeRuns(db, deps), deps, exclude)
+  if (why) return why
+  const usage = await readUsage(deps)
+  if (usage && usage.session >= SESSION_STOP) return `session usage at ${usage.session}%`
+  if (usage && usage.weekly >= WEEKLY_STOP) return `weekly usage at ${usage.weekly}%`
+  if (run.weeklyCap === null) return null
+  if (!usage) return `--weekly-cap needs a readable usage, and /usage printed none`
+  if (run.weeklyStart === null) {
+    run.weeklyStart = usage.weekly
+    run.weeklyReset = usage.weeklyReset
+  }
+  if (weeklyLeft(run, usage)! <= 0) return `the weekly share of ${run.weeklyCap} points is used up`
+  return null
 }
 
 async function launch(db: SqliteDb, deps: Deps, run: Run, brief: string, resume: boolean) {
@@ -640,11 +692,15 @@ async function resumeRun(deps: Deps, id: string, flags: Map<string, string[]>): 
   try {
     const run = await getRun(db, id)
     if (!run) return refuse(`no run ${id}`)
-    if (run.status === `running`) return refuse(`run ${id} is still active`)
+    if ((await activeRuns(db, deps)).some((o) => o.id === id)) {
+      return refuse(`run ${id} is still active`)
+    }
     const brief = await readBrief(deps, one(`brief`))
     if (!brief?.trim()) return refuse(`--brief is required and must not be empty`)
     run.deadlineSec = parseDuration(one(`deadline`) ?? `2h`)
     run.budgetUsd = Number(one(`budget-usd`) ?? run.budgetUsd)
+    const why = await checkStart(db, deps, run, id)
+    if (why) return refuse(why)
     await db.execute(
       `UPDATE runs SET deadline_sec = ?, budget_usd = ? WHERE id = ?`,
       run.deadlineSec,
@@ -658,14 +714,16 @@ async function resumeRun(deps: Deps, id: string, flags: Map<string, string[]>): 
 }
 
 /** Copy new stream-json lines into the database: tool calls as events, the last words as activity. */
-async function ingest(db: SqliteDb, deps: Deps, id: string, offset: number): Promise<number> {
+async function ingest(db: SqliteDb, deps: Deps, id: string): Promise<void> {
+  const row = await db.queryOne(`SELECT events_offset FROM runs WHERE id = ?`, id)
+  const offset = Number(row?.events_offset ?? 0)
   const text = await deps.fs.readText(join(stateHome(deps), id, `events.jsonl`)) ?? ``
   const end = text.lastIndexOf(`\n`) + 1
-  if (end <= offset) return offset
+  if (end <= offset) return
   const { tools, activity } = readEvents(text.slice(offset, end).split(`\n`))
   for (const tool of tools) await addEvent(db, deps, id, `tool`, tool)
   if (activity) await db.execute(`UPDATE runs SET activity = ? WHERE id = ?`, activity, id)
-  return end
+  await db.execute(`UPDATE runs SET events_offset = ? WHERE id = ?`, end, id)
 }
 
 /** The unit's main process: runs `claude`, logs its events, stops it at the weekly share. */
@@ -685,14 +743,13 @@ async function supervise(deps: Deps, id: string): Promise<Outcome> {
     },
     signal: stop.signal,
   })
-  let offset = 0
   let lastUsage = 0
   let done = false
   const watch = (async () => {
     while (!done) {
       await new Promise((resolve) => setTimeout(resolve, INGEST_POLL_MS))
       if (done) break
-      offset = await ingest(db, deps, id, offset)
+      await ingest(db, deps, id)
       if (run.weeklyCap === null || deps.now().getTime() - lastUsage < USAGE_POLL_MS) continue
       lastUsage = deps.now().getTime()
       const usage = await readUsage(deps)
@@ -716,7 +773,7 @@ async function finish(deps: Deps, id: string): Promise<Outcome> {
   try {
     const run = await getRun(db, id)
     if (!run) return { code: 1, output: `no run ${id}` }
-    await ingest(db, deps, id, 0).catch(() => 0)
+    await ingest(db, deps, id).catch(() => {})
     const text = await deps.fs.readText(join(stateHome(deps), id, `events.jsonl`)) ?? ``
     const { result } = readEvents(text.split(`\n`))
     const quota = await db.queryOne(`SELECT 1 FROM events WHERE run_id = ? AND kind = 'quota'`, id)
@@ -726,22 +783,23 @@ async function finish(deps: Deps, id: string): Promise<Outcome> {
       result,
       quota ? `quota` : stopped ? `stopped` : null,
     )
-    const usage = await readUsage(deps).catch(() => null)
     const answer: RunResult = {
       ...(result?.structured_output as RunResult | undefined),
       subtype: result?.subtype as string | undefined,
     }
     await db.execute(
-      `UPDATE runs SET status = ?, ended_at = ?, cost_micros = ?, turns = ?, weekly_end = ?,
-        result = ? WHERE id = ?`,
+      `UPDATE runs SET status = ?, ended_at = ?, cost_micros = ?, turns = ?, result = ?
+        WHERE id = ?`,
       status,
       deps.now().toISOString(),
       result ? Math.round(Number(result.total_cost_usd ?? 0) * 1e6) : null,
       result ? Number(result.num_turns ?? 0) : null,
-      usage?.weekly ?? null,
       JSON.stringify(answer),
       id,
     )
+    // After the status is safe: a slow /usage must not leave the run open if systemd kills this.
+    const usage = await readUsage(deps).catch(() => null)
+    await db.execute(`UPDATE runs SET weekly_end = ? WHERE id = ?`, usage?.weekly ?? null, id)
     await addEvent(db, deps, id, `end`, `${status} (${deps.env(`SERVICE_RESULT`) ?? `?`})`)
     const ended = (await getRun(db, id))!
     const push = pushFor(ended)
@@ -749,6 +807,21 @@ async function finish(deps: Deps, id: string): Promise<Outcome> {
     return ok(status)
   } finally {
     await db.close()
+  }
+}
+
+/** Whether `gitleaks` finds no secret in `text`. A scan that cannot run counts as a finding. */
+async function scanClean(deps: Deps, text: string): Promise<boolean> {
+  const file = join(stateHome(deps), `push-${uuidV7()}.txt`)
+  await deps.fs.writeText(file, text, { mode: 0o600 })
+  try {
+    const scan = await deps.run(
+      [`gitleaks`, `detect`, `--no-git`, `--no-banner`, `--exit-code`, `1`, `--source`, file],
+      { signal: AbortSignal.timeout(USAGE_TIMEOUT_MS) },
+    )
+    return scan.success
+  } finally {
+    await deps.fs.remove(file)
   }
 }
 
@@ -760,6 +833,10 @@ async function notify(deps: Deps, title: string, body: string, priority: string)
   const topic = value(`NTFY_TOPIC`)
   if (!url || !topic) return deps.out(`no NTFY_URL or NTFY_TOPIC; push skipped`)
   const token = value(`NTFY_TOKEN`)
+  if (!await scanClean(deps, `${title}\n${body}`)) {
+    body = `The text was held back: the secret scan flagged it or could not run. ` +
+      `Read it on the machine with agent-run status or agent-run report.`
+  }
   try {
     const response = await deps.fetch(`${url.replace(/\/$/, ``)}/${topic}`, {
       method: `POST`,
@@ -780,15 +857,16 @@ async function notify(deps: Deps, title: string, body: string, priority: string)
 async function stopRun(deps: Deps, id: string): Promise<Outcome> {
   const db = await openDb(deps)
   try {
-    const run = await getRun(db, id)
-    if (!run) return refuse(`no run ${id}`)
-    const active = await activeRuns(db)
+    if (!await getRun(db, id)) return refuse(`no run ${id}`)
+    const active = await activeRuns(db, deps)
     // Children first, so a lead never ends while its runs still work.
     for (const child of active.filter((o) => o.parent === id)) await stopRun(deps, child.id)
-    if (run.status !== `running`) return ok(`${id}: ${run.status}`)
+    if (!active.some((o) => o.id === id)) return ok(`${id}: ${(await getRun(db, id))!.status}`)
     await addEvent(db, deps, id, `stop`, `agent-run stop`)
     await deps.run([`systemctl`, `--user`, `stop`, unitName(id)])
-    return ok(`${id}: stopped`)
+    // `finish` normally closes the row; if it never ran, the unit is gone now and this closes it.
+    await activeRuns(db, deps)
+    return ok(`${id}: ${(await getRun(db, id))!.status}`)
   } finally {
     await db.close()
   }
@@ -798,6 +876,7 @@ async function waitRun(deps: Deps, id: string, timeoutSec: number): Promise<Outc
   const until = deps.now().getTime() + timeoutSec * 1000
   while (true) {
     const db = await openDb(deps)
+    await activeRuns(db, deps)
     const run = await getRun(db, id)
     await db.close()
     if (!run) return refuse(`no run ${id}`)
@@ -817,7 +896,7 @@ async function status(deps: Deps, rest: string[], flags: Map<string, string[]>):
     const runs = rest[0]
       ? [await getRun(db, rest[0])].filter((run): run is Run => run !== null)
       : flags.has(`active`)
-      ? await activeRuns(db)
+      ? await activeRuns(db, deps)
       : (await db.queryAll(`SELECT * FROM runs ORDER BY started_at DESC LIMIT ?`, limit)).map(
         rowToRun,
       )
