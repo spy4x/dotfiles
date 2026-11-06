@@ -22,8 +22,8 @@ without hurting quality. `agent-run` below is `deno run -A ~/sync/code/dotfiles/
 - Stuck on a decision → the `wave` skill's `needs-decision` comment, then end with `blocked`.
 - CI expected to take more than about 20 minutes, or your session compacted twice → stop where
   you are, note it, and end with `parked`, saying exactly where the work stands (branch, PR, what
-  is left), and the full handoff the `wave` skill describes ("The handoff") in `handoff`. A later
-  tick resumes the issue first, with that handoff in its brief.
+  is left), and put the full handoff the `wave` skill describes ("The handoff") in `handoff`. A
+  later tick resumes the issue first, with that handoff in its brief.
 - Never touch the owner's freelance repositories or anything outside the issue.
 
 ## Your final answer

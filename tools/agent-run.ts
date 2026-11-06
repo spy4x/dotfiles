@@ -1271,7 +1271,7 @@ async function expireLeases(db: SqliteDb, deps: Deps): Promise<string[]> {
 async function uncontinued(db: SqliteDb): Promise<Run | null> {
   const row = await db.queryOne(
     `SELECT * FROM runs r WHERE r.status = 'parked' AND r.mode = ? AND r.parent IS NULL
-        AND r.name != 'tick' AND json_extract(r.result, '$.handoff') IS NOT NULL
+        AND r.name != 'tick' AND COALESCE(json_extract(r.result, '$.handoff'), '') != ''
         AND NOT EXISTS (SELECT 1 FROM queue q WHERE q.run_id = r.id)
         AND NOT EXISTS (SELECT 1 FROM events e WHERE e.run_id = r.id AND e.kind = 'continued')
       ORDER BY r.started_at LIMIT 1`,
@@ -1284,7 +1284,8 @@ async function uncontinued(db: SqliteDb): Promise<Run | null> {
  * `agent-tick.timer`, every 30 minutes: expire leases; stop when paused, a lead runs, today's
  * budget is spent or usage is high; continue a parked lead run that has a handoff and no queue
  * item, once, with its settings and its handoff as the brief; else plan again when needed and
- * start one lead run on the next queued item that GitHub still confirms. Every stop exits 0 and says why.
+ * start one lead run on the next queued item that GitHub still confirms. Every stop exits 0 and
+ * says why.
  */
 async function tick(deps: Deps): Promise<Outcome> {
   const db = await openDb(deps)
