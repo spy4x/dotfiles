@@ -119,6 +119,7 @@ export const RESULT_SCHEMA = {
     noticed: { type: `array`, items: { type: `string` } },
     alert: { type: [`string`, `null`] },
     good_news: { type: [`string`, `null`] },
+    handoff: { type: [`string`, `null`] },
   },
   required: [
     `status`,
@@ -129,6 +130,7 @@ export const RESULT_SCHEMA = {
     `noticed`,
     `alert`,
     `good_news`,
+    `handoff`,
   ],
 }
 
@@ -166,6 +168,8 @@ export interface RunResult {
   noticed?: string[]
   alert?: string | null
   good_news?: string | null
+  /** A parked run's full handoff (the `wave` skill, "The handoff") for the next run. */
+  handoff?: string | null
   subtype?: string
 }
 
@@ -559,7 +563,8 @@ ${QUEUE_SCHEMA}`
 
 /**
  * Open the run database under the state home, creating it and its schema. A database from before
- * the weekly share was removed loses its `weekly_*` columns and keeps its rows.
+ * the weekly share was removed loses its `weekly_*` columns and keeps its rows; a queue from before
+ * handoffs gains its `handoff` column.
  */
 export async function openDb(deps: Deps): Promise<SqliteDb> {
   const home = stateHome(deps)
@@ -576,6 +581,10 @@ export async function openDb(deps: Deps): Promise<SqliteDb> {
   for (const column of await db.queryAll(`PRAGMA table_info(runs)`)) {
     const name = String(column.name)
     if (name.startsWith(`weekly_`)) await db.exec(`ALTER TABLE runs DROP COLUMN ${name}`)
+  }
+  const queue = await db.queryAll(`PRAGMA table_info(queue)`)
+  if (!queue.some((column) => column.name === `handoff`)) {
+    await db.exec(`ALTER TABLE queue ADD COLUMN handoff TEXT`)
   }
   return db
 }
@@ -1003,7 +1012,8 @@ async function settleItem(db: SqliteDb, deps: Deps, run: Run) {
   if (run.status === `done`) {
     await setItem(db, deps, item.issue, { status: `done`, reason: summary })
   } else if (run.status === `parked`) {
-    await setItem(db, deps, item.issue, { status: `queued`, reason: summary, rank: 0 })
+    const handoff = run.result?.handoff ?? null
+    await setItem(db, deps, item.issue, { status: `queued`, reason: summary, rank: 0, handoff })
   } else if (run.status === `blocked`) {
     const reason = run.result?.needs_owner ?? summary
     await setItem(db, deps, item.issue, { status: `blocked`, reason })
@@ -1255,9 +1265,27 @@ async function expireLeases(db: SqliteDb, deps: Deps): Promise<string[]> {
 }
 
 /**
+ * The oldest top-level lead run that ended `parked` with a handoff, claimed no queue item and was
+ * never continued, or `null`. Tick runs are left out: their handoff travels on their queue item.
+ */
+async function uncontinued(db: SqliteDb): Promise<Run | null> {
+  const row = await db.queryOne(
+    `SELECT * FROM runs r WHERE r.status = 'parked' AND r.mode = ? AND r.parent IS NULL
+        AND r.name != 'tick' AND COALESCE(json_extract(r.result, '$.handoff'), '') != ''
+        AND NOT EXISTS (SELECT 1 FROM queue q WHERE q.run_id = r.id)
+        AND NOT EXISTS (SELECT 1 FROM events e WHERE e.run_id = r.id AND e.kind = 'continued')
+      ORDER BY r.started_at LIMIT 1`,
+    Mode.Lead,
+  )
+  return row ? rowToRun(row) : null
+}
+
+/**
  * `agent-tick.timer`, every 30 minutes: expire leases; stop when paused, a lead runs, today's
- * budget is spent or usage is high; plan again when needed; then start one lead run on the next
- * queued item that GitHub still confirms. Every stop exits 0 and says why.
+ * budget is spent or usage is high; continue a parked lead run that has a handoff and no queue
+ * item, once, with its settings and its handoff as the brief; else plan again when needed and
+ * start one lead run on the next queued item that GitHub still confirms. Every stop exits 0 and
+ * says why.
  */
 async function tick(deps: Deps): Promise<Outcome> {
   const db = await openDb(deps)
@@ -1272,6 +1300,29 @@ async function tick(deps: Deps): Promise<Outcome> {
     }
     const usage = await usageStop(deps)
     if (usage) return stop(usage)
+    const parked = await uncontinued(db)
+    if (parked) {
+      const run: Run = {
+        ...parked,
+        id: uuidV7(),
+        startedAt: deps.now().toISOString(),
+        endedAt: null,
+        status: `running`,
+        activity: null,
+        costMicros: null,
+        turns: null,
+        result: null,
+      }
+      const refused = await checkStart(db, deps, run, parked.id)
+      if (refused) return stop(refused)
+      // Recorded before the start, so a crash or a failed unit never continues the run twice.
+      await addEvent(db, deps, parked.id, `continued`, run.id)
+      const started = await launch(db, deps, run, parked.result!.handoff!, false)
+      return {
+        ...started,
+        output: [...lines, `tick: continue ${parked.id}`, started.output].join(`\n`),
+      }
+    }
     const direction = await readDirection(deps)
     if (!direction.repo) return stop(`direction.md names no focus project under "## Focus now"`)
     const focus = await readFocus(deps, direction.repo)
@@ -1304,6 +1355,7 @@ async function tick(deps: Deps): Promise<Outcome> {
           `- Source: ${item.source}`,
           ...(item.reason ? [`- Where an earlier run left it: ${item.reason}`] : []),
         ].join(`\n`),
+        ...(item.handoff ? [`## The last run's handoff`, item.handoff] : []),
         `## Open lessons`,
         await lessonLines(db),
       ].join(`\n\n`)

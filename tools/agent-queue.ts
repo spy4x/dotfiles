@@ -45,6 +45,8 @@ export interface QueueItem extends Candidate {
   rank: number
   status: string
   reason: string | null
+  /** The last parked run's handoff, carried in full by the next run's brief. */
+  handoff: string | null
   attempts: number
   leaseUntil: string | null
   runId: string | null
@@ -245,6 +247,7 @@ CREATE TABLE IF NOT EXISTS queue (
   rank INTEGER NOT NULL,
   status TEXT NOT NULL,
   reason TEXT,
+  handoff TEXT,
   attempts INTEGER NOT NULL DEFAULT 0,
   lease_until TEXT,
   run_id TEXT,
@@ -280,6 +283,7 @@ function rowToItem(row: Record<string, unknown>): QueueItem {
     rank: Number(row.rank),
     status: row.status as string,
     reason: (row.reason as string | null) ?? null,
+    handoff: (row.handoff as string | null) ?? null,
     attempts: Number(row.attempts),
     leaseUntil: (row.lease_until as string | null) ?? null,
     runId: (row.run_id as string | null) ?? null,
@@ -300,18 +304,28 @@ export async function itemOfRun(db: SqliteDb, runId: string): Promise<QueueItem 
   return row ? rowToItem(row) : null
 }
 
-/** Set an item's status and reason; the other fields stay unless given. */
+/**
+ * Set an item's status, reason and handoff (`null` unless given, so any status but a parked one
+ * clears it); the other fields stay unless given.
+ */
 export async function setItem(
   db: SqliteDb,
   deps: Deps,
   issue: string,
-  fields: { status: string; reason?: string | null; rank?: number; attempts?: number },
+  fields: {
+    status: string
+    reason?: string | null
+    handoff?: string | null
+    rank?: number
+    attempts?: number
+  },
 ): Promise<void> {
   await db.execute(
-    `UPDATE queue SET status = ?, reason = ?, rank = COALESCE(?, rank),
+    `UPDATE queue SET status = ?, reason = ?, handoff = ?, rank = COALESCE(?, rank),
        attempts = COALESCE(?, attempts), lease_until = NULL, updated_at = ? WHERE issue = ?`,
     fields.status,
     fields.reason ?? null,
+    fields.handoff ?? null,
     fields.rank ?? null,
     fields.attempts ?? null,
     deps.now().toISOString(),

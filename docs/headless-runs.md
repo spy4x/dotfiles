@@ -14,11 +14,15 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   up after the machine was off). In order, each stop printing why and exiting 0: expire leases;
   stop when paused, when a lead runs, when today's runs (started on the local calendar day) have
   spent `DAILY_BUDGET_USD` ($200, summed from their own `total_cost_usd`), or at 90% session or
-  95% weekly usage; plan the queue again when it is needed; take the lowest-rank queued item,
+  95% weekly usage; continue the oldest parked top-level lead run (not `tick`) that has a
+  `handoff` and no queue item: one run with its settings and the handoff as its brief, and a
+  `continued` event on the parked run so no later tick continues it again; else plan the queue
+  again when it is needed; take the lowest-rank queued item,
   re-check it on GitHub (still open, still a candidate; else `dropped`); claim it and start one
   `lead` run on `opus` at `medium` in `~/sync/code`, named `tick`, with `--issue`, a 3-hour
   deadline and no budget or turn cap. The brief is [`tools/agent-tick-brief.md`](../tools/agent-tick-brief.md)
-  plus the item and the 20 newest open lessons. The budget is soft: a running run always
+  plus the item, the last parked run's `handoff` in full under its own heading, and the 20 newest
+  open lessons. The budget is soft: a running run always
   finishes.
 - **The queue**, picked in code by `tools/agent-queue.ts`, never by a model. The focus repository
   is `spy4x/<first bold word under "## Focus now" in direction.md>`. Order, each group oldest
@@ -34,7 +38,8 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   that is a candidate again is queued); queued items no longer planned are `dropped`.
 - **Item statuses:** `queued`, `claimed` (a lease of 3h15m and the run id), `done`, `dropped`,
   `blocked`, each with a reason. When a run ends: `done` → `done`; `parked` (CI expected to take
-  over about 20 minutes, or the session compacted twice) → `queued` at rank 0, no attempt counted;
+  over about 20 minutes, or the session compacted twice) → `queued` at rank 0, no attempt counted,
+  keeping the run's `handoff` (any other end clears it);
   `blocked` → `blocked` with `needs_owner`; `failed`, `timeout`, `budget`, `turns` and an expired
   lease → one failed attempt, `blocked` at 2; `stopped` → `queued`.
 - **Pushes.** Urgent (NTFY priority `urgent`): two failed tick runs in a row (this also pauses the
@@ -168,9 +173,14 @@ The result schema every run fills:
   "injection": "text from data that asked the run to act, quoted with its source, or null",
   "noticed": ["claims outside the task, for the lead to file"],
   "alert": "something really bad the owner must know now, or null",
-  "good_news": "something really good: a milestone closed, a release, a measured flow win, or null"
+  "good_news": "something really good: a milestone closed, a release, a measured flow win, or null",
+  "handoff": "when parked: the full handoff the next run starts from (the `wave` skill), or null"
 }
 ```
+
+A headless run that compacts twice is told by the `harness-rules` mod to finish the step in hand
+and end `parked` with its handoff in `handoff`, since no one can paste a printed prompt; the next
+tick continues from it, as above.
 
 ## Notifications and stepping in
 
