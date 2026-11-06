@@ -40,7 +40,8 @@
     "npm:preact@10.29.8": "10.29.8_preact-render-to-string@6.7.0",
     "npm:preact@^10.29.8": "10.29.8_preact-render-to-string@6.7.0",
     "npm:tailwind-merge@3.7.0": "3.7.0",
-    "npm:tailwindcss@4.1.12": "4.1.12"
+    "npm:tailwindcss@4.1.12": "4.1.12",
+    "npm:ws@8.22.1": "8.22.1"
   },
   "jsr": {
     "@spy4x/platform@1.81.0": {
@@ -59,7 +60,8 @@
         "jsr:@std/path@1.1.6",
         "jsr:@std/ulid",
         "jsr:@std/uuid",
-        "npm:arktype"
+        "npm:arktype",
+        "npm:ws"
       ]
     },
     "@spy4x/preact-charts@14.0.0": {
@@ -236,6 +238,9 @@
     },
     "tailwindcss@4.1.12": {
       "integrity": "sha512-DzFtxOi+7NsFf7DBtI3BJsynR+0Yp6etH+nRPTbpWnS2pZBaSksv/JGctNwSWzbFjp0vxSqknaUylseZqMDGrA=="
+    },
+    "ws@8.22.1": {
+      "integrity": "sha512-oyL6OPYme/CmiFvNuGzeoxCJ4nOrZE2O1FwM9MWM1AsGri6nLXB2pg+lNA8aLeXMSav0J6eIVS1j6vUPzUtK9g=="
     }
   },
   "workspace": {
