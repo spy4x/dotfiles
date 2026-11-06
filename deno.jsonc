@@ -1,9 +1,19 @@
 {
   "imports": {
     "@spy4x/platform": "jsr:@spy4x/platform@1.118.0",
+    "@spy4x/preact-charts": "jsr:@spy4x/preact-charts@14.0.0",
+    "@spy4x/preact-theme": "jsr:@spy4x/preact-theme@14.0.0",
+    "@spy4x/preact-ui": "jsr:@spy4x/preact-ui@14.0.0",
     "@spy4x/server": "jsr:@spy4x/server@1.116.0",
     "@spy4x/validation": "jsr:@spy4x/validation@1.9.0",
-    "arktype": "npm:arktype@2.2.3"
+    "arktype": "npm:arktype@2.2.3",
+    // The run dashboard (tools/runs-dashboard): server-rendered Preact, styled by Tailwind's
+    // compiler at startup. One copy of Preact, the range the @spy4x/preact-* packages accept.
+    "preact": "npm:preact@10.29.8",
+    "preact/": "npm:/preact@10.29.8/",
+    "preact-render-to-string": "npm:preact-render-to-string@6.7.0",
+    "tailwindcss": "npm:tailwindcss@4.1.12",
+    "tailwindcss/": "npm:/tailwindcss@4.1.12/"
   },
   "tasks": {
     "install-all": "deno task install-apps && deno task install-shell",
@@ -12,6 +22,8 @@
     "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts",
     "ai": "deno run -A ai-harnesses/manage.ts",
     "test": "deno test -A tools/ ai-harnesses/",
+    // The read-only run dashboard on http://127.0.0.1:8787. See tools/runs-dashboard/README.md.
+    "runs-dashboard": "deno run --allow-net=127.0.0.1 --allow-read --allow-env tools/runs-dashboard/+main.ts",
     // Records and encodes the README demo video into media/demo/. See media/demo/recipe/README.md.
     "demo-video": "media/demo/recipe/record.sh",
     // Experiment kit: lanes.jsonl from transcripts, then the analysis. See tools/experiments/README.md.

@@ -385,7 +385,9 @@ Derived measures, per session:
 
 ### Views
 
-Recreated on every import. Days are local calendar days.
+Recreated on every import. Days are local calendar days. The read-only dashboard
+(`deno task runs-dashboard`, [its README](../tools/runs-dashboard/README.md)) shows them in a
+browser.
 
 | View | Columns |
 | --- | --- |
