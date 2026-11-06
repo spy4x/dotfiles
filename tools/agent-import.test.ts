@@ -318,7 +318,7 @@ Deno.test(`records each tool call's duration, error, truncated output and resume
   }
 })
 
-Deno.test(`keeps subagents' numbers out of the parent and counts review rounds and rework`, async () => {
+Deno.test(`keeps subagents' numbers out of their parent, links each to its spawner, counts rounds`, async () => {
   const m = await machine()
   try {
     await Deno.writeTextFile(
@@ -335,8 +335,12 @@ Deno.test(`keeps subagents' numbers out of the parent and counts review rounds a
     )
     const work = [assistant(at(1), `sub-msg`, [{ type: `text`, text: `x` }], { output: 1_000_000 })]
     await m.subagent(`rev`, { agentType: `reviewer`, toolUseId: `spawn-r` }, work)
+    // The implementer spawns a subagent of its own, so that one's parent is the implementer.
     await m.subagent(`imp`, { agentType: `implementer`, toolUseId: `spawn-i` }, [
-      assistant(at(2), `sub-msg-2`, [], {}),
+      toolUse(at(2), `sub-msg-2`, `spawn-n`, `Agent`, { subagent_type: `haiku` }),
+    ])
+    await m.subagent(`nested`, { agentType: `haiku`, toolUseId: `spawn-n` }, [
+      assistant(at(3), `sub-msg-4`, [], {}),
     ])
     await m.subagent(`xh`, { agentType: `implementer-xhigh`, toolUseId: `spawn-x` }, [
       assistant(at(3), `sub-msg-3`, [], {}),
@@ -355,12 +359,13 @@ Deno.test(`keeps subagents' numbers out of the parent and counts review rounds a
       `reviewer`,
     ])
     assertEquals(reviewer.cost_usd, 24)
+    assertEquals((await session(m.db, `${SID}:nested`)).parent_id, `${SID}:imp`)
 
     const rollup = await m.db.queryOne(
       `SELECT cost_usd, tree_cost_usd, descendants FROM v_session_rollup WHERE id = ?`,
       SID,
     )
-    assertEquals(rollup, { cost_usd: 20, tree_cost_usd: 52, descendants: 3 })
+    assertEquals(rollup, { cost_usd: 20, tree_cost_usd: 56, descendants: 4 })
   } finally {
     await m.close()
   }
