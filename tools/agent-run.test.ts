@@ -698,6 +698,76 @@ Deno.test(`a parked run puts its item first again without counting an attempt`, 
   }
 })
 
+const HANDOFF = `Branch feat/x, PR #7 open, CI red on lint.\nNext: fix lint, then merge.`
+
+Deno.test(`a parked tick run's handoff reaches the next tick's brief once, verbatim, then clears`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const id = started((await main([`tick`], m.deps)).output)
+    await m.end(id, { status: `parked`, summary: `Compacted twice`, handoff: HANDOFF })
+    m.later(31)
+    const next = started((await main([`tick`], m.deps)).output)
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, next, `prompt.md`))
+    assert(prompt.includes(`## The last run's handoff\n\n${HANDOFF}\n\n## Open lessons`))
+    await m.end(next, { status: `done` })
+    const [item] = m.sql(`SELECT status, handoff FROM queue WHERE issue = '${FINANCY}#1'`)
+    assertEquals([item.status, item.handoff], [`done`, null])
+    // The parked tick run no longer owns the item, yet its handoff travelled there: never continued.
+    m.later(31)
+    const after = await main([`tick`], m.deps)
+    assert(!after.output.includes(`continue`), after.output)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`tick continues a parked lead run without a queue item once, from its handoff`, async () => {
+  const m = await machine()
+  try {
+    const id = JSON.parse((await main(lead(m.brief, [`--name`, `wave`]), m.deps)).output).id
+    await m.end(id, { status: `parked`, handoff: HANDOFF })
+    const units = () => m.commands.filter((c) => c[0] === `systemd-run`).length
+    const before = units()
+    const out = await main([`tick`], m.deps)
+    assertMatch(out.output, new RegExp(`tick: continue ${id}`))
+    assertEquals(units(), before + 1)
+    const next = started(out.output)
+    const [run] = JSON.parse((await main([`status`, next, `--json`], m.deps)).output)
+    assertEquals([run.name, run.mode, run.cwd, run.parent], [`wave`, Mode.Lead, `/tmp`, null])
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, next, `prompt.md`))
+    assertEquals(prompt, HANDOFF)
+    await m.end(next, { status: `done` })
+    m.later(31)
+    const second = await main([`tick`], m.deps)
+    assert(!second.output.includes(`continue`), second.output)
+    assertEquals(units(), before + 1)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`an old queue gains the handoff column and keeps its rows`, async () => {
+  const m = await machine()
+  try {
+    await Deno.mkdir(m.env.AGENT_RUN_HOME, { recursive: true })
+    const old = new DatabaseSync(join(m.env.AGENT_RUN_HOME, `runs.sqlite`))
+    old.exec(`CREATE TABLE queue (issue TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL,
+      rank INTEGER NOT NULL, status TEXT NOT NULL, reason TEXT, attempts INTEGER NOT NULL DEFAULT 0,
+      lease_until TEXT, run_id TEXT, planned_at TEXT NOT NULL, updated_at TEXT NOT NULL) STRICT`)
+    old.exec(`INSERT INTO queue (issue, title, source, rank, status, planned_at, updated_at)
+      VALUES ('spy4x/financy#1', 'One', 'p1', 1, 'queued', 'x', 'x')`)
+    old.close()
+    await main([`status`], m.deps)
+    await main([`status`], m.deps)
+    assertEquals(m.sql(`SELECT issue, handoff FROM queue`), [
+      { issue: `spy4x/financy#1`, handoff: null },
+    ])
+  } finally {
+    await m.cleanup()
+  }
+})
+
 Deno.test(`finish moves the item by status: done, blocked, stopped`, async () => {
   const m = await machine()
   try {
