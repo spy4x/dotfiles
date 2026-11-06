@@ -65,16 +65,31 @@ Deno.test(`backs up a database another connection is writing to, without breakin
     const db = await makeDb(env.AGENT_RUN_HOME, 500)
 
     // One open connection keeps inserting while the backup runs.
-    const writer = new Deno.Command(`sqlite3`, { args: [`-batch`, db], stdin: `piped` }).spawn()
+    const writer = new Deno.Command(`sqlite3`, {
+      args: [`-batch`, db],
+      stdin: `piped`,
+      stdout: `null`,
+    }).spawn()
     const input = writer.stdin.getWriter()
     const encoder = new TextEncoder()
-    await input.write(encoder.encode(`.timeout 10000\n`))
+    // The first 100 rows stay in the WAL file only (no checkpoint), so a copy of the live file
+    // without its WAL would miss them.
+    await input.write(encoder.encode(
+      `.timeout 10000\nPRAGMA wal_autocheckpoint = 0;\nBEGIN;\n` +
+        Array.from({ length: 100 }, (_, i) => `INSERT INTO t VALUES (${501 + i}, 'wal');\n`)
+          .join(``) +
+        `COMMIT;\n`,
+    ))
+    for (let tries = 0; await sql(db, `SELECT count(*) FROM t`) !== `600`; tries++) {
+      assert(tries < 250, `the writer never committed its first rows`)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    }
     let written = 0
     let stop = false
     const writing = (async () => {
       while (!stop) {
         written++
-        await input.write(encoder.encode(`INSERT INTO t VALUES (${500 + written}, 'live');\n`))
+        await input.write(encoder.encode(`INSERT INTO t VALUES (${600 + written}, 'live');\n`))
         await new Promise((resolve) => setTimeout(resolve, 2))
       }
     })()
@@ -88,7 +103,7 @@ Deno.test(`backs up a database another connection is writing to, without breakin
 
     // The live database still opens, passes its check and holds every row.
     assertEquals(await sql(db, `PRAGMA integrity_check`), `ok`)
-    assertEquals(await sql(db, `SELECT count(*) FROM t`), `${500 + written}`)
+    assertEquals(await sql(db, `SELECT count(*) FROM t`), `${600 + written}`)
 
     const snapshots = join(env.AGENT_RUN_HOME, `snapshots`)
     const files = await names(snapshots)
@@ -98,7 +113,10 @@ Deno.test(`backs up a database another connection is writing to, without breakin
     assertEquals(await mode(snapshots), 0o700)
     assertEquals(await mode(snapshot), 0o600)
     assertEquals(await sql(snapshot, `PRAGMA integrity_check`), `ok`)
-    assert(Number(await sql(snapshot, `SELECT count(*) FROM t`)) >= 500)
+    assert(
+      Number(await sql(snapshot, `SELECT count(*) FROM t`)) >= 600,
+      `rows in the WAL are missing`,
+    )
 
     // The copy in the encrypted repository is the same database, readable with the password.
     const opened = { ...env, RESTIC_PASSWORD: PASSWORD }
