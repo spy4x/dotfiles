@@ -951,15 +951,25 @@ Deno.test(`retro starts one read-only run at effort high with only its allowed t
     const args = claudeArgs(run, false)
     assert(args.includes(`dontAsk`))
     assert(!args.includes(`--max-budget-usd`))
-    assert(run.allow.includes(`Bash(sqlite3 -readonly *)`))
-    assert(
-      run.allow.some((rule: string) =>
-        /^Bash\(deno run -A \/.+agent-run\.ts lesson \*\)$/.test(rule)
-      ),
-    )
-    assert(!run.allow.some((rule: string) => /gh pr merge|git push|\.ts tick/.test(rule)))
+    const self = /^Bash\((deno run -A \/.+agent-run\.ts) lesson \*\)$/
+      .exec(run.allow.find((rule: string) => rule.includes(` lesson `)))![1]
+    assertEquals(run.allow, [
+      `Bash(sqlite3 -readonly -safe *)`,
+      `Bash(gh issue list *)`,
+      `Bash(gh issue view *)`,
+      `Bash(gh issue create -R spy4x/dotfiles *)`,
+      `Bash(gh issue comment -R spy4x/dotfiles *)`,
+      `Bash(gh pr list *)`,
+      `Bash(gh pr view *)`,
+      `Bash(gh search *)`,
+      `Bash(${self} lesson *)`,
+      `Bash(${self} experiment *)`,
+      `Bash(${self} report *)`,
+    ])
     const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, id, `prompt.md`))
     assertMatch(prompt, /# Background lead: daily retro/)
+    assertMatch(prompt, /`sqlite3 -readonly -safe "\$AGENT_RUN_HOME/)
+    assertMatch(prompt, /`gh issue create -R spy4x\/dotfiles \.\.\.`/)
     assertMatch(prompt, /agent-run is `deno run -A \/.+agent-run\.ts`/)
   } finally {
     await m.cleanup()

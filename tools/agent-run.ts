@@ -1323,11 +1323,12 @@ async function retro(deps: Deps): Promise<Outcome> {
       cwd: DOTFILES,
       deadlineSec: 3600,
       allow: [
-        `Bash(sqlite3 -readonly *)`,
+        // `-safe` refuses dot-commands such as `.shell` and `.output`, which `-readonly` allows.
+        `Bash(sqlite3 -readonly -safe *)`,
         `Bash(gh issue list *)`,
         `Bash(gh issue view *)`,
-        `Bash(gh issue create *)`,
-        `Bash(gh issue comment *)`,
+        `Bash(gh issue create -R spy4x/dotfiles *)`,
+        `Bash(gh issue comment -R spy4x/dotfiles *)`,
         `Bash(gh pr list *)`,
         `Bash(gh pr view *)`,
         `Bash(gh search *)`,

@@ -7,7 +7,7 @@ dollar; the quality guard is reverts, red `main` after a merge, and reviewer rou
 
 `agent-run` below is the exact command under "Commands" at the end of this brief: your allowed
 tools match it word for word, so type it as given. The database is `$AGENT_RUN_HOME/runs.sqlite`;
-read it with `sqlite3 -readonly "$AGENT_RUN_HOME/runs.sqlite" "<query>"`.
+read it with `sqlite3 -readonly -safe "$AGENT_RUN_HOME/runs.sqlite" "<query>"`.
 
 ## What to do
 
@@ -21,7 +21,9 @@ read it with `sqlite3 -readonly "$AGENT_RUN_HOME/runs.sqlite" "<query>"`.
    spy4x/dotfiles to revert it.
 4. File at most 2 new flow-fix issues in spy4x/dotfiles, at `p2-high` plus a type label, one change
    each, in the "Issues and reports" shape, first line `<!-- agent -->`. Search open issues first
-   and comment on an existing one instead of filing a second.
+   and comment on an existing one instead of filing a second. Write `-R spy4x/dotfiles` right
+   after the subcommand (`gh issue create -R spy4x/dotfiles ...`, `gh issue comment -R
+   spy4x/dotfiles <n> ...`): your allowed tools match only that form.
 5. Log each decision (kept, reverted, filed, nothing to do) with `agent-run experiment "<decision
    and the numbers behind it>"`.
 6. Close each lesson you handled: `agent-run lesson --close <id> "<what was done>"`.
