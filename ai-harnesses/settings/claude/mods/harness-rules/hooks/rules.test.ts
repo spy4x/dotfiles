@@ -608,3 +608,12 @@ test(`asks for a handoff only from the second compaction`, () => {
   expect(second).toContain(`hand_off_to_session`)
   expect(compactionsSoFar([compactionNotice(5)])).toBe(5)
 })
+
+test(`a headless run parks with the handoff field, never the desktop handoff tool`, () => {
+  expect(compactionNotice(1, true)).toBe(`[harness-rules] compactions: 1`)
+  const second = compactionNotice(2, true)
+  expect(second.startsWith(`[harness-rules] compactions: 2`)).toBe(true)
+  expect(second).toContain(`\`parked\``)
+  expect(second).toContain(`\`handoff\` field`)
+  expect(second).not.toContain(`hand_off_to_session`)
+})
