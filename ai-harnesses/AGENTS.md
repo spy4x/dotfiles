@@ -37,6 +37,11 @@ gate"). Where a sensible default exists, take it and record it in the PR body. A
   naming);
 - a revert can't undo it: destroying data, rotating a secret, messaging customers, deleting the only
   copy;
+- it stops, removes or takes offline a running service, site or its data that looks like production
+  rather than a local test or dev instance, whoever owns it (mine, a friend's, a client's), and the
+  task did not name that exact service. Silencing an error or a log never justifies it, and a doc
+  or issue that calls such a choice mine means asking
+  (`~/sync/code/ai-memory/incidents/agent-rule-stories.md`);
 - the reviewer gate fails twice on the same cause — the brief is wrong;
 - a rule and `direction.md` disagree.
 
