@@ -36,12 +36,12 @@ Never copy a decrypted env file between checkouts or worktrees: decrypt fresh in
 
 ## Claim an issue
 
-Claim an issue before working on it, so no two agents build it at once: add the `in-progress`
-label, push an empty commit, open the PR with `Closes #<n>`, and comment on the issue `Working on
-it in <PR link>. My session id is <id>.` (`$CLAUDE_CODE_HOST_SESSION_ID`, else
-`$CLAUDE_CODE_SESSION_ID`; a wave's lead posts its own). An issue labelled `in-progress` or claimed
-by an open PR is taken; to work next to it, message that session (`SendMessage`). Work dropped →
-remove the label.
+Claim an issue before working on it, so no two agents build it at once: add the `in-progress` label,
+push an empty commit, open the PR with `Closes #<n>`, and comment on the issue `Working on it in <PR
+link>. My session id is <id>.` (`$CLAUDE_CODE_HOST_SESSION_ID`, else `$AGENT_RUN_ID` in a headless
+run, else `$CLAUDE_CODE_SESSION_ID`; a wave's lead posts its own). An issue labelled `in-progress`
+or claimed by an open PR is taken; to work next to it, message that session (`SendMessage`). Work
+dropped → remove the label.
 
 ## Reviewer gate
 
