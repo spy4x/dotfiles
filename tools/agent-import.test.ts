@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "jsr:@std/assert@1.0.19"
+import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1.0.19"
 import { join } from "jsr:@std/path@^1.0.0"
 import type { SqliteDb } from "@spy4x/server/db/sqlite"
 import {
@@ -492,6 +492,36 @@ Deno.test(`skips a transcript whose modification time has not changed since the 
     assertEquals(m.reads, [])
     assertEquals(stats, { files: 0, lines: 0 })
     assertEquals(await count(m.db, `messages`), 1)
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a run stopped between two chunks leaves the rest of the file for the next run`, async () => {
+  const m = await machine()
+  try {
+    const lines = [userText(at(1), `one`), userText(at(2), `two`), userText(at(3), `three`)]
+    await Deno.writeTextFile(m.main, jsonl(lines))
+    const chunk = jsonl(lines.slice(0, 1)).length + 10
+    let reads = 0
+    const files: Files = {
+      ...runtimeFiles,
+      readBytes(path, options) {
+        if (++reads > 1) throw new Error(`killed`)
+        return runtimeFiles.readBytes(path, options)
+      },
+    }
+    const stopped = importTranscripts({
+      files,
+      db: m.db,
+      projectsDir: m.projects,
+      now: () => SINCE,
+      chunkBytes: chunk,
+    })
+    await assertRejects(() => stopped, Error, `killed`)
+    assertEquals(await count(m.db, `messages`), 1)
+    await m.run(chunk)
+    assertEquals(await count(m.db, `messages`), 3)
   } finally {
     await m.close()
   }

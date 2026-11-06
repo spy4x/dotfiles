@@ -722,9 +722,11 @@ export async function importTranscripts(options: ImportOptions): Promise<ImportS
       offset += end + 1
       stats.lines += lines.length
       const batch = parseLines(lines, since)
+      // The mtime is kept only once the file is read to its end, so a run stopped between two
+      // chunks leaves a mark the next run does not skip.
       await writeBatch(db, file, meta?.kind === `ok` ? meta.value : undefined, batch, {
         offset,
-        mtimeMs: stat.mtimeMs,
+        mtimeMs: offset >= stat.size ? stat.mtimeMs : 0,
       })
       length = chunkBytes
     }
