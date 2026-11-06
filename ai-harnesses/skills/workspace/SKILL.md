@@ -1,6 +1,6 @@
 ---
 name: workspace
-description: "The owner's repositories and what may be hosted where, the ai-memory files, and the account-wide API tokens. Load before you look for or choose a project, read or write ai-memory, decide where something is hosted or deployed, or need, add or rotate an account-wide token."
+description: "The owner's repositories and what may be hosted where, the self-hosted services agents may use, the ai-memory files, and the account-wide API tokens. Load before you look for or choose a project, read or write ai-memory, decide where something is hosted or deployed, use or add a self-hosted service (notify the owner, send mail, check uptime or metrics, search the web, push an image), or need, add or rotate an account-wide token."
 ---
 
 # Workspace
@@ -27,11 +27,13 @@ Work and production:
   starts from it.
 - `financy`: self-hosted finance tracker for a person or a family, being rebuilt on `seed`
   (Seed). Its `AGENTS.md` says what goes to Seed or the libraries first.
-- `antonshubin.com`: my freelance site.
+- `antonshubin.com`: my freelance site and my blog.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
 
-Homelab, for self-hosted services, never for hosting work or production projects:
+Homelab, for self-hosted services and for my products that earn nothing yet (Seed and Financy
+today); client work never runs there. Moving a product to its own or a shared Hetzner server is my
+call, made per product: never propose or plan it unless I ask.
 
 - `rostok`: CLI that scaffolds a homelab from a catalog of stacks (`stacks/`). Code that both it and
   `seed` need lives in `ts-libs`, never copied between the two.
@@ -47,6 +49,28 @@ Open-source self-hosted tools, each a stack in the rostok catalog:
 - `mig`: meeting scheduler.
 
 Not listed: personal side projects.
+
+## Services
+
+`~/sync/code/homelab/llms.txt` lists every homelab service: its server, URL, what it does, and
+whether agents may use it. Read it before you use or add a service. `rostok llms` generates it from
+each stack's `aiCanUse` and `aiNotes` in `servers/<server>/config.json`; never edit it by hand.
+
+- `aiCanUse: true` → use it as its notes say.
+- No flag → ask me before the first use. My answer goes into that stack's `aiCanUse` (with
+  `aiNotes` on how to use it), and `llms.txt` is regenerated in the same change.
+- `aiCanUse: false` → never use it.
+
+To notify me, publish to ntfy with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account
+tokens. A headless run notifies through `agent-run push` instead (`docs/headless-runs.md`).
+
+A new self-hosted service goes into homelab as a rostok stack: into the rostok catalog first, then
+`rostok stack add` and `rostok deploy`. Each one:
+
+- sits behind Authelia unless it has its own sign-in; behind Authelia, it also gets a zond check;
+- has a Gatus check (oko shows it);
+- gets its DNS record through Cloudflare;
+- keeps its data in backups through the stack's `backup.ts`, when it has data.
 
 ## Memory
 
@@ -73,6 +97,9 @@ Not listed: personal side projects.
 - `UMAMI_API_TOKEN`, `UMAMI_URL`: my self-hosted Umami, `https://stats.antonshubin.com` (homelab).
 - `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`: Docker Hub login and push.
 - `JSR_TOKEN`: `deno publish` to JSR.
+- `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`: notifications to me through the cloud ntfy. The token may
+  only publish to that topic. Send `Authorization: Bearer`, a `Title` header and the message as the
+  body to `$NTFY_URL/$NTFY_TOPIC`. Load all three in the command that sends.
 - `WOODPECKER_CI_TOKEN`: API of my Woodpecker CI (`https://ci.antonshubin.com`): pipelines, build
   logs, restarts. Send it as `Authorization: Bearer`, or give it to `woodpecker-cli` as
   `WOODPECKER_TOKEN` with `WOODPECKER_SERVER` set.
