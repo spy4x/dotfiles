@@ -15,8 +15,9 @@ yours to take, highest priority first, unless it carries `manual` (work only I c
 priority:
 
 - A repo with an open milestone → the candidates are the issues in it (several open: the one due
-  first), whatever their priority label, plus any `p1-critical` issue. Nothing else is picked. An
-  issue you file outside it is reported as waiting for me to add it (the library exception aside).
+  first; none left to take there → the next, then the backlog), whatever their priority label, plus
+  any `p1-critical` issue. Nothing else is picked. An issue you file outside it is reported as
+  waiting for me to add it (the library exception aside).
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker

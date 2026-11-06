@@ -8,10 +8,7 @@ argument-hint: "[repo …]"
 # /kraken $ARGUMENTS
 
 You choose the issues, then run them as one wave. Picking follows the `issues` skill, "Picking work
-yourself"; running follows the `wave` skill. This skill adds the order in which you look, and one
-override: when no open milestone has a candidate, step 3 below takes the backlog, although
-"Picking work yourself" picks only an open milestone's issues and `p1-critical` ones. The owner
-asked for this so a milestone of only `manual` or `needs-decision` issues does not stop the wave.
+yourself"; running follows the `wave` skill. This skill adds only the order in which you look.
 
 ## Which repository
 
@@ -36,10 +33,9 @@ session, an outside author, an agent-filed issue nobody asked for.
    forbids it → take the next one in that list that the repository allows, the same way. Say in
    the report which milestones you passed and why.
 3. **The backlog.** No milestone, or none with a candidate → the open issues at `p3-medium` and
-   above, highest priority level first, whether or not a milestone is open: run the `wave` skill's
-   search without its `milestone:` filter. When a milestone is open, say in the report that it had
-   no candidate. Within a level, the ones that rank highest by `direction.md`, "What matters",
-   come first, then the oldest.
+   above, highest priority level first: the `wave` skill's search without its `milestone:` filter.
+   When a milestone is open, say in the report that it had no candidate. Within a level, the ones
+   that rank highest by `direction.md`, "What matters", come first, then the oldest.
 4. **Nothing.** No candidate anywhere → report that the backlog is done and stop. Never look below
    `p3-medium`, and never pick `p4-low` or `p5-someday` outside a milestone.
 
