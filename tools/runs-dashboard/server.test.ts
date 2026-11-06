@@ -143,10 +143,10 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     ) assertEquals(cardStatus(html, title), `ready`, title)
     has(html, /The lead is paused:/)
     has(html, /Import bank statements from CSV/)
-    has(html, /\$142 of \$200/)
+    has(html, />\$142 of \$200</)
     has(html, /1 blocked · 2 queued · 1 claimed · 1 done · 1 dropped/)
     // The stylesheet carries the theme and the classes the page uses.
-    has(html, /--color-primary/)
+    has(html, /--color-foreground: oklch\(0\.13 /)
     has(html, /\.pc-card/)
   })
 })
