@@ -163,6 +163,20 @@ Deno.test(`creates the database folder with mode 0700`, async () => {
   }
 })
 
+Deno.test(`repairs a state folder left at mode 0755 to 0700`, async () => {
+  const root = await Deno.makeTempDir()
+  const home = join(root, `agent-run`)
+  try {
+    await Deno.mkdir(home)
+    await Deno.chmod(home, 0o755)
+    const db = await openImportDb(runtimeFiles, home)
+    await db.close()
+    assertEquals((await Deno.stat(home)).mode! & 0o777, 0o700)
+  } finally {
+    await Deno.remove(root, { recursive: true })
+  }
+})
+
 Deno.test(`imports only entries from the first run on and never reads files older than it`, async () => {
   const m = await machine()
   try {
@@ -459,6 +473,25 @@ Deno.test(`links a headless run's session to its run, its parent run and the day
       { day: `2026-01-01`, kind: `headless`, sessions: 1 },
       { day: `2026-01-01`, kind: `subagent`, sessions: 1 },
     ])
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`skips a transcript whose modification time has not changed since the last import`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(m.main, jsonl([userText(at(1), `one`)]))
+    await m.run()
+    const { mtime } = await Deno.stat(m.main)
+    // New bytes under the old mtime: only the mtime check keeps the importer from reading them.
+    await Deno.writeTextFile(m.main, jsonl([userText(at(2), `two`)]), { append: true })
+    await Deno.utime(m.main, mtime!, mtime!)
+    m.reads.length = 0
+    const stats = await m.run()
+    assertEquals(m.reads, [])
+    assertEquals(stats, { files: 0, lines: 0 })
+    assertEquals(await count(m.db, `messages`), 1)
   } finally {
     await m.close()
   }
