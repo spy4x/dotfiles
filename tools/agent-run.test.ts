@@ -931,6 +931,32 @@ Deno.test(`push sends and records an urgent or a plain push`, async () => {
   }
 })
 
+Deno.test(`a push whose title the secret scan flags sends neither title nor body`, async () => {
+  const m = await machine()
+  try {
+    await main([`push`, `--title`, `LEAKED token`, `--urgent`, `body`], m.deps)
+    assertEquals(m.titles(), [`Push held back`])
+    assertMatch(String(m.pushes[0].init.body), /held back/)
+    assert(!JSON.stringify(m.pushes[0].init).includes(`LEAKED`))
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a non-ASCII title is sent as a UTF-8 encoded word`, async () => {
+  const m = await machine()
+  try {
+    await main([`push`, `--title`, `Milestone v1 \u2014 closed`, `body`], m.deps)
+    const [title] = m.titles()
+    const encoded = /^=\?UTF-8\?B\?(.+)\?=$/.exec(title)![1]
+    const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))
+    assertEquals(new TextDecoder().decode(bytes), `Milestone v1 \u2014 closed`)
+    new Headers(m.pushes[0].init.headers)
+  } finally {
+    await m.cleanup()
+  }
+})
+
 Deno.test(`retro starts one read-only run at effort high with only its allowed tools`, async () => {
   const m = await machine()
   try {
