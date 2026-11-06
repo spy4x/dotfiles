@@ -1,0 +1,10 @@
+# Pushes the daily headless-run report every morning. See docs/headless-runs.md.
+[Unit]
+Description=Push the daily headless-run report each morning
+
+[Timer]
+OnCalendar=*-*-* 09:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

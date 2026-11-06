@@ -1,0 +1,8 @@
+# Pushes what the headless runs of the last day achieved, spent and got stuck on. Runs from
+# agent-report.timer. See docs/headless-runs.md.
+[Unit]
+Description=Push the daily headless-run report
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env deno run -A %h/sync/code/dotfiles/tools/agent-run.ts report --since 24h --ntfy
