@@ -2,11 +2,11 @@ import { assert, assertEquals } from "jsr:@std/assert@1.0.19"
 import { join } from "jsr:@std/path@^1.0.0"
 import type { SqliteDb } from "@spy4x/server/db/sqlite"
 import {
-  denoFiles,
   type Files,
   importTranscripts,
   openImportDb,
   OUTPUT_LIMIT,
+  runtimeFiles,
 } from "./agent-import.ts"
 
 /** The first import runs at this moment, so `import_since` is it. */
@@ -97,10 +97,10 @@ async function machine() {
   await Deno.mkdir(join(projects, PROJECT), { recursive: true })
   const reads: string[] = []
   const files: Files = {
-    ...denoFiles,
-    read(path, offset, length) {
+    ...runtimeFiles,
+    readBytes(path, options) {
       reads.push(path)
-      return denoFiles.read(path, offset, length)
+      return runtimeFiles.readBytes(path, options)
     },
   }
   const db = await openImportDb(files, home)

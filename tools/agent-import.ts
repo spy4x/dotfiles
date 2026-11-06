@@ -13,33 +13,32 @@
 
 import { DatabaseSync } from "node:sqlite"
 import { join } from "jsr:@std/path@^1.0.0"
-import { processEnv, runtimeFileSystem } from "@spy4x/platform/server"
+import { type FileSystemPort, processEnv, runtimeFileSystem } from "@spy4x/platform/server"
 import { readJsonFile } from "@spy4x/platform/server/atomic-json"
 import { openSqliteDb, type SqliteDb } from "@spy4x/server/db/sqlite"
 import { type AgentMeta, costOf, type RawUsage, toCall, totalOf } from "./session-cost.ts"
 
 // ===== Files =====
 
-/** One directory entry. */
-export interface DirEntry {
-  readonly name: string
-  readonly isFile: boolean
-  readonly isDirectory: boolean
-}
-
 /**
- * The file access the importer needs. `@spy4x/platform`'s `FileSystemPort` has no mtime and no
- * ranged read, so this small port is injected instead; `denoFiles` below implements it.
+ * The file access the importer needs: `@spy4x/platform`'s `FileSystemPort`, with the optional
+ * `stat` and `readBytes` it relies on (mtime and ranged reads) made required. `runtimeFiles` below
+ * is the real one; tests pass a wrapper that counts or fakes reads.
  */
-export interface Files {
-  /** Entries of one directory, or `[]` when it is absent. */
-  list(dir: string): Promise<DirEntry[]>
-  /** Size and modification time in milliseconds, or `null` when the file is absent. */
-  stat(path: string): Promise<{ size: number; mtimeMs: number } | null>
-  /** Up to `length` bytes starting at byte `offset`. */
-  read(path: string, offset: number, length: number): Promise<Uint8Array>
-  /** Create `dir` and its parents, then set its mode to 0700. */
-  makePrivateDir(dir: string): Promise<void>
+export type Files =
+  & Pick<FileSystemPort, `readDir` | `mkdirp`>
+  & Required<Pick<FileSystemPort, `stat` | `readBytes`>>
+
+/** `runtimeFileSystem` as `Files`, so the importer runs unchanged on Deno, Node and Bun. */
+export const runtimeFiles: Files = asFiles(runtimeFileSystem)
+
+/** `fs` as `Files`; throws when it lacks `stat` or `readBytes`. */
+function asFiles(fs: FileSystemPort): Files {
+  const { stat, readBytes } = fs
+  if (!stat || !readBytes) {
+    throw new Error(`agent-import needs a file system with stat and readBytes`)
+  }
+  return { readDir: fs.readDir, mkdirp: fs.mkdirp, stat, readBytes }
 }
 
 /** One transcript file to import, and the session it belongs to. */
@@ -56,10 +55,10 @@ interface Transcript {
 /** Every main and subagent transcript under `root`. */
 async function listTranscripts(files: Files, root: string): Promise<Transcript[]> {
   const out: Transcript[] = []
-  for (const project of await files.list(root)) {
+  for (const project of await files.readDir(root)) {
     if (!project.isDirectory) continue
     const projectDir = join(root, project.name)
-    for (const entry of await files.list(projectDir)) {
+    for (const entry of await files.readDir(projectDir)) {
       if (entry.isFile && entry.name.endsWith(`.jsonl`)) {
         const id = entry.name.slice(0, -`.jsonl`.length)
         out.push({
@@ -70,7 +69,7 @@ async function listTranscripts(files: Files, root: string): Promise<Transcript[]
         })
       } else if (entry.isDirectory) {
         const subagents = join(projectDir, entry.name, `subagents`)
-        for (const file of await files.list(subagents)) {
+        for (const file of await files.readDir(subagents)) {
           const match = file.isFile && file.name.match(/^agent-(.+)\.jsonl$/)
           if (!match) continue
           out.push({
@@ -486,7 +485,7 @@ ORDER BY days.day DESC;
 
 /** Open (and create) the database in `home`, which is kept at mode 0700. */
 export async function openImportDb(files: Files, home: string): Promise<SqliteDb> {
-  await files.makePrivateDir(home)
+  await files.mkdirp(home, { mode: 0o700 })
   const db = await openSqliteDb({
     path: join(home, `runs.sqlite`),
     createDriver: ({ path }) => new DatabaseSync(path),
@@ -706,7 +705,11 @@ export async function importTranscripts(options: ImportOptions): Promise<ImportS
     stats.files++
     let length = chunkBytes
     while (offset < stat.size) {
-      const bytes = await files.read(file.path, offset, Math.min(length, stat.size - offset))
+      const bytes = await files.readBytes(file.path, {
+        offset,
+        length: Math.min(length, stat.size - offset),
+      })
+      if (bytes === null) break
       const end = bytes.lastIndexOf(10)
       if (end < 0) {
         // No complete line yet: a longer line grows the read; an unfinished last line waits.
@@ -738,54 +741,15 @@ export async function importTranscripts(options: ImportOptions): Promise<ImportS
 
 // ===== Entry point =====
 
-/** The `Files` port over `Deno.*`. */
-export const denoFiles: Files = {
-  async list(dir) {
-    try {
-      const out: DirEntry[] = []
-      for await (const entry of Deno.readDir(dir)) out.push(entry)
-      return out
-    } catch (error) {
-      if (error instanceof Deno.errors.NotFound) return []
-      throw error
-    }
-  },
-  async stat(path) {
-    try {
-      const info = await Deno.stat(path)
-      return { size: info.size, mtimeMs: info.mtime?.getTime() ?? 0 }
-    } catch (error) {
-      if (error instanceof Deno.errors.NotFound) return null
-      throw error
-    }
-  },
-  async read(path, offset, length) {
-    using file = await Deno.open(path)
-    await file.seek(offset, Deno.SeekMode.Start)
-    const buffer = new Uint8Array(length)
-    let filled = 0
-    while (filled < length) {
-      const n = await file.read(buffer.subarray(filled))
-      if (n === null) break
-      filled += n
-    }
-    return buffer.subarray(0, filled)
-  },
-  async makePrivateDir(dir) {
-    await Deno.mkdir(dir, { recursive: true, mode: 0o700 })
-    await Deno.chmod(dir, 0o700)
-  },
-}
-
 if (import.meta.main) {
   const home = processEnv.get(`HOME`)
   if (!home) throw new Error(`HOME is not set`)
   const projectsDir = processEnv.get(`CLAUDE_PROJECTS_DIR`) ?? join(home, `.claude`, `projects`)
   const stateHome = processEnv.get(`AGENT_RUN_HOME`) ?? join(home, `.local`, `state`, `agent-run`)
-  const db = await openImportDb(denoFiles, stateHome)
+  const db = await openImportDb(runtimeFiles, stateHome)
   try {
     const stats = await importTranscripts({
-      files: denoFiles,
+      files: runtimeFiles,
       db,
       projectsDir,
       now: () => new Date(),
