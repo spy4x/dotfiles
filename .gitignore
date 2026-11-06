@@ -94,6 +94,8 @@ volumes/
 # System and runtime files
 *.sock
 *.lock
+# The Deno lockfile is committed, so CI resolves the same versions as this machine.
+!deno.lock
 
 # Playwright MCP runtime cache (session logs, page snapshots)
 .playwright-mcp/
