@@ -1,6 +1,6 @@
 // What the "Needs you" banner lists: facts in, items out, no database and no markup.
 
-/** Today's spend past this many dollars stops new runs (the lead's daily budget). */
+/** Today's spend at or past this many dollars stops new runs (the lead's daily budget). */
 export const DAILY_BUDGET_USD = 200
 /** A single run past this many dollars is worth a look. */
 export const RUN_ALERT_USD = 100
@@ -66,7 +66,7 @@ export function needsYou(facts: BannerFacts): Banner | null {
   const recent = (iso: string) => Date.parse(iso) >= since
   const items: BannerItem[] = []
   if (facts.paused !== null) items.push({ kind: `paused`, reason: facts.paused })
-  if (facts.todayUsd !== null && facts.todayUsd > DAILY_BUDGET_USD) {
+  if (facts.todayUsd !== null && facts.todayUsd >= DAILY_BUDGET_USD) {
     items.push({ kind: `over-budget`, todayUsd: facts.todayUsd })
   }
   const runs = (facts.runs ?? []).filter((run) => recent(run.startedAt))

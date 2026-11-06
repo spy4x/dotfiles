@@ -32,10 +32,11 @@ Deno.test(`a paused lead is urgent and carries its reason`, () => {
   assertEquals(banner, { tone: `danger`, items: [{ kind: `paused`, reason: `two runs failed` }] })
 })
 
-Deno.test(`today's spend over $200 is urgent; exactly $200 is not`, () => {
+Deno.test(`today's spend of $200 or more is urgent; just under $200 is not`, () => {
   assertEquals(needsYou({ ...fine, todayUsd: 214 })?.tone, `danger`)
   assertEquals(kinds({ todayUsd: 214 }), [`over-budget`])
-  assertEquals(kinds({ todayUsd: 200 }), undefined)
+  assertEquals(kinds({ todayUsd: 200 }), [`over-budget`])
+  assertEquals(kinds({ todayUsd: 199.99 }), undefined)
 })
 
 Deno.test(`a run over $100 or a failed run in the last 24 hours is listed; older ones are not`, () => {
