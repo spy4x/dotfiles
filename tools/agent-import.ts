@@ -709,7 +709,8 @@ export async function importTranscripts(options: ImportOptions): Promise<ImportS
         offset,
         length: Math.min(length, stat.size - offset),
       })
-      if (bytes === null) break
+      // Absent or empty: the file vanished or shrank after `stat`; the next run starts it over.
+      if (bytes === null || bytes.length === 0) break
       const end = bytes.lastIndexOf(10)
       if (end < 0) {
         // No complete line yet: a longer line grows the read; an unfinished last line waits.

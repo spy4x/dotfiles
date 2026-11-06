@@ -463,3 +463,28 @@ Deno.test(`links a headless run's session to its run, its parent run and the day
     await m.close()
   }
 })
+
+Deno.test(`stops reading a file that returns no bytes, as one truncated after stat does`, async () => {
+  const root = await Deno.makeTempDir()
+  const projects = join(root, `projects`)
+  await Deno.mkdir(join(projects, PROJECT), { recursive: true })
+  await Deno.writeTextFile(join(projects, PROJECT, `${SID}.jsonl`), jsonl([userText(at(1), `one`)]))
+  let reads = 0
+  const files: Files = {
+    ...runtimeFiles,
+    readBytes() {
+      // A second read means the loop retried an empty read instead of stopping.
+      if (++reads > 1) throw new Error(`read the emptied file again`)
+      return Promise.resolve(new Uint8Array(0))
+    },
+  }
+  const db = await openImportDb(runtimeFiles, join(root, `state`))
+  try {
+    const stats = await importTranscripts({ files, db, projectsDir: projects, now: () => SINCE })
+    assertEquals(stats, { files: 1, lines: 0 })
+    assertEquals(await count(db, `messages`), 0)
+  } finally {
+    await db.close()
+    await Deno.remove(root, { recursive: true })
+  }
+})
