@@ -62,12 +62,15 @@ each stack's `aiCanUse` and `aiNotes` in `servers/<server>/config.json`; never e
 - `aiCanUse: false` → never use it.
 
 To notify me, publish to ntfy with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account
-tokens.
+tokens. A headless run notifies through `agent-run push` instead (`docs/headless-runs.md`).
 
 A new self-hosted service goes into homelab as a rostok stack: into the rostok catalog first, then
-`rostok stack add` and `rostok deploy`. Each one sits behind Authelia unless it has its own sign-in,
-has a Gatus check (oko shows it) and a zond check when it sits behind Authelia, gets its DNS record
-through Cloudflare and its backups through the stack's `backup.ts`.
+`rostok stack add` and `rostok deploy`. Each one:
+
+- sits behind Authelia unless it has its own sign-in, with a zond check when it does;
+- has a Gatus check (oko shows it);
+- gets its DNS record through Cloudflare;
+- keeps its data in backups through the stack's `backup.ts`, when it has data.
 
 ## Memory
 
@@ -96,7 +99,7 @@ through Cloudflare and its backups through the stack's `backup.ts`.
 - `JSR_TOKEN`: `deno publish` to JSR.
 - `NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`: notifications to me through the cloud ntfy. The token may
   only publish to that topic. Send `Authorization: Bearer`, a `Title` header and the message as the
-  body to `$NTFY_URL/$NTFY_TOPIC`.
+  body to `$NTFY_URL/$NTFY_TOPIC`. Load all three in the command that sends.
 - `WOODPECKER_CI_TOKEN`: API of my Woodpecker CI (`https://ci.antonshubin.com`): pipelines, build
   logs, restarts. Send it as `Authorization: Bearer`, or give it to `woodpecker-cli` as
   `WOODPECKER_TOKEN` with `WOODPECKER_SERVER` set.
