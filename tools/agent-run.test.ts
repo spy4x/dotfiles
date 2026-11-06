@@ -552,8 +552,9 @@ Deno.test(`tick starts one uncapped opus lead on the first item and claims it`, 
       [`tick`, Mode.Lead, `opus`, `medium`, `spy4x/financy#1`, 3 * 3600],
     )
     assertEquals(run.cwd, join(m.home, `sync`, `code`))
-    const unit = m.commands.find((c) => c[0] === `systemd-run`)!
-    assert(!unit.includes(`--max-budget-usd`))
+    assertEquals([run.budgetUsd, run.maxTurns], [0, 0])
+    const args = claudeArgs(run, false)
+    assert(!args.includes(`--max-budget-usd`) && !args.includes(`--max-turns`))
     const [item] = m.sql(
       `SELECT status, run_id, lease_until FROM queue WHERE issue = '${FINANCY}#1'`,
     )
