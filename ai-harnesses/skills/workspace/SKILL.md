@@ -67,7 +67,7 @@ tokens. A headless run notifies through `agent-run push` instead (`docs/headless
 A new self-hosted service goes into homelab as a rostok stack: into the rostok catalog first, then
 `rostok stack add` and `rostok deploy`. Each one:
 
-- sits behind Authelia unless it has its own sign-in, with a zond check when it does;
+- sits behind Authelia unless it has its own sign-in; behind Authelia, it also gets a zond check;
 - has a Gatus check (oko shows it);
 - gets its DNS record through Cloudflare;
 - keeps its data in backups through the stack's `backup.ts`, when it has data.
