@@ -251,3 +251,105 @@ Other checks, each with `--no-session-persistence`:
 Total spend of the proof: under $0.05.
 
 </details>
+
+## Session database
+
+`tools/agent-import.ts` copies every Claude Code session on this machine into the run database,
+`~/.local/state/agent-run/runs.sqlite`, so spend, waste and slow steps can be asked for in SQL.
+It reads main transcripts (`~/.claude/projects/*/*.jsonl`, interactive and headless) and
+subagent transcripts (`<session>/subagents/agent-*.jsonl` with their `agent-*.meta.json`).
+
+**From when.** The first run stores `meta.import_since`. Only entries stamped at or after it are
+imported, and a file last modified before it is never opened. Older transcripts stay out.
+
+**Incremental.** For each file the importer keeps the byte offset of the last complete line and
+the file's mtime, and the next run reads only what was appended. An unchanged mtime skips the file;
+a file that shrank is read again from the start. Rows are keyed by transcript uuids, API message
+ids and tool-use ids, so a second read adds nothing. Each chunk of a file is one short
+transaction, with WAL and a 10-second busy timeout, so the tick, a supervising run and the backup
+keep working during an import.
+
+**Privacy.** The database holds prompt text and tool output, which can contain secrets. Its folder
+stays mode 0700, outside Syncthing, and its nightly backup is encrypted. Nothing is sent anywhere.
+
+### Tables
+
+- `sessions`: one per session. A subagent's id is `<sessionId>:<agentId>`, with `parent_id`,
+  `agent_type` and `description`; also project folder, `cwd`, `git_branch`, `entrypoint`, `title`
+  and the first and last timestamps.
+- `messages`: every user and assistant entry: uuid, session, time, role, model, API message id, text.
+- `api_calls`: usage once per API message id (the last line of each id wins), and `cost_micros`
+  (millionths of a dollar, priced by `tools/session-cost.ts`; NULL for a model it has no price for).
+- `tool_calls`: tool-use id, session, name, input JSON, start, end, `duration_ms`, `is_error`,
+  output cut to 16 KiB, and `resumed_agent_id` for `SendMessage`.
+- `session_prs`: the PR links (`pr-link` entries) of each session.
+- `transcript_files`: the offset and mtime per file.
+
+### Each session on its own
+
+A session's numbers come only from its own transcript: a main session never includes its
+subagents, and a headless run never includes a child run. A session whose id is a `runs.id` is
+`headless`, and its parent is that run's `parent`. A subagent's parent is the session whose tool
+call spawned it (meta `toolUseId`), else the main session. `v_session_rollup` adds the trees up.
+
+Derived measures, per session:
+
+- `review_rounds`: subagents of type `reviewer` or `design-reviewer` it spawned, plus its
+  `SendMessage` calls that resumed one of them.
+- `rework`: its `SendMessage` calls that resumed an `implementer*` subagent, plus the
+  `implementer-xhigh` subagents it spawned.
+- `ci_wait_sec`: total time of its `Bash` calls whose command contains `gh pr checks`,
+  `gh run watch`, `--watch` or `woodpecker`.
+- `prs`: distinct PR URLs it linked.
+- `cost_usd`: the sum of its priced calls; `unpriced_calls` counts the calls left out. A session
+  whose calls are all unpriced has a NULL cost, never 0.
+
+### Views
+
+Recreated on every import. Days are local calendar days.
+
+| View | Columns |
+| --- | --- |
+| `v_sessions` | `id, parent_id, run_id, kind` (interactive, headless, subagent), `agent_type, project, cwd, started_at, ended_at, wall_sec, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, tool_calls, tool_errors, review_rounds, ci_wait_sec, rework, prs, title, description, git_branch, entrypoint, models, unpriced_calls` |
+| `v_session_rollup` | `id, cost_usd, wall_sec, tree_cost_usd, tree_wall_sec, descendants` |
+| `v_daily_spend` | `day, kind, sessions, cost_usd` (by the day of each API call) |
+| `v_tool_stats` | `tool, calls, errors, total_sec, avg_sec, max_sec` |
+| `v_slow_steps` | `session_id, at, tool, summary, sec, is_error`, slowest first |
+| `v_stalls` | `session_id, from_at, to_at, gap_sec`: gaps of 10 minutes or more between two entries |
+| `v_waste` | `session_id, cost_usd, repeated_calls, failed_calls, review_rounds, rework, ci_wait_sec, cost_per_pr, kind, started_at`, costliest first |
+| `v_goal` | `day, merged_issues, cost_usd, issues_per_dollar, reverts, reviewer_rounds_per_pr` |
+
+`v_goal` takes `merged_issues` from `queue` rows with status `done` (by `updated_at`) and
+`cost_usd` from `runs.cost_micros` (by `started_at`). `reviewer_rounds_per_pr` is review rounds
+over PRs of the headless sessions started that day. Transcripts hold no PR titles, so `reverts`
+counts the sessions that ran `git revert` or `gh pr create --title "Revert …"` that day. A
+stall can be the owner away from an interactive session; `repeated_calls` counts tool calls with
+the same name and input as an earlier one in the session.
+
+Example queries (`sqlite3 ~/.local/state/agent-run/runs.sqlite`):
+
+```sql
+-- Where did today's money go?
+SELECT kind, agent_type, project, cost_usd FROM v_sessions
+WHERE date(started_at, 'localtime') = date('now', 'localtime') ORDER BY cost_usd DESC LIMIT 10;
+-- The slowest steps this week.
+SELECT * FROM v_slow_steps WHERE at >= datetime('now', '-7 days') LIMIT 20;
+-- Which sessions wasted most?
+SELECT * FROM v_waste WHERE started_at >= datetime('now', '-7 days')
+ORDER BY failed_calls + repeated_calls + rework DESC LIMIT 10;
+-- What a lead and all its children cost.
+SELECT * FROM v_session_rollup WHERE id = '<session id>';
+```
+
+### Timer
+
+`agent-import.timer` starts `agent-import.service` every 10 minutes (`OnCalendar=*:0/10`, not
+caught up after sleep: the next tick reads everything since). Setup:
+
+```bash
+for u in agent-import.service agent-import.timer; do systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/$u; done
+systemctl --user enable --now agent-import.timer
+```
+
+A one-off import: `deno run -A ~/sync/code/dotfiles/tools/agent-import.ts`. `CLAUDE_PROJECTS_DIR`
+and `AGENT_RUN_HOME` point it at other folders.
