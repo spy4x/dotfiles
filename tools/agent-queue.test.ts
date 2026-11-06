@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert@1.0.19"
-import { buildPlan, byDue, focusRepo, isCandidate, type Issue } from "./agent-queue.ts"
+import { buildPlan, buildPlans, byDue, focusRepos, isCandidate, type Issue } from "./agent-queue.ts"
 
 const issue = (number: number, labels: string[] = [], milestone?: string): Issue => ({
   number,
@@ -10,11 +10,11 @@ const issue = (number: number, labels: string[] = [], milestone?: string): Issue
   createdAt: `2026-11-${String(number).padStart(2, `0`)}T00:00:00Z`,
 })
 
-Deno.test(`the focus repository is the first bold word under "Focus now"`, () => {
-  const text =
-    `## Stack\n\n**Deno** first.\n\n## Focus now\n\n- **Financy**, with Seed.\n\n## Next\n`
-  assertEquals(focusRepo(text), `spy4x/financy`)
-  assertEquals(focusRepo(`## Focus now\n\nNothing bold.\n## Next\n**Seed**`), null)
+Deno.test(`the focus repositories are the one-word bold names under "Focus now", in order`, () => {
+  const text = `## Stack\n\n**Deno** first.\n\n## Focus now\n\n- **Financy**, with Seed.\n` +
+    `- **A background lead**, a trial.\n- **Seed** next, then **financy** again.\n\n## Next\n`
+  assertEquals(focusRepos(text), [`spy4x/financy`, `spy4x/seed`])
+  assertEquals(focusRepos(`## Focus now\n\nNothing bold.\n## Next\n**Seed**`), [])
 })
 
 Deno.test(`low priorities count only inside a milestone, other authors never`, () => {
@@ -43,4 +43,27 @@ Deno.test(`an issue the loop itself claimed stays planned despite its in-progres
   }
   const plan = buildPlan(focus, [], new Map(), new Set([`spy4x/financy#1`]))
   assertEquals(plan, [{ issue: `spy4x/financy#1`, title: `Issue 1`, source: `backlog` }])
+})
+
+Deno.test(`several focus repositories plan each in its own order, as listed, no issue twice`, () => {
+  const financy = {
+    repo: `spy4x/financy`,
+    issues: [issue(2), issue(1, [`p1-critical`])],
+    milestones: [],
+  }
+  const seed = { repo: `spy4x/seed`, issues: [issue(3), issue(4, [`p1-critical`])], milestones: [] }
+  const tooling = [issue(5, [`p2-high`])]
+  const one = buildPlan(financy, tooling, new Map(), new Set())
+  assertEquals(buildPlans([financy], tooling, new Map(), new Set()), one)
+  assertEquals(buildPlans([financy, seed], tooling, new Map(), new Set()).map((c) => c.issue), [
+    `spy4x/financy#1`,
+    `spy4x/dotfiles#5`,
+    `spy4x/financy#2`,
+    `spy4x/seed#4`,
+    `spy4x/seed#3`,
+  ])
+  // spy4x/dotfiles as a later focus repository: its p2-high fix is already planned as tooling.
+  const dotfiles = { repo: `spy4x/dotfiles`, issues: tooling, milestones: [] }
+  const twice = buildPlans([financy, dotfiles], tooling, new Map(), new Set())
+  assertEquals(twice.filter((c) => c.issue === `spy4x/dotfiles#5`).length, 1)
 })
