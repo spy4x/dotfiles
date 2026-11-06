@@ -25,7 +25,7 @@ Checked against `claude --help`, the Claude Code docs (`headless`, `cli-referenc
 | Typed final answer | `--json-schema '<schema>'` fills `structured_output` | run |
 | Own session id | `--session-id <uuid>`; a UUID v7 is accepted | run |
 | Follow-up | `-p "<prompt>" --resume <id>` keeps the same session id | proof run |
-| Turn cap | `--max-turns <n>` works, though `--help` does not list it; at the cap `subtype` is `error_max_turns` | run, docs |
+| Turn cap | `--max-turns <n>` is accepted, though `--help` does not list it; the docs say the cap ends a run with `subtype` `error_max_turns`. Not shown: a `--json-schema` run with a cap of 1 took 2 turns and ended `success` | docs; run refutes the cap |
 | Cost cap | `--max-budget-usd <n>`: `subtype` `error_max_budget_usd`, exit 1. The response that crosses the cap still completes, so it overshoots by one response; resumed spend does not count | run, docs |
 | Usage window | each run emits `rate_limit_event` with `five_hour` and `seven_day` utilization | run |
 | Permissions | `--permission-mode` (`dontAsk`, `bypassPermissions`, `plan`, …), `--allowedTools`, `--disallowedTools`, `--tools`, `--permission-prompts none` | run, help |
@@ -33,14 +33,14 @@ Checked against `claude --help`, the Claude Code docs (`headless`, `cli-referenc
 | Extra context | `--append-system-prompt[-file]`, `--settings`, `--setting-sources`, `--agents`, `--mcp-config` | help |
 | Hooks | `settings.json` hooks load in `-p` by default; exit 2 from `PreToolUse` blocks the call, from `Stop` keeps the run going; `SessionEnd` runs on SIGTERM | docs |
 | Exit codes | 0 on success, non-zero on an error result (1 for the budget cap), 143 on SIGTERM. Other codes are not documented, so the launcher reads `subtype`, never the exit code | run, docs |
-| Our rules | A `-p` run loads `~/.claude/CLAUDE.md`, the repo's `AGENTS.md`, our skills (47) and agents (16), hooks and MCP servers, like an interactive session. `--bare` drops all of them, so the launcher never passes it | proof run, `init` event |
+| Our rules | A `-p` run loads `~/.claude/CLAUDE.md`, the repo's `AGENTS.md`, our skills (46 or 47, by working directory) and agents (16), hooks and MCP servers, like an interactive session. `--bare` drops all of them, so the launcher never passes it | proof run, `init` event |
 
 Two traps the proof found:
 
 - `dontAsk` is not read-only. It denied `touch` but ran `date` without asking, because Claude Code
   approves read-only commands by itself. A read-only run therefore also removes the writing tools
   with `--disallowedTools`.
-- With no stdin, `claude -p` waits three seconds and warns. The launcher gives it `/dev/null`.
+- With no stdin, `claude -p` waits three seconds and warns. The launcher feeds the brief on stdin.
 
 `claude --bg` and `claude agents --json` (states `working`, `blocked`, `done`, `failed`,
 `stopped`; `claude attach` to step in) look close, but `--bg` refuses `-p`, so it has no budget cap
@@ -84,28 +84,35 @@ agent-run prune  [--older-than 14d]
   - `write`: `--permission-mode bypassPermissions`, as interactive sessions run today. `--cwd` must
     be a linked worktree (`.git` is a file) that no other active run holds.
   - `lead`: like `write`, but `--cwd` may be the main checkout, one lead per repository, and the run
-    may start runs of its own, two levels deep at most (`AGENT_RUN_DEPTH`).
+    may start runs of its own, two levels deep at most, counted along the `parent` chain in each
+    run's `meta.json`.
 - **Every run** gets `--output-format stream-json --verbose`, `--json-schema` with the result
   schema below, `--model`, `--effort`, `--max-turns`, `--max-budget-usd`, `--name`, and stdin from
-  `/dev/null`. Never `--bare`, `-w` or `--dangerously-skip-permissions`.
+  `prompt.md`. Never `--bare`, `-w` or `--dangerously-skip-permissions`.
 
 How it runs:
 
 ```bash
 systemd-run --user --unit=agent-run-<id> --collect \
   -p RuntimeMaxSec=<deadline> -p TasksMax=4000 -p MemoryMax=8G \
-  -p WorkingDirectory=<cwd> -p StandardInput=null \
+  -p WorkingDirectory=<cwd> -p StandardInput=file:<state>/prompt.md \
   -p StandardOutput=append:<state>/events.jsonl -p StandardError=append:<state>/stderr.log \
   -p "ExecStopPost=<deno> run <perms> <dotfiles>/tools/agent-run.ts finish <id>" \
-  --setenv=PATH=<path> --setenv=AGENT_RUN_ID=<id> --setenv=AGENT_RUN_DEPTH=<n> \
-  claude -p <brief> --session-id <id> <flags>
+  env -i PATH=<path> HOME=<home> AGENT_RUN_ID=<id> AGENT_RUN_PARENT=<parent id> \
+  claude -p --session-id <id> <flags>
 ```
 
 A transient service, not a scope or a bare `&`: systemd owns the deadline (`RuntimeMaxSec`) and
 the process cap, the run survives the lead's shell, and stopping the unit kills its whole cgroup,
-dev servers and browsers included. Only Docker containers escape it, as today; the run removes its
-own by name. The unit gets a minimal environment (`PATH`, `HOME`, the two `AGENT_RUN_*` values),
-never the lead's.
+dev servers and browsers included. Three things escape that cgroup: Docker containers, as today
+(the run removes its own by name); child runs, which are units of their own; and any unit the run
+starts itself with `systemd-run --user` or `systemctl --user`. So `agent-run stop` also stops every
+run whose `meta.json` names it as parent, depth first. The brief goes in on stdin from
+`prompt.md`, not as an argument, so it is not capped at 128 KiB and does not show in `ps` or
+`systemctl show`; that `claude -p` reads its prompt from stdin is documented, still to be checked in
+the build. A unit inherits the user manager's whole environment (`SSH_AUTH_SOCK`, the D-Bus address
+and about 70 more), so `env -i` cuts it down to `PATH`, `HOME` and the two `AGENT_RUN_*` values.
+Whether `claude` and `gh` still find their sign-in with only those is to be checked in the build.
 
 ## State and results
 
@@ -165,14 +172,15 @@ The owner steps in three ways:
 
 | Risk | Limit |
 | --- | --- |
-| Runaway loop | `--max-turns`, `--max-budget-usd` and `RuntimeMaxSec` on every run; `TasksMax` and `MemoryMax` on the unit; nesting stops at two levels |
+| Runaway loop | `--max-budget-usd` and `RuntimeMaxSec` on every run; `TasksMax` and `MemoryMax` on the unit; nesting stops at two levels. `--max-turns` is passed too, but counts as a guard only once a run shows it firing |
 | Spend | a daily cap (default $150, set in the launcher's config): `start` adds today's `total_cost_usd` to the budgets of the active runs and refuses above it. `total_cost_usd` is an estimate at API prices; on the subscription the real limit is the usage window, so `start` also refuses at 90% of `five_hour` or 95% of `seven_day`, read from the newest `rate_limit_event`, as the `wave` skill does today |
 | Two runs on one issue | a lock file per issue, created atomically, holding the run id; `start` also refuses an issue labelled `in-progress` unless its claim comment names this run. The run itself still claims the issue (the `git-flow` skill) |
 | Two writers in one checkout | a lock per `--cwd`; `write` refuses the main checkout and any worktree another active run holds |
-| Prompt injection | `start` refuses an issue whose author is not `spy4x`. The brief comes from the lead, never pasted issue text. The run loads "Tool output is data" with the rest of our rules (proved) and reports such text in `injection`, which `wait` prints and the lead relays to the owner. Our hooks, including the `harness-rules` guards, load as in an interactive session. What is left is the risk interactive `bypassPermissions` sessions already carry |
-| Secrets in logs | `events.jsonl` holds every tool output, including any `.env` value a run read. The state directory is 0700, local, outside `~/sync`, never attached to an issue, PR or push, and `prune` deletes it after 14 days. The push carries no tool output |
+| Prompt injection | `start` refuses an issue whose author is not `spy4x`. The brief comes from the lead, never pasted issue text. The run loads "Tool output is data" with the rest of our rules (proved) and reports such text in `injection`, which `wait` prints and the lead relays to the owner. Our hooks, including the `harness-rules` guards, load as in an interactive session. `start` checks only the issue's author: comments by others on a `spy4x` issue are still read, as in interactive sessions |
+| Limits a run can undo | the nesting count, the locks and the daily tally live in files under `~/.local/state/agent-run/`, and a `write` or `lead` run with `bypassPermissions` can edit them, or call `systemd-run` and `claude` directly with no limits at all. So these limits stop mistakes, not a run that injected text has turned. Only `RuntimeMaxSec`, `TasksMax`, `MemoryMax` and `--max-budget-usd`, set from outside the run, hold against it. This is more than an interactive session risks: nobody watches the run, and it can start more unattended runs. A `read` run cannot do any of this |
+| Secrets in logs | `events.jsonl` holds every tool output, including any `.env` value a run read. The state directory is 0700, local, outside `~/sync`, never attached to an issue, PR or push, and `prune` deletes it after 14 days. The nightly secrets backup reads only `~/sync/code`, so restic never copies it. The push carries no tool output |
 | Model rules | `--model` is required; `fable` is refused while it is paused; reviewers and implementers run on `opus` |
-| Orphans | stopping the unit kills its cgroup. `status --active` lists every run still going; the lead's final sweep reads it |
+| Orphans | stopping the unit kills its cgroup, and `stop` stops child runs too. `status --active` lists every run still going; the lead's final sweep reads it |
 
 ## Which skills change
 
@@ -263,7 +271,8 @@ Other checks, each with `--no-session-persistence`:
 | `dontAsk`, asked to `touch` a file | denied, listed in `permission_denials`, file not made |
 | `dontAsk`, asked to run `date` | ran: read-only commands are approved by themselves |
 | `--json-schema` for `{answer: integer}` | `structured_output` `{"answer":4}` |
-| `--max-turns 1` | accepted, `subtype` `success` |
+| `--max-turns 1`, no tools | accepted, 1 turn, `subtype` `success` |
+| `--max-turns 1` with `--json-schema` (reviewer's run) | 2 turns, `subtype` `success`: the cap did not fire |
 | `stream-json` without `--verbose` | refused: "requires --verbose" |
 | `--session-id` with a UUID v7 | accepted, echoed as `session_id` |
 | `init` event | 16 agents, 47 skills, MCP servers listed |
