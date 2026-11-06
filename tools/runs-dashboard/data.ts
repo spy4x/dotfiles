@@ -2,6 +2,7 @@
 // Tables and views: the wave-1 contract (lane A's runs, queue, lessons, meta; lane B's v_* views).
 
 import { DatabaseSync } from "node:sqlite"
+import { localDay as dayBounds } from "../agent-run.ts"
 import type { BannerFacts, BannerRun } from "./needs-you.ts"
 
 /** One card's data: rows, nothing to show, or the query failed (a missing view, a bad column). */
@@ -117,7 +118,6 @@ export interface Kpis {
 
 /** Reads every section. Each query fails on its own, so one missing view blanks one card. */
 export function readDashboard(db: ReadDb, now: number): Dashboard {
-  const today = localDay(now)
   const week = isoAgo(now, 7)
   const day = isoAgo(now, 1)
   const one = <T>(read: () => T): T | null => {
@@ -136,9 +136,7 @@ export function readDashboard(db: ReadDb, now: number): Dashboard {
     now,
     paused: one(() => str(db.all(`SELECT value FROM meta WHERE key = 'paused'`)[0]?.value)) ??
       null,
-    todayUsd: one(() =>
-      num(db.all(`SELECT SUM(cost_usd) AS usd FROM v_daily_spend WHERE day = ?`, today)[0]?.usd)
-    ),
+    todayUsd: one(() => readTodayUsd(db, now)),
     runs: one(() =>
       db.all(
         `SELECT id, issue, status, started_at, cost_micros FROM runs WHERE started_at >= ?`,
@@ -166,7 +164,7 @@ export function readDashboard(db: ReadDb, now: number): Dashboard {
     now,
     banner,
     empty: (runCount ?? 0) === 0 && lastImport === null,
-    today: section(() => ({ usd: readTodayUsd(db, today) }), () => false),
+    today: section(() => ({ usd: readTodayUsd(db, now) }), () => false),
     kpis: section(() => readKpis(db, now), () => false),
     daily: section(() => readDaily(db, now), (data) => Object.keys(data.kinds).length === 0),
     runs,
@@ -177,8 +175,18 @@ export function readDashboard(db: ReadDb, now: number): Dashboard {
   }
 }
 
-function readTodayUsd(db: ReadDb, today: string): number {
-  return num(db.all(`SELECT SUM(cost_usd) AS usd FROM v_daily_spend WHERE day = ?`, today)[0]?.usd)
+/**
+ * What the lead's runs that started on the local calendar day cost, in dollars: the same sum
+ * `agent-run` stops the loop on. Interactive sessions do not count against the budget.
+ */
+function readTodayUsd(db: ReadDb, now: number): number {
+  const { start, end } = dayBounds(new Date(now))
+  const row = db.all(
+    `SELECT SUM(cost_micros) AS spent FROM runs WHERE started_at >= ? AND started_at < ?`,
+    start,
+    end,
+  )[0]
+  return num(row?.spent) / 1e6
 }
 
 function readKpis(db: ReadDb, now: number): Kpis {

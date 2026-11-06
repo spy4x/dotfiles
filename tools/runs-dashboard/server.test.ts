@@ -5,7 +5,8 @@ import { openReadOnly } from "./data.ts"
 import { createFixture } from "./fixture.ts"
 import { createHandler } from "./server.ts"
 
-const NOW = Date.parse(`2026-11-06T12:00:00Z`)
+// Local noon, so the fixture's runs from 0.5 to 9 hours ago fall on today in any time zone.
+const NOW = new Date(2026, 10, 6, 12).getTime()
 const PORT = 8787
 
 async function withDir(test: (dir: string) => Promise<void> | void) {
@@ -143,11 +144,42 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     ) assertEquals(cardStatus(html, title), `ready`, title)
     has(html, /The lead is paused:/)
     has(html, /Import bank statements from CSV/)
-    has(html, />\$142 of \$200</)
+    has(html, />\$171 of \$200</)
     has(html, /1 blocked · 2 queued · 1 claimed · 1 done · 1 dropped/)
     // The stylesheet carries the theme and the classes the page uses.
     has(html, /--color-foreground: oklch\(0\.13 /)
     has(html, /\.pc-card/)
+  })
+})
+
+Deno.test(`the budget counts today's lead runs, not interactive sessions`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    const db = new DatabaseSync(path)
+    db.exec(`UPDATE v_daily_spend SET cost_usd = 250 WHERE kind = 'interactive'`)
+    db.close()
+    const html = await (await get(path)).text()
+    has(html, />\$171 of \$200</)
+    lacks(html, /Today's budget is spent/)
+  })
+})
+
+Deno.test(`today's lead runs reaching $200 show the spent budget`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    const db = new DatabaseSync(path)
+    // Today's runs total $170.90; one more at $29.10 makes exactly $200.
+    db.prepare(
+      `INSERT INTO runs (id, name, started_at, status, cost_micros) VALUES (?, ?, ?, ?, ?)`,
+    ).run(
+      `019a5f00-0000-7000-8000-000000000400`,
+      `lead-tick`,
+      new Date(NOW - 3_600_000).toISOString(),
+      `done`,
+      29_100_000,
+    )
+    db.close()
+    has(await (await get(path)).text(), /Today's budget is spent:<\/strong> \$200 of \$200/)
   })
 })
 
