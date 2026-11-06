@@ -1,9 +1,10 @@
-#!/usr/bin/env -S deno run --allow-net=127.0.0.1 --allow-read --allow-env --allow-ffi
+#!/usr/bin/env -S deno run --allow-net=127.0.0.1 --allow-read --allow-env
 // The run dashboard: `deno task runs-dashboard`, then open http://127.0.0.1:8787. Read-only.
 // It serves on 127.0.0.1 only, until Ctrl+C. See README.md beside this file.
 
 import { join } from "jsr:@std/path@^1.0.0"
 import { processEnv, runtimeFileSystem } from "@spy4x/platform/server"
+import { serve } from "@spy4x/platform/server/serve"
 import { createHandler } from "./server.ts"
 
 const home = processEnv.get(`AGENT_RUN_HOME`) ??
@@ -14,14 +15,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 const dbPath = join(home, `runs.sqlite`)
 
-// @spy4x/platform has no HTTP server adapter yet, so the entry calls Deno.serve; the handler is a
-// plain fetch handler that any runtime can serve.
-Deno.serve(
-  {
-    hostname: `127.0.0.1`,
-    port,
-    onListen: () => console.log(`Agent runs: http://127.0.0.1:${port} (reads ${dbPath})`),
-  },
+const server = await serve(
   createHandler({
     dbPath,
     port,
@@ -32,4 +26,10 @@ Deno.serve(
       return text
     },
   }),
+  {
+    hostname: `127.0.0.1`,
+    port,
+    onListen: () => console.log(`Agent runs: http://127.0.0.1:${port} (reads ${dbPath})`),
+  },
 )
+await server.finished
