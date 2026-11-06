@@ -1058,10 +1058,6 @@ async function scanClean(deps: Deps, text: string): Promise<boolean> {
   }
 }
 
-/**
- * One NTFY push from `ai-harnesses/.env`; whether it was sent. Fails open: a failed push is
- * printed, never retried.
- */
 /** A header-safe title: non-ASCII text as an RFC 2047 encoded word, which ntfy decodes. */
 export function headerText(text: string): string {
   if (/^[\x20-\x7e]*$/.test(text)) return text
@@ -1069,6 +1065,10 @@ export function headerText(text: string): string {
   return `=?UTF-8?B?${btoa(String.fromCharCode(...bytes))}?=`
 }
 
+/**
+ * One NTFY push from `ai-harnesses/.env`; whether it was sent. Fails open: a failed push is
+ * printed, never retried.
+ */
 async function notify(deps: Deps, title: string, body: string, priority: string) {
   const env = await deps.fs.readText(deps.ntfyEnv) ?? ``
   const value = (name: string) => new RegExp(`^${name}=(.*)$`, `m`).exec(env)?.[1]?.trim()

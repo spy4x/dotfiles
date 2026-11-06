@@ -53,7 +53,9 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
 - **The retro.** `agent-retro.timer` runs `agent-run retro` at 08:30, skipped when paused or over
   budget: one `read` run on `opus` at effort `high` in `~/sync/code/dotfiles`, deadline 1h, with
   [`tools/agent-retro-brief.md`](../tools/agent-retro-brief.md). It may only query the database
-  with `sqlite3 -readonly -safe`, read issues, file and comment on issues in spy4x/dotfiles, and call `agent-run lesson`, `experiment` and `report`. It ranks
+  with `sqlite3 -readonly -safe`, read issues, file and comment on issues, and call `agent-run
+  lesson`, `experiment` and `report`. Its brief keeps issues in spy4x/dotfiles; the allow rule
+  names `-R spy4x/dotfiles` but does not stop a second `-R`. It ranks
   waste by measured minutes and tokens, keeps or reverts the last week's flow fixes by the numbers,
   files at most 2 flow-fix issues at `p2-high`, and logs each decision in
   `ai-memory/experiments/background-lead.md`.
