@@ -867,6 +867,18 @@ test(`asks for a handoff from the second compaction on`, async ($, on) => {
   expect(notice).toContain(`hand_off_to_session`)
 })
 
+test(`tells a headless run to park with its handoff after the second compaction`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test`, AGENT_RUN_ID: `0190a000-0000-7000-8000-000000000000` })
+  summarizes(on)
+  const compacted = await compact($, {
+    messages: [said(`summary`), said(`[harness-rules] compactions: 1`), said(`more work`)],
+  })
+  const notice = textsOf(compacted).at(-1) ?? ``
+  expect(notice).toContain(`[harness-rules] compactions: 2`)
+  expect(notice).toContain(`\`handoff\` field`)
+  expect(notice).not.toContain(`hand_off_to_session`)
+})
+
 test(`leaves a subagent's compaction and a precompute as the engine made them`, async ($, on) => {
   summarizes(on)
   const messages = [said(`[harness-rules] compactions: 3`)]

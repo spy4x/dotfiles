@@ -26,7 +26,8 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
   `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
   owner put the issue there, and that outranks its priority label. Run it once more with
   `label:p1-critical` in place of the milestone. A milestone with no candidate left → the next
-  one, and after the last, the first search above. Nothing else is a candidate. An issue outside a
+  one, and after the last, the first search above. In `spy4x/dotfiles`, `p2-high` tooling and flow
+  fixes are candidates too, milestone or not. Nothing else is a candidate. An issue outside a
   milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
   (the `Asked for by the owner` line, a comment of theirs without the marker that says to build it,
   or a priority raised after filing: "Picking work yourself" in the `issues` skill), or when step 2
@@ -166,7 +167,10 @@ as a complete brief. It always makes one of those calls first. When the app refu
 starts the next wave with `tools/agent-run.ts start --mode lead` and names the run id in the report;
 only when that refuses too does a proposal card for that session become the handoff. A harness
 without these tools, such as a plain terminal, ends the report with the prompt instead, ready to
-paste. Write no prompt file. With no next wave, it starts nothing.
+paste. Write no prompt file. A headless run (`AGENT_RUN_ID` set, nobody watching) makes none of
+these calls: it ends with status `parked` and the handoff in its result's `handoff` field, and the
+next tick continues from it (dotfiles `docs/headless-runs.md`). With no next wave, it starts
+nothing.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
