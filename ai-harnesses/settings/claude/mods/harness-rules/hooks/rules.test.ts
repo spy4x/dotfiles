@@ -272,6 +272,11 @@ test(`expands home in a body-file path and gives up on any other shell expansion
       [`/abs/$HOME/f.md`, `/home/t`],
       [`\`pwd\`/f.md`, `/home/t`],
       [`~root/f.md`, `/home/t`],
+      [`/abs/b?.md`, `/home/t`],
+      [`b*.md`, `/home/t`],
+      [`/abs/[ab].md`, `/home/t`],
+      [`{a,b}.md`, `/home/t`],
+      [`=ls`, `/home/t`],
     ]
   ) expect(bodyFilePath(path!, { home, cwd: `/w` })).toBeUndefined()
 })
@@ -283,27 +288,66 @@ test(`joins a relative body-file path to the session's directory, and gives up w
   expect(bodyFilePath(`f.md`, {})).toBeUndefined()
 })
 
-test(`resolves a relative body-file path against the folder a cd moved to`, () => {
+test(`resolves a relative body-file path against the folder a cd chained by && moved to`, () => {
   for (
     const [command, path] of [
       [`cd /x && gh pr comment 5 -F f.md`, `/x/f.md`],
+      [`cd /x && gh pr comment 5 --body-file f.md`, `/x/f.md`],
+      [`cd /x && gh pr comment 5 --body-file=f.md`, `/x/f.md`],
       [`cd -- /x && gh pr comment 5 -F f.md`, `/x/f.md`],
-      [`pushd /x && gh pr comment 5 -F f.md`, `/x/f.md`],
-      [`cd /x; cd sub && gh pr comment 5 -F f.md`, `/x/sub/f.md`],
+      [`cd /x && cd sub && gh pr comment 5 -F f.md`, `/x/sub/f.md`],
+      [`cd /x; cd /y &&\ngh pr comment 5 -F f.md`, `/y/f.md`],
+      [`cd /x/link/../sub/. && gh pr comment 5 -F f.md`, `/x/sub/f.md`],
       [`cd sub && gh pr comment 5 -F f.md`, `sub/f.md`],
+      [`R=a/b && cd /x && echo hi && gh pr comment 5 -F f.md`, `/x/f.md`],
       [`cd && gh pr comment 5 -F f.md`, `$HOME/f.md`],
       [`cd ~ && gh pr comment 5 -F f.md`, `$HOME/f.md`],
       [`cd ~/x && gh pr comment 5 -F f.md`, `~/x/f.md`],
       [`cd /x && gh pr comment 5 -F /abs/f.md`, `/abs/f.md`],
       [`cd "$FOO" && gh pr comment 5 -F /abs/f.md`, `/abs/f.md`],
-      [`gh pr comment 5 -F f.md && cd /x`, `f.md`],
+      [`eval cd /etc; gh pr comment 5 -F /abs/f.md`, `/abs/f.md`],
     ]
   ) expect(ghPost(command!)).toEqual({ kind: `file`, path: path! })
 })
 
-test(`refuses a relative body file after a cd it cannot follow`, () => {
+test(`refuses a relative body file when the shell may post it from another folder`, () => {
   for (
     const command of [
+      `eval cd /etc; gh issue comment 1 --repo a/b --body-file b.md`,
+      `eval cd /etc && gh issue comment 1 --repo a/b --body-file=b.md`,
+      `eval "cd /etc" && gh pr comment 5 -F f.md`,
+      `pushd /x && gh pr comment 5 -F f.md`,
+      `popd && gh pr comment 5 -F f.md`,
+      `builtin cd /x && gh pr comment 5 -F f.md`,
+      `command cd /x && gh pr comment 5 -F f.md`,
+      `sudo cd /x && gh pr comment 5 -F f.md`,
+      `source ./s.sh && gh pr comment 5 -F f.md`,
+      `. ./s.sh && gh pr comment 5 -F f.md`,
+      `take /x && gh pr comment 5 -F f.md`,
+      `f() { cd /x; }; f && gh pr comment 5 -F f.md`,
+      `1 && gh pr comment 5 -F f.md`,
+      `/x && gh pr comment 5 -F f.md`,
+      `cd /x; gh pr comment 5 -F f.md`,
+      `cd /x\ngh pr comment 5 -F f.md`,
+      `cd /x || true && gh pr comment 5 -F f.md`,
+      `test -d /x || cd /x && gh pr comment 5 -F f.md`,
+      `cd /x & gh pr comment 5 -F f.md`,
+      `cd /x | cat && gh pr comment 5 -F f.md`,
+      `if true; then cd /x; fi; gh pr comment 5 -F f.md`,
+      `gh pr comment 5 -F f.md && cd /x`,
+      `while true; do gh pr comment 5 -F f.md; cd /x; done`,
+      `env -C /x gh pr comment 5 -F f.md`,
+      `env --chdir=/x gh pr comment 5 -F f.md`,
+      `sudo -D/x gh pr comment 5 -F f.md`,
+      `CDPATH=/x cd sub && gh pr comment 5 -F f.md`,
+      `CDPATH=/x; cd sub && gh pr comment 5 -F f.md`,
+      `cdpath=(/x); cd sub && gh pr comment 5 -F f.md`,
+      `echo $(( 1 <<X ))\ncd /x\nX\ngh pr comment 5 -F f.md`,
+      `cd ... && gh pr comment 5 -F f.md`,
+      `cd ../x && gh pr comment 5 -F f.md`,
+      `cd ~/.. && gh pr comment 5 -F f.md`,
+      `cd "" && gh pr comment 5 -F f.md`,
+      `cd =ls && gh pr comment 5 -F f.md`,
       `cd "$FOO" && gh pr comment 5 -F f.md`,
       `cd "$FOO" && cd sub && gh pr comment 5 -F f.md`,
       `cd "$(mktemp -d)" && gh pr comment 5 -F f.md`,
@@ -318,6 +362,18 @@ test(`refuses a relative body file after a cd it cannot follow`, () => {
       `(cd /x) && gh pr comment 5 -F f.md`,
     ]
   ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
+})
+
+test(`refuses a body file under home when the command may change HOME`, () => {
+  for (
+    const command of [
+      `HOME=/tmp/c; gh pr comment 5 -F ~/f.md`,
+      `export HOME=/tmp/c && gh pr comment 5 -F $HOME/f.md`,
+      `HOME=/tmp/c && cd && gh pr comment 5 -F f.md`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
+  expect(ghPost(`echo $HOME && gh pr comment 5 -F \${HOME}/f.md`))
+    .toEqual({ kind: `file`, path: `\${HOME}/f.md` })
 })
 
 test(`finds the comment a reopen posts`, () => {
@@ -409,10 +465,13 @@ test(`refuses a heredoc whose text names a gh post, and scans one that names a t
   expect(ghPost(write(`gh pr edit 5 --title x`))).toEqual({ kind: `subject` })
 })
 
-test(`resolves a relative body file after a cd and a heredoc that writes it`, () => {
-  const command = `cd /w/issues && cat > a.md <<'EOF'\n<!-- agent -->\nIt's done.\nEOF\n` +
-    `gh issue create --title t --body-file a.md`
-  expect(ghPost(command)).toEqual({ kind: `file`, path: `/w/issues/a.md` })
+test(`resolves a relative body file after a cd chained by && to the heredoc that writes it`, () => {
+  const write = `cd /w/issues && cat > a.md <<'EOF'`
+  const body = `\n<!-- agent -->\nIt's done.\nEOF\n`
+  const post = `gh issue create --title t --body-file a.md`
+  expect(ghPost(`${write} && ${post}${body}`)).toEqual({ kind: `file`, path: `/w/issues/a.md` })
+  // A failed cd skips only the cat, and the post on the next line runs in the old folder.
+  expect(ghPost(`${write}${body}${post}`)).toEqual({ kind: `unplaced` })
 })
 
 test(`reads a body file inside what a mktemp in the same command made`, () => {
