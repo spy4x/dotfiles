@@ -456,6 +456,58 @@ Deno.test(`a CI wait costs the API call after it returns, not the whole session`
   }
 })
 
+Deno.test(`a CI wait with no API call after it still counts, at no cost`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `ci`, `Bash`, { command: `gh pr checks 1 --watch` }),
+        toolResult(at(3), `ci`, `ok`),
+      ]),
+    )
+    await m.run()
+    const waits = await m.db.queryAll(`SELECT sec, cost_usd FROM v_ci_waits`)
+    assertEquals(waits, [{ sec: 180, cost_usd: 0 }])
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a CI wait that never returned lasts until the session's end`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `ci`, `Bash`, { command: `gh run watch 7` }),
+        userText(at(10), `stopped`),
+      ]),
+    )
+    await m.run()
+    const waits = await m.db.queryAll(`SELECT sec, cost_usd FROM v_ci_waits`)
+    assertEquals(waits, [{ sec: 600, cost_usd: 0 }])
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a CI wait finds its next API call through the session and time index`, async () => {
+  const m = await machine()
+  try {
+    await m.run()
+    const plan = await m.db.queryAll<{ detail: string }>(
+      `EXPLAIN QUERY PLAN SELECT * FROM v_ci_waits`,
+    )
+    assert(
+      plan.some((row) => row.detail.includes(`api_calls_by_session_at`)),
+      JSON.stringify(plan),
+    )
+  } finally {
+    await m.close()
+  }
+})
+
 Deno.test(`an import replaces view definitions left by an older version`, async () => {
   const m = await machine()
   try {
