@@ -111,6 +111,20 @@ Deno.test(`a file that is not a database shows the error state`, async () => {
   })
 })
 
+Deno.test(`a long database path wraps inside the missing and unreadable messages`, async () => {
+  await withDir(async (dir) => {
+    const path = join(dir, `runs.sqlite`)
+    const wraps = (html: string) => {
+      // The message's own element carries the class, and the stylesheet defines it.
+      has(html, /class="[^"]*wrap-anywhere[^"]*"[^>]*>(?:(?!<\/main>)[\s\S])*runs\.sqlite/)
+      has(html, /\.wrap-anywhere\s*\{\s*overflow-wrap:\s*anywhere/)
+    }
+    wraps(await (await get(path)).text())
+    await Deno.writeTextFile(path, `not a database, just text that is long enough to have a header`)
+    wraps(await (await get(path)).text())
+  })
+})
+
 Deno.test(`an empty database says no runs yet and every card shows its empty line`, async () => {
   await withDir(async (dir) => {
     const html = await (await get(createFixture(dir, { now: NOW, empty: true }))).text()
