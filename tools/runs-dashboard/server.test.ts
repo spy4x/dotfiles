@@ -165,6 +165,11 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     has(html, /Run #309<\/a> failed and cost \$104\./)
     assertEquals(html.split(`href="#run-019a5f00-0000-7000-8000-000000000309"`).length - 1, 1)
     has(html, /child of run #309/)
+    // Inline links show the house focus ring: 2 px, 2 px from the text.
+    has(
+      html,
+      /<a class="[^"]*focus-visible:ring-2 [^"]*focus-visible:ring-offset-2[^"]*" href="#run-/,
+    )
     // The stylesheet carries the theme and the classes the page uses.
     has(html, /--color-foreground: oklch\(0\.13 /)
     has(html, /\.pc-card/)
