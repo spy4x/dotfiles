@@ -19,10 +19,11 @@ async function withDir(test: (dir: string) => Promise<void> | void) {
   }
 }
 
-const handlerFor = (dbPath: string) =>
+const handlerFor = (dbPath: string, allowedHosts?: string[]) =>
   createHandler({
     dbPath,
     port: PORT,
+    allowedHosts,
     now: () => NOW,
     exists: async (path) => {
       try {
@@ -35,8 +36,8 @@ const handlerFor = (dbPath: string) =>
     readText: (path) => Deno.readTextFile(path),
   })
 
-const get = (dbPath: string, host = `127.0.0.1:${PORT}`) =>
-  handlerFor(dbPath)(new Request(`http://${host}/`, { headers: { host } }))
+const get = (dbPath: string, host = `127.0.0.1:${PORT}`, allowedHosts?: string[]) =>
+  handlerFor(dbPath, allowedHosts)(new Request(`http://${host}/`, { headers: { host } }))
 
 /** Asserts `html` matches `pattern`, without printing the whole page when it does not. */
 const has = (html: string, pattern: RegExp) => assert(pattern.test(html), `expected ${pattern}`)
@@ -87,6 +88,23 @@ Deno.test(`a request with another Host header gets 403`, async () => {
     for (const host of [`127.0.0.1:${PORT}`, `localhost:${PORT}`]) {
       const response = await get(path, host)
       assertEquals(response.status, 200, host)
+      await response.body?.cancel()
+    }
+  })
+})
+
+Deno.test(`an allowed extra Host is served, and other names still get 403`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    const allowed = [`runs.example.com`]
+    for (const host of [`runs.example.com`, `127.0.0.1:${PORT}`]) {
+      const response = await get(path, host, allowed)
+      assertEquals(response.status, 200, host)
+      await response.body?.cancel()
+    }
+    for (const host of [`runs.example.com:${PORT}`, `evil.example`, `example.com`]) {
+      const response = await get(path, host, allowed)
+      assertEquals(response.status, 403, host)
       await response.body?.cancel()
     }
   })

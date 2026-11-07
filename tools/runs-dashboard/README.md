@@ -12,8 +12,9 @@ deno task runs-dashboard   # then open http://127.0.0.1:8787; Ctrl+C stops it
   the file read-only on each request, never writes it and never creates it.
 - Listens on `127.0.0.1` only, port `PORT` (default 8787). A request whose `Host` header is not
   `127.0.0.1:<port>` or `localhost:<port>` gets 403, so another site cannot read the page through
-  DNS rebinding.
-- Started on demand: no systemd unit, nothing left running after Ctrl+C.
+  DNS rebinding. `ALLOWED_HOSTS` adds comma-separated `Host` values to accept, for a proxy that
+  forwards a public name (the homelab publishes it as `runs.antonshubin.com` through Pangolin).
+- Started on demand here; on portable the homelab's `runs-dashboard.service` keeps it running.
 - Each card runs its own query, so a missing view blanks that card only. It never shows prompt or
   tool-output text.
 
