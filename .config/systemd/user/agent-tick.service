@@ -1,8 +1,0 @@
-# Starts the background lead's next queue item, if the loop may start one now. Runs from
-# agent-tick.timer; the lead itself runs in its own agent-run-<id> unit. See docs/headless-runs.md.
-[Unit]
-Description=Start the background lead's next queue item
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/env deno run -A %h/sync/code/dotfiles/tools/agent-run.ts tick

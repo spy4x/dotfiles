@@ -15,7 +15,7 @@ units (`run-*.scope`) older than an hour, with the unit name in place of the PID
 <seconds>` changes the hour. A subagent adds `--under <worktree> <scratch dir>`, reads the list,
 then reruns it with `--kill` to stop exactly those. Empty output = clean. The lead's final sweep
 adds `--all`, which shows other sessions' orphans and unused anonymous Docker volumes and networks,
-and reads `tools/agent-run.ts status --active`: each headless run it started that its handoff does
+and reads `~/sync/code/ringmaster/src/agent-run.ts status --active`: each headless run it started that its handoff does
 not name is stopped with `agent-run stop <id>`. One older than 24 hours is abandoned, whoever
 started it: stop it with `--stale --kill` and report what it stopped. Report a younger one, never
 kill it. It lists no containers: remove yours by name, with their volumes.

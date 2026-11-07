@@ -111,7 +111,7 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
   cap then applies as usual. A harness without `implementer-xhigh` uses `implementer`.
 - A fix round goes to a fresh `implementer`, not back to the author, when the author's context is
   past about 200K tokens: read the "PEAK CTX" column of its row in
-  `deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <your session id>`. Its brief is the
+  `deno run -A ~/sync/code/ringmaster/src/session-cost.ts <your session id>`. Its brief is the
   same as the escalation brief above. When the escalation applies too, `implementer-xhigh` takes
   the round. Reviewers are resumed as usual: their context stays small. Trial until 2026-11-28
   (`~/sync/code/ai-memory/experiments/fresh-lanes.md`).
@@ -158,18 +158,18 @@ hold a whole group. A security or data-loss hole does not wait: file it when you
 
 The result part also gives the project's position in one line: how much of the plan is done and
 what remains before the next milestone, and the wave's total cost
-(`deno run -A ~/sync/code/dotfiles/tools/session-cost.ts <session id>`).
+(`deno run -A ~/sync/code/ringmaster/src/session-cost.ts <session id>`).
 
 After the report, the lead hands the next wave, or the rest of the work, to a new session itself
 instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__hand_off_to_session` with
 the next wave's prompt as the remaining plan, or `mcp__ccd_session__start_session` with that prompt
 as a complete brief. It always makes one of those calls first. When the app refuses it, the lead
-starts the next wave with `tools/agent-run.ts start --mode lead` and names the run id in the report;
+starts the next wave with `~/sync/code/ringmaster/src/agent-run.ts start --mode lead` and names the run id in the report;
 only when that refuses too does a proposal card for that session become the handoff. A harness
 without these tools, such as a plain terminal, ends the report with the prompt instead, ready to
 paste. Write no prompt file. A headless run (`AGENT_RUN_ID` set, nobody watching) makes none of
 these calls: it ends with status `parked` and the handoff in its result's `handoff` field, and the
-next tick continues from it (dotfiles `docs/headless-runs.md`). With no next wave, it starts
+next tick continues from it (ringmaster `docs/headless-runs.md`). With no next wave, it starts
 nothing.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
@@ -179,7 +179,7 @@ and goes stale. A pasted prompt that names a model or an effort is stale: ignore
 
 A session the lead started that stops before its task is done is still the lead's work. One that
 stopped to hand off, because it compacted twice or reached the usage stop ("Usage" above), gets a
-new session started from its handoff note, by `tools/agent-run.ts start --mode lead` when the app
+new session started from its handoff note, by `~/sync/code/ringmaster/src/agent-run.ts start --mode lead` when the app
 refuses; any other is told to carry on, by `agent-run resume` when it is a headless run. Relaying
 its report to the owner is not enough. The app refuses to start or hand off a session during a turn that another
 session's message started, so a stopped session that needs a successor gets it from the lead.

@@ -9,7 +9,7 @@
 
 [AI harness config](ai-harnesses/README.md) · [Global agent rules](ai-harnesses/AGENTS.md) ·
 [Apps](docs/apps.md) · [Shell](docs/shell.md) · [Sync](docs/sync.md) ·
-[Host limits](docs/host-limits.md) · [Headless runs](docs/headless-runs.md) ·
+[Host limits](docs/host-limits.md) ·
 [Development](docs/development.md)
 
 [![Demo video, 58 seconds: one reviewer agent from ai-harnesses/ shown side by side as Claude Code, OpenCode and DSH render it. One edit to the source reaches all three, and deno task ai --check catches a hand edit to one copy.](media/demo/poster.webp)](https://antonshubin.com/tools/dotfiles)
@@ -43,8 +43,6 @@ is applied here.
   processes and stale `systemd-run` scopes an agent session left behind, and the anonymous Docker
   volumes and networks no container uses, and stops exactly those on request. The rules cap the
   processes and memory of anything that spawns processes, and give every wait a deadline.
-- **Costs you can see.** [`tools/session-cost.ts`](tools/session-cost.ts) reports each session's
-  and subagent's cost, peak context and compactions from Claude Code's transcripts.
 - **Secrets stay local.** Committed env files are age-encrypted one value per line, and
   [`tools/env-key-copy.ts`](tools/env-key-copy.ts) gives a worktree its key without the key
   ever being printed.
@@ -68,9 +66,7 @@ How the rendering works, the file layout per harness and how to write a skill or
   repository.
 - **Limits for many agents.** [`system/`](docs/host-limits.md) raises inotify instances and zram
   swap, cleans `/tmp` sooner, and caps the tasks each app can start.
-- **Unattended agent runs.** [`tools/agent-run.ts`](docs/headless-runs.md) runs `claude -p` as a
-  systemd service with a deadline and a budget, logs it in SQLite, and a nightly lead works on the
-  focus project within 5% of the weekly limit.
+- **Unattended agent runs** and session costs live in a separate private repository, ringmaster.
 - **VPN only while it works.** [`tools/vpn-guard/`](docs/vpn-guard.md) connects a full-tunnel VPN
   at boot and every 30 minutes, and drops it when the internet does not work through it.
 - **Synced, not cloned.** The repository lives in a Syncthing folder, and agent worktrees are
