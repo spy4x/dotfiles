@@ -59,6 +59,7 @@ import {
   setItem,
   setMeta,
 } from "./agent-queue.ts"
+import { DAILY_BUDGET_USD, localDay, RUN_ALERT_USD } from "./agent-budget.ts"
 import { costOf, toCall } from "./session-cost.ts"
 
 // ===== Types and constants =====
@@ -96,10 +97,6 @@ export const KEPT_ENV = [
 const MODELS = [`opus`, `haiku`]
 const SELF = fromFileUrl(import.meta.url)
 const DOTFILES = dirname(dirname(SELF))
-/** The soft daily budget: no tick or retro starts once today's runs have spent it. */
-export const DAILY_BUDGET_USD = 200
-/** A run past this estimate sends one urgent push; it is never stopped for it. */
-export const RUN_ALERT_USD = 100
 /** Good-news pushes per local day; the rest wait for the digest. */
 export const GOOD_PER_DAY = 3
 /** A tick run's deadline, and how long its claim on a queue item holds. */
@@ -563,13 +560,6 @@ export function estimateUsd(lines: string[]): number {
     const { cost } = costOf(call)
     return sum + cost.cacheRead + cost.cacheWrite + cost.output + cost.input
   }, 0)
-}
-
-/** The local calendar day around `now`, as ISO bounds. */
-export function localDay(now: Date): { start: string; end: string } {
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-  return { start: start.toISOString(), end: end.toISOString() }
 }
 
 /** `YYYY-MM-DD HH:MM` in local time. */
