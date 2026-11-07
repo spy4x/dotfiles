@@ -327,7 +327,8 @@ const REVERT = commandLike([
 function viewsSql(has: { runs: boolean; queue: boolean }): string {
   const runs = has.runs
     ? `runs`
-    : `(SELECT NULL AS id, NULL AS parent, NULL AS cost_micros, NULL AS started_at WHERE 0)`
+    : `(SELECT NULL AS id, NULL AS parent, NULL AS issue, NULL AS cost_micros, NULL AS started_at
+      WHERE 0)`
   const queue = has.queue ? `queue` : `(SELECT NULL AS status, NULL AS updated_at WHERE 0)`
   return `
 DROP VIEW IF EXISTS v_goal;
@@ -431,12 +432,15 @@ SELECT name AS tool, COUNT(*) AS calls, SUM(COALESCE(is_error, 0)) AS errors,
 FROM tool_calls GROUP BY name ORDER BY total_sec DESC;
 
 CREATE VIEW v_slow_steps AS
-SELECT session_id, started_at AS at, name AS tool,
+SELECT t.session_id, t.started_at AS at, t.name AS tool, s.project, r.id AS run_id,
+  r.issue AS run_issue,
   substr(COALESCE(json_extract(input, '$.description'), json_extract(input, '$.command'),
     json_extract(input, '$.file_path'), json_extract(input, '$.pattern'),
     json_extract(input, '$.query'), json_extract(input, '$.url')), 1, 120) AS summary,
-  ROUND(duration_ms / 1000.0, 1) AS sec, COALESCE(is_error, 0) AS is_error
-FROM tool_calls WHERE duration_ms IS NOT NULL ORDER BY duration_ms DESC;
+  ROUND(t.duration_ms / 1000.0, 1) AS sec, COALESCE(t.is_error, 0) AS is_error
+FROM tool_calls t JOIN sessions s ON s.id = t.session_id
+LEFT JOIN ${runs} r ON r.id = s.transcript_session
+WHERE t.duration_ms IS NOT NULL ORDER BY t.duration_ms DESC;
 
 CREATE VIEW v_stalls AS
 SELECT g.session_id, g.from_at, g.to_at, g.gap_sec, k.kind FROM (

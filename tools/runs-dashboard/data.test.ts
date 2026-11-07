@@ -77,13 +77,13 @@ Deno.test(`time lost shows one CI-wait row with the cost of the waits, not of th
   assertEquals(rows.map((row) => row.label), [`CI wait`, `Review round`])
 })
 
-Deno.test(`slow steps are labelled with the tool's name only`, async () => {
+Deno.test(`a slow step names its tool, project and run, never its input`, async () => {
   const { data } = await read()
   const rows = ready(data.slowSteps)
   assertEquals(rows.map((row) => [row.label, row.note]), [
-    [`Bash`, undefined],
-    [`Agent`, undefined],
-    [`Bash`, undefined],
+    [`Bash`, `seed · run #301`],
+    [`Agent`, `financy · run 000310`],
+    [`Bash`, `dotfiles · own session`],
   ])
 })
 

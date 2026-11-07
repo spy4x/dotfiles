@@ -508,6 +508,40 @@ Deno.test(`a CI wait finds its next API call through the session and time index`
   }
 })
 
+Deno.test(`a slow step names its project and the run its transcript belongs to`, async () => {
+  const m = await machine()
+  try {
+    await m.db.exec(LANE_A)
+    await m.db.execute(
+      `INSERT INTO runs (id, name, mode, model, effort, cwd, issue, started_at, status)
+       VALUES (?, 'lead', 3, 'opus', 'medium', '/', 'o/r#7', ?, 'running')`,
+      SID,
+      at(0),
+    )
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `spawn`, `Agent`, { subagent_type: `implementer` }),
+        toolResult(at(9), `spawn`, `ok`),
+      ]),
+    )
+    await m.subagent(`imp`, { agentType: `implementer`, toolUseId: `spawn` }, [
+      toolUse(at(1), `sub-1`, `check`, `Bash`, { command: `deno task check` }),
+      toolResult(at(5), `check`, `ok`),
+    ])
+    await m.run()
+    const steps = await m.db.queryAll(
+      `SELECT tool, project, run_id, run_issue FROM v_slow_steps ORDER BY sec DESC`,
+    )
+    assertEquals(steps, [
+      { tool: `Agent`, project: PROJECT, run_id: SID, run_issue: `o/r#7` },
+      { tool: `Bash`, project: PROJECT, run_id: SID, run_issue: `o/r#7` },
+    ])
+  } finally {
+    await m.close()
+  }
+})
+
 Deno.test(`an import replaces view definitions left by an older version`, async () => {
   const m = await machine()
   try {

@@ -365,13 +365,21 @@ function readTimeLost(db: ReadDb, since: string): RankedRow[] {
 }
 
 function readSlowSteps(db: ReadDb, since: string): RankedRow[] {
-  // The tool's name and time only: a step's input can hold prompts, paths or secrets.
+  // The tool's name, its project and run, and its time: a step's input can hold prompts or secrets.
   return db.all(
-    `SELECT tool, sec, is_error FROM v_slow_steps WHERE at >= ? ORDER BY sec DESC LIMIT 5`,
+    `SELECT tool, project, run_id, run_issue, sec, is_error FROM v_slow_steps WHERE at >= ?
+     ORDER BY sec DESC LIMIT 5`,
     since,
-  ).map((row) => ({
-    label: String(row.tool),
-    value: num(row.sec),
-    values: [num(row.is_error)],
-  }))
+  ).map((row) => {
+    const issue = str(row.run_issue)
+    const run = row.run_id === null
+      ? `own session`
+      : `run ${issue ? `#${issue.split(`#`)[1]}` : String(row.run_id).slice(-6)}`
+    return {
+      label: String(row.tool),
+      note: `${row.project} · ${run}`,
+      value: num(row.sec),
+      values: [num(row.is_error)],
+    }
+  })
 }
