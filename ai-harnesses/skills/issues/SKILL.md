@@ -31,9 +31,9 @@ issue into one, or move an issue in or out. Never raise an issue's priority, and
 `p4-low`, `p5-someday`, `manual` or `needs-decision`. Besides setting an issue aside as above, your
 only label changes on an existing issue are adding `manual`, `needs-decision` or a missing type
 label, and the `in-progress` claim (the `git-flow` skill). An open issue you find blocked on me
-or another person, and not labelled `manual` or `needs-decision`, gets `manual`. Library exception to this paragraph: a
-library issue an app needs is built now in the app's wave, or put at `p2-high` in the library's
-nearest milestone.
+or another person, with neither label, gets the one "Filing issues" below would give it. Library
+exception to this paragraph: a library issue an app needs is built now in the app's wave, or put
+at `p2-high` in the library's nearest milestone.
 
 Priority labels, five levels:
 
@@ -96,9 +96,10 @@ repository goes in your report. Before the final report:
    by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
 Every issue you file gets a priority label and a type label. It also gets `needs-decision` when
-it waits on my answer, and `manual` when it is blocked on me or another person in any other way: an
-action of mine, a client's reply, someone's access or review. Type labels are the usual open-source ones (`bug`,
-`enhancement`, `documentation`, `refactoring`…); a type `spy4x/dotfiles` lacks is added there first.
+it waits on my answer, and `manual` when it is blocked on me or another person in any other way:
+an action of mine, a client's reply, someone's access or review. My weekly review of parked and
+someday issues is no block. Type labels are the usual open-source ones (`bug`, `enhancement`,
+`documentation`, `refactoring`…); a type `spy4x/dotfiles` lacks is added there first.
 A repo without these labels → create them first, copying names, colours and descriptions from
 `spy4x/dotfiles`.
 
