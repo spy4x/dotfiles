@@ -1429,9 +1429,13 @@ Deno.test(`experiment appends a row and commits only that file, failing open`, a
     assertEquals(git, [
       `fetch origin main`,
       `rev-list --count origin/main..HEAD`,
+      `merge --ff-only -q origin/main`,
+      `ls-files -s -- experiments/background-lead.md`,
       `add experiments/background-lead.md`,
       `commit -m docs(experiments): background lead retro row -- experiments/background-lead.md`,
       `rev-parse HEAD`,
+      `rev-parse ${`a`.repeat(40)}~1`,
+      `rev-parse origin/main`,
       `push origin ${`a`.repeat(40)}:refs/heads/main`,
     ])
     m.github.failGit = `push`
@@ -1610,6 +1614,76 @@ Deno.test(`a failed experiment push undoes its commit, keeps the row, and the ne
     assertEquals((await main([`experiment`, `Second`], m.deps)).output, `logged and pushed`)
     const pushed = gitIn(origin, `show`, `main:experiments/background-lead.md`)
     assertMatch(pushed, /run run-9: First try\n.*run run-9: Second$/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`experiment catches up when ai-memory is behind and pushes its row`, async () => {
+  const m = await machine({ env: { AGENT_RUN_ID: `run-10` } })
+  try {
+    const { origin } = realMemory(m)
+    const other = join(m.home, `other`)
+    gitIn(m.home, `clone`, `-q`, origin, other)
+    for (const [key, value] of [[`user.email`, `t@example.com`], [`user.name`, `t`]]) {
+      gitIn(other, `config`, key, value)
+    }
+    await Deno.mkdir(join(other, `experiments`))
+    await Deno.writeTextFile(join(other, `experiments`, `background-lead.md`), `- other row\n`)
+    gitIn(other, `add`, `experiments`)
+    gitIn(other, `commit`, `-q`, `--no-gpg-sign`, `-m`, `other machine`)
+    gitIn(other, `push`, `-q`, `origin`, `main`)
+    assertEquals(await main([`experiment`, `Behind`], m.deps), {
+      code: 0,
+      output: `logged and pushed`,
+    })
+    assertEquals(
+      gitIn(origin, `log`, `--format=%s`, `main`),
+      `docs(experiments): background lead retro row\nother machine\nfirst`,
+    )
+    const pushed = gitIn(origin, `show`, `main:experiments/background-lead.md`)
+    assertMatch(pushed, /^- other row\n- .*run run-10: Behind$/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a failed experiment push leaves another staged change in the file staged`, async () => {
+  const m = await machine({ env: { AGENT_RUN_ID: `run-11` } })
+  try {
+    const { memory } = realMemory(m)
+    assertEquals((await main([`experiment`, `First`], m.deps)).output, `logged and pushed`)
+    const relative = `experiments/background-lead.md`
+    const file = join(memory, relative)
+    await Deno.writeTextFile(file, `staged by someone\n`, { append: true })
+    gitIn(memory, `add`, relative)
+    const staged = gitIn(memory, `show`, `:${relative}`)
+    gitIn(memory, `remote`, `set-url`, `--push`, `origin`, join(m.home, `missing.git`))
+    assertMatch((await main([`experiment`, `Second`], m.deps)).output, /^logged; git push failed: /)
+    assertEquals(gitIn(memory, `show`, `:${relative}`), staged)
+    assertMatch(await Deno.readTextFile(file), /staged by someone\n.*run run-11: Second\n$/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`experiment does not push a commit made in ai-memory after its check`, async () => {
+  const m = await machine({ env: { AGENT_RUN_ID: `run-12` } })
+  try {
+    const { memory, origin } = realMemory(m)
+    const run = m.deps.run
+    m.deps.run = async (command) => {
+      if (command[3] === `add`) {
+        await Deno.writeTextFile(join(memory, `late.md`), `late`)
+        gitIn(memory, `add`, `late.md`)
+        gitIn(memory, `commit`, `-q`, `-m`, `late`)
+      }
+      return await run(command)
+    }
+    const out = await main([`experiment`, `Raced`], m.deps)
+    assertMatch(out.output, /^logged; not pushed: ai-memory gained another commit/)
+    assertEquals(gitIn(origin, `log`, `--format=%s`, `main`), `first`)
+    assertEquals(gitIn(memory, `log`, `--format=%s`, `-1`), `late`)
   } finally {
     await m.cleanup()
   }

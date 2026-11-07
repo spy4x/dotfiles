@@ -1723,45 +1723,64 @@ async function lesson(deps: Deps, flags: Map<string, string[]>, text: string): P
 
 /**
  * Append a row to `ai-memory/experiments/background-lead.md` and commit only that file straight
- * to `main`, as ai-memory's README allows for experiment rows. It pushes that one commit by its
- * id, and commits nothing while ai-memory holds other commits not on `origin/main`, since a push
- * would carry them too. A failed push undoes the commit. A failed or refused step is printed and
+ * to `main`, as ai-memory's README allows for experiment rows. It first fast-forwards ai-memory to
+ * `origin/main`, then pushes that one commit by its id. It commits nothing while ai-memory holds
+ * other commits not on `origin/main`, since a push would carry them too. A failed push undoes the
+ * commit and puts back the file's index entry as it was. A failed or refused step is printed and
  * the row stays in the file.
  */
 async function experiment(deps: Deps, text: string): Promise<Outcome> {
   if (!text.trim()) return refuse(`empty experiment row`)
   const relative = join(`experiments`, `background-lead.md`)
   const file = join(deps.memory, relative)
+  const git = async (...args: string[]) => {
+    const step = await deps.run([`git`, `-C`, deps.memory, ...args])
+    if (!step.success) throw new Error(`git ${args[0]} failed: ${step.stderr.trim().slice(0, 300)}`)
+    return step.stdout.trim()
+  }
+  // Catch up before the row is written: other machines append to the same file, and a
+  // fast-forward refuses to overwrite a local change. Git refuses rather than lose one.
+  const stopped = await (async () => {
+    await git(`fetch`, `origin`, `main`)
+    const ahead = Number(await git(`rev-list`, `--count`, `origin/main..HEAD`))
+    if (ahead !== 0) {
+      const commits = ahead === 1 ? `1 other commit` : `${ahead} other commits`
+      return `not committed: ai-memory has ${commits} not on origin/main`
+    }
+    await git(`merge`, `--ff-only`, `-q`, `origin/main`)
+    return null
+  })().catch((error: Error) => error.message)
   await deps.fs.mkdirp(dirname(file))
   if (!await deps.fs.exists(file)) {
     await deps.fs.writeText(file, `# Background lead experiments\n\n`)
   }
   const run = deps.env(`AGENT_RUN_ID`) ?? `none`
   await deps.fs.appendText(file, `- ${localStamp(deps.now())}, run ${run}: ${text.trim()}\n`)
-  const git = async (...args: string[]) => {
-    const step = await deps.run([`git`, `-C`, deps.memory, ...args])
-    if (!step.success) throw new Error(`git ${args[0]} failed: ${step.stderr.trim().slice(0, 300)}`)
-    return step.stdout.trim()
-  }
+  if (stopped) return ok(`logged; ${stopped}`)
   try {
-    await git(`fetch`, `origin`, `main`)
-    const ahead = Number(await git(`rev-list`, `--count`, `origin/main..HEAD`))
-    if (ahead !== 0) {
-      const commits = ahead === 1 ? `1 other commit` : `${ahead} other commits`
-      return ok(`logged; not committed: ai-memory has ${commits} not on origin/main`)
-    }
+    // `<mode> <blob> <stage>\t<path>`, or empty when the file is not in the index.
+    const staged = await git(`ls-files`, `-s`, `--`, relative)
     await git(`add`, relative)
     await git(`commit`, `-m`, `docs(experiments): background lead retro row`, `--`, relative)
     const commit = await git(`rev-parse`, `HEAD`)
     // An empty source in the refspec would delete main.
     if (!/^[0-9a-f]{40,64}$/.test(commit)) throw new Error(`git rev-parse printed no commit id`)
     try {
+      // A commit made in ai-memory since the check above would be pushed underneath the row.
+      if (await git(`rev-parse`, `${commit}~1`) !== await git(`rev-parse`, `origin/main`)) {
+        throw new Error(`not pushed: ai-memory gained another commit not on origin/main`)
+      }
       await git(`push`, `origin`, `${commit}:refs/heads/main`)
     } catch (error) {
-      // Undo the commit, only if it is still HEAD, so the next retro is not refused for it. The
-      // row stays in the file, untracked or modified.
+      // Undo the commit, only if it is still HEAD, so the next retro is not refused for it, and
+      // put back only this file's index entry. The row stays in the file, untracked or modified.
+      const [mode, blob] = staged.split(/\s/)
       const kept = await git(`update-ref`, `HEAD`, `${commit}~1`, commit)
-        .then(() => git(`reset`, `-q`, `--`, relative))
+        .then(() =>
+          staged
+            ? git(`update-index`, `--cacheinfo`, `${mode},${blob},${relative}`)
+            : git(`rm`, `-q`, `--cached`, `--`, relative)
+        )
         .then(() => ``, () => `; the local commit stays`)
       throw new Error(`${(error as Error).message}${kept}`)
     }

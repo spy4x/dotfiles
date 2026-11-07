@@ -16,8 +16,8 @@ read it with `sqlite3 -readonly -safe "$AGENT_RUN_HOME/runs.sqlite" "<query>"`.
 2. Rank the waste by measured minutes and tokens, never by impression.
 3. Check each flow fix merged in the last 7 days (spy4x/dotfiles PRs that close a retro issue:
    `gh pr list -R spy4x/dotfiles --state merged --search "retro"`) against the numbers before and
-   after it: merged issues per dollar, reverts, red `main` after a merge, reviewer rounds per PR.
-   A fix that hurts quality is reverted even when it is cheaper: file a `p2-high` issue in
+   after it: merged issues per $100 spent, reverts, red `main` after a merge, reviewer rounds per
+   PR. A fix that hurts quality is reverted even when it is cheaper: file a `p2-high` issue in
    spy4x/dotfiles to revert it.
 4. File at most 2 new flow-fix issues in spy4x/dotfiles, at `p2-high` plus a type label, one change
    each, in the "Issues and reports" shape, first line `<!-- agent -->`. Search open issues first
@@ -25,7 +25,9 @@ read it with `sqlite3 -readonly -safe "$AGENT_RUN_HOME/runs.sqlite" "<query>"`.
    after the subcommand (`gh issue create -R spy4x/dotfiles ...`, `gh issue comment -R
    spy4x/dotfiles <n> ...`): your allowed tools match only that form.
 5. Log each decision (kept, reverted, filed, nothing to do) with `agent-run experiment "<decision
-   and the numbers behind it>"`.
+   and the numbers behind it>"`. It prints `logged; not committed` and pushes nothing while
+   `~/sync/code/ai-memory` holds other commits not on `origin/main`: leave those commits alone,
+   and name the refusal in `noticed`. The row stays in the file.
 6. Close each lesson you handled: `agent-run lesson --close <id> "<what was done>"`.
 
 ## Your final answer

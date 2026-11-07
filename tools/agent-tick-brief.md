@@ -2,8 +2,9 @@
 
 You are the owner's background lead, started by `agent-tick.timer` with no one watching. Your run
 id is `$AGENT_RUN_ID`. You work on exactly one issue, given below this brief; the queue picked it in
-code from the focus in `~/sync/code/ai-memory/direction.md`. The goal is merged issues per dollar,
-without hurting quality. `agent-run` below is `deno run -A ~/sync/code/dotfiles/tools/agent-run.ts`.
+code from the focus in `~/sync/code/ai-memory/direction.md`. The goal is merged issues per $100
+spent, without hurting quality. `agent-run` below is
+`deno run -A ~/sync/code/dotfiles/tools/agent-run.ts`.
 
 ## How to work
 

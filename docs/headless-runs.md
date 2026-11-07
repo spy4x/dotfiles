@@ -8,7 +8,7 @@ uses it for the background lead below. Issues: spy4x/dotfiles#252, spy4x/dotfile
 ## The background lead
 
 A trial the owner asked for on 2026-11-06: one issue at a time, all day, under a soft daily budget,
-picked in code, measured, and improved by a daily retro. Goal: merged issues per dollar.
+picked in code, measured, and improved by a daily retro. Goal: merged issues per $100 spent.
 
 - **The tick.** `agent-tick.timer` runs `agent-run tick` every 30 minutes (`*:00/30`, not caught up
   after the machine was off). In order, each stop printing why and exiting 0: expire leases; stop
@@ -144,11 +144,13 @@ agent-run experiment <text...>                   a row in ai-memory/experiments/
 - **`start` refuses** (exit 2) a model other than `opus` or `haiku`, a lead past the lead limit, a
   second writing run in a folder (two leads may share one), a second run on one issue, an issue not by `spy4x`, nesting past two levels, and a
   session level of 90% or a weekly level of 95%.
-- **`lesson`** takes the run id from `$AGENT_RUN_ID` inside a run. **`experiment`** appends
-  `- <local date time>, run <id>: <text>`, then commits only that file in `~/sync/code/ai-memory`
-  and pushes that commit by its id to `main` (its README allows experiment rows there). It commits
-  nothing while ai-memory has other commits not on `origin/main`, since the push would carry them;
-  a failed push undoes that local commit; a refused or failed step is printed and the row stays.
+- **`lesson`** takes the run id from `$AGENT_RUN_ID` inside a run. **`experiment`** fast-forwards
+  `~/sync/code/ai-memory` to `origin/main`, appends `- <local date time>, run <id>: <text>`,
+  commits only that file and pushes that commit by its id to `main` (its README allows experiment
+  rows there). It commits nothing while ai-memory has other commits not on `origin/main`, since
+  the push would carry them, and pushes nothing when another commit landed under its own. A failed
+  push undoes that local commit and puts back the file's index entry; a refused or failed step is
+  printed and the row stays.
 
 ## How a run runs
 
