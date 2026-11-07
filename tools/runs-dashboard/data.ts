@@ -65,6 +65,8 @@ const isoAgo = (now: number, days: number) => new Date(now - days * 86_400_000).
 /** A lead run row of the runs table. */
 export interface RunRow extends BannerRun {
   name: string
+  /** agent-run's `Mode`: 1 read, 2 write, 3 lead. agent-run always sets it; null only from a NULL value. */
+  mode: number | null
   title: string | null
   parent: string | null
   /** The parent run's `owner/repo#n`, when it worked on an issue. */
@@ -74,7 +76,7 @@ export interface RunRow extends BannerRun {
   ciWaitSec: number | null
 }
 
-/** An open queue item. */
+/** A queue item that is open, or declined and waiting for its issue to change. */
 export interface QueueItem {
   issue: string
   title: string
@@ -243,7 +245,7 @@ function readDaily(db: ReadDb, now: number) {
 
 function readRuns(db: ReadDb): RunRow[] {
   const rows = db.all(
-    `SELECT r.id, r.name, r.parent, p.issue AS parent_issue, r.issue, r.started_at, r.ended_at,
+    `SELECT r.id, r.name, r.mode, r.parent, p.issue AS parent_issue, r.issue, r.started_at, r.ended_at,
        r.status, r.cost_micros, q.title
      FROM runs r LEFT JOIN queue q ON q.issue = r.issue LEFT JOIN runs p ON p.id = r.parent
      ORDER BY r.started_at DESC LIMIT 20`,
@@ -267,6 +269,7 @@ function readRuns(db: ReadDb): RunRow[] {
     return {
       id: String(row.id),
       name: String(row.name),
+      mode: row.mode === null ? null : num(row.mode),
       title: str(row.title),
       parent: str(row.parent),
       parentIssue: str(row.parent_issue),
@@ -281,7 +284,8 @@ function readRuns(db: ReadDb): RunRow[] {
   })
 }
 
-const QUEUE_ORDER = `CASE status WHEN 'blocked' THEN 0 WHEN 'claimed' THEN 1 ELSE 2 END, rank`
+const QUEUE_ORDER =
+  `CASE status WHEN 'blocked' THEN 0 WHEN 'declined' THEN 1 WHEN 'claimed' THEN 2 ELSE 3 END, rank`
 
 function readQueue(db: ReadDb) {
   const counts: Record<string, number> = {}
@@ -290,7 +294,7 @@ function readQueue(db: ReadDb) {
   }
   const open = db.all(
     `SELECT issue, title, status, reason, attempts FROM queue
-     WHERE status IN ('blocked', 'claimed', 'queued') ORDER BY ${QUEUE_ORDER}`,
+     WHERE status IN ('blocked', 'declined', 'claimed', 'queued') ORDER BY ${QUEUE_ORDER}`,
   ).map((row) => ({
     issue: String(row.issue),
     title: String(row.title),
@@ -365,13 +369,21 @@ function readTimeLost(db: ReadDb, since: string): RankedRow[] {
 }
 
 function readSlowSteps(db: ReadDb, since: string): RankedRow[] {
-  // The tool's name and time only: a step's input can hold prompts, paths or secrets.
+  // The tool's name, its project and run, and its time: a step's input can hold prompts or secrets.
   return db.all(
-    `SELECT tool, sec, is_error FROM v_slow_steps WHERE at >= ? ORDER BY sec DESC LIMIT 5`,
+    `SELECT tool, project, run_id, run_issue, sec, is_error FROM v_slow_steps WHERE at >= ?
+     ORDER BY sec DESC LIMIT 5`,
     since,
-  ).map((row) => ({
-    label: String(row.tool),
-    value: num(row.sec),
-    values: [num(row.is_error)],
-  }))
+  ).map((row) => {
+    const issue = str(row.run_issue)
+    const run = row.run_id === null
+      ? `own session`
+      : `run ${issue ? `#${issue.split(`#`)[1]}` : String(row.run_id).slice(-6)}`
+    return {
+      label: String(row.tool),
+      note: `${row.project} · ${run}`,
+      value: num(row.sec),
+      values: [num(row.is_error)],
+    }
+  })
 }

@@ -416,9 +416,9 @@ browser.
 | `v_session_rollup` | `id, cost_usd, wall_sec, tree_cost_usd, tree_wall_sec, descendants` |
 | `v_daily_spend` | `day, kind, sessions, cost_usd` (by the day of each API call) |
 | `v_tool_stats` | `tool, calls, errors, total_sec, avg_sec, max_sec` |
-| `v_slow_steps` | `session_id, at, tool, summary, sec, is_error`, slowest first; `summary` is the input's description, command, path, pattern, query or address, else empty |
+| `v_slow_steps` | `session_id, at, tool, project, run_id, run_issue, summary, sec, is_error`, slowest first; `run_id` and `run_issue` name the run whose transcript holds the step, else empty; `summary` is the input's description, command, path, pattern, query or address, else empty |
 | `v_stalls` | `session_id, from_at, to_at, gap_sec, kind`: gaps of 10 minutes or more between two entries |
-| `v_ci_waits` | `session_id, kind, at, sec, cost_usd`: Bash calls that waited on CI, longest first; `cost_usd` is the session's first API call after the wait |
+| `v_ci_waits` | `session_id, kind, at, sec, cost_usd`: Bash calls that waited on CI, longest first; `cost_usd` is the session's first API call after the wait, 0 when none came; a wait that never returned lasts until the session's end |
 | `v_waste` | `session_id, cost_usd, repeated_calls, failed_calls, review_rounds, rework, ci_wait_sec, cost_per_pr, kind, started_at`, costliest first |
 | `v_goal` | `day, merged_issues, cost_usd, issues_per_dollar, reverts, reviewer_rounds_per_pr` |
 

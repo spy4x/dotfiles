@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite"
 import { openReadOnly } from "./data.ts"
 import { createFixture } from "./fixture.ts"
 import { usd } from "./page.tsx"
-import { createHandler } from "./server.ts"
+import { createHandler, parseAllowedHosts } from "./server.ts"
 
 // Local noon, so the fixture's runs from 0.5 to 9 hours ago fall on today in any time zone.
 const NOW = new Date(2026, 10, 6, 12).getTime()
@@ -88,6 +88,27 @@ Deno.test(`a request with another Host header gets 403`, async () => {
     for (const host of [`127.0.0.1:${PORT}`, `localhost:${PORT}`]) {
       const response = await get(path, host)
       assertEquals(response.status, 200, host)
+      await response.body?.cancel()
+    }
+  })
+})
+
+Deno.test(`ALLOWED_HOSTS keeps trimmed entries and drops empty ones`, () => {
+  assertEquals(parseAllowedHosts(undefined), [])
+  assertEquals(parseAllowedHosts(``), [])
+  assertEquals(parseAllowedHosts(` runs.example.com , ,Runs.example.com:443,`), [
+    `runs.example.com`,
+    `Runs.example.com:443`,
+  ])
+})
+
+Deno.test(`an empty or unset ALLOWED_HOSTS lets no empty Host through`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    for (const allowed of [parseAllowedHosts(undefined), parseAllowedHosts(` , `), [``]]) {
+      const request = new Request(`http://127.0.0.1:${PORT}/`, { headers: { host: `` } })
+      const response = await handlerFor(path, allowed)(request)
+      assertEquals(response.status, 403, JSON.stringify(allowed))
       await response.body?.cancel()
     }
   })
@@ -178,7 +199,7 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     has(html, /The lead is paused:/)
     has(html, /Import bank statements from CSV/)
     has(html, />\$171 of \$200</)
-    has(html, /1 blocked · 2 queued · 1 claimed · 1 done · 1 dropped/)
+    has(html, /1 blocked · 1 declined · 2 queued · 1 claimed · 1 done · 1 dropped/)
     // Run 309 failed and cost over $100: one banner line names it once, with both facts.
     has(html, /Run #309 \(\w{3} \d\d:\d\d\)<\/a> failed and cost \$104\./)
     assertEquals(html.split(`href="#run-019a5f00-0000-7000-8000-000000000309"`).length - 1, 1)
@@ -250,6 +271,35 @@ Deno.test(`titles from the database render escaped`, async () => {
     const html = await (await get(path)).text()
     lacks(html, /<script>x\(\)/)
     has(html, /&lt;script>x\(\)/)
+  })
+})
+
+Deno.test(`a running run with no spend yet shows a dash, not $0`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    const db = new DatabaseSync(path)
+    db.exec(`UPDATE runs SET cost_micros = NULL WHERE status = 'running'`)
+    db.close()
+    const html = await (await get(path)).text()
+    has(html, /<span aria-hidden="true">–<\/span><span class="sr-only">No spend yet<\/span>/)
+    lacks(html, /tabular-nums">\$0</)
+  })
+})
+
+Deno.test(`a run without an issue is titled by its mode and start time`, async () => {
+  await withDir(async (dir) => {
+    const html = await (await get(createFixture(dir, { now: NOW }))).text()
+    // The fixture's run 310 is a lead run with no issue, started 2.5 hours before local noon.
+    has(html, /id="run-019a5f00-0000-7000-8000-000000000310"[^>]*><span[^>]*>Lead run, Fri 09:30</)
+  })
+})
+
+Deno.test(`a declined queue item shows its badge and the reason`, async () => {
+  await withDir(async (dir) => {
+    const html = await (await get(createFixture(dir, { now: NOW }))).text()
+    has(html, /Needs the bank's API keys first/)
+    has(html, /title="Not startable yet\. Back in the queue once the issue changes\.">/)
+    has(html, />Declined</)
   })
 })
 

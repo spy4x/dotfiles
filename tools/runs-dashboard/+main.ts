@@ -5,7 +5,7 @@
 import { join } from "jsr:@std/path@^1.0.0"
 import { processEnv, runtimeFileSystem } from "@spy4x/platform/server"
 import { serve } from "@spy4x/platform/server/serve"
-import { createHandler } from "./server.ts"
+import { createHandler, parseAllowedHosts } from "./server.ts"
 
 const home = processEnv.get(`AGENT_RUN_HOME`) ??
   join(processEnv.get(`HOME`) ?? ``, `.local`, `state`, `agent-run`)
@@ -15,8 +15,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 const dbPath = join(home, `runs.sqlite`)
 // Extra Host values, comma-separated, for a proxy that forwards a public name (README.md).
-const allowedHosts = (processEnv.get(`ALLOWED_HOSTS`) ?? ``).split(`,`).map((host) => host.trim())
-  .filter(Boolean)
+const allowedHosts = parseAllowedHosts(processEnv.get(`ALLOWED_HOSTS`))
 
 const server = await serve(
   createHandler({

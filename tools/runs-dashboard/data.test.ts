@@ -77,13 +77,36 @@ Deno.test(`time lost shows one CI-wait row with the cost of the waits, not of th
   assertEquals(rows.map((row) => row.label), [`CI wait`, `Review round`])
 })
 
-Deno.test(`slow steps are labelled with the tool's name only`, async () => {
+Deno.test(`a ci_wait lesson counts as CI wait when no wait was measured`, async () => {
+  const { data } = await read((db) =>
+    db.exec(`DELETE FROM v_ci_waits; DELETE FROM lessons;
+      INSERT INTO lessons (id, at, kind, minutes, detail) VALUES
+      ('l5', '${new Date(NOW - 3_600_000).toISOString()}', 'ci_wait', 7, 'Runner queue')`)
+  )
+  assertEquals(ready(data.timeLost), [{
+    label: `CI wait`,
+    note: `Runner queue`,
+    value: 7,
+    values: [null, null],
+  }])
+})
+
+Deno.test(`a slow step names its tool, project and run, never its input`, async () => {
   const { data } = await read()
   const rows = ready(data.slowSteps)
   assertEquals(rows.map((row) => [row.label, row.note]), [
-    [`Bash`, undefined],
-    [`Agent`, undefined],
-    [`Bash`, undefined],
+    [`Bash`, `seed · run #301`],
+    [`Agent`, `financy · run 000310`],
+    [`Bash`, `dotfiles · own session`],
+  ])
+})
+
+Deno.test(`the open queue lists a declined item with its reason, after blocked ones`, async () => {
+  const { data } = await read()
+  const open = ready(data.queue).open
+  assertEquals(open.slice(0, 2).map((item) => [item.status, item.reason]), [
+    [`blocked`, `failed twice`],
+    [`declined`, `Needs the bank's API keys first`],
   ])
 })
 

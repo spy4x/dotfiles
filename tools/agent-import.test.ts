@@ -9,14 +9,17 @@ import {
   runtimeFiles,
 } from "./agent-import.ts"
 
-/** The first import runs at this moment, so `import_since` is it. */
-const SINCE = new Date(`2026-01-01T00:00:00.000Z`)
+/** The first import runs at this moment, local midnight, so `import_since` is it. */
+const SINCE = new Date(`2026-01-01T00:00:00`)
 const SID = `0190a1b2-0000-7000-8000-000000000001`
 const PROJECT = `-home-test-repo`
 
-/** A timestamp `minutes` after `SINCE`, on 2026-01-01 at noon UTC plus that, so the local day is stable. */
+/**
+ * A timestamp `minutes` after local noon of `day`. The views name days in local time, and noon UTC
+ * is already the next local day east of UTC+12, so every time here is local, never UTC.
+ */
 function at(minutes: number, day = `2026-01-01`): string {
-  return new Date(Date.parse(`${day}T12:00:00.000Z`) + minutes * 60_000).toISOString()
+  return new Date(new Date(`${day}T12:00:00`).getTime() + minutes * 60_000).toISOString()
 }
 
 let seq = 0
@@ -182,7 +185,7 @@ Deno.test(`imports only entries from the first run on and never reads files olde
   try {
     await Deno.writeTextFile(
       m.main,
-      jsonl([userText(`2025-12-31T23:00:00.000Z`, `before`), userText(at(1), `after`)]),
+      jsonl([userText(at(-13 * 60), `before`), userText(at(1), `after`)]),
     )
     const old = join(m.projects, PROJECT, `0190a1b2-0000-7000-8000-00000000000f.jsonl`)
     await Deno.writeTextFile(old, jsonl([userText(at(2), `stale file`)]))
@@ -448,6 +451,92 @@ Deno.test(`a CI wait costs the API call after it returns, not the whole session`
     assertEquals((await session(m.db)).cost_usd, 32)
     const waits = await m.db.queryAll(`SELECT session_id, kind, sec, cost_usd FROM v_ci_waits`)
     assertEquals(waits, [{ session_id: SID, kind: `interactive`, sec: 180, cost_usd: 24 }])
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a CI wait with no API call after it still counts, at no cost`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `ci`, `Bash`, { command: `gh pr checks 1 --watch` }),
+        toolResult(at(3), `ci`, `ok`),
+      ]),
+    )
+    await m.run()
+    const waits = await m.db.queryAll(`SELECT sec, cost_usd FROM v_ci_waits`)
+    assertEquals(waits, [{ sec: 180, cost_usd: 0 }])
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a CI wait that never returned lasts until the session's end`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `ci`, `Bash`, { command: `gh run watch 7` }),
+        userText(at(10), `stopped`),
+      ]),
+    )
+    await m.run()
+    const waits = await m.db.queryAll(`SELECT sec, cost_usd FROM v_ci_waits`)
+    assertEquals(waits, [{ sec: 600, cost_usd: 0 }])
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a CI wait finds its next API call through the session and time index`, async () => {
+  const m = await machine()
+  try {
+    await m.run()
+    const plan = await m.db.queryAll<{ detail: string }>(
+      `EXPLAIN QUERY PLAN SELECT * FROM v_ci_waits`,
+    )
+    assert(
+      plan.some((row) => row.detail.includes(`api_calls_by_session_at`)),
+      JSON.stringify(plan),
+    )
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a slow step names its project and the run its transcript belongs to`, async () => {
+  const m = await machine()
+  try {
+    await m.db.exec(LANE_A)
+    await m.db.execute(
+      `INSERT INTO runs (id, name, mode, model, effort, cwd, issue, started_at, status)
+       VALUES (?, 'lead', 3, 'opus', 'medium', '/', 'o/r#7', ?, 'running')`,
+      SID,
+      at(0),
+    )
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `spawn`, `Agent`, { subagent_type: `implementer` }),
+        toolResult(at(9), `spawn`, `ok`),
+      ]),
+    )
+    await m.subagent(`imp`, { agentType: `implementer`, toolUseId: `spawn` }, [
+      toolUse(at(1), `sub-1`, `check`, `Bash`, { command: `deno task check` }),
+      toolResult(at(5), `check`, `ok`),
+    ])
+    await m.run()
+    const steps = await m.db.queryAll(
+      `SELECT tool, project, run_id, run_issue FROM v_slow_steps ORDER BY sec DESC`,
+    )
+    assertEquals(steps, [
+      { tool: `Agent`, project: PROJECT, run_id: SID, run_issue: `o/r#7` },
+      { tool: `Bash`, project: PROJECT, run_id: SID, run_issue: `o/r#7` },
+    ])
   } finally {
     await m.close()
   }

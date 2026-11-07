@@ -22,8 +22,8 @@ CREATE TABLE v_sessions (id TEXT, parent_id TEXT, run_id TEXT, kind TEXT, agent_
   project TEXT, cwd TEXT, started_at TEXT, ended_at TEXT, wall_sec REAL, model TEXT,
   cost_usd REAL, review_rounds INTEGER, ci_wait_sec REAL, rework INTEGER, prs INTEGER);
 CREATE TABLE v_daily_spend (day TEXT, kind TEXT, sessions INTEGER, cost_usd REAL);
-CREATE TABLE v_slow_steps (session_id TEXT, at TEXT, tool TEXT, summary TEXT, sec REAL,
-  is_error INTEGER);
+CREATE TABLE v_slow_steps (session_id TEXT, at TEXT, tool TEXT, project TEXT, run_id TEXT,
+  run_issue TEXT, summary TEXT, sec REAL, is_error INTEGER);
 CREATE TABLE v_stalls (session_id TEXT, from_at TEXT, to_at TEXT, gap_sec REAL, kind TEXT);
 CREATE TABLE v_ci_waits (session_id TEXT, kind TEXT, at TEXT, sec REAL, cost_usd REAL);
 CREATE TABLE v_goal (day TEXT, merged_issues INTEGER, cost_usd REAL, issues_per_dollar REAL,
@@ -137,6 +137,13 @@ function seed(db: DatabaseSync, now: number) {
       2,
     ),
     q(`spy4x/financy#315`, `Show the budget left per category`, 4, `queued`, null),
+    q(
+      `spy4x/financy#317`,
+      `Sync with the bank's API`,
+      7,
+      `declined`,
+      `Needs the bank's API keys first`,
+    ),
     q(`spy4x/financy#298`, `Recurring transactions`, 5, `done`, null),
     q(`spy4x/financy#290`, `Old idea`, 6, `dropped`, `closed`),
   ])
@@ -205,6 +212,9 @@ function seed(db: DatabaseSync, now: number) {
       session_id: `s-a`,
       at: ago(now, 2),
       tool: `Bash`,
+      project: `dotfiles`,
+      run_id: null,
+      run_issue: null,
       summary: `deno task check`,
       sec: 412,
       is_error: 0,
@@ -213,14 +223,20 @@ function seed(db: DatabaseSync, now: number) {
       session_id: `s-b`,
       at: ago(now, 9),
       tool: `Bash`,
+      project: `seed`,
+      run_id: `019a5f00-0000-7000-8000-000000000301`,
+      run_issue: `spy4x/seed#301`,
       summary: `gh pr checks --watch`,
       sec: 960,
       is_error: 1,
     },
     {
-      session_id: `s-c`,
-      at: ago(now, 30),
+      session_id: `019a5f00-0000-7000-8000-000000000310`,
+      at: ago(now, 2.4),
       tool: `Agent`,
+      project: `financy`,
+      run_id: `019a5f00-0000-7000-8000-000000000310`,
+      run_issue: null,
       summary: `reviewer`,
       sec: 640,
       is_error: 0,

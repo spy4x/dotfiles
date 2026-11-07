@@ -274,6 +274,7 @@ CREATE TABLE IF NOT EXISTS api_calls (
   cost_micros INTEGER
 ) STRICT;
 CREATE INDEX IF NOT EXISTS api_calls_by_session ON api_calls(session_id);
+CREATE INDEX IF NOT EXISTS api_calls_by_session_at ON api_calls(session_id, at);
 CREATE TABLE IF NOT EXISTS tool_calls (
   id TEXT PRIMARY KEY,
   session_id TEXT NOT NULL,
@@ -320,11 +321,14 @@ const REVERT = commandLike([
  *
  * A CI wait's `cost_usd` in `v_ci_waits` is the session's first API call after the wait returned:
  * the call that rereads the whole context, often from an expired cache, which is what waiting cost.
+ * A wait that never returned lasts until the session's end, and a wait with no call after it
+ * costs 0, so both still count.
  */
 function viewsSql(has: { runs: boolean; queue: boolean }): string {
   const runs = has.runs
     ? `runs`
-    : `(SELECT NULL AS id, NULL AS parent, NULL AS cost_micros, NULL AS started_at WHERE 0)`
+    : `(SELECT NULL AS id, NULL AS parent, NULL AS issue, NULL AS cost_micros, NULL AS started_at
+      WHERE 0)`
   const queue = has.queue ? `queue` : `(SELECT NULL AS status, NULL AS updated_at WHERE 0)`
   return `
 DROP VIEW IF EXISTS v_goal;
@@ -428,12 +432,15 @@ SELECT name AS tool, COUNT(*) AS calls, SUM(COALESCE(is_error, 0)) AS errors,
 FROM tool_calls GROUP BY name ORDER BY total_sec DESC;
 
 CREATE VIEW v_slow_steps AS
-SELECT session_id, started_at AS at, name AS tool,
+SELECT t.session_id, t.started_at AS at, t.name AS tool, s.project, r.id AS run_id,
+  r.issue AS run_issue,
   substr(COALESCE(json_extract(input, '$.description'), json_extract(input, '$.command'),
     json_extract(input, '$.file_path'), json_extract(input, '$.pattern'),
     json_extract(input, '$.query'), json_extract(input, '$.url')), 1, 120) AS summary,
-  ROUND(duration_ms / 1000.0, 1) AS sec, COALESCE(is_error, 0) AS is_error
-FROM tool_calls WHERE duration_ms IS NOT NULL ORDER BY duration_ms DESC;
+  ROUND(t.duration_ms / 1000.0, 1) AS sec, COALESCE(t.is_error, 0) AS is_error
+FROM tool_calls t JOIN sessions s ON s.id = t.session_id
+LEFT JOIN ${runs} r ON r.id = s.transcript_session
+WHERE t.duration_ms IS NOT NULL ORDER BY t.duration_ms DESC;
 
 CREATE VIEW v_stalls AS
 SELECT g.session_id, g.from_at, g.to_at, g.gap_sec, k.kind FROM (
@@ -444,12 +451,18 @@ JOIN v_session_kind k ON k.id = g.session_id
 WHERE g.gap_sec >= 600 ORDER BY g.gap_sec DESC;
 
 CREATE VIEW v_ci_waits AS
-SELECT t.session_id, k.kind, t.started_at AS at, ROUND(t.duration_ms / 1000.0, 1) AS sec,
-  (SELECT a.cost_micros FROM api_calls a WHERE a.session_id = t.session_id AND a.at >= t.ended_at
-    ORDER BY a.at LIMIT 1) / 1e6 AS cost_usd
-FROM tool_calls t JOIN v_session_kind k ON k.id = t.session_id
-WHERE t.name = 'Bash' AND t.duration_ms > 0 AND (${CI_WAIT})
-ORDER BY t.duration_ms DESC;
+WITH waits AS (
+  SELECT t.session_id, k.kind, t.started_at AS at,
+    COALESCE(t.duration_ms, (julianday(s.ended_at) - julianday(t.started_at)) * 86400000) AS ms,
+    (SELECT a.message_id FROM api_calls a WHERE a.session_id = t.session_id AND a.at >= t.ended_at
+      ORDER BY a.at LIMIT 1) AS next_call
+  FROM tool_calls t JOIN sessions s ON s.id = t.session_id
+  JOIN v_session_kind k ON k.id = t.session_id
+  WHERE t.name = 'Bash' AND (${CI_WAIT}))
+SELECT w.session_id, w.kind, w.at, ROUND(w.ms / 1000.0, 1) AS sec,
+  CASE WHEN w.next_call IS NULL THEN 0 ELSE a.cost_micros / 1e6 END AS cost_usd
+FROM waits w LEFT JOIN api_calls a ON a.message_id = w.next_call
+WHERE w.ms > 0 ORDER BY w.ms DESC;
 
 CREATE VIEW v_waste AS
 WITH repeats AS (
