@@ -12,6 +12,8 @@ export interface DashboardOptions {
   dbPath: string
   /** The port the server listens on; the Host header must name it. */
   port: number
+  /** Extra `Host` values to accept as they are, such as a public name a proxy forwards. */
+  allowedHosts?: string[]
   /** Whether a file exists; injected so the handler stays free of runtime APIs. */
   exists: (path: string) => Promise<boolean>
   /** Reads a text file; Tailwind's own stylesheet comes from the npm cache. */
@@ -56,11 +58,16 @@ const SECURITY_HEADERS = {
 }
 
 /**
- * The request handler. A Host other than `127.0.0.1:<port>` or `localhost:<port>` gets 403, so a
- * page on another site that rebinds its name to this machine cannot read the dashboard.
+ * The request handler. A Host other than `127.0.0.1:<port>`, `localhost:<port>` or one of
+ * `allowedHosts` gets 403, so a page on another site that rebinds its name to this machine cannot
+ * read the dashboard.
  */
 export function createHandler(options: DashboardOptions): (request: Request) => Promise<Response> {
-  const allowedHosts = new Set([`127.0.0.1:${options.port}`, `localhost:${options.port}`])
+  const allowedHosts = new Set([
+    `127.0.0.1:${options.port}`,
+    `localhost:${options.port}`,
+    ...(options.allowedHosts ?? []),
+  ])
   const now = options.now ?? Date.now
   let compiler: Promise<Compiler> | null = null
   return async (request) => {

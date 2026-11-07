@@ -14,11 +14,15 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`PORT must be a port number`)
 }
 const dbPath = join(home, `runs.sqlite`)
+// Extra Host values, comma-separated, for a proxy that forwards a public name (README.md).
+const allowedHosts = (processEnv.get(`ALLOWED_HOSTS`) ?? ``).split(`,`).map((host) => host.trim())
+  .filter(Boolean)
 
 const server = await serve(
   createHandler({
     dbPath,
     port,
+    allowedHosts,
     exists: (path) => runtimeFileSystem.exists(path),
     readText: async (path) => {
       const text = await runtimeFileSystem.readText(path)
