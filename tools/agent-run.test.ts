@@ -1009,6 +1009,22 @@ Deno.test(`a resumed item whose run times out keeps the last handoff for the nex
   }
 })
 
+Deno.test(`an item dropped by the re-check loses its handoff`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const id = started((await main([`tick`], m.deps)).output)
+    await m.end(id, { status: `parked`, handoff: HANDOFF })
+    m.github.closed.add(`${FINANCY}#1`)
+    m.later(31)
+    assertMatch((await main([`tick`], m.deps)).output, /dropped spy4x\/financy#1/)
+    const [item] = m.sql(`SELECT status, handoff FROM queue WHERE issue = '${FINANCY}#1'`)
+    assertEquals([item.status, item.handoff], [`dropped`, null])
+  } finally {
+    await m.cleanup()
+  }
+})
+
 Deno.test(`a stored lead limit that is no number counts as the default`, async () => {
   const m = await machine()
   try {

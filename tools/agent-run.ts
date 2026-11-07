@@ -1464,7 +1464,7 @@ async function tick(deps: Deps): Promise<Outcome> {
       if (free === 0) break
       const bad = await recheck(deps, item)
       if (bad) {
-        await setItem(db, deps, item.issue, { status: `dropped`, reason: bad })
+        await setItem(db, deps, item.issue, { status: `dropped`, reason: bad, handoff: null })
         lines.push(`dropped ${item.issue}: ${bad}`)
         continue
       }

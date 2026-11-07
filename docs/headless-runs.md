@@ -10,30 +10,30 @@ uses it for the background lead below. Issues: spy4x/dotfiles#252, spy4x/dotfile
 A trial the owner asked for on 2026-11-06: one issue at a time, all day, under a soft daily budget,
 picked in code, measured, and improved by a daily retro. Goal: merged issues per dollar.
 
-- **The tick.** `agent-tick.timer` runs `agent-run tick` every 30 minutes (`*:00/30`, not caught
-  up after the machine was off). In order, each stop printing why and exiting 0: expire leases;
-  stop when paused, when the lead limit (below) is reached, when today's runs (started on the
-  local calendar day) have spent `DAILY_BUDGET_USD` ($200, summed from their own
-  `total_cost_usd`), or at 90% session or 95% weekly usage (read once per tick). Then it fills
-  each free lead slot, checking the pause and the budget again before each start. Parked top-level lead runs
-  (not `tick`) that have a `handoff` and no queue item come first, oldest first: one run each with
-  its settings and the handoff as its brief, and a `continued` event on the parked run so no later
-  tick continues it again. Then it plans the queue again when it is needed and takes queued items
-  by rank: re-check each on GitHub (still open, still a candidate; else `dropped`), claim it and
-  start a `lead` run on `opus` at `medium` in `~/sync/code`, named `tick`, with `--issue`, a
-  3-hour deadline and no budget or turn cap. A candidate that `start` would refuse (another run on
-  its issue, a model no longer allowed, an issue no longer by `spy4x`) is skipped and the tick
-  takes the next; a continuation refused twice (`refused` events) is no longer tried. When every
-  queued item was skipped, the tick says how many and each one's reason. The claim changes only
-  an item still `queued`, so a manual `agent-run tick` that overlaps the timer never starts two
-  runs on one issue; a lead counts the running leads and inserts its row in one SQL statement, so
-  two overlapping ticks or starts never pass the lead limit. A tick that loses the last slot that
-  way gives its claim back, records no refusal and stops. A failed `systemd-run` ends the run
-  `failed`, gives its item back to the queue and counts toward the pause after two failed tick
-  runs. A stored `max_leads` that is no whole number from 1 counts as the default. The brief is [`tools/agent-tick-brief.md`](../tools/agent-tick-brief.md)
-  plus the item, the last parked run's `handoff` in full under its own heading, and the 20 newest
-  open lessons. The budget is soft: a running run always
-  finishes.
+- **The tick.** `agent-tick.timer` runs `agent-run tick` every 30 minutes (`*:00/30`, not caught up
+  after the machine was off). In order, each stop printing why and exiting 0: expire leases; stop
+  when paused, when the lead limit (below) is reached, when today's runs (started on the local
+  calendar day) have spent `DAILY_BUDGET_USD` ($200, summed from their own `total_cost_usd`), or at
+  90% session or 95% weekly usage (read once per tick). Then it fills each free lead slot, checking
+  the pause and the budget again before each start. Parked top-level lead runs (not `tick`) that
+  have a `handoff` and no queue item come first, oldest first: one run each with its settings and
+  the handoff as its brief, and a `continued` event on the parked run so no later tick continues it
+  again. Then it plans the queue again when it is needed and takes queued items by rank: re-check
+  each on GitHub (still open, still a candidate; else `dropped`), claim it and start a `lead` run on
+  `opus` at `medium` in `~/sync/code`, named `tick`, with `--issue`, a 3-hour deadline and no budget
+  or turn cap. A candidate that `start` would refuse (another run on its issue, a model no longer
+  allowed, an issue no longer by `spy4x`) is skipped and the tick takes the next; a continuation
+  refused twice (`refused` events) is no longer tried. When every queued item was skipped, the tick
+  says how many and each one's reason. The claim changes only an item still `queued`, so a manual
+  `agent-run tick` that overlaps the timer never starts two runs on one issue; a lead counts the
+  running leads and inserts its row in one SQL statement, so two overlapping ticks or starts never
+  pass the lead limit. A tick that loses the last slot that way gives its claim back, records no
+  refusal and stops. A failed `systemd-run` ends the run `failed`, gives its item back to the queue
+  and counts toward the pause after two failed tick runs. A stored `max_leads` that is no whole
+  number from 1 counts as the default. The brief is
+  [`tools/agent-tick-brief.md`](../tools/agent-tick-brief.md) plus the item, the last parked run's
+  `handoff` in full under its own heading, and the 20 newest open lessons. The budget is soft: a
+  running run always finishes.
 - **Parallel leads.** `agent-run limit --leads <n>` sets how many lead runs (manual and tick) may
   run at once; the default is 1, and `status` prints it. Several tick leads share the `cwd`
   `~/sync/code`: two leads may share a folder, since each writes only in worktrees of its own,
@@ -162,7 +162,8 @@ systemd-run --user --unit=agent-run-<id>.service --collect \
 - A row still marked running whose unit is gone (it died before `finish`, or the machine lost
   power) is closed as `failed`, or `stopped` after `agent-run stop`, the next time any command
   lists the active runs, so it never blocks the next tick, and its queue item is settled then as
-  for that status. An item whose run ended unsettled comes back when the lease expires. `resume` runs the same checks as `start`.
+  for that status. An item whose run ended unsettled comes back when the lease expires. `resume`
+  runs the same checks as `start`.
 - Stopping the unit kills its cgroup. Docker containers, child runs and units a run starts itself
   escape it, so `stop` stops child runs first.
 
