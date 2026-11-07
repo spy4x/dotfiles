@@ -111,6 +111,10 @@ const BRIEF_LESSONS = 20
 const FAILED = [`failed`, `timeout`, `budget`, `turns`]
 const INGEST_POLL_MS = 60_000
 const USAGE_TIMEOUT_MS = 60_000
+/** ntfy turns a longer message body into an attachment; the digest push stays within it. */
+export const NTFY_MAX_BYTES = 4096
+/** The longest run text one digest line quotes. */
+const QUOTE_MAX = 300
 /** `systemctl is-active` states of a unit that still exists. */
 const ALIVE = [`active`, `activating`, `deactivating`, `reloading`, `refreshing`]
 
@@ -414,12 +418,31 @@ export interface Digest {
 }
 
 /**
- * The digest: achievements first, then spend against the daily budget, failures, bottlenecks,
- * whether the loop is paused, and each run of the window with its notes.
+ * Text a run wrote, marked as its words and not the digest's: on one line, cut to `QUOTE_MAX`
+ * characters, in quotes after the run id. A newline or quote in it cannot start a fake line.
+ */
+function quoted(id: string, text: string): string {
+  const line = text.replace(/\s+/g, ` `).trim()
+  const short = line.length > QUOTE_MAX ? `${line.slice(0, QUOTE_MAX - 1)}…` : line
+  return `run ${id} wrote ${JSON.stringify(short)}`
+}
+
+/** The goal metric, named and scaled as on the runs dashboard: merged issues per $100 spent. */
+export function goalText(span: string, merged: number, micros: number): string {
+  const value = merged === 0 || micros <= 0 ? `–` : (merged / (micros / 1e6) * 100).toFixed(1)
+  return `Merged issues per $100, ${span}: ${value} (${merged} merged for ${dollars(micros)})`
+}
+
+/**
+ * The digest: achievements first, then spend against the daily budget and the goal metric,
+ * failures, bottlenecks, whether the loop is paused, and each run of the window with its notes.
+ * What a run wrote is quoted with its id (see `quoted`).
  */
 export function digestText(d: Digest): string {
   const windowMicros = d.runs.reduce((sum, run) => sum + (run.costMicros ?? 0), 0)
-  const good = d.runs.flatMap((run) => run.result?.good_news ? [run.result.good_news] : [])
+  const good = d.runs.flatMap((run) =>
+    run.result?.good_news ? [quoted(run.id, run.result.good_news)] : []
+  )
   const failed = d.runs.filter((run) => FAILED.includes(run.status))
   const out = [`Since ${d.since.toISOString()}:`, ``, `Achievements`]
   for (const item of d.done) {
@@ -432,12 +455,13 @@ export function digestText(d: Digest): string {
     `Spend: ${dollars(d.todayMicros)} today of $${DAILY_BUDGET_USD}, ${
       dollars(windowMicros)
     } in the window, at API prices.`,
+    goalText(`this window`, d.done.length, windowMicros),
   )
   if (failed.length > 0 || d.blocked.length > 0) {
     out.push(``, `Failures`)
     for (const run of failed) {
       const what = [run.name, run.issue, run.status].filter(Boolean).join(` `)
-      out.push(`- ${what}: ${run.result?.summary ?? run.id}`)
+      out.push(`- ${what}: ${run.result?.summary ? quoted(run.id, run.result.summary) : run.id}`)
     }
     for (const item of d.blocked) out.push(`- blocked ${item.issue}: ${item.reason ?? `no reason`}`)
   }
@@ -460,14 +484,45 @@ export function digestText(d: Digest): string {
         [run.name, `(${run.status})`, run.issue, dollars(run.costMicros)].filter(Boolean).join(` `)
       }`,
     )
-    if (run.result?.summary) out.push(`  ${run.result.summary}`)
+    const said = (label: string, text: string | null | undefined) => {
+      if (text) out.push(`  ${label}${quoted(run.id, text)}`)
+    }
+    said(``, run.result?.summary)
     for (const pr of run.result?.prs ?? []) out.push(`  PR: ${pr}`)
-    for (const note of d.notes.get(run.id) ?? []) out.push(`  - ${note}`)
-    if (run.result?.needs_owner) out.push(`  Needs you: ${run.result.needs_owner}`)
-    if (run.result?.injection) out.push(`  Injection reported: ${run.result.injection}`)
-    if (run.status === `running` && run.activity) out.push(`  Now: ${run.activity}`)
+    for (const note of d.notes.get(run.id) ?? []) said(`Note: `, note)
+    said(`Needs you: `, run.result?.needs_owner)
+    said(`Injection reported: `, run.result?.injection)
+    if (run.status === `running`) said(`Now: `, run.activity)
   }
   return out.join(`\n`)
+}
+
+/**
+ * `text` cut to `maxBytes` of UTF-8 for a push: whole `- ` items (each with its indented lines)
+ * go from the end, and a last line says how many went and that `command` shows them all.
+ */
+export function fitPush(text: string, maxBytes: number, command: string): string {
+  const size = (s: string) => new TextEncoder().encode(s).length
+  if (size(text) <= maxBytes) return text
+  const blocks: string[][] = []
+  for (const line of text.split(`\n`)) {
+    if (line.startsWith(`  `) && blocks.at(-1)?.[0].startsWith(`- `)) blocks.at(-1)!.push(line)
+    else blocks.push([line])
+  }
+  let left = 0
+  const fitted = () =>
+    `${blocks.map((block) => block.join(`\n`)).join(`\n`)}\n\n` +
+    `${left} items left out. All of them: ${command}`
+  while (size(fitted()) > maxBytes) {
+    const last = blocks.findLastIndex((block) => block[0].startsWith(`- `))
+    if (last === -1) break
+    blocks.splice(last, 1)
+    left++
+  }
+  let out = fitted()
+  // Only headers are left and still too long: cut characters off the end.
+  while (size(out) > maxBytes) out = out.slice(0, -1)
+  return out
 }
 
 /** A run's cost so far from its stream-json lines: each API call once, at API list prices. */
@@ -1234,6 +1289,20 @@ async function waitRun(deps: Deps, id: string, timeoutSec: number): Promise<Outc
   }
 }
 
+/** The goal metric over the last 7 days: issues done and what all runs started in them cost. */
+async function weekGoal(db: SqliteDb, deps: Deps): Promise<string> {
+  const since = new Date(deps.now().getTime() - 7 * 86400_000).toISOString()
+  const done = await db.queryOne(
+    `SELECT COUNT(*) AS n FROM queue WHERE status = 'done' AND updated_at >= ?`,
+    since,
+  )
+  const spent = await db.queryOne(
+    `SELECT COALESCE(SUM(cost_micros), 0) AS micros FROM runs WHERE started_at >= ?`,
+    since,
+  )
+  return goalText(`7 days`, Number(done?.n ?? 0), Number(spent?.micros ?? 0))
+}
+
 async function status(deps: Deps, rest: string[], flags: Map<string, string[]>): Promise<Outcome> {
   const db = await openDb(deps)
   try {
@@ -1249,6 +1318,7 @@ async function status(deps: Deps, rest: string[], flags: Map<string, string[]>):
     return ok(
       [
         `lead limit: ${await leadLimit(db)}`,
+        await weekGoal(db, deps),
         ...runs.map((run) =>
           `${run.id} ${run.name} ${run.status} ${run.startedAt} ${dollars(run.costMicros)}` +
           (run.activity ? `\n  ${run.activity.split(`\n`)[0]}` : ``)
@@ -1635,8 +1705,9 @@ async function lesson(deps: Deps, flags: Map<string, string[]>, text: string): P
 
 /**
  * Append a row to `ai-memory/experiments/background-lead.md` and commit only that file straight
- * to `main`, as ai-memory's README allows for experiment rows. A failed commit or push is printed
- * and the row stays in the file.
+ * to `main`, as ai-memory's README allows for experiment rows. It pushes that one commit by its
+ * id, and commits nothing while ai-memory holds other commits not on `origin/main`, since a push
+ * would carry them too. A failed or refused step is printed and the row stays in the file.
  */
 async function experiment(deps: Deps, text: string): Promise<Outcome> {
   if (!text.trim()) return refuse(`empty experiment row`)
@@ -1648,18 +1719,25 @@ async function experiment(deps: Deps, text: string): Promise<Outcome> {
   }
   const run = deps.env(`AGENT_RUN_ID`) ?? `none`
   await deps.fs.appendText(file, `- ${localStamp(deps.now())}, run ${run}: ${text.trim()}\n`)
-  const git = (...args: string[]) => deps.run([`git`, `-C`, deps.memory, ...args])
-  for (
-    const args of [
-      [`add`, relative],
-      [`commit`, `-m`, `docs(experiments): background lead retro row`, `--`, relative],
-      [`push`, `origin`, `HEAD:main`],
-    ]
-  ) {
-    const step = await git(...args)
-    if (!step.success) {
-      return ok(`logged; git ${args[0]} failed: ${step.stderr.trim().slice(0, 300)}`)
+  const git = async (...args: string[]) => {
+    const step = await deps.run([`git`, `-C`, deps.memory, ...args])
+    if (!step.success) throw new Error(`git ${args[0]} failed: ${step.stderr.trim().slice(0, 300)}`)
+    return step.stdout.trim()
+  }
+  try {
+    await git(`fetch`, `origin`, `main`)
+    const ahead = Number(await git(`rev-list`, `--count`, `origin/main..HEAD`))
+    if (ahead !== 0) {
+      return ok(`logged; not committed: ai-memory has ${ahead} other commits not on origin/main`)
     }
+    await git(`add`, relative)
+    await git(`commit`, `-m`, `docs(experiments): background lead retro row`, `--`, relative)
+    const commit = await git(`rev-parse`, `HEAD`)
+    // An empty source in the refspec would delete main.
+    if (!/^[0-9a-f]{40,64}$/.test(commit)) throw new Error(`git rev-parse printed no commit id`)
+    await git(`push`, `origin`, `${commit}:refs/heads/main`)
+  } catch (error) {
+    return ok(`logged; ${(error as Error).message}`)
   }
   return ok(`logged and pushed`)
 }
@@ -1737,7 +1815,9 @@ async function report(deps: Deps, flags: Map<string, string[]>): Promise<Outcome
       todayMicros: await todayMicros(db, deps),
       paused: await getMeta(db, `paused`),
     })
-    if (flags.has(`ntfy`) && await notify(deps, `Background lead digest`, text, `default`)) {
+    const all = `agent-run report --since ${flags.get(`since`)?.at(-1) ?? `24h`}`
+    const push = fitPush(text, NTFY_MAX_BYTES, all)
+    if (flags.has(`ntfy`) && await notify(deps, `Background lead digest`, push, `default`)) {
       await db.execute(
         `INSERT INTO pushes (id, at, kind, title, run_id) VALUES (?, ?, 'digest', ?, NULL)`,
         uuidV7(),
