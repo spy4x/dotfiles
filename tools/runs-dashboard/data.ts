@@ -65,7 +65,7 @@ const isoAgo = (now: number, days: number) => new Date(now - days * 86_400_000).
 /** A lead run row of the runs table. */
 export interface RunRow extends BannerRun {
   name: string
-  /** agent-run's `Mode`: 1 read, 2 write, 3 lead; null in a database without the column. */
+  /** agent-run's `Mode`: 1 read, 2 write, 3 lead. agent-run always sets it; null only from a NULL value. */
   mode: number | null
   title: string | null
   parent: string | null
