@@ -23,13 +23,15 @@ come before priority:
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker
   says to build it, or when its priority was raised after filing (agents never raise one, the
-  library exception aside). Any other is not built: it gets `p4-low`, a one-line comment with the
+  library exception and an obstacle aside; an agent's raise to `p1-tooling` is no sign that I
+  asked). Any other is not built: it gets `p4-low`, a one-line comment with the
   reason and the label it had, and a line under **Issues** in the report.
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
-issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
-`p4-low`, `p5-someday`, `manual` or `needs-decision`, an obstacle aside ("Obstacles" below). Besides setting an issue aside as above, your
-only label changes on an existing issue are adding `manual`, `needs-decision` or a missing type
+issue into one, or move an issue in or out. Never raise an issue's priority, never remove `manual`
+or `needs-decision`, and never remove `p4-low` or `p5-someday` except to raise an obstacle
+("Obstacles" below). Besides setting an issue aside as above, your only label changes on an existing
+issue are adding `manual`, `needs-decision` or a missing type
 label, and the `in-progress` claim (the `git-flow` skill). An open issue you find blocked on me
 or another person, with neither label, gets the one "Filing issues" below would give it. Library
 exception to this paragraph: a library issue an app needs is built now in the app's wave, or put

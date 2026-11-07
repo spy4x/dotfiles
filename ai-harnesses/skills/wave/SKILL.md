@@ -13,7 +13,8 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
 
 ## Picking the work
 
-- Take open issues by priority, `p1-critical` first, then `p1-tooling`; no priority label counts as `p3-medium`;
+- Take open issues by priority, `p1-critical` first, then `p1-tooling`; no priority label counts as
+  `p3-medium`;
   oldest first within a level. Stop at `p3-medium`: `p4-low` and `p5-someday` are never
   candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual`
   or `needs-decision`, issues with an open PR by `spy4x`, and issues another session claimed
@@ -25,7 +26,8 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
   `gh api --paginate --slurp 'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`) → add
   `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
   owner put the issue there, and that outranks its priority label. Run it once more with
-  `label:p1-critical,p1-tooling` in place of the milestone. A milestone with no candidate left → the next
+  `label:p1-critical,p1-tooling` in place of the milestone. A milestone with no candidate left → the
+  next
   one, and after the last, the first search above. In `spy4x/dotfiles`, `p2-high` tooling polish
   is a candidate too, milestone or not. Nothing else is a candidate. An issue outside a
   milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it

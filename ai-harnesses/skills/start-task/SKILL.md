@@ -85,7 +85,8 @@ set it aside ("Picking work yourself" in the `issues` skill). If the repo has an
 report that the issue is outside it and that no wave picks it until I add it, unless it is
 `p1-critical` or `p1-tooling`.
 
-Label it with its priority (`p1-critical`, `p1-tooling`, then `p2-high` to `p5-someday`, defined in the `issues` skill), its type
+Label it with its priority (`p1-critical`, `p1-tooling`, then `p2-high` to `p5-someday`, defined in
+the `issues` skill), its type
 (`bug`, `enhancement` and the rest, "Filing issues" in the `issues` skill), and with `manual` or
 `needs-decision` when that section says so. Scrub secrets before
 sending (the hard rule). If the repo has no GitHub remote, keep the same text
