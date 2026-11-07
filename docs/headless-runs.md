@@ -35,7 +35,7 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   `handoff` in full under its own heading, and the 20 newest open lessons. The budget is soft: a
   running run always finishes.
 - **Parallel leads.** `agent-run limit --leads <n>` sets how many lead runs (manual and tick) may
-  run at once; the default is 1, and `status` prints it. Several tick leads share the `cwd`
+  run at once; the default is 1, and `status` prints it, with merged issues per $100 over 7 days. Several tick leads share the `cwd`
   `~/sync/code`: two leads may share a folder, since each writes only in worktrees of its own,
   while a `write` run still shares its folder with no other writing run.
 - **The queue**, picked in code by `tools/agent-queue.ts`, never by a model. The focus
@@ -68,9 +68,15 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   digest. No other run end pushes. Every push sent is a row in `pushes`.
 - **The digest.** `agent-report.timer` runs `agent-run report --since 24h --ntfy` at 09:00:
   achievements (done items with their PRs, good news), spend today and in the window against $200,
-  failures (failed runs, newly blocked items), bottlenecks (open lessons by minutes, the 5 slowest
-  steps of `v_slow_steps` when the importer's view exists), whether the loop is paused, then each
-  run with its notes.
+  merged issues per $100 in the window, failures (failed runs, newly blocked items), bottlenecks
+  (open lessons by minutes, the 5 slowest steps of `v_slow_steps` when the importer's view exists),
+  whether the loop is paused, then each run with its notes. Text that agents wrote is quoted on
+  one line, cut at 300 characters: a run's summary, good news, notes, needs-you, injection and
+  current activity, a blocked item's reason and a lesson's detail, after `run <id> wrote` (the
+  lesson's id only when it was added inside a run); a slow step's summary and the pause reason
+  without an id. The push is cut
+  to ntfy's 4096 bytes: whole items go from the end, and a last line says how many and to run
+  `agent-run report` for all of them.
 - **Lessons.** A run records lost time or tokens with `agent-run lesson`; the next tick and the
   retro read the open ones.
 - **The retro.** `agent-retro.timer` runs `agent-run retro` at 08:30, skipped when paused or over
@@ -136,8 +142,9 @@ agent-run experiment <text...>                   a row in ai-memory/experiments/
   session level of 90% or a weekly level of 95%.
 - **`lesson`** takes the run id from `$AGENT_RUN_ID` inside a run. **`experiment`** appends
   `- <local date time>, run <id>: <text>`, then commits only that file in `~/sync/code/ai-memory`
-  and pushes it to `main` (its README allows experiment rows there); a failed commit or push is
-  printed and the row stays.
+  and pushes that commit by its id to `main` (its README allows experiment rows there). It commits
+  nothing while ai-memory has other commits not on `origin/main`, since the push would carry them;
+  a failed push undoes that local commit; a refused or failed step is printed and the row stays.
 
 ## How a run runs
 
