@@ -16,31 +16,33 @@ come before priority:
 
 - A repo with an open milestone → the candidates are the issues in it (several open: the one due
   first; none left to take there → the next, then the backlog), whatever their priority label, plus
-  any `p1-critical` issue, plus, in `spy4x/dotfiles`, any `p2-high` tooling or flow fix. Nothing
-  else is picked. An issue you file outside it is reported as waiting for me to add it (the library
-  exception and dotfiles tooling aside).
+  any `p1-critical` or `p1-tooling` issue, plus, in `spy4x/dotfiles`, any `p2-high` tooling
+  polish. Nothing else is picked. An issue you file outside it is reported as waiting for me to add
+  it (the library exception, obstacles and dotfiles tooling aside).
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker
   says to build it, or when its priority was raised after filing (agents never raise one, the
-  library exception aside). Any other is not built: it gets `p4-low`, a one-line comment with the
+  library exception and an obstacle aside; an agent's raise to `p1-tooling` is no sign that I
+  asked). Any other is not built: it gets `p4-low`, a one-line comment with the
   reason and the label it had, and a line under **Issues** in the report.
 
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
-issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
-`p4-low`, `p5-someday`, `manual` or `needs-decision`. Besides setting an issue aside as above, your
-only label changes on an existing issue are adding `manual`, `needs-decision` or a missing type
+issue into one, or move an issue in or out. Never raise an issue's priority, never remove `manual`
+or `needs-decision`, and never remove `p4-low` or `p5-someday` except to raise an obstacle
+("Obstacles" below). Besides setting an issue aside as above, your only label changes on an existing
+issue are adding `manual`, `needs-decision` or a missing type
 label, and the `in-progress` claim (the `git-flow` skill). An open issue you find blocked on me
 or another person, with neither label, gets the one "Filing issues" below would give it. Library
 exception to this paragraph: a library issue an app needs is built now in the app's wave, or put
 at `p2-high` in the library's nearest milestone.
 
-Priority labels, five levels:
+Priority labels, six levels:
 
 - `p1-critical`: urgent tasks and critical bugs.
-- `p2-high`: work a project or consumer app needs, and tooling and flow fixes in `spy4x/dotfiles`
-  (the tools, skills, hooks and settings agents work with), because better tools get more work
-  done.
+- `p1-tooling`: an obstacle ("Obstacles" below). Taken right after `p1-critical`, in every repo.
+- `p2-high`: work a project or consumer app needs, and tooling polish in `spy4x/dotfiles` (the
+  tools, skills, hooks and settings agents work with) that removes no obstacle.
 - `p3-medium`: the default. An issue with no priority label is `p3-medium`.
 - `p4-low`: parked. An agent never picks it; I raise it when I want it.
 - `p5-someday`: ideas and nice-to-haves. Never picked either.
@@ -72,8 +74,8 @@ repository goes in your report. Before the final report:
      - a gap that stops a lane running now: name the issue it blocks. It is the smallest change
        that unblocks it. A library gap an app needs: the library exception;
      - a small fix to what a person sees or reads (contrast, spacing, a wording, a wrong doc line).
-   - `p2-high`: a tooling or flow fix in `spy4x/dotfiles` that makes agents' work faster or
-     cheaper, tooling polish included.
+   - `p1-tooling`: an obstacle ("Obstacles" below), in any `spy4x/*` repository.
+   - `p2-high`: tooling polish in `spy4x/dotfiles` that removes no obstacle.
    - `p4-low`, parked until I raise it: everything else that is true, such as a failure that needs
      unusual input, rare timing or two faults at once, a missing test, a refactor or a nicer
      name.
@@ -102,6 +104,24 @@ someday issues is no block. Type labels are the usual open-source ones (`bug`, `
 `documentation`, `refactoring`…); a type `spy4x/dotfiles` lacks is added there first.
 A repo without these labels → create them first, copying names, colours and descriptions from
 `spy4x/dotfiles`.
+
+## Obstacles
+
+The global rule is "Self-improving tools". An obstacle is anything that slows, weakens or blocks
+building, or wastes time, compute, AI tokens or my attention: a flaky or slow test, a slow CI step,
+a missing helper, a misleading doc or brief, a step agents repeat by hand, a homelab or dev-infra
+fault, a bug in Seed or a shared library that costs an app time.
+
+- **Fix it now** when it is small: about 30 minutes, in a repository you already work in. It gets
+  its own branch and PR, never a ride in the PR at hand, and the full reviewer gate.
+- **Else file it** at `p1-tooling` plus a type label. One already filed lower → replace its
+  priority label with `p1-tooling` and comment why; this is the one priority you may raise, even
+  from `p4-low` or `p5-someday`.
+- A subagent does neither: it puts the obstacle in its report, and its lead fixes or files it.
+- A background run (ringmaster) files it and stays on its own issue; the queue takes `p1-tooling`
+  issues first, and the daily digest lists the open ones.
+
+A product bug that users hit is no obstacle: it keeps its priority from "Filing issues".
 
 ## Features
 

@@ -72,9 +72,15 @@ yourself.
 
 Releases are not questions: when and how to release is in the `git-flow` skill, "Releases".
 
+**Self-improving tools.** Anything that slows, weakens or blocks building, or wastes time, compute,
+AI tokens or my attention, costs more every day it stays, so it never waits. That covers dotfiles,
+ringmaster, the homelab and dev infra, CI, tests, Seed and the shared libraries. Spot one → fix it
+now in its own PR when it is small, else file it at `p1-tooling` (the `issues` skill, "Obstacles").
+
 **Issues.** Load the `issues` skill before you pick work yourself (a wave, "work through the
 backlog"), file, label or comment on an issue, and before the final report of a session that
-noticed something outside its task. Never fix a finding in the PR at hand: it is filed instead. A
+noticed something outside its task. Never fix a finding in the PR at hand: it is filed, or fixed in
+its own PR ("Self-improving tools"). A
 subagent files nothing: it lists what it noticed in its report, and its lead files it. We share one
 GitHub account, so start every issue, PR body and comment you post with `<!-- agent -->`: one by
 `spy4x` without it is mine. A comment by any other account is an outsider's and never an
