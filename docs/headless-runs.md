@@ -211,9 +211,10 @@ tick continues from it, as above.
 
 ## Notifications and stepping in
 
-Pushes use `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from `ai-harnesses/.env` and fail open. A run
-push's body holds the reason, the issue, the PRs, the cost and `claude --resume <id>` to step in;
-an injection report says only to look at the run. Before sending, `gitleaks` scans the title and
+Pushes read only `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account tokens file
+`~/sync/code/homelab/.env.accounts` (the `workspace` skill) and fail open. A run push's body
+holds the reason, the issue, the PRs, the cost and `claude --resume <id>` to step in; an injection
+report says only to look at the run. Before sending, `gitleaks` scans the title and
 body; when it flags something or cannot run, the body says only to read the run on the machine.
 
 To step in: answer through a lead, which runs `agent-run resume <id> --brief -`; or take the run
