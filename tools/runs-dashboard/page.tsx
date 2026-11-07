@@ -319,10 +319,15 @@ function bannerLine(item: BannerItem): ComponentChildren {
   }
 }
 
-function RunLink({ run }: { run: { id: string; issue: string | null } }): JSX.Element {
+/** "Run #12 (Sat 00:00)": the start time, as in the runs table, tells two runs of one issue apart. */
+function RunLink(
+  { run }: { run: { id: string; issue: string | null; startedAt: string } },
+): JSX.Element {
   return (
     <a class={LINK} href={`#run-${run.id}`}>
-      Run {run.issue ? issueNumber(run.issue) : run.id.slice(-6)}
+      {`Run ${run.issue ? issueNumber(run.issue) : run.id.slice(-6)} (${
+        timeFormat.format(new Date(run.startedAt))
+      })`}
     </a>
   )
 }

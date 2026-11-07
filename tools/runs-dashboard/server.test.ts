@@ -162,7 +162,7 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     has(html, />\$171 of \$200</)
     has(html, /1 blocked · 2 queued · 1 claimed · 1 done · 1 dropped/)
     // Run 309 failed and cost over $100: one banner line names it once, with both facts.
-    has(html, /Run #309<\/a> failed and cost \$104\./)
+    has(html, /Run #309 \(\w{3} \d\d:\d\d\)<\/a> failed and cost \$104\./)
     assertEquals(html.split(`href="#run-019a5f00-0000-7000-8000-000000000309"`).length - 1, 1)
     has(html, /child of run #309/)
     // Inline links show the house focus ring: 2 px, 2 px from the text.
@@ -237,4 +237,26 @@ Deno.test(`titles from the database render escaped`, async () => {
 
 Deno.test(`dollars show cents below $10, and zero as $0`, () => {
   assertEquals([usd(0), usd(4.2), usd(142)], [`$0`, `$4.20`, `$142`])
+})
+
+Deno.test(`two runs of one issue in the banner are told apart by their start times`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    const db = new DatabaseSync(path)
+    // A second failed run of #309, an hour after the first (which started at 09:00).
+    db.prepare(
+      `INSERT INTO runs (id, name, issue, started_at, status, cost_micros) VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(
+      `019a5f00-0000-7000-8000-000000000401`,
+      `lead-309`,
+      `spy4x/financy#309`,
+      new Date(NOW - 2 * 3_600_000).toISOString(),
+      `failed`,
+      5_000_000,
+    )
+    db.close()
+    const html = await (await get(path)).text()
+    has(html, /Run #309 \(Fri 09:00\)<\/a> failed and cost/)
+    has(html, /Run #309 \(Fri 10:00\)<\/a> failed\./)
+  })
 })
