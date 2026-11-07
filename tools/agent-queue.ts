@@ -16,7 +16,10 @@ const NEVER = [`manual`, `needs-decision`, `in-progress`]
 /** Labels that keep an issue out of the queue outside a milestone. */
 const LOW = [`p4-low`, `p5-someday`]
 
-/** An open issue as `gh issue list --json number,title,labels,author,milestone,createdAt` gives it. */
+/** The fields `gh issue list` and `gh issue view` read for an issue. */
+const ISSUE_FIELDS = `number,title,labels,author,milestone,createdAt,updatedAt`
+
+/** An open issue as `gh issue list --json <ISSUE_FIELDS>` gives it. */
 export interface Issue {
   number: number
   title: string
@@ -24,6 +27,7 @@ export interface Issue {
   author: { login: string }
   milestone: { title: string } | null
   createdAt: string
+  updatedAt: string
 }
 
 /** An open milestone as `gh api repos/<repo>/milestones` gives it. */
@@ -100,6 +104,22 @@ export function milestoneHash(state: FocusState): Promise<string> {
 }
 
 /**
+ * The hash of the candidates that may join the plan at any time: `p1-critical` in the focus and
+ * tooling repositories, and `p2-high` tooling fixes. A new one re-plans the queue.
+ */
+export function urgentHash(focus: FocusState[], tooling: Issue[]): Promise<string> {
+  const tagged = [
+    ...focus.flatMap((state) => state.issues.map((issue) => ({ repo: state.repo, issue }))),
+    ...tooling.map((issue) => ({ repo: TOOLING_REPO, issue })),
+  ]
+  const ids = tagged.filter(({ repo, issue }) =>
+    isCandidate(issue, false) &&
+    (hasLabel(issue, `p1-critical`) || (repo === TOOLING_REPO && hasLabel(issue, `p2-high`)))
+  ).map(({ repo, issue }) => `${repo}#${issue.number}`)
+  return sha256([...new Set(ids)].sort().join(`,`))
+}
+
+/**
  * Whether an issue may be queued: by `spy4x`, without `manual`, `needs-decision` or
  * `in-progress`, and outside a milestone not at `p4-low` or `p5-someday`. `ours` tolerates
  * `in-progress`: the label of the loop's own earlier claim on that issue.
@@ -112,15 +132,22 @@ export function isCandidate(issue: Issue, inMilestone: boolean, ours = false): b
   return inMilestone || !labels.some((name) => LOW.includes(name))
 }
 
-const hasLabel = (issue: Issue, name: string) => issue.labels.some((label) => label.name === name)
+function hasLabel(issue: Issue, name: string): boolean {
+  return issue.labels.some((label) => label.name === name)
+}
+
+/** Queue statuses that leave nothing to take in a milestone. */
+const SETTLED = [`blocked`, `claimed`, `done`, `declined`]
+
 const oldestFirst = <T extends { createdAt: string }>(list: T[]) =>
   [...list].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
 /**
  * The plan, in order, each group oldest first and no issue twice: `p1-critical` in the focus and
  * tooling repositories; `p2-high` tooling fixes; the due-first milestone that still has an issue
- * neither blocked, claimed nor done in the queue (later ones when it has none); then the focus
- * repository's backlog at `p2-high`, `p3-medium` or no priority. `statuses` maps queue items to
+ * neither blocked, claimed, done nor declined in the queue (later ones when it has none); then the
+ * focus repository's backlog: issues in no milestone at `p2-high`, `p3-medium` or no priority. An
+ * issue in a milestone that is not the current one is never planned. `statuses` maps queue items to
  * their status; `ours` are items an earlier tick claimed, whose `in-progress` label is its own.
  */
 export function buildPlan(
@@ -162,13 +189,14 @@ export function buildPlan(
     )
     const open = issues.some((issue) => {
       const id = key(focus.repo, issue)
-      return !seen.has(id) && ![`blocked`, `claimed`, `done`].includes(statuses.get(id) ?? ``)
+      return !seen.has(id) && !SETTLED.includes(statuses.get(id) ?? ``)
     })
     if (!open) continue
     for (const issue of issues) add(focus.repo, issue, `milestone:${milestone.title}`)
     break
   }
   for (const issue of oldestFirst(focus.issues)) {
+    if (issue.milestone !== null) continue
     const priority = issue.labels.find((label) => /^p\d-/.test(label.name))?.name
     const level = priority === undefined || [`p2-high`, `p3-medium`].includes(priority)
     if (level && fits(focus.repo, issue, false)) add(focus.repo, issue, `backlog`)
@@ -196,7 +224,7 @@ export function listIssues(deps: Deps, repo: string): Promise<Issue[]> {
     `--limit`,
     `1000`,
     `--json`,
-    `number,title,labels,author,milestone,createdAt`,
+    ISSUE_FIELDS,
   ])
 }
 
@@ -229,7 +257,7 @@ export async function recheck(deps: Deps, item: QueueItem): Promise<string | nul
     `-R`,
     match[1],
     `--json`,
-    `number,title,labels,author,milestone,createdAt,state`,
+    `${ISSUE_FIELDS},state`,
   ]).catch(() => null)
   if (!issue) return `gh could not read it`
   if (issue.state !== `OPEN`) return `closed`
@@ -399,24 +427,59 @@ async function milestoneHashes(focus: FocusState[]): Promise<string> {
 
 /**
  * Why the queue must be planned again, or `null`: no queued item, another "Focus now", another
- * current milestone or set of its issues, or a plan 7 days old.
+ * current milestone or set of its issues, another set of `p1-critical` or `p2-high` tooling
+ * candidates, or a plan 7 days old.
  */
 export async function replanReason(
   db: SqliteDb,
   deps: Deps,
   focusHash: string,
   focus: FocusState[],
+  tooling: Issue[],
 ): Promise<string | null> {
   if ((await queueItems(db, `queued`)).length === 0) return `no queued item`
   if (await getMeta(db, `plan_focus_hash`) !== focusHash) return `"Focus now" changed`
   if (await getMeta(db, `plan_milestone_hash`) !== await milestoneHashes(focus)) {
     return `the milestone's issues changed`
   }
+  if (await getMeta(db, `plan_urgent_hash`) !== await urgentHash(focus, tooling)) {
+    return `the p1-critical or tooling issues changed`
+  }
   const planned = await getMeta(db, `planned_at`)
   if (!planned || deps.now().getTime() - Date.parse(planned) >= PLAN_MAX_AGE_MS) {
     return `the plan is 7 days old`
   }
   return null
+}
+
+/**
+ * Queue a declined item again when its issue's `updatedAt` on GitHub is later than the item's own
+ * `updated_at`: a new milestone, label, comment or edit since the lead declined it, or since the
+ * last plan (every plan stamps the items it keeps).
+ */
+async function requeueUpdated(
+  db: SqliteDb,
+  deps: Deps,
+  focus: FocusState[],
+  tooling: Issue[],
+): Promise<void> {
+  const updated = new Map<string, string>()
+  for (const { repo, issues } of [...focus, { repo: TOOLING_REPO, issues: tooling }]) {
+    for (const issue of issues) {
+      updated.set(`${repo}#${issue.number}`, new Date(issue.updatedAt).toISOString())
+    }
+  }
+  for (const item of await queueItems(db, `declined`)) {
+    const at = updated.get(item.issue)
+    if (!at) continue
+    await db.execute(
+      `UPDATE queue SET status = 'queued', reason = NULL, updated_at = ?
+        WHERE issue = ? AND status = 'declined' AND updated_at < ?`,
+      deps.now().toISOString(),
+      item.issue,
+      at,
+    )
+  }
 }
 
 /**
@@ -438,20 +501,24 @@ export function buildPlans(
 }
 
 /**
- * Plan again and store it: existing items get the new rank, title and source and keep their
- * status, attempts and reason (a parked item keeps rank 0, a dropped one is queued again); new
- * ones are queued; queued items no longer planned are dropped. Returns the plan's length.
+ * Plan again and store it. A declined item whose issue was updated on GitHub since it was declined
+ * (or since the last plan) is queued again first. Then existing items get the new rank, title and
+ * source and keep their status, attempts and reason (a parked item keeps rank 0, a dropped one is
+ * queued again); new ones are queued; queued items no longer planned are dropped. `tooling` is
+ * spy4x/dotfiles' open issues, empty when it is the first focus repository. Returns the plan's
+ * length.
  */
 export async function replan(
   db: SqliteDb,
   deps: Deps,
   focusHash: string,
   focus: FocusState[],
+  tooling: Issue[],
 ): Promise<number> {
+  await requeueUpdated(db, deps, focus, tooling)
   const items = await queueItems(db)
   const statuses = new Map(items.map((item) => [item.issue, item.status]))
   const ours = new Set(items.filter((item) => item.runId !== null).map((item) => item.issue))
-  const tooling = focus[0].repo === TOOLING_REPO ? [] : await listIssues(deps, TOOLING_REPO)
   const plan = buildPlans(focus, tooling, statuses, ours)
   const now = deps.now().toISOString()
   for (const [index, candidate] of plan.entries()) {
@@ -495,6 +562,7 @@ export async function replan(
   }
   await setMeta(db, `plan_focus_hash`, focusHash)
   await setMeta(db, `plan_milestone_hash`, await milestoneHashes(focus))
+  await setMeta(db, `plan_urgent_hash`, await urgentHash(focus, tooling))
   await setMeta(db, `planned_at`, now)
   return plan.length
 }

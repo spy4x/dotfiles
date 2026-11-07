@@ -40,6 +40,7 @@ function issue(
     author: { login: options.author ?? `spy4x` },
     milestone: options.milestone ? { title: options.milestone } : null,
     createdAt: `2026-11-${String(options.day ?? number).padStart(2, `0`)}T00:00:00Z`,
+    updatedAt: `2026-11-${String(options.day ?? number).padStart(2, `0`)}T00:00:00Z`,
   }
 }
 
@@ -532,12 +533,11 @@ Deno.test(`the plan takes p1, then tooling, then the due-first open milestone, t
       `spy4x/dotfiles#3 tooling`,
       `spy4x/financy#5 milestone:Next`,
       `spy4x/financy#6 milestone:Next`,
-      `spy4x/financy#2 backlog`,
-      `spy4x/financy#7 backlog`,
       `spy4x/financy#8 backlog`,
+      `spy4x/financy#2 milestone:Blocked`,
     ])
-    // Planned again, the blocked item keeps its status.
-    assertEquals(plan[5].status, `blocked`)
+    // The blocked item stays as it was, and #7 of the later milestone is never planned.
+    assertEquals(plan[6].status, `blocked`)
   } finally {
     await m.cleanup()
   }
@@ -1141,6 +1141,88 @@ Deno.test(`two failed tick runs in a row pause the loop with one urgent push`, a
     assertMatch(String(m.pushes[0].init.body), /^Unpause: agent-run unpause$/m)
     assertMatch((await main([`tick`], m.deps)).output, /tick: paused: two tick runs failed/)
     assertEquals(m.sql(`SELECT kind FROM pushes`), [{ kind: `urgent` }])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a new p2-high tooling or p1-critical issue re-plans the queue at the next tick`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2), issue(3)]
+    await m.end(started((await main([`tick`], m.deps)).output), {})
+    m.later(31)
+    m.github.issues[DOTFILES] = [issue(4, { labels: [`p2-high`] })]
+    const tooling = await main([`tick`], m.deps)
+    assertMatch(tooling.output, /planned \d+ item\(s\): the p1-critical or tooling issues changed/)
+    const [first] = JSON.parse(
+      (await main([`status`, started(tooling.output), `--json`], m.deps)).output,
+    )
+    assertEquals(first.issue, `${DOTFILES}#4`)
+    await m.end(first.id, {})
+    m.later(31)
+    m.github.issues[FINANCY].push(issue(5, { labels: [`p1-critical`] }))
+    const critical = await main([`tick`], m.deps)
+    assertMatch(critical.output, /the p1-critical or tooling issues changed/)
+    const [second] = JSON.parse(
+      (await main([`status`, started(critical.output), `--json`], m.deps)).output,
+    )
+    assertEquals(second.issue, `${FINANCY}#5`)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a declined run takes its item out of the queue without a failed attempt or a pause`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2), issue(3)]
+    const first = started((await main([`tick`], m.deps)).output)
+    assertEquals(await m.end(first, {}, 1, `error_during_execution`), `failed`)
+    m.later(31)
+    const second = started((await main([`tick`], m.deps)).output)
+    assertEquals(
+      await m.end(second, { status: `declined`, summary: `Needs #2 first.` }),
+      `declined`,
+    )
+    assertEquals(m.sql(`SELECT status, attempts, reason FROM queue WHERE issue = '${FINANCY}#1'`), [
+      { status: `declined`, attempts: 1, reason: `Needs #2 first.` },
+    ])
+    m.later(31)
+    const third = started((await main([`tick`], m.deps)).output)
+    const [run] = JSON.parse((await main([`status`, third, `--json`], m.deps)).output)
+    assertEquals(run.issue, `${FINANCY}#2`)
+    assertEquals(await m.end(third, {}, 1, `error_during_execution`), `failed`)
+    // Failed, declined, failed: no two failures in a row, so no pause and no push.
+    assertEquals(m.titles(), [])
+    m.later(31)
+    assertEquals(started((await main([`tick`], m.deps)).output).length > 0, true)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a declined item comes back once its issue is updated on GitHub, not before`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    await m.end(started((await main([`tick`], m.deps)).output), { status: `declined` })
+    m.later(31)
+    await m.end(started((await main([`tick`], m.deps)).output), {})
+    m.later(31)
+    // Nothing queued: the plan is made again, and #1 has not changed since it was declined.
+    assertMatch((await main([`tick`], m.deps)).output, /tick: no queued item/)
+    assertEquals(m.sql(`SELECT status FROM queue WHERE issue = '${FINANCY}#1'`), [
+      { status: `declined` },
+    ])
+    m.later(5)
+    m.github.issues[FINANCY][0].updatedAt = m.state.now.toISOString().replace(`.000Z`, `Z`)
+    m.later(26)
+    const back = await main([`tick`], m.deps)
+    const [run] = JSON.parse(
+      (await main([`status`, started(back.output), `--json`], m.deps)).output,
+    )
+    assertEquals(run.issue, `${FINANCY}#1`)
   } finally {
     await m.cleanup()
   }

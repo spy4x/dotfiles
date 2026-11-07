@@ -46,19 +46,23 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   first, no issue twice: `p1-critical` in the focus repository and spy4x/dotfiles (`p1`);
   `p2-high` in spy4x/dotfiles (`tooling`); the focus repository's milestone due first, all
   priorities (`milestone:<title>`), or the next one when every issue of it is blocked, claimed,
-  done or filtered out; then its open issues at `p2-high`, `p3-medium` or no priority
-  (`backlog`). Never: an author other than `spy4x`, `manual`, `needs-decision`, `in-progress`
+  done, declined or filtered out; then its open issues in no milestone at `p2-high`, `p3-medium`
+  or no priority (`backlog`). An issue in any other milestone is never planned. Never: an author other than `spy4x`, `manual`, `needs-decision`, `in-progress`
   (except the loop's own earlier claim); outside a milestone also `p4-low` and `p5-someday`.
 - **Planning again** happens when no item is queued, the "Focus now" section changes, the
-  due-first milestone or its open issues change, or the plan is 7 days old. Existing items get the
+  due-first milestone or its open issues change, the set of `p1-critical` and `p2-high` tooling
+  candidates changes, or the plan is 7 days old. A declined item whose issue GitHub shows as
+  updated since it was declined (or since the last plan) is queued again first. Existing items get the
   new rank and keep their status, attempts and reason (a parked item keeps rank 0; a dropped one
   that is a candidate again is queued); queued items no longer planned are `dropped`.
 - **Item statuses:** `queued`, `claimed` (a lease of 3h15m and the run id), `done`, `dropped`,
-  `blocked`, each with a reason. When a run ends: `done` → `done`; `parked` (CI expected to take
+  `blocked`, `declined`, each with a reason. When a run ends: `done` → `done`; `parked` (CI expected to take
   over about 20 minutes, or the session compacted twice) → `queued` at rank 0, no attempt counted,
   with the run's `handoff`. Every end but `done` (and a `dropped` item) keeps the last handoff
   unless the run wrote its own;
-  `blocked` → `blocked` with `needs_owner`; `failed`, `timeout`, `budget`, `turns` and an expired
+  `blocked` → `blocked` with `needs_owner`; `declined` (not startable yet: out of milestone order
+  or waiting on another issue) → `declined` with the summary, no attempt counted and no step
+  toward the pause; `failed`, `timeout`, `budget`, `turns` and an expired
   lease → one failed attempt, `blocked` at 2; `stopped` → `queued`.
 - **Pushes.** Urgent (NTFY priority `urgent`): two failed tick runs in a row (this also pauses the
   loop), a run's `alert` or `injection`, and a run passing $100 (`RUN_ALERT_USD`): estimated every
@@ -161,7 +165,7 @@ systemd-run --user --unit=agent-run-<id>.service --collect \
   and description, never its command or output) and the run's latest words into `activity`, and
   estimates the cost so far for the $100 push.
 - `finish` (`ExecStopPost`) sets the final status from `$SERVICE_RESULT`, the CLI's `result` event
-  and the run's own answer: `done`, `parked`, `blocked`, `failed`, `timeout`, `budget`, `turns` or
+  and the run's own answer: `done`, `parked`, `blocked`, `declined`, `failed`, `timeout`, `budget`, `turns` or
   `stopped`. It stores the cost, turns and answer, moves the run's queue item, and sends the pushes
   above.
 - `env -i` drops the rest of the user manager's environment (`SSH_AUTH_SOCK` among it). `gh` signs
@@ -183,7 +187,7 @@ systemd-run --user --unit=agent-run-<id>.service --collect \
   dollar, turns, the answer), `events` (start, resume, tool, note, over100, stop, end, error),
   `queue` (the items above), `lessons` (kind, measured minutes and tokens, detail, open or closed
   with a reason), `pushes` (urgent, good, digest) and `meta` (`paused`, `plan_focus_hash`,
-  `plan_milestone_hash`, `planned_at`). A database from before #257 loses its `weekly_*` columns
+  `plan_milestone_hash`, `plan_urgent_hash`, `planned_at`). A database from before #257 loses its `weekly_*` columns
   on first open. Inspect it with `sqlite3`, for example `select at, kind, detail from events where
   run_id = '<id>' order by at`.
 - `<id>/`: `prompt.md` (the latest brief), `brief.md` (every brief, appended), `events.jsonl` (raw
@@ -193,7 +197,7 @@ The result schema every run fills:
 
 ```json
 {
-  "status": "done | parked | blocked | failed",
+  "status": "done | parked | blocked | declined | failed",
   "summary": "two or three sentences: what changed and where it stands",
   "prs": ["PR URLs"],
   "needs_owner": "what only the owner can do, or null",

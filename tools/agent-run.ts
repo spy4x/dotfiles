@@ -47,6 +47,7 @@ import {
   failAttempt,
   getMeta,
   itemOfRun,
+  listIssues,
   listMilestones,
   QUEUE_SCHEMA,
   queueItems,
@@ -58,6 +59,7 @@ import {
   replanReason,
   setItem,
   setMeta,
+  TOOLING_REPO,
 } from "./agent-queue.ts"
 import { DAILY_BUDGET_USD, localDay, RUN_ALERT_USD } from "./agent-budget.ts"
 import { costOf, toCall } from "./session-cost.ts"
@@ -119,7 +121,7 @@ const ALIVE = [`active`, `activating`, `deactivating`, `reloading`, `refreshing`
 export const RESULT_SCHEMA = {
   type: `object`,
   properties: {
-    status: { type: `string`, enum: [`done`, `parked`, `blocked`, `failed`] },
+    status: { type: `string`, enum: [`done`, `parked`, `blocked`, `declined`, `failed`] },
     summary: { type: `string` },
     prs: { type: `array`, items: { type: `string` } },
     needs_owner: { type: [`string`, `null`] },
@@ -1168,6 +1170,9 @@ async function settleItem(db: SqliteDb, deps: Deps, run: Run) {
   } else if (run.status === `blocked`) {
     const reason = run.result?.needs_owner ?? summary
     await setItem(db, deps, item.issue, { status: `blocked`, reason, handoff })
+  } else if (run.status === `declined`) {
+    // Not startable yet: out of the queue, no attempt counted, back once the issue changes.
+    await setItem(db, deps, item.issue, { status: `declined`, reason: summary, handoff })
   } else if (run.status === `stopped`) {
     await setItem(db, deps, item.issue, { status: `queued`, reason: `stopped`, handoff })
   } else await failAttempt(db, deps, item, `${run.status}: ${summary ?? `no answer`}`, handoff)
@@ -1535,9 +1540,11 @@ async function tick(deps: Deps): Promise<Outcome> {
     }
     const focus = []
     for (const repo of direction.repos) focus.push(await readFocus(deps, repo))
-    const why = await replanReason(db, deps, direction.focusHash, focus)
+    const tooling = focus[0].repo === TOOLING_REPO ? [] : await listIssues(deps, TOOLING_REPO)
+    const why = await replanReason(db, deps, direction.focusHash, focus, tooling)
     if (why) {
-      lines.push(`planned ${await replan(db, deps, direction.focusHash, focus)} item(s): ${why}`)
+      const planned = await replan(db, deps, direction.focusHash, focus, tooling)
+      lines.push(`planned ${planned} item(s): ${why}`)
     }
     const before = free
     let skipped = 0
