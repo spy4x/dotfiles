@@ -9,14 +9,17 @@ import {
   runtimeFiles,
 } from "./agent-import.ts"
 
-/** The first import runs at this moment, so `import_since` is it. */
-const SINCE = new Date(`2026-01-01T00:00:00.000Z`)
+/** The first import runs at this moment, local midnight, so `import_since` is it. */
+const SINCE = new Date(`2026-01-01T00:00:00`)
 const SID = `0190a1b2-0000-7000-8000-000000000001`
 const PROJECT = `-home-test-repo`
 
-/** A timestamp `minutes` after `SINCE`, on 2026-01-01 at noon UTC plus that, so the local day is stable. */
+/**
+ * A timestamp `minutes` after local noon of `day`. The views name days in local time, and noon UTC
+ * is already the next local day east of UTC+12, so every time here is local, never UTC.
+ */
 function at(minutes: number, day = `2026-01-01`): string {
-  return new Date(Date.parse(`${day}T12:00:00.000Z`) + minutes * 60_000).toISOString()
+  return new Date(new Date(`${day}T12:00:00`).getTime() + minutes * 60_000).toISOString()
 }
 
 let seq = 0
@@ -182,7 +185,7 @@ Deno.test(`imports only entries from the first run on and never reads files olde
   try {
     await Deno.writeTextFile(
       m.main,
-      jsonl([userText(`2025-12-31T23:00:00.000Z`, `before`), userText(at(1), `after`)]),
+      jsonl([userText(at(-13 * 60), `before`), userText(at(1), `after`)]),
     )
     const old = join(m.projects, PROJECT, `0190a1b2-0000-7000-8000-00000000000f.jsonl`)
     await Deno.writeTextFile(old, jsonl([userText(at(2), `stale file`)]))
