@@ -16,6 +16,23 @@ const NEVER = [`manual`, `needs-decision`, `in-progress`]
 /** Labels that keep an issue out of the queue outside a milestone. */
 const LOW = [`p4-low`, `p5-someday`]
 
+/** An issue reference, `owner/repo#n`: the repository and the number. */
+const ISSUE_REF = /^([\w.-]+\/[\w.-]+)#(\d+)$/
+
+/**
+ * The issue references in a run's `waits_on`, for the item `own` (`owner/repo#n`): a bare `#n`
+ * is taken as an issue of `own`'s repository; anything else that is no `owner/repo#n` is dropped.
+ */
+export function issueRefs(raw: unknown, own: string): string[] {
+  if (!Array.isArray(raw)) return []
+  const repo = own.split(`#`)[0]
+  return raw.flatMap((ref) => {
+    if (typeof ref !== `string`) return []
+    const full = /^#\d+$/.test(ref) ? `${repo}${ref}` : ref
+    return ISSUE_REF.test(full) ? [full] : []
+  })
+}
+
 /** The fields `gh issue list` and `gh issue view` read for an issue. */
 const ISSUE_FIELDS = `number,title,labels,author,milestone,createdAt,updatedAt`
 
@@ -51,6 +68,8 @@ export interface QueueItem extends Candidate {
   reason: string | null
   /** The last parked run's handoff, carried in full by the next run's brief. */
   handoff: string | null
+  /** The issues (`owner/repo#n`) a declined item waits on; empty in every other status. */
+  waitsOn: string[]
   attempts: number
   leaseUntil: string | null
   runId: string | null
@@ -248,7 +267,7 @@ export async function readFocus(deps: Deps, repo: string): Promise<FocusState> {
 
 /** Why a queued item may no longer be worked on, or `null` when it still may. */
 export async function recheck(deps: Deps, item: QueueItem): Promise<string | null> {
-  const match = /^([\w.-]+\/[\w.-]+)#(\d+)$/.exec(item.issue)
+  const match = ISSUE_REF.exec(item.issue)
   if (!match) return `not an issue reference`
   const issue = await gh<Issue & { state: string }>(deps, [
     `issue`,
@@ -279,6 +298,7 @@ CREATE TABLE IF NOT EXISTS queue (
   status TEXT NOT NULL,
   reason TEXT,
   handoff TEXT,
+  waits_on TEXT,
   attempts INTEGER NOT NULL DEFAULT 0,
   lease_until TEXT,
   run_id TEXT,
@@ -315,6 +335,7 @@ function rowToItem(row: Record<string, unknown>): QueueItem {
     status: row.status as string,
     reason: (row.reason as string | null) ?? null,
     handoff: (row.handoff as string | null) ?? null,
+    waitsOn: row.waits_on ? JSON.parse(row.waits_on as string) : [],
     attempts: Number(row.attempts),
     leaseUntil: (row.lease_until as string | null) ?? null,
     runId: (row.run_id as string | null) ?? null,
@@ -337,7 +358,8 @@ export async function itemOfRun(db: SqliteDb, runId: string): Promise<QueueItem 
 
 /**
  * Set an item's status and reason (`null` unless given); the handoff and the other fields stay
- * unless given, so the last handoff survives a run that ends without writing its own.
+ * unless given, so the last handoff survives a run that ends without writing its own. `waitsOn` is
+ * cleared unless given.
  */
 export async function setItem(
   db: SqliteDb,
@@ -347,18 +369,20 @@ export async function setItem(
     status: string
     reason?: string | null
     handoff?: string | null
+    waitsOn?: string[]
     rank?: number
     attempts?: number
   },
 ): Promise<void> {
   await db.execute(
     `UPDATE queue SET status = ?, reason = ?, handoff = CASE WHEN ? THEN ? ELSE handoff END,
-       rank = COALESCE(?, rank), attempts = COALESCE(?, attempts), lease_until = NULL,
-       updated_at = ? WHERE issue = ?`,
+       waits_on = ?, rank = COALESCE(?, rank), attempts = COALESCE(?, attempts),
+       lease_until = NULL, updated_at = ? WHERE issue = ?`,
     fields.status,
     fields.reason ?? null,
     fields.handoff === undefined ? 0 : 1,
     fields.handoff ?? null,
+    fields.waitsOn?.length ? JSON.stringify(fields.waitsOn) : null,
     fields.rank ?? null,
     fields.attempts ?? null,
     deps.now().toISOString(),
@@ -453,11 +477,12 @@ export async function replanReason(
 }
 
 /**
- * Queue a declined item again when its issue's `updatedAt` on GitHub is later than the item's own
- * `updated_at`: a new milestone, label, comment or edit since the lead declined it, or since the
- * last plan (every plan stamps the items it keeps).
+ * Queue a declined item again, clearing its reason and `waits_on`, when its issue's `updatedAt` on
+ * GitHub is later than the item's own `updated_at` (a new milestone, label, comment or edit since
+ * the lead declined it, or since the last plan: every plan stamps the items it keeps), or when
+ * `gh issue view` shows an issue it waits on as not open. A `gh` error counts as still open.
  */
-async function requeueUpdated(
+async function requeueDeclined(
   db: SqliteDb,
   deps: Deps,
   focus: FocusState[],
@@ -469,17 +494,33 @@ async function requeueUpdated(
       updated.set(`${repo}#${issue.number}`, new Date(issue.updatedAt).toISOString())
     }
   }
+  const requeue = `UPDATE queue SET status = 'queued', reason = NULL, waits_on = NULL,
+    updated_at = ? WHERE issue = ? AND status = 'declined'`
   for (const item of await queueItems(db, `declined`)) {
     const at = updated.get(item.issue)
-    if (!at) continue
-    await db.execute(
-      `UPDATE queue SET status = 'queued', reason = NULL, updated_at = ?
-        WHERE issue = ? AND status = 'declined' AND updated_at < ?`,
-      deps.now().toISOString(),
-      item.issue,
-      at,
-    )
+    const now = deps.now().toISOString()
+    if (at) await db.execute(`${requeue} AND updated_at < ?`, now, item.issue, at)
+    if (await anyClosed(deps, item.waitsOn)) await db.execute(requeue, now, item.issue)
   }
+}
+
+/** Whether `gh issue view` shows any of `refs` (`owner/repo#n`) as not open; an error is open. */
+async function anyClosed(deps: Deps, refs: string[]): Promise<boolean> {
+  for (const ref of refs) {
+    const match = ISSUE_REF.exec(ref)
+    if (!match) continue
+    const issue = await gh<{ state: string }>(deps, [
+      `issue`,
+      `view`,
+      match[2],
+      `-R`,
+      match[1],
+      `--json`,
+      `state`,
+    ]).catch(() => null)
+    if (issue && issue.state !== `OPEN`) return true
+  }
+  return false
 }
 
 /**
@@ -502,7 +543,8 @@ export function buildPlans(
 
 /**
  * Plan again and store it. A declined item whose issue was updated on GitHub since it was declined
- * (or since the last plan) is queued again first. Then existing items get the new rank, title and
+ * (or since the last plan), or one of whose `waits_on` issues is no longer open, is queued again
+ * first. Then existing items get the new rank, title and
  * source and keep their status, attempts and reason (a parked item keeps rank 0, a dropped one is
  * queued again); new ones are queued; queued items no longer planned are dropped. `tooling` is
  * spy4x/dotfiles' open issues, empty when it is the first focus repository. Returns the plan's
@@ -515,7 +557,7 @@ export async function replan(
   focus: FocusState[],
   tooling: Issue[],
 ): Promise<number> {
-  await requeueUpdated(db, deps, focus, tooling)
+  await requeueDeclined(db, deps, focus, tooling)
   const items = await queueItems(db)
   const statuses = new Map(items.map((item) => [item.issue, item.status]))
   const ours = new Set(items.filter((item) => item.runId !== null).map((item) => item.issue))
