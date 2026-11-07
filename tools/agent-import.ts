@@ -317,6 +317,9 @@ const REVERT = commandLike([
  * The analysis views. `runs` and `queue` belong to agent-run.ts; while either table is missing,
  * an empty stand-in with the same columns keeps every view queryable, and the next import, which
  * recreates the views, picks the real table up.
+ *
+ * A CI wait's `cost_usd` in `v_ci_waits` is the session's first API call after the wait returned:
+ * the call that rereads the whole context, often from an expired cache, which is what waiting cost.
  */
 function viewsSql(has: { runs: boolean; queue: boolean }): string {
   const runs = has.runs
@@ -326,6 +329,7 @@ function viewsSql(has: { runs: boolean; queue: boolean }): string {
   return `
 DROP VIEW IF EXISTS v_goal;
 DROP VIEW IF EXISTS v_waste;
+DROP VIEW IF EXISTS v_ci_waits;
 DROP VIEW IF EXISTS v_stalls;
 DROP VIEW IF EXISTS v_slow_steps;
 DROP VIEW IF EXISTS v_tool_stats;
@@ -427,16 +431,25 @@ CREATE VIEW v_slow_steps AS
 SELECT session_id, started_at AS at, name AS tool,
   substr(COALESCE(json_extract(input, '$.description'), json_extract(input, '$.command'),
     json_extract(input, '$.file_path'), json_extract(input, '$.pattern'),
-    json_extract(input, '$.query'), json_extract(input, '$.url'), input), 1, 120) AS summary,
+    json_extract(input, '$.query'), json_extract(input, '$.url')), 1, 120) AS summary,
   ROUND(duration_ms / 1000.0, 1) AS sec, COALESCE(is_error, 0) AS is_error
 FROM tool_calls WHERE duration_ms IS NOT NULL ORDER BY duration_ms DESC;
 
 CREATE VIEW v_stalls AS
-SELECT session_id, from_at, to_at, gap_sec FROM (
+SELECT g.session_id, g.from_at, g.to_at, g.gap_sec, k.kind FROM (
   SELECT session_id, LAG(at) OVER w AS from_at, at AS to_at,
     ROUND((julianday(at) - julianday(LAG(at) OVER w)) * 86400) AS gap_sec
-  FROM messages WINDOW w AS (PARTITION BY session_id ORDER BY at))
-WHERE gap_sec >= 600 ORDER BY gap_sec DESC;
+  FROM messages WINDOW w AS (PARTITION BY session_id ORDER BY at)) g
+JOIN v_session_kind k ON k.id = g.session_id
+WHERE g.gap_sec >= 600 ORDER BY g.gap_sec DESC;
+
+CREATE VIEW v_ci_waits AS
+SELECT t.session_id, k.kind, t.started_at AS at, ROUND(t.duration_ms / 1000.0, 1) AS sec,
+  (SELECT a.cost_micros FROM api_calls a WHERE a.session_id = t.session_id AND a.at >= t.ended_at
+    ORDER BY a.at LIMIT 1) / 1e6 AS cost_usd
+FROM tool_calls t JOIN v_session_kind k ON k.id = t.session_id
+WHERE t.name = 'Bash' AND t.duration_ms > 0 AND (${CI_WAIT})
+ORDER BY t.duration_ms DESC;
 
 CREATE VIEW v_waste AS
 WITH repeats AS (

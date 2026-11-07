@@ -4,7 +4,7 @@
 
 import { DatabaseSync } from "node:sqlite"
 import { join } from "jsr:@std/path@^1.0.0"
-import { localDay } from "./data.ts"
+import { isoLocalDate } from "./data.ts"
 
 const SCHEMA = `
 CREATE TABLE runs (id TEXT PRIMARY KEY, name TEXT NOT NULL, mode INTEGER, model TEXT, effort TEXT,
@@ -17,15 +17,15 @@ CREATE TABLE queue (issue TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT
 CREATE TABLE lessons (id TEXT PRIMARY KEY, run_id TEXT, at TEXT NOT NULL, kind TEXT NOT NULL,
   minutes REAL, tokens INTEGER, detail TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open',
   closed_reason TEXT) STRICT;
+CREATE TABLE sessions (id TEXT PRIMARY KEY, started_at TEXT, ended_at TEXT);
 CREATE TABLE v_sessions (id TEXT, parent_id TEXT, run_id TEXT, kind TEXT, agent_type TEXT,
   project TEXT, cwd TEXT, started_at TEXT, ended_at TEXT, wall_sec REAL, model TEXT,
   cost_usd REAL, review_rounds INTEGER, ci_wait_sec REAL, rework INTEGER, prs INTEGER);
 CREATE TABLE v_daily_spend (day TEXT, kind TEXT, sessions INTEGER, cost_usd REAL);
 CREATE TABLE v_slow_steps (session_id TEXT, at TEXT, tool TEXT, summary TEXT, sec REAL,
   is_error INTEGER);
-CREATE TABLE v_stalls (session_id TEXT, from_at TEXT, to_at TEXT, gap_sec REAL);
-CREATE TABLE v_waste (session_id TEXT, cost_usd REAL, repeated_calls INTEGER, failed_calls INTEGER,
-  review_rounds INTEGER, rework INTEGER, ci_wait_sec REAL, cost_per_pr REAL);
+CREATE TABLE v_stalls (session_id TEXT, from_at TEXT, to_at TEXT, gap_sec REAL, kind TEXT);
+CREATE TABLE v_ci_waits (session_id TEXT, kind TEXT, at TEXT, sec REAL, cost_usd REAL);
 CREATE TABLE v_goal (day TEXT, merged_issues INTEGER, cost_usd REAL, issues_per_dollar REAL,
   reverts INTEGER, reviewer_rounds_per_pr REAL);
 `
@@ -167,6 +167,11 @@ function seed(db: DatabaseSync, now: number) {
   ] as const
   insert(
     db,
+    `sessions`,
+    sessions.map(([id, , , h]) => ({ id, started_at: ago(now, h), ended_at: ago(now, h - 0.4) })),
+  )
+  insert(
+    db,
     `v_sessions`,
     sessions.map(([id, kind, project, h, usd, rounds, ci]) => ({
       id,
@@ -179,11 +184,22 @@ function seed(db: DatabaseSync, now: number) {
       ci_wait_sec: ci,
     })),
   )
-  insert(db, `v_waste`, [{
-    session_id: `019a5f00-0000-7000-8000-000000000309`,
-    cost_usd: 104.2,
-    ci_wait_sec: 1260,
-  }])
+  insert(db, `v_ci_waits`, [
+    {
+      session_id: `019a5f00-0000-7000-8000-000000000309`,
+      kind: `headless`,
+      at: ago(now, 2.5),
+      sec: 1260,
+      cost_usd: 3.1,
+    },
+    {
+      session_id: `019a5f00-0000-7000-8000-000000000312`,
+      kind: `headless`,
+      at: ago(now, 0.3),
+      sec: 300,
+      cost_usd: 0.9,
+    },
+  ])
   insert(db, `v_slow_steps`, [
     {
       session_id: `s-a`,
@@ -210,16 +226,27 @@ function seed(db: DatabaseSync, now: number) {
       is_error: 0,
     },
   ])
-  insert(db, `v_stalls`, [{
-    session_id: `s-b`,
-    from_at: ago(now, 8.5),
-    to_at: ago(now, 8.2),
-    gap_sec: 1080,
-  }])
+  insert(db, `v_stalls`, [
+    {
+      session_id: `019a5f00-0000-7000-8000-000000000309`,
+      from_at: ago(now, 2.8),
+      to_at: ago(now, 2.5),
+      gap_sec: 1080,
+      kind: `headless`,
+    },
+    // The owner away from an interactive session: not a stall of the loop.
+    {
+      session_id: `s-a`,
+      from_at: ago(now, 1.9),
+      to_at: ago(now, 1.7),
+      gap_sec: 720,
+      kind: `interactive`,
+    },
+  ])
   const daily: Record<string, string | number | null>[] = []
   const goal: Record<string, string | number | null>[] = []
   for (let d = 29; d >= 0; d--) {
-    const day = localDay(now - d * 86_400_000)
+    const day = isoLocalDate(now - d * 86_400_000)
     const wave = (d * 37) % 11
     const kinds = d === 0 ? { interactive: 38, headless: 92, subagent: 12 } : {
       interactive: 30 + wave * 6,

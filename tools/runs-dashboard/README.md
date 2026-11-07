@@ -20,8 +20,11 @@ deno task runs-dashboard   # then open http://127.0.0.1:8787; Ctrl+C stops it
 To look at it without real data, write a sample database and point the server at it:
 
 ```bash
-D=$(mktemp -d) && deno run -A tools/runs-dashboard/fixture.ts "$D" && AGENT_RUN_HOME=$D deno task runs-dashboard
+(D=$(mktemp -d) && trap '[ -d "$D" ] && find "$D" -delete; exit' EXIT INT TERM &&
+  deno run -A tools/runs-dashboard/fixture.ts "$D" && AGENT_RUN_HOME=$D deno task runs-dashboard)
 ```
+
+Ctrl+C stops the server, and the `trap` deletes the sample folder, in bash and zsh alike.
 
 `fixture.ts "$D" --empty` writes the tables with no rows. `screenshots/` holds the page on that
 sample.

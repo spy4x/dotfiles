@@ -2,7 +2,7 @@
 // Tables and views: the wave-1 contract (lane A's runs, queue, lessons, meta; lane B's v_* views).
 
 import { DatabaseSync } from "node:sqlite"
-import { localDay as dayBounds } from "../agent-run.ts"
+import { localDay } from "../agent-budget.ts"
 import type { BannerFacts, BannerRun } from "./needs-you.ts"
 
 /** One card's data: rows, nothing to show, or the query failed (a missing view, a bad column). */
@@ -45,7 +45,7 @@ const str = (
 ): string | null => (value === null || value === undefined ? null : String(value))
 
 /** `YYYY-MM-DD` of `time` in the local time zone, the way `v_daily_spend` names its days. */
-export function localDay(time: number): string {
+export function isoLocalDate(time: number): string {
   const date = new Date(time)
   const pad = (n: number) => String(n).padStart(2, `0`)
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
@@ -56,7 +56,7 @@ export function lastDays(now: number, days: number): string[] {
   const today = new Date(now)
   return Array.from({ length: days }, (_, i) => {
     const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1 - i))
-    return localDay(day.getTime())
+    return isoLocalDate(day.getTime())
   })
 }
 
@@ -67,6 +67,8 @@ export interface RunRow extends BannerRun {
   name: string
   title: string | null
   parent: string | null
+  /** The parent run's `owner/repo#n`, when it worked on an issue. */
+  parentIssue: string | null
   endedAt: string | null
   reviewRounds: number | null
   ciWaitSec: number | null
@@ -129,8 +131,9 @@ export function readDashboard(db: ReadDb, now: number): Dashboard {
   }
 
   const runs = section(() => readRuns(db), (rows) => rows.length === 0)
+  // The sessions table, not the v_sessions view: the view sums every API call to answer.
   const lastImport = one(() =>
-    str(db.all(`SELECT MAX(COALESCE(ended_at, started_at)) AS at FROM v_sessions`)[0]?.at)
+    str(db.all(`SELECT MAX(COALESCE(ended_at, started_at)) AS at FROM sessions`)[0]?.at)
   )
   const banner: BannerFacts = {
     now,
@@ -154,8 +157,11 @@ export function readDashboard(db: ReadDb, now: number): Dashboard {
         String(row.issue)
       )
     ),
+    // Headless runs only: a pause in the owner's own session is not the loop stalling.
     stalls: one(() =>
-      db.all(`SELECT to_at FROM v_stalls WHERE to_at >= ?`, day).map((row) => String(row.to_at))
+      db.all(`SELECT to_at FROM v_stalls WHERE to_at >= ? AND kind = 'headless'`, day).map((
+        row,
+      ) => String(row.to_at))
     ),
     lastImport,
   }
@@ -180,7 +186,7 @@ export function readDashboard(db: ReadDb, now: number): Dashboard {
  * `agent-run` stops the loop on. Interactive sessions do not count against the budget.
  */
 function readTodayUsd(db: ReadDb, now: number): number {
-  const { start, end } = dayBounds(new Date(now))
+  const { start, end } = localDay(new Date(now))
   const row = db.all(
     `SELECT SUM(cost_micros) AS spent FROM runs WHERE started_at >= ? AND started_at < ?`,
     start,
@@ -237,9 +243,9 @@ function readDaily(db: ReadDb, now: number) {
 
 function readRuns(db: ReadDb): RunRow[] {
   const rows = db.all(
-    `SELECT r.id, r.name, r.parent, r.issue, r.started_at, r.ended_at, r.status, r.cost_micros,
-       q.title
-     FROM runs r LEFT JOIN queue q ON q.issue = r.issue
+    `SELECT r.id, r.name, r.parent, p.issue AS parent_issue, r.issue, r.started_at, r.ended_at,
+       r.status, r.cost_micros, q.title
+     FROM runs r LEFT JOIN queue q ON q.issue = r.issue LEFT JOIN runs p ON p.id = r.parent
      ORDER BY r.started_at DESC LIMIT 20`,
   )
   // Review rounds and CI wait come from lane B's sessions; without them the table still draws.
@@ -263,6 +269,7 @@ function readRuns(db: ReadDb): RunRow[] {
       name: String(row.name),
       title: str(row.title),
       parent: str(row.parent),
+      parentIssue: str(row.parent_issue),
       issue: str(row.issue),
       status: String(row.status),
       startedAt: String(row.started_at),
@@ -302,39 +309,68 @@ function readProjects(db: ReadDb, since: string): RankedRow[] {
   ).map((row) => ({ label: String(row.project), value: num(row.usd), values: [num(row.n)] }))
 }
 
+/** A lesson kind as one category: `CI wait`, `ci_wait` and `ci-wait` are all `ci-wait`. */
+const lessonCategory = (kind: string): string => kind.trim().toLowerCase().replace(/[\s_]+/g, `-`)
+
+const CATEGORY_NAMES: Record<string, string> = { "ci-wait": `CI wait` }
+const categoryName = (category: string) =>
+  CATEGORY_NAMES[category] ??
+    category.charAt(0).toUpperCase() + category.slice(1).replaceAll(`-`, ` `)
+
+/**
+ * Time lost, one row per category: the open lessons grouped by kind, and the measured CI waits.
+ * The CI-wait row is one row: its time is the measured waits (a lesson's estimate only when none
+ * was measured, since both describe the same waits), its cost is what those waits cost.
+ */
 function readTimeLost(db: ReadDb, since: string): RankedRow[] {
-  const lessons = db.all(
-    `SELECT kind, detail, minutes, tokens FROM lessons
-     WHERE status = 'open' AND at >= ? AND minutes > 0 ORDER BY minutes DESC LIMIT 5`,
+  const groups = new Map<string, { minutes: number; tokens: number | null; details: string[] }>()
+  for (
+    const row of db.all(
+      `SELECT kind, detail, minutes, tokens FROM lessons
+       WHERE status = 'open' AND at >= ? AND minutes > 0 ORDER BY minutes DESC`,
+      since,
+    )
+  ) {
+    const category = lessonCategory(String(row.kind))
+    const group = groups.get(category) ?? { minutes: 0, tokens: null, details: [] }
+    group.minutes += num(row.minutes)
+    if (row.tokens !== null) group.tokens = (group.tokens ?? 0) + num(row.tokens)
+    group.details.push(String(row.detail))
+    groups.set(category, group)
+  }
+  const rows = new Map<string, RankedRow>()
+  for (const [category, group] of groups) {
+    const [first, ...more] = group.details
+    rows.set(category, {
+      label: categoryName(category),
+      note: more.length ? `${first} (and ${more.length} more)` : first,
+      value: group.minutes,
+      values: [group.tokens, null],
+    })
+  }
+  const ci = db.all(
+    `SELECT COUNT(*) AS n, SUM(sec) AS sec, SUM(cost_usd) AS usd FROM v_ci_waits WHERE at >= ?`,
     since,
-  ).map((row) => ({
-    label: String(row.kind),
-    note: String(row.detail),
-    value: num(row.minutes),
-    values: [row.tokens === null ? null : num(row.tokens), null],
-  }))
-  const waste = db.all(
-    `SELECT s.project, w.ci_wait_sec, w.cost_usd FROM v_waste w
-     JOIN v_sessions s ON s.id = w.session_id
-     WHERE s.started_at >= ? AND w.ci_wait_sec > 0 ORDER BY w.ci_wait_sec DESC LIMIT 5`,
-    since,
-  ).map((row) => ({
-    label: `CI wait`,
-    note: str(row.project) ?? undefined,
-    value: num(row.ci_wait_sec) / 60,
-    values: [null, num(row.cost_usd)],
-  }))
-  return [...lessons, ...waste].sort((a, b) => b.value - a.value).slice(0, 5)
+  )[0] ?? {}
+  if (num(ci.n) > 0) {
+    const lesson = rows.get(`ci-wait`)
+    rows.set(`ci-wait`, {
+      label: categoryName(`ci-wait`),
+      note: lesson?.note ?? `${num(ci.n)} ${num(ci.n) === 1 ? `wait` : `waits`}`,
+      value: num(ci.sec) > 0 ? num(ci.sec) / 60 : lesson?.value ?? 0,
+      values: [lesson?.values[0] ?? null, ci.usd === null ? null : num(ci.usd)],
+    })
+  }
+  return [...rows.values()].sort((a, b) => b.value - a.value).slice(0, 5)
 }
 
 function readSlowSteps(db: ReadDb, since: string): RankedRow[] {
+  // The tool's name and time only: a step's input can hold prompts, paths or secrets.
   return db.all(
-    `SELECT tool, summary, sec, is_error FROM v_slow_steps WHERE at >= ?
-     ORDER BY sec DESC LIMIT 5`,
+    `SELECT tool, sec, is_error FROM v_slow_steps WHERE at >= ? ORDER BY sec DESC LIMIT 5`,
     since,
   ).map((row) => ({
-    label: str(row.summary) || String(row.tool),
-    note: String(row.tool),
+    label: String(row.tool),
     value: num(row.sec),
     values: [num(row.is_error)],
   }))

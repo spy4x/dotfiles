@@ -3,6 +3,7 @@ import { join } from "jsr:@std/path@^1.0.0"
 import { DatabaseSync } from "node:sqlite"
 import { openReadOnly } from "./data.ts"
 import { createFixture } from "./fixture.ts"
+import { usd } from "./page.tsx"
 import { createHandler } from "./server.ts"
 
 // Local noon, so the fixture's runs from 0.5 to 9 hours ago fall on today in any time zone.
@@ -110,6 +111,20 @@ Deno.test(`a file that is not a database shows the error state`, async () => {
   })
 })
 
+Deno.test(`a long database path wraps inside the missing and unreadable messages`, async () => {
+  await withDir(async (dir) => {
+    const path = join(dir, `runs.sqlite`)
+    const wraps = (html: string) => {
+      // The message's own element carries the class, and the stylesheet defines it.
+      has(html, /class="[^"]*wrap-anywhere[^"]*"[^>]*>(?:(?!<\/main>)[\s\S])*runs\.sqlite/)
+      has(html, /\.wrap-anywhere\s*\{\s*overflow-wrap:\s*anywhere/)
+    }
+    wraps(await (await get(path)).text())
+    await Deno.writeTextFile(path, `not a database, just text that is long enough to have a header`)
+    wraps(await (await get(path)).text())
+  })
+})
+
 Deno.test(`an empty database says no runs yet and every card shows its empty line`, async () => {
   await withDir(async (dir) => {
     const html = await (await get(createFixture(dir, { now: NOW, empty: true }))).text()
@@ -133,7 +148,7 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     const html = await response.text()
     for (
       const title of [
-        `Today`,
+        `Today's budget`,
         `Spend per day, 30 days`,
         `Lead runs`,
         `Queue`,
@@ -146,6 +161,15 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     has(html, /Import bank statements from CSV/)
     has(html, />\$171 of \$200</)
     has(html, /1 blocked · 2 queued · 1 claimed · 1 done · 1 dropped/)
+    // Run 309 failed and cost over $100: one banner line names it once, with both facts.
+    has(html, /Run #309 \(\w{3} \d\d:\d\d\)<\/a> failed and cost \$104\./)
+    assertEquals(html.split(`href="#run-019a5f00-0000-7000-8000-000000000309"`).length - 1, 1)
+    has(html, /child of run #309/)
+    // Inline links show the house focus ring: 2 px, 2 px from the text.
+    has(
+      html,
+      /<a class="[^"]*focus-visible:ring-2 [^"]*focus-visible:ring-offset-2[^"]*" href="#run-/,
+    )
     // The stylesheet carries the theme and the classes the page uses.
     has(html, /--color-foreground: oklch\(0\.13 /)
     has(html, /\.pc-card/)
@@ -208,5 +232,31 @@ Deno.test(`titles from the database render escaped`, async () => {
     const html = await (await get(path)).text()
     lacks(html, /<script>x\(\)/)
     has(html, /&lt;script>x\(\)/)
+  })
+})
+
+Deno.test(`dollars show cents below $10, and zero as $0`, () => {
+  assertEquals([usd(0), usd(4.2), usd(142)], [`$0`, `$4.20`, `$142`])
+})
+
+Deno.test(`two runs of one issue in the banner are told apart by their start times`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    const db = new DatabaseSync(path)
+    // A second failed run of #309, an hour after the first (which started at 09:00).
+    db.prepare(
+      `INSERT INTO runs (id, name, issue, started_at, status, cost_micros) VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(
+      `019a5f00-0000-7000-8000-000000000401`,
+      `lead-309`,
+      `spy4x/financy#309`,
+      new Date(NOW - 2 * 3_600_000).toISOString(),
+      `failed`,
+      5_000_000,
+    )
+    db.close()
+    const html = await (await get(path)).text()
+    has(html, /Run #309 \(Fri 09:00\)<\/a> failed and cost/)
+    has(html, /Run #309 \(Fri 10:00\)<\/a> failed\./)
   })
 })

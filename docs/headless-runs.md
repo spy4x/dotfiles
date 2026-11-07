@@ -410,8 +410,9 @@ browser.
 | `v_session_rollup` | `id, cost_usd, wall_sec, tree_cost_usd, tree_wall_sec, descendants` |
 | `v_daily_spend` | `day, kind, sessions, cost_usd` (by the day of each API call) |
 | `v_tool_stats` | `tool, calls, errors, total_sec, avg_sec, max_sec` |
-| `v_slow_steps` | `session_id, at, tool, summary, sec, is_error`, slowest first |
-| `v_stalls` | `session_id, from_at, to_at, gap_sec`: gaps of 10 minutes or more between two entries |
+| `v_slow_steps` | `session_id, at, tool, summary, sec, is_error`, slowest first; `summary` is the input's description, command, path, pattern, query or address, else empty |
+| `v_stalls` | `session_id, from_at, to_at, gap_sec, kind`: gaps of 10 minutes or more between two entries |
+| `v_ci_waits` | `session_id, kind, at, sec, cost_usd`: Bash calls that waited on CI, longest first; `cost_usd` is the session's first API call after the wait |
 | `v_waste` | `session_id, cost_usd, repeated_calls, failed_calls, review_rounds, rework, ci_wait_sec, cost_per_pr, kind, started_at`, costliest first |
 | `v_goal` | `day, merged_issues, cost_usd, issues_per_dollar, reverts, reviewer_rounds_per_pr` |
 
@@ -428,10 +429,11 @@ Example queries (`sqlite3 ~/.local/state/agent-run/runs.sqlite`):
 -- Where did today's money go?
 SELECT kind, agent_type, project, cost_usd FROM v_sessions
 WHERE date(started_at, 'localtime') = date('now', 'localtime') ORDER BY cost_usd DESC LIMIT 10;
--- The slowest steps this week.
-SELECT * FROM v_slow_steps WHERE at >= datetime('now', '-7 days') LIMIT 20;
+-- The slowest steps this week. Times are ISO strings (`2026-11-07T09:30:00.000Z`), so the bound
+-- is one too: datetime() would give `2026-11-07 09:30:00`, which sorts before any `T` that day.
+SELECT * FROM v_slow_steps WHERE at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-7 days') LIMIT 20;
 -- Which sessions wasted most?
-SELECT * FROM v_waste WHERE started_at >= datetime('now', '-7 days')
+SELECT * FROM v_waste WHERE started_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-7 days')
 ORDER BY failed_calls + repeated_calls + rework DESC LIMIT 10;
 -- What a lead and all its children cost.
 SELECT * FROM v_session_rollup WHERE id = '<session id>';

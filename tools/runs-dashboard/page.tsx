@@ -17,14 +17,8 @@ import { Kpi, KpiGrid } from "@spy4x/preact-charts/kpi"
 import { LineChart } from "@spy4x/preact-charts/line-chart"
 import { type RankedBarColumns, RankedBars } from "@spy4x/preact-charts/ranked-bars"
 import type { Dashboard, QueueItem, RankedRow, RunRow, Section } from "./data.ts"
-import {
-  type Banner,
-  type BannerItem,
-  DAILY_BUDGET_USD,
-  FAILED_STATUSES,
-  needsYou,
-  RUN_ALERT_USD,
-} from "./needs-you.ts"
+import { DAILY_BUDGET_USD, RUN_ALERT_USD } from "../agent-budget.ts"
+import { type Banner, type BannerItem, FAILED_STATUSES, needsYou } from "./needs-you.ts"
 
 /** What the whole page shows: the data, or why there is none. */
 export type PageState =
@@ -40,9 +34,9 @@ const wholeUsd = new Intl.NumberFormat(`en-US`, {
   maximumFractionDigits: 0,
 })
 const centsUsd = new Intl.NumberFormat(`en-US`, { style: `currency`, currency: `USD` })
-/** Dollars, with cents below $10: "$4.20", "$142". */
+/** Dollars, with cents below $10: "$4.20", "$142"; zero is "$0". */
 export const usd = (value: number): string =>
-  (Math.abs(value) < 10 ? centsUsd : wholeUsd).format(value)
+  (value !== 0 && Math.abs(value) < 10 ? centsUsd : wholeUsd).format(value)
 const durationFormat = new Intl.DurationFormat(`en`, { style: `short` })
 /** "1 hr, 12 min"; seconds only under a minute. */
 export function duration(seconds: number): string {
@@ -63,6 +57,9 @@ export function issueUrl(issue: string): string | undefined {
   const match = /^([\w.-]+\/[\w.-]+)#(\d+)$/.exec(issue)
   return match ? `https://github.com/${match[1]}/issues/${match[2]}` : undefined
 }
+/** The house focus ring for inline links: 2 px, 2 px from the text. */
+const LINK =
+  `rounded-xs underline underline-offset-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-focus`
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 // ===== Page =====
@@ -104,11 +101,13 @@ function DashboardPage({ state }: { state: PageState }): JSX.Element {
               title="Can't find the run database"
               headingLevel={2}
               description={`at ${state.path}.`}
+              class="wrap-anywhere"
             />
           )
           : state.kind === `unreadable`
           ? (
             <ErrorState
+              class="wrap-anywhere"
               message={`Can't read the run database at ${state.path}. Check that this user owns the folder and its mode is 0700, then reload.`}
             />
           )
@@ -291,16 +290,12 @@ function bannerLine(item: BannerItem): ComponentChildren {
           midnight.
         </>
       )
-    case `expensive-run`:
+    case `run`:
       return (
         <>
-          <RunLink run={item.run} /> cost {usd(item.run.costUsd)}.
-        </>
-      )
-    case `failed-run`:
-      return (
-        <>
-          <RunLink run={item.run} /> failed.
+          <RunLink run={item.run} /> {item.failed ? `failed` : null}
+          {item.failed && item.expensive ? ` and ` : null}
+          {item.expensive ? `cost ${usd(item.run.costUsd)}` : null}.
         </>
       )
     case `blocked`:
@@ -324,29 +319,32 @@ function bannerLine(item: BannerItem): ComponentChildren {
   }
 }
 
-function RunLink({ run }: { run: { id: string; issue: string | null } }): JSX.Element {
+/** "Run #12 (Sat 00:00)": the start time, as in the runs table, tells two runs of one issue apart. */
+function RunLink(
+  { run }: { run: { id: string; issue: string | null; startedAt: string } },
+): JSX.Element {
   return (
-    <a class="underline underline-offset-2" href={`#run-${run.id}`}>
-      Run {run.issue ? issueNumber(run.issue) : run.id.slice(-6)}
+    <a class={LINK} href={`#run-${run.id}`}>
+      {`Run ${run.issue ? issueNumber(run.issue) : run.id.slice(-6)} (${
+        timeFormat.format(new Date(run.startedAt))
+      })`}
     </a>
   )
 }
 
 function IssueLink({ issue }: { issue: string }): JSX.Element {
   const href = issueUrl(issue)
-  return href
-    ? <a class="underline underline-offset-2" href={href}>{issueNumber(issue)}</a>
-    : <span>{issue}</span>
+  return href ? <a class={LINK} href={href}>{issueNumber(issue)}</a> : <span>{issue}</span>
 }
 
 // ===== Today =====
 
 function TodayCard({ data }: { data: Dashboard }): JSX.Element {
   return (
-    <Card title="Today" section={data.today} empty="No sessions imported yet." size="stat">
+    <Card title="Today's budget" section={data.today} empty="No sessions imported yet." size="stat">
       {(today) => (
         <UsageMeter
-          label="Spent today"
+          label="Spent"
           used={today.usd}
           limit={DAILY_BUDGET_USD}
           warnAt={75}
@@ -464,7 +462,9 @@ function RunCell({ run, now }: { run: RunRow; now: number }): JSX.Element {
     duration((end - Date.parse(run.startedAt)) / 1000),
     run.reviewRounds ? plural(run.reviewRounds, `review round`) : null,
     run.ciWaitSec ? `CI wait ${duration(run.ciWaitSec)}` : null,
-    run.parent ? `child of run ${run.parent.slice(-6)}` : null,
+    run.parent
+      ? `child of run ${run.parentIssue ? issueNumber(run.parentIssue) : run.parent.slice(-6)}`
+      : null,
   ].filter(Boolean)
   return (
     <div id={`run-${run.id}`} class="flex min-w-0 flex-col gap-1">
