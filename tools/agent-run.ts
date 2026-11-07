@@ -53,6 +53,7 @@ import {
   readDirection,
   readFocus,
   recheck,
+  release,
   replan,
   replanReason,
   setItem,
@@ -110,6 +111,10 @@ const BRIEF_LESSONS = 20
 const FAILED = [`failed`, `timeout`, `budget`, `turns`]
 const INGEST_POLL_MS = 60_000
 const USAGE_TIMEOUT_MS = 60_000
+/** ntfy turns a longer message body into an attachment; the digest push stays within it. */
+export const NTFY_MAX_BYTES = 4096
+/** The longest run text one digest line quotes. */
+const QUOTE_MAX = 300
 /** `systemctl is-active` states of a unit that still exists. */
 const ALIVE = [`active`, `activating`, `deactivating`, `reloading`, `refreshing`]
 
@@ -197,7 +202,10 @@ export interface Deps {
   fetch(url: string, init: RequestInit): Promise<Response>
   out(text: string): void
   home: string
-  /** The NTFY settings file (`ai-harnesses/.env`); tests point it elsewhere. */
+  /**
+   * The account tokens file (`~/sync/code/homelab/.env.accounts`); only its `NTFY_*` lines are
+   * read. Tests point it elsewhere.
+   */
   ntfyEnv: string
   /** The `ai-memory` checkout: `direction.md` and the experiment log. */
   memory: string
@@ -405,20 +413,46 @@ export interface Digest {
   runs: Run[]
   notes: Map<string, string[]>
   done: { issue: string; title: string; prs: string[] }[]
-  blocked: { issue: string; reason: string | null }[]
-  lessons: { kind: string; minutes: number | null; tokens: number | null; detail: string }[]
+  blocked: { issue: string; reason: string | null; runId: string | null }[]
+  lessons: {
+    kind: string
+    minutes: number | null
+    tokens: number | null
+    detail: string
+    runId: string | null
+  }[]
   slow: { tool: string; summary: string; sec: number }[]
   todayMicros: number
   paused: string | null
 }
 
 /**
- * The digest: achievements first, then spend against the daily budget, failures, bottlenecks,
- * whether the loop is paused, and each run of the window with its notes.
+ * Text a run (or any agent) wrote, marked as its words and not the digest's: on one line, cut to
+ * `QUOTE_MAX` characters, in quotes, after the run id when there is one. A newline or quote in it
+ * cannot start a fake line.
+ */
+function quoted(id: string | null, text: string): string {
+  const line = text.replace(/\s+/g, ` `).trim()
+  const short = line.length > QUOTE_MAX ? `${line.slice(0, QUOTE_MAX - 1)}…` : line
+  return id ? `run ${id} wrote ${JSON.stringify(short)}` : JSON.stringify(short)
+}
+
+/** The goal metric, named and scaled as on the runs dashboard: merged issues per $100 spent. */
+export function goalText(span: string, merged: number, micros: number): string {
+  const value = merged === 0 || micros <= 0 ? `–` : (merged / (micros / 1e6) * 100).toFixed(1)
+  return `Merged issues per $100, ${span}: ${value} (${merged} merged for ${dollars(micros)})`
+}
+
+/**
+ * The digest: achievements first, then spend against the daily budget and the goal metric,
+ * failures, bottlenecks, whether the loop is paused, and each run of the window with its notes.
+ * What a run wrote is quoted with its id (see `quoted`).
  */
 export function digestText(d: Digest): string {
   const windowMicros = d.runs.reduce((sum, run) => sum + (run.costMicros ?? 0), 0)
-  const good = d.runs.flatMap((run) => run.result?.good_news ? [run.result.good_news] : [])
+  const good = d.runs.flatMap((run) =>
+    run.result?.good_news ? [quoted(run.id, run.result.good_news)] : []
+  )
   const failed = d.runs.filter((run) => FAILED.includes(run.status))
   const out = [`Since ${d.since.toISOString()}:`, ``, `Achievements`]
   for (const item of d.done) {
@@ -431,14 +465,19 @@ export function digestText(d: Digest): string {
     `Spend: ${dollars(d.todayMicros)} today of $${DAILY_BUDGET_USD}, ${
       dollars(windowMicros)
     } in the window, at API prices.`,
+    goalText(`this window`, d.done.length, windowMicros),
   )
   if (failed.length > 0 || d.blocked.length > 0) {
     out.push(``, `Failures`)
     for (const run of failed) {
       const what = [run.name, run.issue, run.status].filter(Boolean).join(` `)
-      out.push(`- ${what}: ${run.result?.summary ?? run.id}`)
+      out.push(`- ${what}: ${run.result?.summary ? quoted(run.id, run.result.summary) : run.id}`)
     }
-    for (const item of d.blocked) out.push(`- blocked ${item.issue}: ${item.reason ?? `no reason`}`)
+    for (const item of d.blocked) {
+      out.push(
+        `- blocked ${item.issue}: ${item.reason ? quoted(item.runId, item.reason) : `no reason`}`,
+      )
+    }
   }
   if (d.lessons.length > 0 || d.slow.length > 0) {
     out.push(``, `Bottlenecks`)
@@ -447,11 +486,17 @@ export function digestText(d: Digest): string {
         lesson.minutes === null ? null : `${lesson.minutes} min`,
         lesson.tokens === null ? null : `${lesson.tokens} tokens`,
       ].filter(Boolean).join(`, `)
-      out.push(`- ${lesson.kind}${cost ? ` (${cost})` : ``}: ${lesson.detail}`)
+      out.push(
+        `- ${lesson.kind}${cost ? ` (${cost})` : ``}: ${quoted(lesson.runId, lesson.detail)}`,
+      )
     }
-    for (const step of d.slow) out.push(`- slow ${step.tool} ${step.sec}s: ${step.summary}`)
+    for (const step of d.slow) {
+      out.push(
+        `- slow ${step.tool} ${step.sec}s${step.summary ? `: ${quoted(null, step.summary)}` : ``}`,
+      )
+    }
   }
-  out.push(``, d.paused ? `The loop is paused: ${d.paused}` : `The loop is running.`)
+  out.push(``, d.paused ? `The loop is paused: ${quoted(null, d.paused)}` : `The loop is running.`)
   if (d.runs.length > 0) out.push(``, `Runs`)
   for (const run of d.runs) {
     out.push(
@@ -459,14 +504,45 @@ export function digestText(d: Digest): string {
         [run.name, `(${run.status})`, run.issue, dollars(run.costMicros)].filter(Boolean).join(` `)
       }`,
     )
-    if (run.result?.summary) out.push(`  ${run.result.summary}`)
+    const said = (label: string, text: string | null | undefined) => {
+      if (text) out.push(`  ${label}${quoted(run.id, text)}`)
+    }
+    said(``, run.result?.summary)
     for (const pr of run.result?.prs ?? []) out.push(`  PR: ${pr}`)
-    for (const note of d.notes.get(run.id) ?? []) out.push(`  - ${note}`)
-    if (run.result?.needs_owner) out.push(`  Needs you: ${run.result.needs_owner}`)
-    if (run.result?.injection) out.push(`  Injection reported: ${run.result.injection}`)
-    if (run.status === `running` && run.activity) out.push(`  Now: ${run.activity}`)
+    for (const note of d.notes.get(run.id) ?? []) said(`Note: `, note)
+    said(`Needs you: `, run.result?.needs_owner)
+    said(`Injection reported: `, run.result?.injection)
+    if (run.status === `running`) said(`Now: `, run.activity)
   }
   return out.join(`\n`)
+}
+
+/**
+ * `text` cut to `maxBytes` of UTF-8 for a push: whole `- ` items (each with its indented lines)
+ * go from the end, and a last line says how many went and that `command` shows them all.
+ */
+export function fitPush(text: string, maxBytes: number, command: string): string {
+  const size = (s: string) => new TextEncoder().encode(s).length
+  if (size(text) <= maxBytes) return text
+  const blocks: string[][] = []
+  for (const line of text.split(`\n`)) {
+    if (line.startsWith(`  `) && blocks.at(-1)?.[0].startsWith(`- `)) blocks.at(-1)!.push(line)
+    else blocks.push([line])
+  }
+  let left = 0
+  const fitted = () =>
+    `${blocks.map((block) => block.join(`\n`)).join(`\n`)}\n\n` +
+    `${left} items left out. All of them: ${command}`
+  while (size(fitted()) > maxBytes) {
+    const last = blocks.findLastIndex((block) => block[0].startsWith(`- `))
+    if (last === -1) break
+    blocks.splice(last, 1)
+    left++
+  }
+  let out = fitted()
+  // Only headers are left and still too long: cut characters off the end.
+  while (size(out) > maxBytes) out = out.slice(0, -1)
+  return out
 }
 
 /** A run's cost so far from its stream-json lines: each API call once, at API list prices. */
@@ -626,7 +702,8 @@ async function getRun(db: SqliteDb, id: string): Promise<Run | null> {
 
 /**
  * The runs still going. A row marked running whose unit is gone (it died before `finish` ran) is
- * closed here as stopped or failed, so it never blocks later starts.
+ * closed here as stopped or failed and its queue item settled, so it never blocks later starts
+ * nor holds its item until the lease runs out.
  */
 async function activeRuns(db: SqliteDb, deps: Deps): Promise<Run[]> {
   const rows = await db.queryAll(`SELECT * FROM runs WHERE status = 'running' ORDER BY started_at`)
@@ -653,15 +730,29 @@ async function activeRuns(db: SqliteDb, deps: Deps): Promise<Run[]> {
       run.id,
     )
     await addEvent(db, deps, run.id, `end`, `${status} (unit ${state} without finish)`)
+    await settleItem(db, deps, { ...run, status })
   }
   return active
 }
 
-async function insertRun(db: SqliteDb, run: Run): Promise<void> {
-  await db.execute(
+/**
+ * SQL that holds while a run of mode `?` (first parameter) may take a lead slot: it is no lead, or
+ * fewer than `?` (third) leads other than run `?` (second) are running.
+ */
+const LEAD_ROOM = `(? != ${Mode.Lead} OR (SELECT COUNT(*) FROM runs
+  WHERE status = 'running' AND mode = ${Mode.Lead} AND id IS NOT ?) < ?)`
+
+/** Insert `run` when `LEAD_ROOM` holds; returns whether it did. */
+async function insertRun(
+  db: SqliteDb,
+  run: Run,
+  exclude: string | null,
+  maxLeads: number,
+): Promise<boolean> {
+  const { changes } = await db.execute(
     `INSERT INTO runs (id, name, mode, model, effort, cwd, parent, issue, deadline_sec, budget_usd,
       max_turns, allow, started_at, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${LEAD_ROOM}`,
     run.id,
     run.name,
     run.mode,
@@ -676,7 +767,11 @@ async function insertRun(db: SqliteDb, run: Run): Promise<void> {
     JSON.stringify(run.allow),
     run.startedAt,
     run.status,
+    run.mode,
+    exclude,
+    maxLeads,
   )
+  return Number(changes) === 1
 }
 
 async function addEvent(db: SqliteDb, deps: Deps, id: string, kind: string, detail: string) {
@@ -809,7 +904,7 @@ async function startRun(deps: Deps, flags: Map<string, string[]>): Promise<Outco
     }
     const why = await checkStart(db, deps, run, handoffFrom)
     if (why) return refuse(why)
-    return await launch(db, deps, run, brief, false)
+    return await launch(db, deps, run, brief, false, handoffFrom, await leadLimit(db))
   } finally {
     await db.close()
   }
@@ -837,9 +932,13 @@ async function checkStart(
   return await whyNot(run, active, deps, exclude, await leadLimit(db)) ?? await usageStop(deps)
 }
 
-/** How many lead runs may run at once: the stored `agent-run limit --leads`, else `MAX_LEADS`. */
+/**
+ * How many lead runs may run at once: the stored `agent-run limit --leads`, else `MAX_LEADS`. A
+ * stored value that is no whole number from 1 counts as unset.
+ */
 async function leadLimit(db: SqliteDb): Promise<number> {
-  return Number(await getMeta(db, `max_leads`) ?? MAX_LEADS)
+  const stored = await getMeta(db, `max_leads`)
+  return stored && /^[1-9]\d*$/.test(stored) ? Number(stored) : MAX_LEADS
 }
 
 /** `agent-run limit [--leads <n>]`: store a new lead limit when given, then print the limit. */
@@ -857,22 +956,51 @@ async function limitCommand(deps: Deps, flags: Map<string, string[]>): Promise<O
   }
 }
 
-async function launch(db: SqliteDb, deps: Deps, run: Run, brief: string, resume: boolean) {
+/**
+ * Insert `run` (or reopen it, resuming) and start its unit. A lead gets in only while fewer than
+ * `maxLeads` leads other than `exclude` are running. That count and the write are one SQL
+ * statement, and SQLite takes its write lock before such a statement reads, so two ticks or starts
+ * at once never both take the last slot; a lost race is refused with code 2. A failed
+ * `systemd-run` ends the run `failed`, gives its claimed queue item back and counts toward the
+ * pause after two failed tick runs.
+ */
+async function launch(
+  db: SqliteDb,
+  deps: Deps,
+  run: Run,
+  brief: string,
+  resume: boolean,
+  exclude: string | null,
+  maxLeads: number,
+): Promise<Outcome> {
+  const room = resume
+    ? Number(
+      (await db.execute(
+        `UPDATE runs SET status = 'running', ended_at = NULL WHERE id = ? AND ${LEAD_ROOM}`,
+        run.id,
+        run.mode,
+        exclude,
+        maxLeads,
+      )).changes,
+    ) === 1
+    : await insertRun(db, run, exclude, maxLeads)
+  if (!room) return refuse(`${maxLeads} lead run(s) already active`)
   const dir = join(stateHome(deps), run.id)
   await deps.fs.mkdirp(dir)
   await deps.run([`chmod`, `700`, stateHome(deps), dir])
   await deps.fs.writeText(join(dir, `prompt.md`), brief, { mode: 0o600 })
   await deps.fs.appendText(join(dir, `brief.md`), `${brief}\n\n---\n\n`)
-  if (resume) {
-    await db.execute(`UPDATE runs SET status = 'running', ended_at = NULL WHERE id = ?`, run.id)
-  } else {
-    await insertRun(db, run)
-  }
   await addEvent(db, deps, run.id, resume ? `resume` : `start`, brief.slice(0, 300))
   const started = await deps.run(unitCommand(run, deps))
   if (!started.success) {
-    await db.execute(`UPDATE runs SET status = 'failed' WHERE id = ?`, run.id)
+    await db.execute(
+      `UPDATE runs SET status = 'failed', ended_at = ? WHERE id = ?`,
+      deps.now().toISOString(),
+      run.id,
+    )
     await addEvent(db, deps, run.id, `error`, started.stderr.slice(0, 500))
+    await release(db, deps, run.id)
+    if (run.name === `tick`) await pauseOnTwoFailures(db, deps, (await getRun(db, run.id))!)
     return { code: 1, output: `systemd-run failed: ${started.stderr}` }
   }
   return ok(JSON.stringify({ id: run.id, unit: unitName(run.id) }))
@@ -899,7 +1027,7 @@ async function resumeRun(deps: Deps, id: string, flags: Map<string, string[]>): 
       run.budgetUsd,
       id,
     )
-    return await launch(db, deps, run, brief, true)
+    return await launch(db, deps, run, brief, true, id, await leadLimit(db))
   } finally {
     await db.close()
   }
@@ -1041,17 +1169,18 @@ async function settleItem(db: SqliteDb, deps: Deps, run: Run) {
   const item = await itemOfRun(db, run.id)
   if (!item || item.status !== `claimed`) return item
   const summary = run.result?.summary ?? null
+  // The item keeps its last handoff unless this run wrote one; only `done` clears it.
+  const handoff = run.result?.handoff || undefined
   if (run.status === `done`) {
-    await setItem(db, deps, item.issue, { status: `done`, reason: summary })
+    await setItem(db, deps, item.issue, { status: `done`, reason: summary, handoff: null })
   } else if (run.status === `parked`) {
-    const handoff = run.result?.handoff ?? null
     await setItem(db, deps, item.issue, { status: `queued`, reason: summary, rank: 0, handoff })
   } else if (run.status === `blocked`) {
     const reason = run.result?.needs_owner ?? summary
-    await setItem(db, deps, item.issue, { status: `blocked`, reason })
+    await setItem(db, deps, item.issue, { status: `blocked`, reason, handoff })
   } else if (run.status === `stopped`) {
-    await setItem(db, deps, item.issue, { status: `queued`, reason: `stopped` })
-  } else await failAttempt(db, deps, item, `${run.status}: ${summary ?? `no answer`}`)
+    await setItem(db, deps, item.issue, { status: `queued`, reason: `stopped`, handoff })
+  } else await failAttempt(db, deps, item, `${run.status}: ${summary ?? `no answer`}`, handoff)
   return item
 }
 
@@ -1108,8 +1237,9 @@ export function headerText(text: string): string {
 }
 
 /**
- * One NTFY push from `ai-harnesses/.env`; whether it was sent. Fails open: a failed push is
- * printed, never retried.
+ * One NTFY push with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account tokens file;
+ * whether it was sent. No other key of that file is kept. Fails open: a missing setting or a
+ * failed push is printed, never retried.
  */
 async function notify(deps: Deps, title: string, body: string, priority: string) {
   const env = await deps.fs.readText(deps.ntfyEnv) ?? ``
@@ -1180,6 +1310,20 @@ async function waitRun(deps: Deps, id: string, timeoutSec: number): Promise<Outc
   }
 }
 
+/** The goal metric over the last 7 days: issues done and what all runs started in them cost. */
+async function weekGoal(db: SqliteDb, deps: Deps): Promise<string> {
+  const since = new Date(deps.now().getTime() - 7 * 86400_000).toISOString()
+  const done = await db.queryOne(
+    `SELECT COUNT(*) AS n FROM queue WHERE status = 'done' AND updated_at >= ?`,
+    since,
+  )
+  const spent = await db.queryOne(
+    `SELECT COALESCE(SUM(cost_micros), 0) AS micros FROM runs WHERE started_at >= ?`,
+    since,
+  )
+  return goalText(`7 days`, Number(done?.n ?? 0), Number(spent?.micros ?? 0))
+}
+
 async function status(deps: Deps, rest: string[], flags: Map<string, string[]>): Promise<Outcome> {
   const db = await openDb(deps)
   try {
@@ -1195,6 +1339,7 @@ async function status(deps: Deps, rest: string[], flags: Map<string, string[]>):
     return ok(
       [
         `lead limit: ${await leadLimit(db)}`,
+        await weekGoal(db, deps),
         ...runs.map((run) =>
           `${run.id} ${run.name} ${run.status} ${run.startedAt} ${dollars(run.costMicros)}` +
           (run.activity ? `\n  ${run.activity.split(`\n`)[0]}` : ``)
@@ -1320,30 +1465,36 @@ async function uncontinued(db: SqliteDb): Promise<Run[]> {
 
 /**
  * `agent-tick.timer`, every 30 minutes: expire leases; stop when paused, the lead limit is reached,
- * today's budget is spent or usage is high; else fill each free lead slot, checking the budget and
- * usage again before each start. Parked lead runs that have a handoff and no queue item come
- * first, continued once each with their settings and their handoff as the brief; then the queue,
- * planned again when needed, gives lead runs on the next queued items that GitHub still confirms
- * and this tick claims first. A candidate `whyNot` refuses is skipped; a continuation's refusal is
- * recorded, so it is given up after `MAX_REFUSALS`. Every stop exits 0 and says why.
+ * today's budget is spent or usage is high (read once per tick); else fill each free lead slot,
+ * checking the budget again before each start. Parked lead runs that have a handoff and no queue
+ * item come first, continued once each with their settings and their handoff as the brief; then
+ * the queue, planned again when needed, gives lead runs on the next queued items that GitHub still
+ * confirms and this tick claims first. A candidate `whyNot` refuses is skipped; a continuation's
+ * refusal is recorded, so it is given up after `MAX_REFUSALS`. When another tick or start takes
+ * the last slot first, `launch` refuses: nothing is recorded against the candidate and the tick
+ * stops. Every stop exits 0 and says why.
  */
 async function tick(deps: Deps): Promise<Outcome> {
   const db = await openDb(deps)
   const lines: string[] = []
   const stop = (why: string) => ok([...lines, `tick: ${why}`].join(`\n`))
-  /** Why no more runs may start now: paused, the day's budget or the usage stops. */
-  const gate = async () => await loopStop(db, deps) ?? await usageStop(deps)
-  /** Start `run`; `null` when it started, else the outcome the tick ends with. */
-  const begin = async (run: Run, brief: string, label: string) => {
-    const started = await launch(db, deps, run, brief, false)
+  let limit = MAX_LEADS
+  /**
+   * Start `run`: `null` when it started, `full` when the lead slots filled since this tick counted
+   * them, else the outcome the tick ends with.
+   */
+  const begin = async (run: Run, brief: string, label: string, exclude: string | null) => {
+    const started = await launch(db, deps, run, brief, false, exclude, limit)
+    if (started.code === 2) return `full`
     lines.push(`tick: ${label}`, started.output)
     return started.code === 0 ? null : { code: started.code, output: lines.join(`\n`) }
   }
+  const full = `another run took the last lead slot`
   try {
     lines.push(...await expireLeases(db, deps))
     const loop = await loopStop(db, deps)
     if (loop) return stop(loop)
-    const limit = await leadLimit(db)
+    limit = await leadLimit(db)
     const leads = (await activeRuns(db, deps)).filter((run) => run.mode === Mode.Lead).length
     if (leads >= limit) {
       return stop(leads === 1 ? `a lead run is active` : `${leads} lead runs are active`)
@@ -1353,7 +1504,7 @@ async function tick(deps: Deps): Promise<Outcome> {
     let free = limit - leads
     for (const parked of await uncontinued(db)) {
       if (free === 0) return ok(lines.join(`\n`))
-      const gated = await gate()
+      const gated = await loopStop(db, deps)
       if (gated) return stop(gated)
       const run: Run = {
         ...parked,
@@ -1366,7 +1517,8 @@ async function tick(deps: Deps): Promise<Outcome> {
         turns: null,
         result: null,
       }
-      const refused = await whyNot(run, await activeRuns(db, deps), deps, parked.id, limit)
+      // The lead slots are counted by `launch`, where a full count is no refusal of this run.
+      const refused = await whyNot(run, await activeRuns(db, deps), deps, parked.id, Infinity)
       if (refused) {
         await addEvent(db, deps, parked.id, `refused`, refused)
         lines.push(`skipped continue ${parked.id}: ${refused}`)
@@ -1374,7 +1526,15 @@ async function tick(deps: Deps): Promise<Outcome> {
       }
       // Recorded before the start, so a crash or a failed unit never continues the run twice.
       await addEvent(db, deps, parked.id, `continued`, run.id)
-      const failed = await begin(run, parked.result!.handoff!, `continue ${parked.id}`)
+      const failed = await begin(run, parked.result!.handoff!, `continue ${parked.id}`, parked.id)
+      if (failed === `full`) {
+        await db.execute(
+          `DELETE FROM events WHERE run_id = ? AND kind = 'continued' AND detail = ?`,
+          parked.id,
+          run.id,
+        )
+        return stop(full)
+      }
       if (failed) return failed
       free--
     }
@@ -1390,11 +1550,12 @@ async function tick(deps: Deps): Promise<Outcome> {
       lines.push(`planned ${await replan(db, deps, direction.focusHash, focus)} item(s): ${why}`)
     }
     const before = free
+    let skipped = 0
     for (const item of await queueItems(db, `queued`)) {
       if (free === 0) break
       const bad = await recheck(deps, item)
       if (bad) {
-        await setItem(db, deps, item.issue, { status: `dropped`, reason: bad })
+        await setItem(db, deps, item.issue, { status: `dropped`, reason: bad, handoff: null })
         lines.push(`dropped ${item.issue}: ${bad}`)
         continue
       }
@@ -1405,11 +1566,12 @@ async function tick(deps: Deps): Promise<Outcome> {
         cwd: join(deps.home, `sync`, `code`),
         issue: item.issue,
       })
-      const gated = await gate()
+      const gated = await loopStop(db, deps)
       if (gated) return stop(gated)
-      const refused = await whyNot(run, await activeRuns(db, deps), deps, null, limit)
+      const refused = await whyNot(run, await activeRuns(db, deps), deps, null, Infinity)
       if (refused) {
         lines.push(`skipped ${item.issue}: ${refused}`)
+        skipped++
         continue
       }
       const brief = [
@@ -1428,14 +1590,19 @@ async function tick(deps: Deps): Promise<Outcome> {
       const lease = new Date(deps.now().getTime() + LEASE_MS)
       if (!await claim(db, deps, item.issue, run.id, lease)) {
         lines.push(`skipped ${item.issue}: another tick claimed it`)
+        skipped++
         continue
       }
-      const failed = await begin(run, brief, item.issue)
+      const failed = await begin(run, brief, item.issue, null)
+      if (failed === `full`) {
+        await release(db, deps, run.id)
+        return stop(full)
+      }
       if (failed) return failed
       free--
     }
     if (free < before) return ok(lines.join(`\n`))
-    return stop(`no queued item`)
+    return stop(skipped ? `${skipped} queued item(s) skipped, none started` : `no queued item`)
   } catch (error) {
     return { code: 1, output: [...lines, `tick failed: ${(error as Error).message}`].join(`\n`) }
   } finally {
@@ -1480,7 +1647,7 @@ async function retro(deps: Deps): Promise<Outcome> {
       `## Commands`,
       `agent-run is \`deno run -A ${SELF}\``,
     ].join(`\n\n`)
-    return await launch(db, deps, run, brief, false)
+    return await launch(db, deps, run, brief, false, null, MAX_LEADS)
   } finally {
     await db.close()
   }
@@ -1559,8 +1726,10 @@ async function lesson(deps: Deps, flags: Map<string, string[]>, text: string): P
 
 /**
  * Append a row to `ai-memory/experiments/background-lead.md` and commit only that file straight
- * to `main`, as ai-memory's README allows for experiment rows. A failed commit or push is printed
- * and the row stays in the file.
+ * to `main`, as ai-memory's README allows for experiment rows. It pushes that one commit by its
+ * id, and commits nothing while ai-memory holds other commits not on `origin/main`, since a push
+ * would carry them too. A failed push undoes the commit. A failed or refused step is printed and
+ * the row stays in the file.
  */
 async function experiment(deps: Deps, text: string): Promise<Outcome> {
   if (!text.trim()) return refuse(`empty experiment row`)
@@ -1572,18 +1741,35 @@ async function experiment(deps: Deps, text: string): Promise<Outcome> {
   }
   const run = deps.env(`AGENT_RUN_ID`) ?? `none`
   await deps.fs.appendText(file, `- ${localStamp(deps.now())}, run ${run}: ${text.trim()}\n`)
-  const git = (...args: string[]) => deps.run([`git`, `-C`, deps.memory, ...args])
-  for (
-    const args of [
-      [`add`, relative],
-      [`commit`, `-m`, `docs(experiments): background lead retro row`, `--`, relative],
-      [`push`, `origin`, `HEAD:main`],
-    ]
-  ) {
-    const step = await git(...args)
-    if (!step.success) {
-      return ok(`logged; git ${args[0]} failed: ${step.stderr.trim().slice(0, 300)}`)
+  const git = async (...args: string[]) => {
+    const step = await deps.run([`git`, `-C`, deps.memory, ...args])
+    if (!step.success) throw new Error(`git ${args[0]} failed: ${step.stderr.trim().slice(0, 300)}`)
+    return step.stdout.trim()
+  }
+  try {
+    await git(`fetch`, `origin`, `main`)
+    const ahead = Number(await git(`rev-list`, `--count`, `origin/main..HEAD`))
+    if (ahead !== 0) {
+      const commits = ahead === 1 ? `1 other commit` : `${ahead} other commits`
+      return ok(`logged; not committed: ai-memory has ${commits} not on origin/main`)
     }
+    await git(`add`, relative)
+    await git(`commit`, `-m`, `docs(experiments): background lead retro row`, `--`, relative)
+    const commit = await git(`rev-parse`, `HEAD`)
+    // An empty source in the refspec would delete main.
+    if (!/^[0-9a-f]{40,64}$/.test(commit)) throw new Error(`git rev-parse printed no commit id`)
+    try {
+      await git(`push`, `origin`, `${commit}:refs/heads/main`)
+    } catch (error) {
+      // Undo the commit, only if it is still HEAD, so the next retro is not refused for it. The
+      // row stays in the file, untracked or modified.
+      const kept = await git(`update-ref`, `HEAD`, `${commit}~1`, commit)
+        .then(() => git(`reset`, `-q`, `--`, relative))
+        .then(() => ``, () => `; the local commit stays`)
+      throw new Error(`${(error as Error).message}${kept}`)
+    }
+  } catch (error) {
+    return ok(`logged; ${(error as Error).message}`)
   }
   return ok(`logged and pushed`)
 }
@@ -1624,18 +1810,23 @@ async function report(deps: Deps, flags: Map<string, string[]>): Promise<Outcome
       })),
     )
     const blocked = (await db.queryAll(
-      `SELECT issue, reason FROM queue WHERE status = 'blocked' AND updated_at >= ?
+      `SELECT issue, reason, run_id FROM queue WHERE status = 'blocked' AND updated_at >= ?
         ORDER BY updated_at`,
       iso,
-    )).map((row) => ({ issue: row.issue as string, reason: (row.reason as string | null) ?? null }))
+    )).map((row) => ({
+      issue: row.issue as string,
+      reason: (row.reason as string | null) ?? null,
+      runId: (row.run_id as string | null) ?? null,
+    }))
     const lessons = (await db.queryAll(
-      `SELECT kind, minutes, tokens, detail FROM lessons WHERE status = 'open'
+      `SELECT kind, minutes, tokens, detail, run_id FROM lessons WHERE status = 'open'
         ORDER BY minutes DESC NULLS LAST, at DESC LIMIT 5`,
     )).map((row) => ({
       kind: row.kind as string,
       minutes: row.minutes === null ? null : Number(row.minutes),
       tokens: row.tokens === null ? null : Number(row.tokens),
       detail: row.detail as string,
+      runId: (row.run_id as string | null) ?? null,
     }))
     const view = await db.queryOne(
       `SELECT 1 FROM sqlite_master WHERE type = 'view' AND name = 'v_slow_steps'`,
@@ -1661,7 +1852,9 @@ async function report(deps: Deps, flags: Map<string, string[]>): Promise<Outcome
       todayMicros: await todayMicros(db, deps),
       paused: await getMeta(db, `paused`),
     })
-    if (flags.has(`ntfy`) && await notify(deps, `Background lead digest`, text, `default`)) {
+    const all = `agent-run report --since ${flags.get(`since`)?.at(-1) ?? `24h`}`
+    const push = fitPush(text, NTFY_MAX_BYTES, all)
+    if (flags.has(`ntfy`) && await notify(deps, `Background lead digest`, push, `default`)) {
       await db.execute(
         `INSERT INTO pushes (id, at, kind, title, run_id) VALUES (?, ?, 'digest', ?, NULL)`,
         uuidV7(),
@@ -1754,7 +1947,7 @@ if (import.meta.main) {
     fetch: (url, init) => fetch(url, init),
     out: (text) => console.error(text),
     home: processEnv.get(`HOME`) ?? `/`,
-    ntfyEnv: join(DOTFILES, `ai-harnesses`, `.env`),
+    ntfyEnv: join(processEnv.get(`HOME`) ?? `/`, `sync`, `code`, `homelab`, `.env.accounts`),
     memory: join(processEnv.get(`HOME`) ?? `/`, `sync`, `code`, `ai-memory`),
   }
   const outcome = await main(processArgs(), deps)

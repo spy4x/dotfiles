@@ -330,7 +330,7 @@ test(`reads a relative body file from the session's directory`, async ($, on) =>
   expect(read).toEqual([`/srv/app/f.md`])
 })
 
-test(`refuses to post a relative body file after a cd it cannot follow`, async ($, on) => {
+test(`refuses a relative body file after eval cd or a cd it cannot follow`, async ($, on) => {
   on(`session.cwd`, () => ({ value: `/srv/app` }))
   const read: string[] = []
   on(`fs.read`, (_$, e) => {
@@ -339,8 +339,12 @@ test(`refuses to post a relative body file after a cd it cannot follow`, async (
   })
   on(`process.run`, () => ({ value: RAN(0) }))
   on(`tool.call`, () => BASH_OK)
-  const ran = await $.tool.call({ tool: `Bash`, command: `cd "$FOO" && gh pr comment 5 -F f.md` })
-  expect(ran.deny).toContain(`cannot follow`)
+  for (
+    const command of [
+      `eval cd /etc; gh issue comment 1 --repo a/b --body-file b.md`,
+      `cd "$FOO" && gh pr comment 5 -F f.md`,
+    ]
+  ) expect((await $.tool.call({ tool: `Bash`, command })).deny).toContain(`pass its absolute path`)
   expect(read).toEqual([])
 })
 

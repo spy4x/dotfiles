@@ -71,10 +71,12 @@ interface Heredoc {
   end: number
 }
 
-/** A simple command: its words, and the heredocs it reads. */
+/** A simple command: its words, the heredocs it reads, and the separators before it. */
 interface Simple {
   readonly words: string[]
   readonly heredocs: Heredoc[]
+  /** The `;`, `&`, `|` and newline characters between the command before it and this one. */
+  readonly before: string
 }
 
 /**
@@ -100,13 +102,17 @@ function simpleCommands(command: string, shell: boolean): Simple[] {
   let pending: { doc: Heredoc; delimiter: string; tabs: boolean }[] = []
   let word: string | undefined
   let quote: string | undefined
+  let before = ``
   const endWord = () => {
     if (word !== undefined) words.push(word)
     word = undefined
   }
   const endCommand = () => {
     endWord()
-    if (words.length > 0 || heredocs.length > 0) commands.push({ words, heredocs })
+    if (words.length > 0 || heredocs.length > 0) {
+      commands.push({ words, heredocs, before })
+      before = ``
+    }
     words = []
     heredocs = []
   }
@@ -166,6 +172,7 @@ function simpleCommands(command: string, shell: boolean): Simple[] {
       i = (newline === -1 ? command.length : newline) - 1
     } else if (/[;&|\n]/.test(char)) {
       endCommand()
+      before += char
       if (char === `\n` && pending.length > 0) i = readBodies(i + 1) - 1
     } else if (/\s/.test(char)) endWord()
     else word = (word ?? ``) + char
@@ -538,8 +545,13 @@ export function ghPost(command: string): GhPost {
   let found: GhPost = { kind: `none` }
   let poster: { readonly command: Simple; readonly paths: string[] } | undefined
   // Where an earlier `cd` in this command moved: undefined while it has not, null once a `cd` the
-  // hook cannot follow ran.
+  // hook cannot follow ran or a command not chained to it by `&&` came after it.
   let dir: string | null | undefined
+  // The plain `cd` commands followed before the post, and whether its body file is relative to
+  // the folder the shell runs it in, and whether that folder is lost.
+  const followed = new Set<Simple>()
+  let relative = false
+  let lost = false
   for (const simple of commands) {
     const { words } = simple
     // The shell might run what reads as a heredoc's text here, so a posting call in it counts.
@@ -558,8 +570,13 @@ export function ghPost(command: string): GhPost {
     const fresh = MKTEMP.exec(words.join(` `))
     if (fresh && assignedOnce(text, fresh[1]!)) made.set(fresh[1]!, simple)
     const proper = commandProper(words)
-    if ([`cd`, `pushd`, `popd`].includes(proper[0] ?? ``)) {
-      dir = words.some((word) => /[()]/.test(word)) ? null : movedTo(proper, dir)
+    const sep = simple.before.replace(/\n/g, ``)
+    // A failed `cd` leaves the shell where it was, and only `&&` skips what follows it then.
+    if (!poster && typeof dir === `string` && sep !== `&&`) dir = null
+    // After `||` or a pipe, the `cd` may not run, or runs in a subshell.
+    if (!poster && words[0] === `cd` && !sep.includes(`|`)) {
+      dir = movedTo(words.slice(1), dir)
+      followed.add(simple)
       continue
     }
     // Global flags may sit between `gh` and the noun: `gh -R a/b pr comment`.
@@ -598,11 +615,14 @@ export function ghPost(command: string): GhPost {
     else if (path !== undefined) {
       const full = expandVars(path, vars)
       poster = { command: simple, paths: [path, full] }
+      // A path that still holds a variable is refused by the caller.
+      relative = !/^[/~]|[$`]/.test(full)
       if (inMade(full, made)) found = { kind: `fresh` }
-      else if (full.startsWith(`/`) || HOME_LEAD.test(full) || dir === undefined) {
-        found = { kind: `file`, path: full }
-      } else if (dir === null) return { kind: `unplaced` }
-      else found = { kind: `file`, path: `${dir}/${full}` }
+      else if (!relative || dir === undefined) found = { kind: `file`, path: full }
+      else {
+        lost = dir === null
+        found = { kind: `file`, path: dir === null ? full : `${dir}/${full}` }
+      }
     } else found = { kind: `inline`, body: body ?? `` }
   }
   // A path still holding a variable is refused by the caller, which names that cause.
@@ -618,7 +638,64 @@ export function ghPost(command: string): GhPost {
   ) {
     return { kind: `built` }
   }
+  if (found.kind === `file` && poster) {
+    if (relative && (lost || !folderKept(commands, poster.command, followed, text))) {
+      return { kind: `unplaced` }
+    }
+    // `~` and `$HOME` expand to the shell's `HOME`, which the hook reads from its own.
+    if (HOME_LEAD.test(found.path) && HOME_SET.test(text)) return { kind: `unplaced` }
+  }
   return found
+}
+
+/** A mention of `HOME` other than `$HOME` or `${HOME}`: an assignment, `export`, `read`. */
+const HOME_SET = /(?<!\$|\$\{)\bHOME\b/
+
+/**
+ * Commands that do not change the shell's folder themselves: programs, and builtins that do not.
+ * Their words still can, before they run: a zsh glob qualifier runs code in the shell
+ * (`echo /(e:'cd /etc':)`), so `folderKept` also needs every word plain. Any other command may
+ * change it: `eval`, `source`, `pushd`, a function or alias (`take`, oh-my-zsh's `1`), a directory
+ * name run as a command (zsh `autocd`), a loop or `if` around a `cd`.
+ */
+const FOLDER_KEEPERS = [`cat`, `echo`, `printf`, `mkdir`, `true`, `test`, `[`, `git`, `gh`]
+
+/**
+ * A word the shell runs no code for: literal characters, after a redirect's `>` or `>>`. A space
+ * stands for a quoted word; `(`, `$`, a backtick and globs never pass.
+ */
+const PLAIN_WORD = /^(?:[\w./@%+,: -][\w./@%+,:= -]*)?$/
+
+/** Whether `word` is plain (`PLAIN_WORD`), or `[` and `]` of a `test`. */
+function plainWord(word: string): boolean {
+  return word === `[` || word === `]` || PLAIN_WORD.test(word.replace(REDIRECT, ``))
+}
+
+/**
+ * Whether the post runs in the folder the guard placed its relative body file in: every other
+ * command is a followed `cd`, or an assignment or one of `FOLDER_KEEPERS` whose words, like the
+ * post's, are all plain (`plainWord`); no prefix moves the post
+ * (`env -C`, `sudo --chdir`); no `cdpath` steers a `cd`; and no arithmetic (`(( 1 <<X ))`) hides
+ * lines the shell runs inside what reads as a heredoc.
+ */
+function folderKept(
+  commands: Simple[],
+  poster: Simple,
+  followed: Set<Simple>,
+  text: string,
+): boolean {
+  if (/\(\(|\$\[|cdpath/i.test(text)) return false
+  const gh = poster.words.findIndex((word) => word.replace(/^\\/, ``).split(`/`).pop() === `gh`)
+  if (poster.words.slice(0, gh).some((word) => /^(?:--chdir|-[A-Za-z]*[CD])/.test(word))) {
+    return false
+  }
+  return commands.every((simple) => {
+    const { words } = simple
+    if (followed.has(simple)) return true
+    if (!words.every(plainWord)) return false
+    return simple === poster || FOLDER_KEEPERS.includes(commandProper(words)[0] ?? ``) ||
+      (words.length > 0 && words.every((word) => /^[A-Za-z_]\w*=/.test(word)))
+  })
 }
 
 /**
@@ -762,31 +839,53 @@ function titled(found: GhPost): GhPost {
 const HOME_LEAD = /^(?:~(?=\/)|\$HOME(?!\w)|\$\{HOME\})/
 
 /**
- * Where a `cd` or `pushd` (`proper`, its words) moves from `dir`: a literal path, joined to `dir`
- * when relative, or `$HOME` for a bare `cd`. Null for what the hook cannot follow: `popd`, a
- * flag, `-`, `+1`, a second argument, a glob, or a `$`, a backtick or `~` other than home.
+ * Where a plain `cd` with `args` moves from `dir`: a literal path, joined to `dir` when relative,
+ * or `$HOME` for a bare `cd`, with `.` and `..` folded as the shell's logical `cd` folds them.
+ * Null for what the hook cannot follow: a flag, `-`, `+1`, a second argument, an empty one, any
+ * character that could expand (`$`, a backtick, a glob, `~user`, zsh `=cmd`), an oh-my-zsh `...`,
+ * or a `..` above a folder the hook does not know.
  */
-function movedTo(proper: string[], dir: string | null | undefined): string | null {
-  const args = proper[1] === `--` ? proper.slice(2) : proper.slice(1)
-  if (proper[0] === `popd` || args.length > 1) return null
-  const to = args[0] === undefined || args[0] === `~` ? `$HOME` : args[0]
-  if (/^[-+]/.test(to) || /[$`*?[{]|^~/.test(to.replace(HOME_LEAD, ``))) return null
-  if (to.startsWith(`/`) || HOME_LEAD.test(to) || dir === undefined) return to
-  return dir === null ? null : `${dir}/${to}`
+function movedTo(args: string[], dir: string | null | undefined): string | null {
+  const rest = args[0] === `--` ? args.slice(1) : args
+  if (rest.length > 1) return null
+  const to = rest[0] === undefined || rest[0] === `~` ? `$HOME` : rest[0]
+  if (to === `` || /^[-+]/.test(to) || /(?:^|\/)\.{3,}(?:\/|$)/.test(to)) return null
+  if (!/^[\w./@%+,:-]*$/.test(to.replace(HOME_LEAD, ``))) return null
+  if (to.startsWith(`/`) || HOME_LEAD.test(to) || dir === undefined) return folded(to)
+  return dir === null ? null : folded(`${dir}/${to}`)
+}
+
+/**
+ * Folds `.` and `..` in `path` without reading the disk, keeping its lead (`/`, `$HOME`, `~`).
+ * Null when a `..` climbs above a lead other than `/`, or above the start of a relative path.
+ */
+function folded(path: string): string | null {
+  const lead = /^(?:\/|\$HOME(?=\/|$)|\$\{HOME\}(?=\/|$)|~(?=\/))/.exec(path)?.[0] ?? ``
+  const parts: string[] = []
+  for (const part of path.slice(lead.length).split(`/`)) {
+    if (part === `..`) {
+      if (parts.length > 0) parts.pop()
+      else if (lead !== `/`) return null
+    } else if (part !== `` && part !== `.`) parts.push(part)
+  }
+  if (lead === `/`) return `/${parts.join(`/`)}`
+  if (lead === ``) return parts.length > 0 ? parts.join(`/`) : `.`
+  return [lead, ...parts].join(`/`)
 }
 
 /** Expands a leading home in `path`; undefined when the shell would still change it. */
 function homeExpanded(path: string, home: string | undefined): string | undefined {
   if (HOME_LEAD.test(path) && !home) return undefined
   const full = path.replace(HOME_LEAD, home ?? ``)
-  return /[$`]|^~/.test(full) ? undefined : full
+  // A glob or brace (`b?.md`, `{a,b}.md`, zsh `=cmd`) names another file than the one written.
+  return /[$`*?[\]{}()<>]|^[~=]/.test(full) ? undefined : full
 }
 
 /**
  * The body-file path the shell hands `gh`, with a leading `~/`, `$HOME` or `${HOME}` made home
  * and a relative path joined to the session's directory. Undefined when the shell would still
- * change it (`$`, a backtick, `~user`) or the home or directory it needs is unknown: the hook
- * could then read a different file from the one `gh` posts.
+ * change it (`$`, a backtick, `~user`, a glob) or the home or directory it needs is unknown: the
+ * hook could then read a different file from the one `gh` posts.
  */
 export function bodyFilePath(path: string, { cwd, home }: Where): string | undefined {
   const full = homeExpanded(path, home)
@@ -817,8 +916,11 @@ export function unplacedVerdict(command: string): Verdict {
   return {
     deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
       `after a wrapper it does not know or inside a shell function, inside quotes or \`$(…)\`, ` +
-      `as a second post, in a heredoc's text, or with a body file named through a variable it ` +
-      `cannot resolve or relative to a \`cd\` it cannot follow. Make it the only post, written ` +
+      `as a second post, in a heredoc's text, or with a body file named through a variable or ` +
+      `glob it cannot resolve. A relative body file needs every other command to keep the ` +
+      `folder: only a literal \`cd <dir> &&\` chained to the post may move it, never \`eval\`, ` +
+      `\`pushd\`, a function or a \`cd\` that may not run; else pass its absolute path. ` +
+      `Make it the only post, written ` +
       `plainly, with at most \`timeout <n>\`, \`sudo\`, \`env\` or \`X=1\` before it and one ` +
       `body flag: \`${plainPost(command)}\`. The body file may be written earlier in the same ` +
       `command by \`cat > <path> <<'EOF'\`, in a folder from \`D=$(mktemp -d)\`. Write a file ` +

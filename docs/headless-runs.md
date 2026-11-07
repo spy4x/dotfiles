@@ -10,27 +10,32 @@ uses it for the background lead below. Issues: spy4x/dotfiles#252, spy4x/dotfile
 A trial the owner asked for on 2026-11-06: one issue at a time, all day, under a soft daily budget,
 picked in code, measured, and improved by a daily retro. Goal: merged issues per dollar.
 
-- **The tick.** `agent-tick.timer` runs `agent-run tick` every 30 minutes (`*:00/30`, not caught
-  up after the machine was off). In order, each stop printing why and exiting 0: expire leases;
-  stop when paused, when the lead limit (below) is reached, when today's runs (started on the
-  local calendar day) have spent `DAILY_BUDGET_USD` ($200, summed from their own
-  `total_cost_usd`), or at 90% session or 95% weekly usage. Then it fills each free lead slot,
-  checking the pause, the budget and the usage again before each start. Parked top-level lead runs
-  (not `tick`) that have a `handoff` and no queue item come first, oldest first: one run each with
-  its settings and the handoff as its brief, and a `continued` event on the parked run so no later
-  tick continues it again. Then it plans the queue again when it is needed and takes queued items
-  by rank: re-check each on GitHub (still open, still a candidate; else `dropped`), claim it and
-  start a `lead` run on `opus` at `medium` in `~/sync/code`, named `tick`, with `--issue`, a
-  3-hour deadline and no budget or turn cap. A candidate that `start` would refuse (another run on
-  its issue, a model no longer allowed, an issue no longer by `spy4x`) is skipped and the tick
-  takes the next; a continuation refused twice (`refused` events) is no longer tried. The claim
-  changes only an item still `queued`, so a manual `agent-run tick` that overlaps the timer never
-  starts two runs on one issue. The brief is [`tools/agent-tick-brief.md`](../tools/agent-tick-brief.md)
-  plus the item, the last parked run's `handoff` in full under its own heading, and the 20 newest
-  open lessons. The budget is soft: a running run always
-  finishes.
+- **The tick.** `agent-tick.timer` runs `agent-run tick` every 30 minutes (`*:00/30`, not caught up
+  after the machine was off). In order, each stop printing why and exiting 0: expire leases; stop
+  when paused, when the lead limit (below) is reached, when today's runs (started on the local
+  calendar day) have spent `DAILY_BUDGET_USD` ($200, summed from their own `total_cost_usd`), or at
+  90% session or 95% weekly usage (read once per tick). Then it fills each free lead slot, checking
+  the pause and the budget again before each start. Parked top-level lead runs (not `tick`) that
+  have a `handoff` and no queue item come first, oldest first: one run each with its settings and
+  the handoff as its brief, and a `continued` event on the parked run so no later tick continues it
+  again. Then it plans the queue again when it is needed and takes queued items by rank: re-check
+  each on GitHub (still open, still a candidate; else `dropped`), claim it and start a `lead` run on
+  `opus` at `medium` in `~/sync/code`, named `tick`, with `--issue`, a 3-hour deadline and no budget
+  or turn cap. A candidate that `start` would refuse (another run on its issue, a model no longer
+  allowed, an issue no longer by `spy4x`) is skipped and the tick takes the next; a continuation
+  refused twice (`refused` events) is no longer tried. When every queued item was skipped, the tick
+  says how many and each one's reason. The claim changes only an item still `queued`, so a manual
+  `agent-run tick` that overlaps the timer never starts two runs on one issue; a lead counts the
+  running leads and inserts its row in one SQL statement, so two overlapping ticks or starts never
+  pass the lead limit. A tick that loses the last slot that way gives its claim back, records no
+  refusal and stops. A failed `systemd-run` ends the run `failed`, gives its item back to the queue
+  and counts toward the pause after two failed tick runs. A stored `max_leads` that is no whole
+  number from 1 counts as the default. The brief is
+  [`tools/agent-tick-brief.md`](../tools/agent-tick-brief.md) plus the item, the last parked run's
+  `handoff` in full under its own heading, and the 20 newest open lessons. The budget is soft: a
+  running run always finishes.
 - **Parallel leads.** `agent-run limit --leads <n>` sets how many lead runs (manual and tick) may
-  run at once; the default is 1, and `status` prints it. Several tick leads share the `cwd`
+  run at once; the default is 1, and `status` prints it, with merged issues per $100 over 7 days. Several tick leads share the `cwd`
   `~/sync/code`: two leads may share a folder, since each writes only in worktrees of its own,
   while a `write` run still shares its folder with no other writing run.
 - **The queue**, picked in code by `tools/agent-queue.ts`, never by a model. The focus
@@ -51,7 +56,8 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
 - **Item statuses:** `queued`, `claimed` (a lease of 3h15m and the run id), `done`, `dropped`,
   `blocked`, each with a reason. When a run ends: `done` → `done`; `parked` (CI expected to take
   over about 20 minutes, or the session compacted twice) → `queued` at rank 0, no attempt counted,
-  keeping the run's `handoff` (any other end clears it);
+  with the run's `handoff`. Every end but `done` (and a `dropped` item) keeps the last handoff
+  unless the run wrote its own;
   `blocked` → `blocked` with `needs_owner`; `failed`, `timeout`, `budget`, `turns` and an expired
   lease → one failed attempt, `blocked` at 2; `stopped` → `queued`.
 - **Pushes.** Urgent (NTFY priority `urgent`): two failed tick runs in a row (this also pauses the
@@ -62,9 +68,15 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   digest. No other run end pushes. Every push sent is a row in `pushes`.
 - **The digest.** `agent-report.timer` runs `agent-run report --since 24h --ntfy` at 09:00:
   achievements (done items with their PRs, good news), spend today and in the window against $200,
-  failures (failed runs, newly blocked items), bottlenecks (open lessons by minutes, the 5 slowest
-  steps of `v_slow_steps` when the importer's view exists), whether the loop is paused, then each
-  run with its notes.
+  merged issues per $100 in the window, failures (failed runs, newly blocked items), bottlenecks
+  (open lessons by minutes, the 5 slowest steps of `v_slow_steps` when the importer's view exists),
+  whether the loop is paused, then each run with its notes. Text that agents wrote is quoted on
+  one line, cut at 300 characters: a run's summary, good news, notes, needs-you, injection and
+  current activity, a blocked item's reason and a lesson's detail, after `run <id> wrote` (the
+  lesson's id only when it was added inside a run); a slow step's summary and the pause reason
+  without an id. The push is cut
+  to ntfy's 4096 bytes: whole items go from the end, and a last line says how many and to run
+  `agent-run report` for all of them.
 - **Lessons.** A run records lost time or tokens with `agent-run lesson`; the next tick and the
   retro read the open ones.
 - **The retro.** `agent-retro.timer` runs `agent-run retro` at 08:30, skipped when paused or over
@@ -130,8 +142,9 @@ agent-run experiment <text...>                   a row in ai-memory/experiments/
   session level of 90% or a weekly level of 95%.
 - **`lesson`** takes the run id from `$AGENT_RUN_ID` inside a run. **`experiment`** appends
   `- <local date time>, run <id>: <text>`, then commits only that file in `~/sync/code/ai-memory`
-  and pushes it to `main` (its README allows experiment rows there); a failed commit or push is
-  printed and the row stays.
+  and pushes that commit by its id to `main` (its README allows experiment rows there). It commits
+  nothing while ai-memory has other commits not on `origin/main`, since the push would carry them;
+  a failed push undoes that local commit; a refused or failed step is printed and the row stays.
 
 ## How a run runs
 
@@ -155,8 +168,9 @@ systemd-run --user --unit=agent-run-<id>.service --collect \
   in through the keyring over D-Bus, so the bus address stays.
 - A row still marked running whose unit is gone (it died before `finish`, or the machine lost
   power) is closed as `failed`, or `stopped` after `agent-run stop`, the next time any command
-  lists the active runs, so it never blocks the next tick. Its queue item comes back when the lease
-  expires. `resume` runs the same checks as `start`.
+  lists the active runs, so it never blocks the next tick, and its queue item is settled then as
+  for that status. An item whose run ended unsettled comes back when the lease expires. `resume`
+  runs the same checks as `start`.
 - Stopping the unit kills its cgroup. Docker containers, child runs and units a run starts itself
   escape it, so `stop` stops child runs first.
 
@@ -197,9 +211,10 @@ tick continues from it, as above.
 
 ## Notifications and stepping in
 
-Pushes use `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from `ai-harnesses/.env` and fail open. A run
-push's body holds the reason, the issue, the PRs, the cost and `claude --resume <id>` to step in;
-an injection report says only to look at the run. Before sending, `gitleaks` scans the title and
+Pushes read only `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account tokens file
+`~/sync/code/homelab/.env.accounts` (the `workspace` skill) and fail open. A run push's body
+holds the reason, the issue, the PRs, the cost and `claude --resume <id>` to step in; an injection
+report says only to look at the run. Before sending, `gitleaks` scans the title and
 body; when it flags something or cannot run, the body says only to read the run on the machine.
 
 To step in: answer through a lead, which runs `agent-run resume <id> --brief -`; or take the run
