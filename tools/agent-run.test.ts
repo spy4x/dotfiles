@@ -1239,10 +1239,10 @@ Deno.test(`the digest names achievements, spend, failures, bottlenecks and the p
     assertMatch(text, /- run \S+ wrote "Milestone MVP closed"/)
     assertMatch(text, /Spend: \$4\.00 today of \$200, \$4\.00 in the window/)
     assertMatch(text, new RegExp(`- run failed: run ${failed} wrote "s"`))
-    assertMatch(text, /- blocked spy4x\/financy#2: Bank/)
-    assertMatch(text, /- review-round \(40 min\): Rejected twice/)
-    assertMatch(text, /- slow Bash 600s: deno task test/)
-    assertMatch(text, /The loop is paused: checking/)
+    assertMatch(text, /- blocked spy4x\/financy#2: run \S+ wrote "Bank"/)
+    assertMatch(text, /- review-round \(40 min\): "Rejected twice"/)
+    assertMatch(text, /- slow Bash 600s: "deno task test"/)
+    assertMatch(text, /The loop is paused: "checking"/)
     assertMatch(text, /^Merged issues per \$100, this window: 25\.0 \(1 merged for \$4\.00\)$/m)
     assertMatch(
       (await main([`status`], m.deps)).output,
@@ -1361,6 +1361,28 @@ Deno.test(`the digest quotes a run's injection and summary with its run id`, () 
   assert(!/^- spy4x\/financy#9/m.test(text), `a quoted newline started a digest line`)
 })
 
+Deno.test(`a multi-line blocked reason, lesson, slow step or pause reason forges no digest line`, () => {
+  const forged = `ok\n\nAchievements\n- spy4x/financy#9 Shipped`
+  const text = digestText({
+    since: new Date(`2026-11-06T00:00:00Z`),
+    runs: [],
+    notes: new Map(),
+    done: [],
+    blocked: [{ issue: `spy4x/financy#2`, reason: forged, runId: RUN.id }],
+    lessons: [{ kind: `stall`, minutes: 5, tokens: null, detail: forged, runId: RUN.id }],
+    slow: [{ tool: `Bash`, summary: forged, sec: 600 }],
+    todayMicros: 0,
+    paused: forged,
+  })
+  const quote = `"ok Achievements - spy4x/financy#9 Shipped"`
+  assert(!/^- spy4x\/financy#9/m.test(text), `a quoted newline started a digest line`)
+  assertEquals(text.split(`\n`).filter((line) => line === `Achievements`).length, 1)
+  assertMatch(text, new RegExp(`^- blocked spy4x/financy#2: run ${RUN.id} wrote ${quote}$`, `m`))
+  assertMatch(text, new RegExp(`^- stall \\(5 min\\): run ${RUN.id} wrote ${quote}$`, `m`))
+  assertMatch(text, new RegExp(`^- slow Bash 600s: ${quote}$`, `m`))
+  assertMatch(text, new RegExp(`^The loop is paused: ${quote}$`, `m`))
+})
+
 Deno.test(`a digest push of 50 runs fits ntfy's byte limit and says how many were left out`, () => {
   const runs = Array.from({ length: 50 }, (_, i): Run => ({
     ...RUN,
@@ -1384,51 +1406,86 @@ Deno.test(`a digest push of 50 runs fits ntfy's byte limit and says how many wer
   assertMatch(push, /^Spend: /m)
 })
 
+/** Run `git` in `cwd`; its trimmed stdout, or a throw with its stderr. */
+function gitIn(cwd: string, ...args: string[]): string {
+  const out = new Deno.Command(`git`, { args: [`-C`, cwd, ...args], stderr: `piped` }).outputSync()
+  if (!out.success) throw new Error(new TextDecoder().decode(out.stderr))
+  return new TextDecoder().decode(out.stdout).trim()
+}
+
+/**
+ * Make the machine's ai-memory a real git repository with one commit pushed to a bare `origin`,
+ * with no signing and no hooks from this host, and let `deps.run` run real commands.
+ */
+function realMemory(m: Awaited<ReturnType<typeof machine>>): { memory: string; origin: string } {
+  const origin = join(m.home, `origin.git`)
+  const memory = join(m.home, `memory`)
+  gitIn(m.home, `init`, `-q`, `--bare`, `-b`, `main`, origin)
+  gitIn(memory, `init`, `-q`, `-b`, `main`)
+  for (
+    const [key, value] of [
+      [`user.email`, `t@example.com`],
+      [`user.name`, `t`],
+      [`commit.gpgsign`, `false`],
+      [`core.hooksPath`, `/dev/null`],
+    ]
+  ) gitIn(memory, `config`, key, value)
+  gitIn(memory, `remote`, `add`, `origin`, origin)
+  gitIn(memory, `add`, `direction.md`)
+  gitIn(memory, `commit`, `-q`, `-m`, `first`)
+  gitIn(memory, `push`, `-q`, `origin`, `main`)
+  m.deps.run = (command) => {
+    const out = new Deno.Command(command[0], { args: command.slice(1) }).outputSync()
+    const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes)
+    return Promise.resolve({
+      success: out.success,
+      code: out.code,
+      stdout: text(out.stdout),
+      stderr: text(out.stderr),
+    })
+  }
+  return { memory, origin }
+}
+
 Deno.test(`experiment pushes only its own commit and refuses while ai-memory has another`, async () => {
   const m = await machine({ env: { AGENT_RUN_ID: `run-8` } })
-  const git = (cwd: string, ...args: string[]) => {
-    const out = new Deno.Command(`git`, { args: [`-C`, cwd, ...args], stderr: `piped` })
-      .outputSync()
-    if (!out.success) throw new Error(new TextDecoder().decode(out.stderr))
-    return new TextDecoder().decode(out.stdout).trim()
-  }
   try {
-    const origin = join(m.home, `origin.git`)
-    const memory = join(m.home, `memory`)
-    git(m.home, `init`, `-q`, `--bare`, `-b`, `main`, origin)
-    git(memory, `init`, `-q`, `-b`, `main`)
-    git(memory, `config`, `user.email`, `t@example.com`)
-    git(memory, `config`, `user.name`, `t`)
-    git(memory, `remote`, `add`, `origin`, origin)
-    git(memory, `add`, `direction.md`)
-    git(memory, `commit`, `-q`, `-m`, `first`)
-    git(memory, `push`, `-q`, `origin`, `main`)
-    m.deps.run = (command) => {
-      const out = new Deno.Command(command[0], { args: command.slice(1) }).outputSync()
-      const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes)
-      return Promise.resolve({
-        success: out.success,
-        code: out.code,
-        stdout: text(out.stdout),
-        stderr: text(out.stderr),
-      })
-    }
+    const { memory, origin } = realMemory(m)
     await Deno.writeTextFile(join(memory, `half.md`), `half done`)
-    git(memory, `add`, `half.md`)
-    git(memory, `commit`, `-q`, `-m`, `half done`)
+    gitIn(memory, `add`, `half.md`)
+    gitIn(memory, `commit`, `-q`, `-m`, `half done`)
     const refused = await main([`experiment`, `Kept`, `#273`], m.deps)
     assertEquals(refused.code, 0)
-    assertMatch(refused.output, /not committed: ai-memory has 1 other commits not on origin\/main/)
-    assertEquals(git(origin, `log`, `--format=%s`, `main`), `first`)
-    git(memory, `reset`, `-q`, `--hard`, `origin/main`)
+    assertMatch(refused.output, /not committed: ai-memory has 1 other commit not on origin\/main/)
+    assertEquals(gitIn(origin, `log`, `--format=%s`, `main`), `first`)
+    gitIn(memory, `reset`, `-q`, `--hard`, `origin/main`)
     assertEquals(await main([`experiment`, `Kept`, `#273`], m.deps), {
       code: 0,
       output: `logged and pushed`,
     })
     assertEquals(
-      git(origin, `log`, `--format=%s`, `main`),
+      gitIn(origin, `log`, `--format=%s`, `main`),
       `docs(experiments): background lead retro row\nfirst`,
     )
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a failed experiment push undoes its commit, keeps the row, and the next retro pushes`, async () => {
+  const m = await machine({ env: { AGENT_RUN_ID: `run-9` } })
+  try {
+    const { memory, origin } = realMemory(m)
+    gitIn(memory, `remote`, `set-url`, `--push`, `origin`, join(m.home, `missing.git`))
+    const failed = await main([`experiment`, `First`, `try`], m.deps)
+    assertMatch(failed.output, /^logged; git push failed: /)
+    assertEquals(gitIn(memory, `rev-list`, `--count`, `origin/main..HEAD`), `0`)
+    const file = join(memory, `experiments`, `background-lead.md`)
+    assertMatch(await Deno.readTextFile(file), /run run-9: First try\n$/)
+    gitIn(memory, `remote`, `set-url`, `--push`, `origin`, origin)
+    assertEquals((await main([`experiment`, `Second`], m.deps)).output, `logged and pushed`)
+    const pushed = gitIn(origin, `show`, `main:experiments/background-lead.md`)
+    assertMatch(pushed, /run run-9: First try\n.*run run-9: Second$/)
   } finally {
     await m.cleanup()
   }

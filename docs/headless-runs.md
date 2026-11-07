@@ -70,8 +70,11 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   achievements (done items with their PRs, good news), spend today and in the window against $200,
   merged issues per $100 in the window, failures (failed runs, newly blocked items), bottlenecks
   (open lessons by minutes, the 5 slowest steps of `v_slow_steps` when the importer's view exists),
-  whether the loop is paused, then each run with its notes. Whatever a run wrote (summary, good
-  news, notes, needs-you, injection) is quoted on one line after `run <id> wrote`. The push is cut
+  whether the loop is paused, then each run with its notes. Text that agents wrote is quoted on
+  one line, cut at 300 characters: a run's summary, good news, notes, needs-you, injection and
+  current activity, a blocked item's reason and a lesson's detail, after `run <id> wrote` (the
+  lesson's id only when it was added inside a run); a slow step's summary and the pause reason
+  without an id. The push is cut
   to ntfy's 4096 bytes: whole items go from the end, and a last line says how many and to run
   `agent-run report` for all of them.
 - **Lessons.** A run records lost time or tokens with `agent-run lesson`; the next tick and the
@@ -141,7 +144,7 @@ agent-run experiment <text...>                   a row in ai-memory/experiments/
   `- <local date time>, run <id>: <text>`, then commits only that file in `~/sync/code/ai-memory`
   and pushes that commit by its id to `main` (its README allows experiment rows there). It commits
   nothing while ai-memory has other commits not on `origin/main`, since the push would carry them;
-  a refused or failed step is printed and the row stays.
+  a failed push undoes that local commit; a refused or failed step is printed and the row stays.
 
 ## How a run runs
 

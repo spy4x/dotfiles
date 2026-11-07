@@ -410,21 +410,28 @@ export interface Digest {
   runs: Run[]
   notes: Map<string, string[]>
   done: { issue: string; title: string; prs: string[] }[]
-  blocked: { issue: string; reason: string | null }[]
-  lessons: { kind: string; minutes: number | null; tokens: number | null; detail: string }[]
+  blocked: { issue: string; reason: string | null; runId: string | null }[]
+  lessons: {
+    kind: string
+    minutes: number | null
+    tokens: number | null
+    detail: string
+    runId: string | null
+  }[]
   slow: { tool: string; summary: string; sec: number }[]
   todayMicros: number
   paused: string | null
 }
 
 /**
- * Text a run wrote, marked as its words and not the digest's: on one line, cut to `QUOTE_MAX`
- * characters, in quotes after the run id. A newline or quote in it cannot start a fake line.
+ * Text a run (or any agent) wrote, marked as its words and not the digest's: on one line, cut to
+ * `QUOTE_MAX` characters, in quotes, after the run id when there is one. A newline or quote in it
+ * cannot start a fake line.
  */
-function quoted(id: string, text: string): string {
+function quoted(id: string | null, text: string): string {
   const line = text.replace(/\s+/g, ` `).trim()
   const short = line.length > QUOTE_MAX ? `${line.slice(0, QUOTE_MAX - 1)}…` : line
-  return `run ${id} wrote ${JSON.stringify(short)}`
+  return id ? `run ${id} wrote ${JSON.stringify(short)}` : JSON.stringify(short)
 }
 
 /** The goal metric, named and scaled as on the runs dashboard: merged issues per $100 spent. */
@@ -463,7 +470,11 @@ export function digestText(d: Digest): string {
       const what = [run.name, run.issue, run.status].filter(Boolean).join(` `)
       out.push(`- ${what}: ${run.result?.summary ? quoted(run.id, run.result.summary) : run.id}`)
     }
-    for (const item of d.blocked) out.push(`- blocked ${item.issue}: ${item.reason ?? `no reason`}`)
+    for (const item of d.blocked) {
+      out.push(
+        `- blocked ${item.issue}: ${item.reason ? quoted(item.runId, item.reason) : `no reason`}`,
+      )
+    }
   }
   if (d.lessons.length > 0 || d.slow.length > 0) {
     out.push(``, `Bottlenecks`)
@@ -472,11 +483,17 @@ export function digestText(d: Digest): string {
         lesson.minutes === null ? null : `${lesson.minutes} min`,
         lesson.tokens === null ? null : `${lesson.tokens} tokens`,
       ].filter(Boolean).join(`, `)
-      out.push(`- ${lesson.kind}${cost ? ` (${cost})` : ``}: ${lesson.detail}`)
+      out.push(
+        `- ${lesson.kind}${cost ? ` (${cost})` : ``}: ${quoted(lesson.runId, lesson.detail)}`,
+      )
     }
-    for (const step of d.slow) out.push(`- slow ${step.tool} ${step.sec}s: ${step.summary}`)
+    for (const step of d.slow) {
+      out.push(
+        `- slow ${step.tool} ${step.sec}s${step.summary ? `: ${quoted(null, step.summary)}` : ``}`,
+      )
+    }
   }
-  out.push(``, d.paused ? `The loop is paused: ${d.paused}` : `The loop is running.`)
+  out.push(``, d.paused ? `The loop is paused: ${quoted(null, d.paused)}` : `The loop is running.`)
   if (d.runs.length > 0) out.push(``, `Runs`)
   for (const run of d.runs) {
     out.push(
@@ -1707,7 +1724,8 @@ async function lesson(deps: Deps, flags: Map<string, string[]>, text: string): P
  * Append a row to `ai-memory/experiments/background-lead.md` and commit only that file straight
  * to `main`, as ai-memory's README allows for experiment rows. It pushes that one commit by its
  * id, and commits nothing while ai-memory holds other commits not on `origin/main`, since a push
- * would carry them too. A failed or refused step is printed and the row stays in the file.
+ * would carry them too. A failed push undoes the commit. A failed or refused step is printed and
+ * the row stays in the file.
  */
 async function experiment(deps: Deps, text: string): Promise<Outcome> {
   if (!text.trim()) return refuse(`empty experiment row`)
@@ -1728,14 +1746,24 @@ async function experiment(deps: Deps, text: string): Promise<Outcome> {
     await git(`fetch`, `origin`, `main`)
     const ahead = Number(await git(`rev-list`, `--count`, `origin/main..HEAD`))
     if (ahead !== 0) {
-      return ok(`logged; not committed: ai-memory has ${ahead} other commits not on origin/main`)
+      const commits = ahead === 1 ? `1 other commit` : `${ahead} other commits`
+      return ok(`logged; not committed: ai-memory has ${commits} not on origin/main`)
     }
     await git(`add`, relative)
     await git(`commit`, `-m`, `docs(experiments): background lead retro row`, `--`, relative)
     const commit = await git(`rev-parse`, `HEAD`)
     // An empty source in the refspec would delete main.
     if (!/^[0-9a-f]{40,64}$/.test(commit)) throw new Error(`git rev-parse printed no commit id`)
-    await git(`push`, `origin`, `${commit}:refs/heads/main`)
+    try {
+      await git(`push`, `origin`, `${commit}:refs/heads/main`)
+    } catch (error) {
+      // Undo the commit, only if it is still HEAD, so the next retro is not refused for it. The
+      // row stays in the file, untracked or modified.
+      const kept = await git(`update-ref`, `HEAD`, `${commit}~1`, commit)
+        .then(() => git(`reset`, `-q`, `--`, relative))
+        .then(() => ``, () => `; the local commit stays`)
+      throw new Error(`${(error as Error).message}${kept}`)
+    }
   } catch (error) {
     return ok(`logged; ${(error as Error).message}`)
   }
@@ -1778,18 +1806,23 @@ async function report(deps: Deps, flags: Map<string, string[]>): Promise<Outcome
       })),
     )
     const blocked = (await db.queryAll(
-      `SELECT issue, reason FROM queue WHERE status = 'blocked' AND updated_at >= ?
+      `SELECT issue, reason, run_id FROM queue WHERE status = 'blocked' AND updated_at >= ?
         ORDER BY updated_at`,
       iso,
-    )).map((row) => ({ issue: row.issue as string, reason: (row.reason as string | null) ?? null }))
+    )).map((row) => ({
+      issue: row.issue as string,
+      reason: (row.reason as string | null) ?? null,
+      runId: (row.run_id as string | null) ?? null,
+    }))
     const lessons = (await db.queryAll(
-      `SELECT kind, minutes, tokens, detail FROM lessons WHERE status = 'open'
+      `SELECT kind, minutes, tokens, detail, run_id FROM lessons WHERE status = 'open'
         ORDER BY minutes DESC NULLS LAST, at DESC LIMIT 5`,
     )).map((row) => ({
       kind: row.kind as string,
       minutes: row.minutes === null ? null : Number(row.minutes),
       tokens: row.tokens === null ? null : Number(row.tokens),
       detail: row.detail as string,
+      runId: (row.run_id as string | null) ?? null,
     }))
     const view = await db.queryOne(
       `SELECT 1 FROM sqlite_master WHERE type = 'view' AND name = 'v_slow_steps'`,
