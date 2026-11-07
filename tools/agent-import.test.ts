@@ -398,14 +398,72 @@ Deno.test(`every view answers on a database without agent-run's tables`, async (
         `v_tool_stats`,
         `v_slow_steps`,
         `v_stalls`,
+        `v_ci_waits`,
         `v_waste`,
         `v_goal`,
       ]
     ) {
       await m.db.queryAll(`SELECT * FROM ${view}`)
     }
-    const stall = await m.db.queryOne(`SELECT session_id, gap_sec FROM v_stalls`)
-    assertEquals(stall, { session_id: SID, gap_sec: 900 })
+    const stall = await m.db.queryOne(`SELECT session_id, gap_sec, kind FROM v_stalls`)
+    assertEquals(stall, { session_id: SID, gap_sec: 900, kind: `interactive` })
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a slow step's summary is never the raw tool input`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `tool-1`, `Write`, { content: `secret-ish text` }),
+        toolResult(at(2), `tool-1`, `ok`),
+      ]),
+    )
+    await m.run()
+    const slow = await m.db.queryOne(`SELECT tool, summary, sec FROM v_slow_steps`)
+    assertEquals(slow, { tool: `Write`, summary: null, sec: 120 })
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`a CI wait costs the API call after it returns, not the whole session`, async () => {
+  const m = await machine()
+  try {
+    await Deno.writeTextFile(
+      m.main,
+      jsonl([
+        toolUse(at(0), `msg-1`, `ci`, `Bash`, { command: `gh pr checks 1 --watch` }),
+        toolResult(at(3), `ci`, `ok`),
+        assistant(at(4), `msg-2`, [{ type: `text`, text: `green` }], { output: 1_000_000 }),
+        toolUse(at(5), `msg-3`, `ls`, `Bash`, { command: `ls` }),
+        toolResult(at(6), `ls`, `ok`),
+      ]),
+    )
+    await m.run()
+    // Three calls cost $4 + $24 + $4; the wait owns only msg-2's $24.
+    assertEquals((await session(m.db)).cost_usd, 32)
+    const waits = await m.db.queryAll(`SELECT session_id, kind, sec, cost_usd FROM v_ci_waits`)
+    assertEquals(waits, [{ session_id: SID, kind: `interactive`, sec: 180, cost_usd: 24 }])
+  } finally {
+    await m.close()
+  }
+})
+
+Deno.test(`an import replaces view definitions left by an older version`, async () => {
+  const m = await machine()
+  try {
+    await m.db.exec(`CREATE VIEW v_stalls AS SELECT 1 AS old`)
+    await m.db.exec(`DROP VIEW IF EXISTS v_ci_waits`)
+    await Deno.writeTextFile(m.main, jsonl([userText(at(0), `a`), userText(at(15), `b`)]))
+    await m.run()
+    await m.run()
+    const stall = await m.db.queryOne(`SELECT kind FROM v_stalls`)
+    assertEquals(stall, { kind: `interactive` })
+    assertEquals(await m.db.queryAll(`SELECT * FROM v_ci_waits`), [])
   } finally {
     await m.close()
   }
