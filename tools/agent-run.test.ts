@@ -63,6 +63,8 @@ async function machine(
     issues: {} as Record<string, Issue[]>,
     milestones: {} as Record<string, GhMilestone[]>,
     closed: new Set<string>(),
+    /** Issues `gh issue view` fails on, `owner/repo#n`. */
+    failView: new Set<string>(),
     failGit: ``,
   }
   const env: Record<string, string> = {
@@ -91,6 +93,7 @@ async function machine(
       )
       return result(JSON.stringify(open))
     }
+    if (github.failView.has(`${repo}#${args[2]}`)) return result(``, false)
     const found = (github.issues[repo] ?? []).find((i) => String(i.number) === args[2])
     const closed = !found || github.closed.has(`${repo}#${args[2]}`)
     return result(JSON.stringify({ ...found, state: closed ? `CLOSED` : `OPEN` }))
@@ -495,6 +498,7 @@ Deno.test(`an alert push that the secret scan flags carries no model text`, asyn
 
 const FINANCY = `spy4x/financy`
 const DOTFILES = `spy4x/dotfiles`
+const SEED = `spy4x/seed`
 
 Deno.test(`the plan takes p1, then tooling, then the due-first open milestone, then the backlog`, async () => {
   const m = await machine()
@@ -1078,7 +1082,7 @@ Deno.test(`a continuation that lost the last slot to another start is not counte
   }
 })
 
-Deno.test(`an old queue gains the handoff column and keeps its rows`, async () => {
+Deno.test(`an old queue gains the handoff and waits_on columns and keeps its rows`, async () => {
   const m = await machine()
   try {
     await Deno.mkdir(m.env.AGENT_RUN_HOME, { recursive: true })
@@ -1091,8 +1095,8 @@ Deno.test(`an old queue gains the handoff column and keeps its rows`, async () =
     old.close()
     await main([`status`], m.deps)
     await main([`status`], m.deps)
-    assertEquals(m.sql(`SELECT issue, handoff FROM queue`), [
-      { issue: `spy4x/financy#1`, handoff: null },
+    assertEquals(m.sql(`SELECT issue, handoff, waits_on FROM queue`), [
+      { issue: `spy4x/financy#1`, handoff: null, waits_on: null },
     ])
   } finally {
     await m.cleanup()
@@ -1223,6 +1227,72 @@ Deno.test(`a declined item comes back once its issue is updated on GitHub, not b
       (await main([`status`, started(back.output), `--json`], m.deps)).output,
     )
     assertEquals(run.issue, `${FINANCY}#1`)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a declined item comes back once an issue it waits on closes, not before`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    m.github.issues[SEED] = [issue(96)]
+    const id = started((await main([`tick`], m.deps)).output)
+    await m.end(id, {
+      status: `declined`,
+      summary: `Needs the seed release first.`,
+      waits_on: [`${SEED}#96`, `not a ref`],
+    })
+    assertEquals(m.sql(`SELECT waits_on FROM queue WHERE issue = '${FINANCY}#1'`), [
+      { waits_on: JSON.stringify([`${SEED}#96`]) },
+    ])
+    const digest = (await main([`report`, `--since`, `24h`], m.deps)).output
+    assertMatch(
+      digest,
+      new RegExp(
+        `^Declined\n- ${FINANCY}#1 \\(waits on ${SEED}#96\\): ` +
+          `run ${id} wrote "Needs the seed release first\\."$`,
+        `m`,
+      ),
+    )
+    m.later(31)
+    await m.end(started((await main([`tick`], m.deps)).output), {})
+    m.later(31)
+    // #96 is still open and #1 has not changed: nothing queued.
+    assertMatch((await main([`tick`], m.deps)).output, /tick: no queued item/)
+    m.github.closed.add(`${SEED}#96`)
+    m.later(31)
+    const back = await main([`tick`], m.deps)
+    const [run] = JSON.parse(
+      (await main([`status`, started(back.output), `--json`], m.deps)).output,
+    )
+    assertEquals(run.issue, `${FINANCY}#1`)
+    assertEquals(m.sql(`SELECT waits_on FROM queue WHERE issue = '${FINANCY}#1'`), [
+      { waits_on: null },
+    ])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a declined item stays declined when gh cannot read the issue it waits on`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2)]
+    // A bare `#3` is an issue of the item's own repository.
+    await m.end(started((await main([`tick`], m.deps)).output), {
+      status: `declined`,
+      waits_on: [`#3`],
+    })
+    m.later(31)
+    await m.end(started((await main([`tick`], m.deps)).output), {})
+    m.github.failView.add(`${FINANCY}#3`)
+    m.later(31)
+    // The fake gh shows an unknown issue as closed, so only the error keeps #1 out.
+    assertMatch((await main([`tick`], m.deps)).output, /tick: no queued item/)
+    assertEquals(m.sql(`SELECT status, waits_on FROM queue WHERE issue = '${FINANCY}#1'`), [
+      { status: `declined`, waits_on: JSON.stringify([`${FINANCY}#3`]) },
+    ])
   } finally {
     await m.cleanup()
   }
@@ -1456,6 +1526,7 @@ function digestOf(runs: Run[]): string {
     notes: new Map(),
     done: [],
     blocked: [],
+    declined: [],
     lessons: [],
     slow: [],
     todayMicros: 0,
@@ -1497,6 +1568,7 @@ Deno.test(`a multi-line blocked reason, lesson, slow step or pause reason forges
     notes: new Map(),
     done: [],
     blocked: [{ issue: `spy4x/financy#2`, reason: forged, runId: RUN.id }],
+    declined: [],
     lessons: [{ kind: `stall`, minutes: 5, tokens: null, detail: forged, runId: RUN.id }],
     slow: [{ tool: `Bash`, summary: forged, sec: 600 }],
     todayMicros: 0,

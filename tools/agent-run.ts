@@ -46,6 +46,7 @@ import {
   claim,
   failAttempt,
   getMeta,
+  issueRefs,
   itemOfRun,
   listIssues,
   listMilestones,
@@ -130,6 +131,7 @@ export const RESULT_SCHEMA = {
     alert: { type: [`string`, `null`] },
     good_news: { type: [`string`, `null`] },
     handoff: { type: [`string`, `null`] },
+    waits_on: { type: `array`, items: { type: `string` } },
   },
   required: [
     `status`,
@@ -180,6 +182,8 @@ export interface RunResult {
   good_news?: string | null
   /** A parked run's full handoff (the `wave` skill, "The handoff") for the next run. */
   handoff?: string | null
+  /** A declined run's prerequisites, `owner/repo#n` each; `issueRefs` checks them. */
+  waits_on?: string[]
   subtype?: string
 }
 
@@ -413,6 +417,7 @@ export interface Digest {
   notes: Map<string, string[]>
   done: { issue: string; title: string; prs: string[] }[]
   blocked: { issue: string; reason: string | null; runId: string | null }[]
+  declined: { issue: string; reason: string | null; runId: string | null; waitsOn: string[] }[]
   lessons: {
     kind: string
     minutes: number | null
@@ -444,7 +449,8 @@ export function goalText(span: string, merged: number, micros: number): string {
 
 /**
  * The digest: achievements first, then spend against the daily budget and the goal metric,
- * failures, bottlenecks, whether the loop is paused, and each run of the window with its notes.
+ * failures, declined items with what they wait on, bottlenecks, whether the loop is paused, and
+ * each run of the window with its notes.
  * What a run wrote is quoted with its id (see `quoted`).
  */
 export function digestText(d: Digest): string {
@@ -476,6 +482,14 @@ export function digestText(d: Digest): string {
       out.push(
         `- blocked ${item.issue}: ${item.reason ? quoted(item.runId, item.reason) : `no reason`}`,
       )
+    }
+  }
+  if (d.declined.length > 0) {
+    out.push(``, `Declined`)
+    for (const item of d.declined) {
+      const waits = item.waitsOn.length > 0 ? ` (waits on ${item.waitsOn.join(`, `)})` : ``
+      const reason = item.reason ? quoted(item.runId, item.reason) : `no reason`
+      out.push(`- ${item.issue}${waits}: ${reason}`)
     }
   }
   if (d.lessons.length > 0 || d.slow.length > 0) {
@@ -638,7 +652,7 @@ ${QUEUE_SCHEMA}`
 /**
  * Open the run database under the state home, creating it and its schema. A database from before
  * the weekly share was removed loses its `weekly_*` columns and keeps its rows; a queue from before
- * handoffs gains its `handoff` column.
+ * handoffs gains its `handoff` column, and one from before prerequisites its `waits_on` column.
  */
 export async function openDb(deps: Deps): Promise<SqliteDb> {
   const home = stateHome(deps)
@@ -659,6 +673,9 @@ export async function openDb(deps: Deps): Promise<SqliteDb> {
   const queue = await db.queryAll(`PRAGMA table_info(queue)`)
   if (!queue.some((column) => column.name === `handoff`)) {
     await db.exec(`ALTER TABLE queue ADD COLUMN handoff TEXT`)
+  }
+  if (!queue.some((column) => column.name === `waits_on`)) {
+    await db.exec(`ALTER TABLE queue ADD COLUMN waits_on TEXT`)
   }
   return db
 }
@@ -1171,8 +1188,10 @@ async function settleItem(db: SqliteDb, deps: Deps, run: Run) {
     const reason = run.result?.needs_owner ?? summary
     await setItem(db, deps, item.issue, { status: `blocked`, reason, handoff })
   } else if (run.status === `declined`) {
-    // Not startable yet: out of the queue, no attempt counted, back once the issue changes.
-    await setItem(db, deps, item.issue, { status: `declined`, reason: summary, handoff })
+    // Not startable yet: out of the queue, no attempt counted, back once the issue changes or
+    // an issue it waits on closes.
+    const waitsOn = issueRefs(run.result?.waits_on, item.issue)
+    await setItem(db, deps, item.issue, { status: `declined`, reason: summary, handoff, waitsOn })
   } else if (run.status === `stopped`) {
     await setItem(db, deps, item.issue, { status: `queued`, reason: `stopped`, handoff })
   } else await failAttempt(db, deps, item, `${run.status}: ${summary ?? `no answer`}`, handoff)
@@ -1834,6 +1853,16 @@ async function report(deps: Deps, flags: Map<string, string[]>): Promise<Outcome
       reason: (row.reason as string | null) ?? null,
       runId: (row.run_id as string | null) ?? null,
     }))
+    const declined = (await db.queryAll(
+      `SELECT issue, reason, run_id, waits_on FROM queue WHERE status = 'declined'
+        AND updated_at >= ? ORDER BY updated_at`,
+      iso,
+    )).map((row) => ({
+      issue: row.issue as string,
+      reason: (row.reason as string | null) ?? null,
+      runId: (row.run_id as string | null) ?? null,
+      waitsOn: row.waits_on ? JSON.parse(row.waits_on as string) as string[] : [],
+    }))
     const lessons = (await db.queryAll(
       `SELECT kind, minutes, tokens, detail, run_id FROM lessons WHERE status = 'open'
         ORDER BY minutes DESC NULLS LAST, at DESC LIMIT 5`,
@@ -1863,6 +1892,7 @@ async function report(deps: Deps, flags: Map<string, string[]>): Promise<Outcome
       notes,
       done,
       blocked,
+      declined,
       lessons,
       slow,
       todayMicros: await todayMicros(db, deps),
