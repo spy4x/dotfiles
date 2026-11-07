@@ -58,6 +58,14 @@ const SECURITY_HEADERS = {
 }
 
 /**
+ * `ALLOWED_HOSTS` as a list: comma-separated, each entry trimmed, empty entries dropped, so an
+ * unset or empty value adds no Host. Entries match exactly, case and port included.
+ */
+export function parseAllowedHosts(value: string | undefined): string[] {
+  return (value ?? ``).split(`,`).map((host) => host.trim()).filter(Boolean)
+}
+
+/**
  * The request handler. A Host other than `127.0.0.1:<port>`, `localhost:<port>` or one of
  * `allowedHosts` gets 403, so a page on another site that rebinds its name to this machine cannot
  * read the dashboard.
@@ -66,7 +74,8 @@ export function createHandler(options: DashboardOptions): (request: Request) => 
   const allowedHosts = new Set([
     `127.0.0.1:${options.port}`,
     `localhost:${options.port}`,
-    ...(options.allowedHosts ?? []),
+    // An empty entry would let a request with an empty or missing Host through.
+    ...(options.allowedHosts ?? []).filter(Boolean),
   ])
   const now = options.now ?? Date.now
   let compiler: Promise<Compiler> | null = null

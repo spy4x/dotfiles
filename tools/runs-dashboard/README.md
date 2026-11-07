@@ -14,6 +14,8 @@ deno task runs-dashboard   # then open http://127.0.0.1:8787; Ctrl+C stops it
   `127.0.0.1:<port>` or `localhost:<port>` gets 403, so another site cannot read the page through
   DNS rebinding. `ALLOWED_HOSTS` adds comma-separated `Host` values to accept, for a proxy that
   forwards a public name (the homelab publishes it as `runs.antonshubin.com` through Pangolin).
+  Each entry matches the `Host` header exactly, case and port included: `runs.example.com` does
+  not accept `Runs.example.com` or `runs.example.com:443`. Empty entries are ignored.
 - Started on demand here; on portable the homelab's `runs-dashboard.service` keeps it running.
 - Each card runs its own query, so a missing view blanks that card only. It never shows prompt or
   tool-output text.

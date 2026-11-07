@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite"
 import { openReadOnly } from "./data.ts"
 import { createFixture } from "./fixture.ts"
 import { usd } from "./page.tsx"
-import { createHandler } from "./server.ts"
+import { createHandler, parseAllowedHosts } from "./server.ts"
 
 // Local noon, so the fixture's runs from 0.5 to 9 hours ago fall on today in any time zone.
 const NOW = new Date(2026, 10, 6, 12).getTime()
@@ -88,6 +88,27 @@ Deno.test(`a request with another Host header gets 403`, async () => {
     for (const host of [`127.0.0.1:${PORT}`, `localhost:${PORT}`]) {
       const response = await get(path, host)
       assertEquals(response.status, 200, host)
+      await response.body?.cancel()
+    }
+  })
+})
+
+Deno.test(`ALLOWED_HOSTS keeps trimmed entries and drops empty ones`, () => {
+  assertEquals(parseAllowedHosts(undefined), [])
+  assertEquals(parseAllowedHosts(``), [])
+  assertEquals(parseAllowedHosts(` runs.example.com , ,Runs.example.com:443,`), [
+    `runs.example.com`,
+    `Runs.example.com:443`,
+  ])
+})
+
+Deno.test(`an empty or unset ALLOWED_HOSTS lets no empty Host through`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    for (const allowed of [parseAllowedHosts(undefined), parseAllowedHosts(` , `), [``]]) {
+      const request = new Request(`http://127.0.0.1:${PORT}/`, { headers: { host: `` } })
+      const response = await handlerFor(path, allowed)(request)
+      assertEquals(response.status, 403, JSON.stringify(allowed))
       await response.body?.cancel()
     }
   })
