@@ -1,8 +1,0 @@
-# Pushes the digest of the last day: achievements, spend, failures and bottlenecks. Runs from
-# agent-report.timer. See docs/headless-runs.md.
-[Unit]
-Description=Push the background lead digest
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/env deno run -A %h/sync/code/dotfiles/tools/agent-run.ts report --since 24h --ntfy

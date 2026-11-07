@@ -62,7 +62,7 @@ each stack's `aiCanUse` and `aiNotes` in `servers/<server>/config.json`; never e
 - `aiCanUse: false` → never use it.
 
 To notify me, publish to ntfy with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account
-tokens. A headless run notifies through `agent-run push` instead (`docs/headless-runs.md`).
+tokens. A headless run notifies through `agent-run push` instead (ringmaster `docs/headless-runs.md`).
 
 A new self-hosted service goes into homelab as a rostok stack: into the rostok catalog first, then
 `rostok stack add` and `rostok deploy`. Each one:

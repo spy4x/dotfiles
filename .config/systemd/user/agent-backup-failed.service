@@ -1,8 +1,0 @@
-# Sends an urgent push when agent-backup.service fails. Started by that unit's OnFailure.
-# Setup: docs/sync.md.
-[Unit]
-Description=Push that the agent-run database backup failed
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/env deno run -A %h/sync/code/dotfiles/tools/agent-run.ts push --urgent --title "Run database backup failed" "Read why: journalctl --user -u agent-backup.service -n 30"
