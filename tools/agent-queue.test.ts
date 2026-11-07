@@ -1,5 +1,13 @@
-import { assertEquals } from "jsr:@std/assert@1.0.19"
-import { buildPlan, buildPlans, byDue, focusRepos, isCandidate, type Issue } from "./agent-queue.ts"
+import { assert, assertEquals } from "jsr:@std/assert@1.0.19"
+import {
+  buildPlan,
+  buildPlans,
+  byDue,
+  focusRepos,
+  isCandidate,
+  type Issue,
+  urgentHash,
+} from "./agent-queue.ts"
 
 const issue = (number: number, labels: string[] = [], milestone?: string): Issue => ({
   number,
@@ -8,6 +16,7 @@ const issue = (number: number, labels: string[] = [], milestone?: string): Issue
   author: { login: `spy4x` },
   milestone: milestone ? { title: milestone } : null,
   createdAt: `2026-11-${String(number).padStart(2, `0`)}T00:00:00Z`,
+  updatedAt: `2026-11-${String(number).padStart(2, `0`)}T00:00:00Z`,
 })
 
 Deno.test(`the focus repositories are the one-word bold names under "Focus now", in order`, () => {
@@ -66,4 +75,56 @@ Deno.test(`several focus repositories plan each in its own order, as listed, no 
   const dotfiles = { repo: `spy4x/dotfiles`, issues: tooling, milestones: [] }
   const twice = buildPlans([financy, dotfiles], tooling, new Map(), new Set())
   assertEquals(twice.filter((c) => c.issue === `spy4x/dotfiles#5`).length, 1)
+})
+
+Deno.test(`the backlog holds only issues in no milestone, never one from a later milestone`, () => {
+  const focus = {
+    repo: `spy4x/financy`,
+    issues: [
+      issue(1, [], `Now`),
+      issue(2, [], `Later`),
+      issue(3, [`p3-medium`], `Later`),
+      issue(4),
+    ],
+    milestones: [
+      { number: 1, title: `Now`, due_on: `2026-11-20T00:00:00Z` },
+      { number: 2, title: `Later`, due_on: null },
+    ],
+  }
+  assertEquals(buildPlan(focus, [], new Map(), new Set()), [
+    { issue: `spy4x/financy#1`, title: `Issue 1`, source: `milestone:Now` },
+    { issue: `spy4x/financy#4`, title: `Issue 4`, source: `backlog` },
+  ])
+})
+
+Deno.test(`a milestone whose only issue was declined falls through to the next one`, () => {
+  const focus = {
+    repo: `spy4x/financy`,
+    issues: [issue(1, [], `Now`), issue(2, [], `Later`)],
+    milestones: [
+      { number: 1, title: `Now`, due_on: `2026-11-20T00:00:00Z` },
+      { number: 2, title: `Later`, due_on: null },
+    ],
+  }
+  const statuses = new Map([[`spy4x/financy#1`, `declined`]])
+  assertEquals(buildPlan(focus, [], statuses, new Set()).map((c) => c.source), [
+    `milestone:Later`,
+  ])
+})
+
+Deno.test(`the urgent hash changes with a new p1-critical or p2-high tooling issue only`, async () => {
+  const focus = [{ repo: `spy4x/financy`, issues: [issue(1)], milestones: [] }]
+  const base = await urgentHash(focus, [issue(5, [`p2-high`])])
+  assertEquals(await urgentHash(focus, [issue(5, [`p2-high`]), issue(6, [`p3-medium`])]), base)
+  assertEquals(
+    await urgentHash(focus, [issue(5, [`p2-high`]), issue(6, [`manual`, `p2-high`])]),
+    base,
+  )
+  assert(await urgentHash(focus, [issue(5, [`p2-high`]), issue(6, [`p2-high`])]) !== base)
+  assert(await urgentHash(focus, [issue(5, [`p2-high`]), issue(6, [`p1-critical`])]) !== base)
+  const critical = [{ ...focus[0], issues: [issue(1), issue(2, [`p1-critical`])] }]
+  assert(await urgentHash(critical, [issue(5, [`p2-high`])]) !== base)
+  // A p2-high issue in a focus repository other than spy4x/dotfiles is no tooling fix.
+  const high = [{ ...focus[0], issues: [issue(1), issue(2, [`p2-high`])] }]
+  assertEquals(await urgentHash(high, [issue(5, [`p2-high`])]), base)
 })
