@@ -1082,7 +1082,7 @@ Deno.test(`a continuation that lost the last slot to another start is not counte
   }
 })
 
-Deno.test(`an old queue gains the handoff column and keeps its rows`, async () => {
+Deno.test(`an old queue gains the handoff and waits_on columns and keeps its rows`, async () => {
   const m = await machine()
   try {
     await Deno.mkdir(m.env.AGENT_RUN_HOME, { recursive: true })
@@ -1095,8 +1095,8 @@ Deno.test(`an old queue gains the handoff column and keeps its rows`, async () =
     old.close()
     await main([`status`], m.deps)
     await main([`status`], m.deps)
-    assertEquals(m.sql(`SELECT issue, handoff FROM queue`), [
-      { issue: `spy4x/financy#1`, handoff: null },
+    assertEquals(m.sql(`SELECT issue, handoff, waits_on FROM queue`), [
+      { issue: `spy4x/financy#1`, handoff: null, waits_on: null },
     ])
   } finally {
     await m.cleanup()
