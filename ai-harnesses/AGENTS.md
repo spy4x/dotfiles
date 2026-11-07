@@ -366,9 +366,9 @@ new dependency once with network access and committing the result. `CI=true` doe
 lockfile, so every Dockerfile installs with `deno install --frozen`, and CI either does the same or
 fails when a run changed `deno.lock`.
 
-A checkout whose only uncommitted change is a lockfile (`deno.lock`, `package-lock.json` and the
-like) → discard it with `git checkout -- <file>` and carry on; never report or file it. It is
-leftover resolution from a run, and the committed lockfile is the source.
+A checkout you find whose only uncommitted change is a lockfile (`deno.lock`, `package-lock.json`
+and the like) that your task did not make → discard it with `git checkout -- <file>` and carry
+on; never report or file it. The committed lockfile is the source.
 
 Integration tests that share services, fake binaries on `PATH`, browser and accessibility checks,
 and when test tooling may change: the `tests` skill.
