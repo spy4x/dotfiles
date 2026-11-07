@@ -3,6 +3,7 @@ import { join } from "jsr:@std/path@^1.0.0"
 import { DatabaseSync } from "node:sqlite"
 import { openReadOnly } from "./data.ts"
 import { createFixture } from "./fixture.ts"
+import { usd } from "./page.tsx"
 import { createHandler } from "./server.ts"
 
 // Local noon, so the fixture's runs from 0.5 to 9 hours ago fall on today in any time zone.
@@ -133,7 +134,7 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     const html = await response.text()
     for (
       const title of [
-        `Today`,
+        `Today's budget`,
         `Spend per day, 30 days`,
         `Lead runs`,
         `Queue`,
@@ -146,6 +147,10 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     has(html, /Import bank statements from CSV/)
     has(html, />\$171 of \$200</)
     has(html, /1 blocked · 2 queued · 1 claimed · 1 done · 1 dropped/)
+    // Run 309 failed and cost over $100: one banner line names it once, with both facts.
+    has(html, /Run #309<\/a> failed and cost \$104\./)
+    assertEquals(html.split(`href="#run-019a5f00-0000-7000-8000-000000000309"`).length - 1, 1)
+    has(html, /child of run #309/)
     // The stylesheet carries the theme and the classes the page uses.
     has(html, /--color-foreground: oklch\(0\.13 /)
     has(html, /\.pc-card/)
@@ -209,4 +214,8 @@ Deno.test(`titles from the database render escaped`, async () => {
     lacks(html, /<script>x\(\)/)
     has(html, /&lt;script>x\(\)/)
   })
+})
+
+Deno.test(`dollars show cents below $10, and zero as $0`, () => {
+  assertEquals([usd(0), usd(4.2), usd(142)], [`$0`, `$4.20`, `$142`])
 })

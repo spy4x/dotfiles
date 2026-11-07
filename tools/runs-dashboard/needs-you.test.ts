@@ -39,14 +39,24 @@ Deno.test(`today's spend of $200 or more is urgent; just under $200 is not`, () 
   assertEquals(kinds({ todayUsd: 199.99 }), undefined)
 })
 
+const runLines = (runs: BannerRun[]) =>
+  needsYou({ ...fine, runs })?.items.map((item) =>
+    item.kind === `run` ? [item.run.id, item.failed, item.expensive] : item.kind
+  )
+
 Deno.test(`a run over $100 or a failed run in the last 24 hours is listed; older ones are not`, () => {
-  assertEquals(kinds({ runs: [run({ costUsd: 104 })] }), [`expensive-run`])
-  assertEquals(kinds({ runs: [run({ status: `timeout` })] }), [`failed-run`])
+  assertEquals(runLines([run({ costUsd: 104 })]), [[`r1`, false, true]])
+  assertEquals(runLines([run({ status: `timeout` })]), [[`r1`, true, false]])
   assertEquals(
     kinds({ runs: [run({ status: `failed`, costUsd: 104, startedAt: hoursAgo(25) })] }),
     undefined,
   )
   assertEquals(kinds({ runs: [run({ status: `blocked` })] }), undefined)
+})
+
+Deno.test(`a run that failed and cost over $100 is named once`, () => {
+  const runs = [run({ status: `failed`, costUsd: 104 }), run({ id: `r2`, costUsd: 120 })]
+  assertEquals(runLines(runs), [[`r1`, true, true], [`r2`, false, true]])
 })
 
 Deno.test(`blocked queue items, recent stalls and a stale import warn without being urgent`, () => {
