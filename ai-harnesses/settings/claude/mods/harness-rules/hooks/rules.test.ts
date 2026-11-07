@@ -348,6 +348,12 @@ test(`refuses a relative body file when the shell may post it from another folde
       `cd ~/.. && gh pr comment 5 -F f.md`,
       `cd "" && gh pr comment 5 -F f.md`,
       `cd =ls && gh pr comment 5 -F f.md`,
+      // A zsh glob qualifier runs code in the shell, even in a folder-keeping command's words.
+      `echo /(e:'cd /etc':) && gh issue comment 1 --repo a/b --body-file b.md`,
+      `cat /(e:'cd /etc':) && gh issue comment 1 --repo a/b --body-file b.md`,
+      `echo hi >/(e:'cd /etc':)x && gh issue comment 1 --repo a/b --body-file b.md`,
+      `gh issue comment 1 --repo /(e:'cd /etc':) --body-file b.md`,
+      `R=(/(e:'cd /etc':)) && gh issue comment 1 --repo a/b --body-file b.md`,
       `cd "$FOO" && gh pr comment 5 -F f.md`,
       `cd "$FOO" && cd sub && gh pr comment 5 -F f.md`,
       `cd "$(mktemp -d)" && gh pr comment 5 -F f.md`,

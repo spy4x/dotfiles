@@ -616,7 +616,7 @@ export function ghPost(command: string): GhPost {
       const full = expandVars(path, vars)
       poster = { command: simple, paths: [path, full] }
       // A path that still holds a variable is refused by the caller.
-      relative = !/^[/$`~]/.test(full)
+      relative = !/^[/~]|[$`]/.test(full)
       if (inMade(full, made)) found = { kind: `fresh` }
       else if (!relative || dir === undefined) found = { kind: `file`, path: full }
       else {
@@ -652,15 +652,29 @@ export function ghPost(command: string): GhPost {
 const HOME_SET = /(?<!\$|\$\{)\bHOME\b/
 
 /**
- * Commands that never change the shell's folder: programs, and builtins that do not. Any other
- * may: `eval`, `source`, `pushd`, a function or alias (`take`, oh-my-zsh's `1`), a directory name
- * run as a command (zsh `autocd`), a loop or `if` around a `cd`.
+ * Commands that do not change the shell's folder themselves: programs, and builtins that do not.
+ * Their words still can, before they run: a zsh glob qualifier runs code in the shell
+ * (`echo /(e:'cd /etc':)`), so `folderKept` also needs every word plain. Any other command may
+ * change it: `eval`, `source`, `pushd`, a function or alias (`take`, oh-my-zsh's `1`), a directory
+ * name run as a command (zsh `autocd`), a loop or `if` around a `cd`.
  */
 const FOLDER_KEEPERS = [`cat`, `echo`, `printf`, `mkdir`, `true`, `test`, `[`, `git`, `gh`]
 
 /**
+ * A word the shell runs no code for: literal characters, after a redirect's `>` or `>>`. A space
+ * stands for a quoted word; `(`, `$`, a backtick and globs never pass.
+ */
+const PLAIN_WORD = /^(?:[\w./@%+,: -][\w./@%+,:= -]*)?$/
+
+/** Whether `word` is plain (`PLAIN_WORD`), or `[` and `]` of a `test`. */
+function plainWord(word: string): boolean {
+  return word === `[` || word === `]` || PLAIN_WORD.test(word.replace(REDIRECT, ``))
+}
+
+/**
  * Whether the post runs in the folder the guard placed its relative body file in: every other
- * command is a followed `cd`, an assignment, or one of `FOLDER_KEEPERS`; no prefix moves the post
+ * command is a followed `cd`, or an assignment or one of `FOLDER_KEEPERS` whose words, like the
+ * post's, are all plain (`plainWord`); no prefix moves the post
  * (`env -C`, `sudo --chdir`); no `cdpath` steers a `cd`; and no arithmetic (`(( 1 <<X ))`) hides
  * lines the shell runs inside what reads as a heredoc.
  */
@@ -675,11 +689,13 @@ function folderKept(
   if (poster.words.slice(0, gh).some((word) => /^(?:--chdir|-[A-Za-z]*[CD])/.test(word))) {
     return false
   }
-  return commands.every((simple) =>
-    simple === poster || followed.has(simple) ||
-    (simple.words.length > 0 && simple.words.every((word) => /^[A-Za-z_]\w*=/.test(word))) ||
-    FOLDER_KEEPERS.includes(commandProper(simple.words)[0] ?? ``)
-  )
+  return commands.every((simple) => {
+    const { words } = simple
+    if (followed.has(simple)) return true
+    if (!words.every(plainWord)) return false
+    return simple === poster || FOLDER_KEEPERS.includes(commandProper(words)[0] ?? ``) ||
+      (words.length > 0 && words.every((word) => /^[A-Za-z_]\w*=/.test(word)))
+  })
 }
 
 /**
