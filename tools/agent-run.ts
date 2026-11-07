@@ -53,6 +53,7 @@ import {
   readDirection,
   readFocus,
   recheck,
+  release,
   replan,
   replanReason,
   setItem,
@@ -626,7 +627,8 @@ async function getRun(db: SqliteDb, id: string): Promise<Run | null> {
 
 /**
  * The runs still going. A row marked running whose unit is gone (it died before `finish` ran) is
- * closed here as stopped or failed, so it never blocks later starts.
+ * closed here as stopped or failed and its queue item settled, so it never blocks later starts
+ * nor holds its item until the lease runs out.
  */
 async function activeRuns(db: SqliteDb, deps: Deps): Promise<Run[]> {
   const rows = await db.queryAll(`SELECT * FROM runs WHERE status = 'running' ORDER BY started_at`)
@@ -653,15 +655,29 @@ async function activeRuns(db: SqliteDb, deps: Deps): Promise<Run[]> {
       run.id,
     )
     await addEvent(db, deps, run.id, `end`, `${status} (unit ${state} without finish)`)
+    await settleItem(db, deps, { ...run, status })
   }
   return active
 }
 
-async function insertRun(db: SqliteDb, run: Run): Promise<void> {
-  await db.execute(
+/**
+ * SQL that holds while a run of mode `?` (first parameter) may take a lead slot: it is no lead, or
+ * fewer than `?` (third) leads other than run `?` (second) are running.
+ */
+const LEAD_ROOM = `(? != ${Mode.Lead} OR (SELECT COUNT(*) FROM runs
+  WHERE status = 'running' AND mode = ${Mode.Lead} AND id IS NOT ?) < ?)`
+
+/** Insert `run` when `LEAD_ROOM` holds; returns whether it did. */
+async function insertRun(
+  db: SqliteDb,
+  run: Run,
+  exclude: string | null,
+  maxLeads: number,
+): Promise<boolean> {
+  const { changes } = await db.execute(
     `INSERT INTO runs (id, name, mode, model, effort, cwd, parent, issue, deadline_sec, budget_usd,
       max_turns, allow, started_at, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${LEAD_ROOM}`,
     run.id,
     run.name,
     run.mode,
@@ -676,7 +692,11 @@ async function insertRun(db: SqliteDb, run: Run): Promise<void> {
     JSON.stringify(run.allow),
     run.startedAt,
     run.status,
+    run.mode,
+    exclude,
+    maxLeads,
   )
+  return Number(changes) === 1
 }
 
 async function addEvent(db: SqliteDb, deps: Deps, id: string, kind: string, detail: string) {
@@ -809,7 +829,7 @@ async function startRun(deps: Deps, flags: Map<string, string[]>): Promise<Outco
     }
     const why = await checkStart(db, deps, run, handoffFrom)
     if (why) return refuse(why)
-    return await launch(db, deps, run, brief, false)
+    return await launch(db, deps, run, brief, false, handoffFrom, await leadLimit(db))
   } finally {
     await db.close()
   }
@@ -837,9 +857,13 @@ async function checkStart(
   return await whyNot(run, active, deps, exclude, await leadLimit(db)) ?? await usageStop(deps)
 }
 
-/** How many lead runs may run at once: the stored `agent-run limit --leads`, else `MAX_LEADS`. */
+/**
+ * How many lead runs may run at once: the stored `agent-run limit --leads`, else `MAX_LEADS`. A
+ * stored value that is no whole number from 1 counts as unset.
+ */
 async function leadLimit(db: SqliteDb): Promise<number> {
-  return Number(await getMeta(db, `max_leads`) ?? MAX_LEADS)
+  const stored = await getMeta(db, `max_leads`)
+  return stored && /^[1-9]\d*$/.test(stored) ? Number(stored) : MAX_LEADS
 }
 
 /** `agent-run limit [--leads <n>]`: store a new lead limit when given, then print the limit. */
@@ -857,22 +881,51 @@ async function limitCommand(deps: Deps, flags: Map<string, string[]>): Promise<O
   }
 }
 
-async function launch(db: SqliteDb, deps: Deps, run: Run, brief: string, resume: boolean) {
+/**
+ * Insert `run` (or reopen it, resuming) and start its unit. A lead gets in only while fewer than
+ * `maxLeads` leads other than `exclude` are running. That count and the write are one SQL
+ * statement, and SQLite takes its write lock before such a statement reads, so two ticks or starts
+ * at once never both take the last slot; a lost race is refused with code 2. A failed
+ * `systemd-run` ends the run `failed`, gives its claimed queue item back and counts toward the
+ * pause after two failed tick runs.
+ */
+async function launch(
+  db: SqliteDb,
+  deps: Deps,
+  run: Run,
+  brief: string,
+  resume: boolean,
+  exclude: string | null,
+  maxLeads: number,
+): Promise<Outcome> {
+  const room = resume
+    ? Number(
+      (await db.execute(
+        `UPDATE runs SET status = 'running', ended_at = NULL WHERE id = ? AND ${LEAD_ROOM}`,
+        run.id,
+        run.mode,
+        exclude,
+        maxLeads,
+      )).changes,
+    ) === 1
+    : await insertRun(db, run, exclude, maxLeads)
+  if (!room) return refuse(`${maxLeads} lead run(s) already active`)
   const dir = join(stateHome(deps), run.id)
   await deps.fs.mkdirp(dir)
   await deps.run([`chmod`, `700`, stateHome(deps), dir])
   await deps.fs.writeText(join(dir, `prompt.md`), brief, { mode: 0o600 })
   await deps.fs.appendText(join(dir, `brief.md`), `${brief}\n\n---\n\n`)
-  if (resume) {
-    await db.execute(`UPDATE runs SET status = 'running', ended_at = NULL WHERE id = ?`, run.id)
-  } else {
-    await insertRun(db, run)
-  }
   await addEvent(db, deps, run.id, resume ? `resume` : `start`, brief.slice(0, 300))
   const started = await deps.run(unitCommand(run, deps))
   if (!started.success) {
-    await db.execute(`UPDATE runs SET status = 'failed' WHERE id = ?`, run.id)
+    await db.execute(
+      `UPDATE runs SET status = 'failed', ended_at = ? WHERE id = ?`,
+      deps.now().toISOString(),
+      run.id,
+    )
     await addEvent(db, deps, run.id, `error`, started.stderr.slice(0, 500))
+    await release(db, deps, run.id)
+    if (run.name === `tick`) await pauseOnTwoFailures(db, deps, (await getRun(db, run.id))!)
     return { code: 1, output: `systemd-run failed: ${started.stderr}` }
   }
   return ok(JSON.stringify({ id: run.id, unit: unitName(run.id) }))
@@ -899,7 +952,7 @@ async function resumeRun(deps: Deps, id: string, flags: Map<string, string[]>): 
       run.budgetUsd,
       id,
     )
-    return await launch(db, deps, run, brief, true)
+    return await launch(db, deps, run, brief, true, id, await leadLimit(db))
   } finally {
     await db.close()
   }
@@ -1041,17 +1094,18 @@ async function settleItem(db: SqliteDb, deps: Deps, run: Run) {
   const item = await itemOfRun(db, run.id)
   if (!item || item.status !== `claimed`) return item
   const summary = run.result?.summary ?? null
+  // The item keeps its last handoff unless this run wrote one; only `done` clears it.
+  const handoff = run.result?.handoff || undefined
   if (run.status === `done`) {
-    await setItem(db, deps, item.issue, { status: `done`, reason: summary })
+    await setItem(db, deps, item.issue, { status: `done`, reason: summary, handoff: null })
   } else if (run.status === `parked`) {
-    const handoff = run.result?.handoff ?? null
     await setItem(db, deps, item.issue, { status: `queued`, reason: summary, rank: 0, handoff })
   } else if (run.status === `blocked`) {
     const reason = run.result?.needs_owner ?? summary
-    await setItem(db, deps, item.issue, { status: `blocked`, reason })
+    await setItem(db, deps, item.issue, { status: `blocked`, reason, handoff })
   } else if (run.status === `stopped`) {
-    await setItem(db, deps, item.issue, { status: `queued`, reason: `stopped` })
-  } else await failAttempt(db, deps, item, `${run.status}: ${summary ?? `no answer`}`)
+    await setItem(db, deps, item.issue, { status: `queued`, reason: `stopped`, handoff })
+  } else await failAttempt(db, deps, item, `${run.status}: ${summary ?? `no answer`}`, handoff)
   return item
 }
 
@@ -1320,30 +1374,36 @@ async function uncontinued(db: SqliteDb): Promise<Run[]> {
 
 /**
  * `agent-tick.timer`, every 30 minutes: expire leases; stop when paused, the lead limit is reached,
- * today's budget is spent or usage is high; else fill each free lead slot, checking the budget and
- * usage again before each start. Parked lead runs that have a handoff and no queue item come
- * first, continued once each with their settings and their handoff as the brief; then the queue,
- * planned again when needed, gives lead runs on the next queued items that GitHub still confirms
- * and this tick claims first. A candidate `whyNot` refuses is skipped; a continuation's refusal is
- * recorded, so it is given up after `MAX_REFUSALS`. Every stop exits 0 and says why.
+ * today's budget is spent or usage is high (read once per tick); else fill each free lead slot,
+ * checking the budget again before each start. Parked lead runs that have a handoff and no queue
+ * item come first, continued once each with their settings and their handoff as the brief; then
+ * the queue, planned again when needed, gives lead runs on the next queued items that GitHub still
+ * confirms and this tick claims first. A candidate `whyNot` refuses is skipped; a continuation's
+ * refusal is recorded, so it is given up after `MAX_REFUSALS`. When another tick or start takes
+ * the last slot first, `launch` refuses: nothing is recorded against the candidate and the tick
+ * stops. Every stop exits 0 and says why.
  */
 async function tick(deps: Deps): Promise<Outcome> {
   const db = await openDb(deps)
   const lines: string[] = []
   const stop = (why: string) => ok([...lines, `tick: ${why}`].join(`\n`))
-  /** Why no more runs may start now: paused, the day's budget or the usage stops. */
-  const gate = async () => await loopStop(db, deps) ?? await usageStop(deps)
-  /** Start `run`; `null` when it started, else the outcome the tick ends with. */
-  const begin = async (run: Run, brief: string, label: string) => {
-    const started = await launch(db, deps, run, brief, false)
+  let limit = MAX_LEADS
+  /**
+   * Start `run`: `null` when it started, `full` when the lead slots filled since this tick counted
+   * them, else the outcome the tick ends with.
+   */
+  const begin = async (run: Run, brief: string, label: string, exclude: string | null) => {
+    const started = await launch(db, deps, run, brief, false, exclude, limit)
+    if (started.code === 2) return `full`
     lines.push(`tick: ${label}`, started.output)
     return started.code === 0 ? null : { code: started.code, output: lines.join(`\n`) }
   }
+  const full = `another run took the last lead slot`
   try {
     lines.push(...await expireLeases(db, deps))
     const loop = await loopStop(db, deps)
     if (loop) return stop(loop)
-    const limit = await leadLimit(db)
+    limit = await leadLimit(db)
     const leads = (await activeRuns(db, deps)).filter((run) => run.mode === Mode.Lead).length
     if (leads >= limit) {
       return stop(leads === 1 ? `a lead run is active` : `${leads} lead runs are active`)
@@ -1353,7 +1413,7 @@ async function tick(deps: Deps): Promise<Outcome> {
     let free = limit - leads
     for (const parked of await uncontinued(db)) {
       if (free === 0) return ok(lines.join(`\n`))
-      const gated = await gate()
+      const gated = await loopStop(db, deps)
       if (gated) return stop(gated)
       const run: Run = {
         ...parked,
@@ -1366,7 +1426,8 @@ async function tick(deps: Deps): Promise<Outcome> {
         turns: null,
         result: null,
       }
-      const refused = await whyNot(run, await activeRuns(db, deps), deps, parked.id, limit)
+      // The lead slots are counted by `launch`, where a full count is no refusal of this run.
+      const refused = await whyNot(run, await activeRuns(db, deps), deps, parked.id, Infinity)
       if (refused) {
         await addEvent(db, deps, parked.id, `refused`, refused)
         lines.push(`skipped continue ${parked.id}: ${refused}`)
@@ -1374,7 +1435,15 @@ async function tick(deps: Deps): Promise<Outcome> {
       }
       // Recorded before the start, so a crash or a failed unit never continues the run twice.
       await addEvent(db, deps, parked.id, `continued`, run.id)
-      const failed = await begin(run, parked.result!.handoff!, `continue ${parked.id}`)
+      const failed = await begin(run, parked.result!.handoff!, `continue ${parked.id}`, parked.id)
+      if (failed === `full`) {
+        await db.execute(
+          `DELETE FROM events WHERE run_id = ? AND kind = 'continued' AND detail = ?`,
+          parked.id,
+          run.id,
+        )
+        return stop(full)
+      }
       if (failed) return failed
       free--
     }
@@ -1390,11 +1459,12 @@ async function tick(deps: Deps): Promise<Outcome> {
       lines.push(`planned ${await replan(db, deps, direction.focusHash, focus)} item(s): ${why}`)
     }
     const before = free
+    let skipped = 0
     for (const item of await queueItems(db, `queued`)) {
       if (free === 0) break
       const bad = await recheck(deps, item)
       if (bad) {
-        await setItem(db, deps, item.issue, { status: `dropped`, reason: bad })
+        await setItem(db, deps, item.issue, { status: `dropped`, reason: bad, handoff: null })
         lines.push(`dropped ${item.issue}: ${bad}`)
         continue
       }
@@ -1405,11 +1475,12 @@ async function tick(deps: Deps): Promise<Outcome> {
         cwd: join(deps.home, `sync`, `code`),
         issue: item.issue,
       })
-      const gated = await gate()
+      const gated = await loopStop(db, deps)
       if (gated) return stop(gated)
-      const refused = await whyNot(run, await activeRuns(db, deps), deps, null, limit)
+      const refused = await whyNot(run, await activeRuns(db, deps), deps, null, Infinity)
       if (refused) {
         lines.push(`skipped ${item.issue}: ${refused}`)
+        skipped++
         continue
       }
       const brief = [
@@ -1428,14 +1499,19 @@ async function tick(deps: Deps): Promise<Outcome> {
       const lease = new Date(deps.now().getTime() + LEASE_MS)
       if (!await claim(db, deps, item.issue, run.id, lease)) {
         lines.push(`skipped ${item.issue}: another tick claimed it`)
+        skipped++
         continue
       }
-      const failed = await begin(run, brief, item.issue)
+      const failed = await begin(run, brief, item.issue, null)
+      if (failed === `full`) {
+        await release(db, deps, run.id)
+        return stop(full)
+      }
       if (failed) return failed
       free--
     }
     if (free < before) return ok(lines.join(`\n`))
-    return stop(`no queued item`)
+    return stop(skipped ? `${skipped} queued item(s) skipped, none started` : `no queued item`)
   } catch (error) {
     return { code: 1, output: [...lines, `tick failed: ${(error as Error).message}`].join(`\n`) }
   } finally {
@@ -1480,7 +1556,7 @@ async function retro(deps: Deps): Promise<Outcome> {
       `## Commands`,
       `agent-run is \`deno run -A ${SELF}\``,
     ].join(`\n\n`)
-    return await launch(db, deps, run, brief, false)
+    return await launch(db, deps, run, brief, false, null, MAX_LEADS)
   } finally {
     await db.close()
   }

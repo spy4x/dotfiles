@@ -655,13 +655,14 @@ Deno.test(`an expired lease counts a failed attempt, and two block the item`, as
   const m = await machine()
   try {
     m.github.issues[FINANCY] = [issue(1)]
+    // The run ended, but `finish` crashed before it settled the item.
+    const ended = (id: string) => m.sql(`UPDATE runs SET status = 'failed' WHERE id = '${id}'`)
     const first = started((await main([`tick`], m.deps)).output)
-    m.dead.add(`agent-run-${first}.service`)
+    ended(first)
     m.later(196)
     const again = await main([`tick`], m.deps)
     assertMatch(again.output, /lease expired: spy4x\/financy#1/)
-    const second = started(again.output)
-    m.dead.add(`agent-run-${second}.service`)
+    ended(started(again.output))
     m.later(196)
     assertMatch((await main([`tick`], m.deps)).output, /tick: no queued item/)
     const [item] = m.sql(`SELECT status, attempts, reason FROM queue`)
@@ -889,19 +890,183 @@ Deno.test(`tick skips a queued item another run works on and starts the next`, a
   }
 })
 
-Deno.test(`with free slots, tick checks the usage again before each start`, async () => {
+Deno.test(`a tick that skips three items reads the usage once and says why none started`, async () => {
   const m = await machine()
   try {
-    m.github.issues[FINANCY] = [issue(1), issue(2)]
-    await main([`limit`, `--leads`, `2`], m.deps)
-    const units = () => m.commands.filter((c) => c[0] === `systemd-run`).length
-    m.deps.run = ((run) => (command: string[]) =>
-      command[0] === `claude` && units() > 0
-        ? Promise.resolve({ success: true, code: 0, stdout: USAGE(10, `x`, 91), stderr: `` })
-        : run(command))(m.deps.run)
+    m.github.issues[FINANCY] = [issue(1), issue(2), issue(3)]
+    for (const n of [1, 2, 3]) await main([...read(m.brief), `--issue`, `${FINANCY}#${n}`], m.deps)
+    const usage = () => m.commands.filter((c) => c[0] === `claude`).length
+    const before = usage()
     const out = await main([`tick`], m.deps)
-    assertMatch(out.output, /tick: spy4x\/financy#1\n.*\ntick: session usage at 91%$/)
-    assertEquals(units(), 1)
+    assertEquals(usage(), before + 1)
+    assertMatch(out.output, /skipped spy4x\/financy#3: another run works on/)
+    assertMatch(out.output, /\ntick: 3 queued item\(s\) skipped, none started$/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`two ticks at once with one free slot start exactly one lead`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1), issue(2), issue(3)]
+    started((await main([`tick`], m.deps)).output)
+    await main([`limit`, `--leads`, `2`], m.deps)
+    m.later(31)
+    const units = () => m.commands.filter((c) => c[0] === `systemd-run`).length
+    const before = units()
+    // Both ticks have counted the leads before either reads the usage, then go on together.
+    let arrived: (() => void) | null = null
+    let timer: ReturnType<typeof setTimeout> | undefined
+    m.deps.run = ((run) => async (command: string[]) => {
+      if (command[0] === `claude`) {
+        if (arrived) arrived()
+        else {
+          await new Promise<void>((resolve, reject) => {
+            arrived = resolve
+            timer = setTimeout(() => reject(new Error(`the second tick never read usage`)), 5000)
+          })
+          clearTimeout(timer)
+        }
+      }
+      return await run(command)
+    })(m.deps.run)
+    const outs = await Promise.all([main([`tick`], m.deps), main([`tick`], m.deps)])
+    assertEquals(units(), before + 1, outs.map((o) => o.output).join(`\n---\n`))
+    assertEquals(outs.map((o) => o.code), [0, 0])
+    assert(outs.some((o) => o.output.endsWith(`tick: another run took the last lead slot`)))
+    const items = m.sql(`SELECT status, run_id FROM queue ORDER BY issue`)
+    assertEquals(items.filter((row) => row.status === `claimed`).length, 2)
+    assertEquals(items.filter((row) => row.status === `queued` && row.run_id === null).length, 1)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a failed systemd-run gives the item back and counts toward the pause`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    m.deps.run = ((run) => (command: string[]) =>
+      command[0] === `systemd-run`
+        ? Promise.resolve({ success: false, code: 1, stdout: ``, stderr: `no bus` })
+        : run(command))(m.deps.run)
+    const first = await main([`tick`], m.deps)
+    assertEquals(first.code, 1)
+    assertMatch(first.output, /systemd-run failed: no bus/)
+    const item = () =>
+      m.sql(`SELECT status, attempts, run_id, lease_until FROM queue`)[0]
+    assertEquals(item(), { status: `queued`, attempts: 0, run_id: null, lease_until: null })
+    assertEquals(m.titles(), [])
+    m.later(31)
+    assertEquals((await main([`tick`], m.deps)).code, 1)
+    assertEquals(item().status, `queued`)
+    assertEquals(m.titles(), [`Background lead paused`])
+    assertMatch((await main([`tick`], m.deps)).output, /tick: paused: two tick runs failed/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a run whose unit died without a result frees its item at once`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const first = started((await main([`tick`], m.deps)).output)
+    m.dead.add(`agent-run-${first}.service`)
+    m.later(2)
+    const next = await main([`tick`], m.deps)
+    assert(!next.output.includes(`lease expired`), next.output)
+    const [run] = JSON.parse(
+      (await main([`status`, started(next.output), `--json`], m.deps)).output,
+    )
+    assertEquals(run.issue, `${FINANCY}#1`)
+    const [old] = m.sql(`SELECT status FROM runs WHERE id = '${first}'`)
+    assertEquals(old.status, `failed`)
+    const [item] = m.sql(`SELECT attempts, reason FROM queue`)
+    assertEquals([item.attempts, item.reason], [1, `failed: no answer`])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a resumed item whose run times out keeps the last handoff for the next brief`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const id = started((await main([`tick`], m.deps)).output)
+    await m.end(id, { status: `parked`, handoff: HANDOFF })
+    m.later(31)
+    const resumed = started((await main([`tick`], m.deps)).output)
+    m.env.SERVICE_RESULT = `timeout`
+    assertEquals((await main([`finish`, resumed], m.deps)).output, `timeout`)
+    m.later(31)
+    const next = started((await main([`tick`], m.deps)).output)
+    const prompt = await Deno.readTextFile(join(m.env.AGENT_RUN_HOME, next, `prompt.md`))
+    assert(prompt.includes(`## The last run's handoff\n\n${HANDOFF}\n\n## Open lessons`), prompt)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`an item dropped by the re-check loses its handoff`, async () => {
+  const m = await machine()
+  try {
+    m.github.issues[FINANCY] = [issue(1)]
+    const id = started((await main([`tick`], m.deps)).output)
+    await m.end(id, { status: `parked`, handoff: HANDOFF })
+    m.github.closed.add(`${FINANCY}#1`)
+    m.later(31)
+    assertMatch((await main([`tick`], m.deps)).output, /dropped spy4x\/financy#1/)
+    const [item] = m.sql(`SELECT status, handoff FROM queue WHERE issue = '${FINANCY}#1'`)
+    assertEquals([item.status, item.handoff], [`dropped`, null])
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a stored lead limit that is no number counts as the default`, async () => {
+  const m = await machine()
+  try {
+    await main([`limit`], m.deps)
+    m.sql(`INSERT INTO meta (key, value) VALUES ('max_leads', 'abc')`)
+    assertEquals((await main([`limit`], m.deps)).output, `leads: 1`)
+    assertEquals((await main(lead(m.brief), m.deps)).code, 0)
+    assertMatch((await main(lead(m.brief), m.deps)).output, /1 lead run\(s\) already active/)
+  } finally {
+    await m.cleanup()
+  }
+})
+
+Deno.test(`a continuation that lost the last slot to another start is not counted as refused`, async () => {
+  const m = await machine()
+  try {
+    const id = JSON.parse((await main(lead(m.brief, [`--name`, `wave`]), m.deps)).output).id
+    await m.end(id, { status: `parked`, handoff: HANDOFF })
+    m.later(31)
+    // Another start takes the one slot after this tick counted it, while it reads the usage.
+    const other = `0190a000-0000-7000-8000-00000000000b`
+    m.sql(`INSERT INTO runs (id, name, mode, model, effort, cwd, deadline_sec, budget_usd,
+      max_turns, allow, started_at, status) VALUES ('${other}', 'x', ${Mode.Lead}, 'opus',
+      'medium', '/tmp', 60, 0, 0, '[]', '${m.state.now.toISOString()}', 'done')`)
+    let raced = false
+    m.deps.run = ((run) => (command: string[]) => {
+      if (command[0] === `claude` && !raced) {
+        raced = true
+        m.sql(`UPDATE runs SET status = 'running' WHERE id = '${other}'`)
+      }
+      return run(command)
+    })(m.deps.run)
+    for (let i = 0; i < 3; i++) {
+      raced = false
+      const out = await main([`tick`], m.deps)
+      assertMatch(out.output, /tick: another run took the last lead slot$/)
+      m.sql(`UPDATE runs SET status = 'done' WHERE id = '${other}'`)
+    }
+    const events = m.sql(`SELECT kind FROM events WHERE run_id = '${id}' AND kind != 'end'`)
+    assertEquals(events.filter((e) => e.kind !== `start`), [])
+    raced = true
+    assertMatch((await main([`tick`], m.deps)).output, new RegExp(`tick: continue ${id}`))
   } finally {
     await m.cleanup()
   }
