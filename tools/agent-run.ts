@@ -202,7 +202,10 @@ export interface Deps {
   fetch(url: string, init: RequestInit): Promise<Response>
   out(text: string): void
   home: string
-  /** The NTFY settings file (`ai-harnesses/.env`); tests point it elsewhere. */
+  /**
+   * The account tokens file (`~/sync/code/homelab/.env.accounts`); only its `NTFY_*` lines are
+   * read. Tests point it elsewhere.
+   */
   ntfyEnv: string
   /** The `ai-memory` checkout: `direction.md` and the experiment log. */
   memory: string
@@ -1234,8 +1237,9 @@ export function headerText(text: string): string {
 }
 
 /**
- * One NTFY push from `ai-harnesses/.env`; whether it was sent. Fails open: a failed push is
- * printed, never retried.
+ * One NTFY push with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account tokens file;
+ * whether it was sent. No other key of that file is kept. Fails open: a missing setting or a
+ * failed push is printed, never retried.
  */
 async function notify(deps: Deps, title: string, body: string, priority: string) {
   const env = await deps.fs.readText(deps.ntfyEnv) ?? ``
@@ -1943,7 +1947,7 @@ if (import.meta.main) {
     fetch: (url, init) => fetch(url, init),
     out: (text) => console.error(text),
     home: processEnv.get(`HOME`) ?? `/`,
-    ntfyEnv: join(DOTFILES, `ai-harnesses`, `.env`),
+    ntfyEnv: join(processEnv.get(`HOME`) ?? `/`, `sync`, `code`, `homelab`, `.env.accounts`),
     memory: join(processEnv.get(`HOME`) ?? `/`, `sync`, `code`, `ai-memory`),
   }
   const outcome = await main(processArgs(), deps)

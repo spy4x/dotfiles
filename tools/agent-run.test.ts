@@ -1146,6 +1146,48 @@ Deno.test(`two failed tick runs in a row pause the loop with one urgent push`, a
   }
 })
 
+Deno.test(`a push takes only the NTFY keys from the account tokens file`, async () => {
+  const m = await machine()
+  const lines: string[] = []
+  m.deps.out = (text) => lines.push(text)
+  try {
+    await Deno.writeTextFile(
+      m.deps.ntfyEnv,
+      [
+        `GITHUB_TOKEN=other-secret-1`,
+        `# NTFY_TOPIC=other-secret-2`,
+        `NTFY_URL=https://ntfy.example.com/`,
+        `NTFY_TOPIC=agents`,
+        `NTFY_TOKEN_OLD=other-secret-3`,
+        `NTFY_TOKEN=tk-agents`,
+        `HETZNER_TOKEN=other-secret-4`,
+      ].join(`\n`) + `\n`,
+    )
+    await main([`report`, `--since`, `24h`, `--ntfy`], m.deps)
+    assertEquals(m.pushes.length, 1)
+    const [push] = m.pushes
+    assertEquals(push.url, `https://ntfy.example.com/agents`)
+    const headers = push.init.headers as Record<string, string>
+    assertEquals(headers.Authorization, `Bearer tk-agents`)
+    const seen = [JSON.stringify(push), ...lines]
+    // The run database, its write-ahead log included.
+    for await (const file of Deno.readDir(m.env.AGENT_RUN_HOME)) {
+      if (!file.name.startsWith(`runs.sqlite`)) continue
+      seen.push(
+        new TextDecoder().decode(await Deno.readFile(join(m.env.AGENT_RUN_HOME, file.name))),
+      )
+    }
+    assert(seen.length > lines.length + 1, `no run database was read`)
+    assertEquals(seen.join(`\n`).match(/other-secret-\d/g), null)
+    await Deno.remove(m.deps.ntfyEnv)
+    await main([`report`, `--since`, `24h`, `--ntfy`], m.deps)
+    assertEquals(m.pushes.length, 1)
+    assert(lines.includes(`no NTFY_URL or NTFY_TOPIC; push skipped`), lines.join(`\n`))
+  } finally {
+    await m.cleanup()
+  }
+})
+
 Deno.test(`alert and injection push urgently; good news stops at three a day`, async () => {
   const m = await machine()
   try {
