@@ -343,7 +343,7 @@ function readTimeLost(db: ReadDb, since: string): RankedRow[] {
     const [first, ...more] = group.details
     rows.set(category, {
       label: categoryName(category),
-      note: more.length ? `${first} and ${more.length} more` : first,
+      note: more.length ? `${first} (and ${more.length} more)` : first,
       value: group.minutes,
       values: [group.tokens, null],
     })

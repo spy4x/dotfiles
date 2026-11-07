@@ -62,14 +62,15 @@ Deno.test(`only stalls of headless runs reach the banner`, async () => {
 Deno.test(`time lost shows one CI-wait row with the cost of the waits, not of the sessions`, async () => {
   const { data } = await read((db) =>
     db.exec(`INSERT INTO lessons (id, at, kind, minutes, detail) VALUES
-      ('l3', '${new Date(NOW - 3_600_000).toISOString()}', 'CI wait', 5, 'Woodpecker queue')`)
+      ('l3', '${new Date(NOW - 3_600_000).toISOString()}', 'CI wait', 5, 'Woodpecker queue'),
+      ('l4', '${new Date(NOW - 3_600_000).toISOString()}', 'ci_wait', 4, 'Runner restart')`)
   )
   const rows = ready(data.timeLost)
   const ci = rows.filter((row) => /ci/i.test(row.label))
   // Measured waits of 1,260 and 300 seconds, $3.10 and $0.90; the lessons' tokens stay.
   assertEquals(ci, [{
     label: `CI wait`,
-    note: `Playwright suite ran twice and 1 more`,
+    note: `Playwright suite ran twice (and 2 more)`,
     value: 26,
     values: [120_000, 4],
   }])
