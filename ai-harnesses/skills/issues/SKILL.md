@@ -10,9 +10,9 @@ Part of the global rules (`AGENTS.md`, "Issues"); they bind as if written there.
 ## Picking work yourself
 
 A wave or "work through the backlog" → the `wave` skill. Any open issue at `p3-medium` or above is
-yours to take, highest priority first, unless it carries `manual` (work only I can do) or
-`needs-decision` (waits on my answer): skip those until I remove the label. Two limits come before
-priority:
+yours to take, highest priority first, unless it carries `manual` (blocked on me or another
+person) or `needs-decision` (waits on my answer): skip those until I remove the label. Two limits
+come before priority:
 
 - A repo with an open milestone → the candidates are the issues in it (several open: the one due
   first; none left to take there → the next, then the backlog), whatever their priority label, plus
@@ -30,9 +30,10 @@ Milestones and the labels that gate work are mine. Never create, edit or close a
 issue into one, or move an issue in or out. Never raise an issue's priority, and never remove
 `p4-low`, `p5-someday`, `manual` or `needs-decision`. Besides setting an issue aside as above, your
 only label changes on an existing issue are adding `manual`, `needs-decision` or a missing type
-label, and the `in-progress` claim (the `git-flow` skill). Library exception to this paragraph: a
-library issue an app needs is built now in the app's wave, or put at `p2-high` in the library's
-nearest milestone.
+label, and the `in-progress` claim (the `git-flow` skill). An open issue you find blocked on me
+or another person, with neither label, gets the one "Filing issues" below would give it. Library
+exception to this paragraph: a library issue an app needs is built now in the app's wave, or put
+at `p2-high` in the library's nearest milestone.
 
 Priority labels, five levels:
 
@@ -94,9 +95,11 @@ repository goes in your report. Before the final report:
    behaviour share it, and nothing else rides along. It takes that priority. Small fixes are grouped
    by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
-Every issue you file gets a priority label, a type label, and `manual` or `needs-decision` too
-when it needs my hands or my answer. Type labels are the usual open-source ones (`bug`,
-`enhancement`, `documentation`, `refactoring`…); a type `spy4x/dotfiles` lacks is added there first.
+Every issue you file gets a priority label and a type label. It also gets `needs-decision` when
+it waits on my answer, and `manual` when it is blocked on me or another person in any other way:
+an action of mine, a client's reply, someone's access or review. My weekly review of parked and
+someday issues is no block. Type labels are the usual open-source ones (`bug`, `enhancement`,
+`documentation`, `refactoring`…); a type `spy4x/dotfiles` lacks is added there first.
 A repo without these labels → create them first, copying names, colours and descriptions from
 `spy4x/dotfiles`.
 
