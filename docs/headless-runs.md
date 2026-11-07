@@ -35,35 +35,37 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   `handoff` in full under its own heading, and the 20 newest open lessons. The budget is soft: a
   running run always finishes.
 - **Parallel leads.** `agent-run limit --leads <n>` sets how many lead runs (manual and tick) may
-  run at once; the default is 1, and `status` prints it, with merged issues per $100 over 7 days. Several tick leads share the `cwd`
-  `~/sync/code`: two leads may share a folder, since each writes only in worktrees of its own,
-  while a `write` run still shares its folder with no other writing run.
-- **The queue**, picked in code by `tools/agent-queue.ts`, never by a model. The focus
-  repositories are `spy4x/<name>` for each one-word bold name under "## Focus now" in
-  direction.md (`**Financy**`; a bold phrase with a space is not one), in the order listed. With
-  several, each gets its own plan below, one after another, and only the first gets the
-  spy4x/dotfiles groups. Order, each group oldest
-  first, no issue twice: `p1-critical` in the focus repository and spy4x/dotfiles (`p1`);
-  `p2-high` in spy4x/dotfiles (`tooling`); the focus repository's milestone due first, all
-  priorities (`milestone:<title>`), or the next one when every issue of it is blocked, claimed,
-  done, declined or filtered out; then its open issues in no milestone at `p2-high`, `p3-medium`
-  or no priority (`backlog`). An issue in any other milestone is never planned. Never: an author other than `spy4x`, `manual`, `needs-decision`, `in-progress`
-  (except the loop's own earlier claim); outside a milestone also `p4-low` and `p5-someday`.
-- **Planning again** happens when no item is queued, the "Focus now" section changes, the
-  due-first milestone or its open issues change, the set of `p1-critical` and `p2-high` tooling
-  candidates changes, or the plan is 7 days old. A declined item whose issue GitHub shows as
-  updated since it was declined (or since the last plan) is queued again first. Existing items get the
-  new rank and keep their status, attempts and reason (a parked item keeps rank 0; a dropped one
+  run at once; the default is 1, and `status` prints it, with merged issues per $100 over 7 days.
+  Several tick leads share the `cwd` `~/sync/code`: two leads may share a folder, since each writes
+  only in worktrees of its own, while a `write` run still shares its folder with no other writing
+  run.
+- **The queue**, picked in code by `tools/agent-queue.ts`, never by a model. The focus repositories
+  are `spy4x/<name>` for each one-word bold name under "## Focus now" in direction.md
+  (`**Financy**`; a bold phrase with a space is not one), in the order listed. With several, each
+  gets its own plan below, one after another, and only the first gets the spy4x/dotfiles groups.
+  Order, each group oldest first, no issue twice: `p1-critical` in the focus repository and
+  spy4x/dotfiles (`p1`); `p2-high` in spy4x/dotfiles (`tooling`); the focus repository's milestone
+  due first, all priorities (`milestone:<title>`), or the next one when every issue of it is
+  blocked, claimed, done, declined or filtered out; then its open issues in no milestone at
+  `p2-high`, `p3-medium` or no priority (`backlog`). An issue in any other milestone is never
+  planned. Never: an author other than `spy4x`, `manual`, `needs-decision`, `in-progress` (except
+  the loop's own earlier claim); outside a milestone also `p4-low` and `p5-someday`.
+- **Planning again** happens when no item is queued, the "Focus now" section changes, the due-first
+  milestone or its open issues change, the set of `p1-critical` and `p2-high` tooling candidates
+  changes, or the plan is 7 days old. A declined item is queued again first when GitHub shows its
+  issue as updated since it was declined (or since the last plan), or when `gh issue view` shows an
+  issue in its `waits_on` as no longer open; a `gh` error counts as still open. Existing items get
+  the new rank and keep their status, attempts and reason (a parked item keeps rank 0; a dropped one
   that is a candidate again is queued); queued items no longer planned are `dropped`.
 - **Item statuses:** `queued`, `claimed` (a lease of 3h15m and the run id), `done`, `dropped`,
-  `blocked`, `declined`, each with a reason. When a run ends: `done` → `done`; `parked` (CI expected to take
-  over about 20 minutes, or the session compacted twice) → `queued` at rank 0, no attempt counted,
-  with the run's `handoff`. Every end but `done` (and a `dropped` item) keeps the last handoff
-  unless the run wrote its own;
-  `blocked` → `blocked` with `needs_owner`; `declined` (not startable yet: out of milestone order
-  or waiting on another issue) → `declined` with the summary, no attempt counted and no step
-  toward the pause; `failed`, `timeout`, `budget`, `turns` and an expired
-  lease → one failed attempt, `blocked` at 2; `stopped` → `queued`.
+  `blocked`, `declined`, each with a reason. When a run ends: `done` → `done`; `parked` (CI expected
+  to take over about 20 minutes, or the session compacted twice) → `queued` at rank 0, no attempt
+  counted, with the run's `handoff`. Every end but `done` (and a `dropped` item) keeps the last
+  handoff unless the run wrote its own; `blocked` → `blocked` with `needs_owner`; `declined` (not
+  startable yet: out of milestone order or waiting on another issue) → `declined` with the summary
+  and the run's `waits_on` (entries that are no `owner/repo#n` are dropped, a bare `#n` is taken as
+  the item's own repository), no attempt counted and no step toward the pause; `failed`, `timeout`,
+  `budget`, `turns` and an expired lease → one failed attempt, `blocked` at 2; `stopped` → `queued`.
 - **Pushes.** Urgent (NTFY priority `urgent`): two failed tick runs in a row (this also pauses the
   loop), a run's `alert` or `injection`, and a run passing $100 (`RUN_ALERT_USD`): estimated every
   minute from its stream-json usage and checked again from its final cost, sent once, never
@@ -72,7 +74,8 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
   digest. No other run end pushes. Every push sent is a row in `pushes`.
 - **The digest.** `agent-report.timer` runs `agent-run report --since 24h --ntfy` at 09:00:
   achievements (done items with their PRs, good news), spend today and in the window against $200,
-  merged issues per $100 in the window, failures (failed runs, newly blocked items), bottlenecks
+  merged issues per $100 in the window, failures (failed runs, newly blocked items), declined items
+  with their reason and what they wait on (`Declined`, not failures), bottlenecks
   (open lessons by minutes, the 5 slowest steps of `v_slow_steps` when the importer's view exists),
   whether the loop is paused, then each run with its notes. Text that agents wrote is quoted on
   one line, cut at 300 characters: a run's summary, good news, notes, needs-you, injection and
@@ -96,8 +99,11 @@ picked in code, measured, and improved by a daily retro. Goal: merged issues per
 Setup on this machine, from the main checkout:
 
 ```bash
-systemctl --user disable --now agent-daily.timer 2>/dev/null; rm -f ~/.config/systemd/user/agent-daily.{service,timer}
-for u in agent-tick agent-retro agent-report; do for t in service timer; do systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/$u.$t; done; done
+systemctl --user disable --now agent-daily.timer 2>/dev/null
+rm -f ~/.config/systemd/user/agent-daily.{service,timer}
+for u in agent-tick agent-retro agent-report; do for t in service timer; do
+  systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/$u.$t
+done; done
 systemctl --user daemon-reload
 systemctl --user enable --now agent-tick.timer agent-retro.timer agent-report.timer
 ```
@@ -137,13 +143,14 @@ agent-run experiment <text...>                   a row in ai-memory/experiments/
 - **Modes.** `read`: `--permission-mode dontAsk --permission-prompts none`, the `--allow` rules,
   and `--disallowedTools Edit Write NotebookEdit` (`dontAsk` alone still runs read-only shell
   commands). `write`: `bypassPermissions`, and `--cwd` must be a linked worktree no other writing
-  run holds. `lead`: like `write`, in any folder no `write` run holds. Never `--bare`, which drops our rules.
+  run holds. `lead`: like `write`, in any folder no `write` run holds. Never `--bare`, which drops
+  our rules.
 - **Every run** gets `--output-format stream-json --verbose`, the result schema below as
   `--json-schema`, `--model`, `--effort` and `--name`, plus `--max-turns` and `--max-budget-usd`
   unless they are 0; the brief comes on stdin.
 - **`start` refuses** (exit 2) a model other than `opus` or `haiku`, a lead past the lead limit, a
-  second writing run in a folder (two leads may share one), a second run on one issue, an issue not by `spy4x`, nesting past two levels, and a
-  session level of 90% or a weekly level of 95%.
+  second writing run in a folder (two leads may share one), a second run on one issue, an issue
+  not by `spy4x`, nesting past two levels, and a session level of 90% or a weekly level of 95%.
 - **`lesson`** takes the run id from `$AGENT_RUN_ID` inside a run. **`experiment`** fast-forwards
   `~/sync/code/ai-memory` to `origin/main`, appends `- <local date time>, run <id>: <text>`,
   commits only that file and pushes that commit by its id to `main` (its README allows experiment
@@ -158,7 +165,8 @@ agent-run experiment <text...>                   a row in ai-memory/experiments/
 systemd-run --user --unit=agent-run-<id>.service --collect \
   -p RuntimeMaxSec=<deadline> -p TasksMax=4000 -p MemoryMax=8G -p WorkingDirectory=<cwd> \
   -p "ExecStopPost=/usr/bin/env deno run -A tools/agent-run.ts finish <id>" \
-  /usr/bin/env -i PATH HOME USER LANG XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS AGENT_RUN_ID AGENT_RUN_HOME \
+  /usr/bin/env -i PATH HOME USER LANG XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS \
+  AGENT_RUN_ID AGENT_RUN_HOME \
   deno run -A tools/agent-run.ts supervise <id>
 ```
 
@@ -167,9 +175,9 @@ systemd-run --user --unit=agent-run-<id>.service --collect \
   and description, never its command or output) and the run's latest words into `activity`, and
   estimates the cost so far for the $100 push.
 - `finish` (`ExecStopPost`) sets the final status from `$SERVICE_RESULT`, the CLI's `result` event
-  and the run's own answer: `done`, `parked`, `blocked`, `declined`, `failed`, `timeout`, `budget`, `turns` or
-  `stopped`. It stores the cost, turns and answer, moves the run's queue item, and sends the pushes
-  above.
+  and the run's own answer: `done`, `parked`, `blocked`, `declined`, `failed`, `timeout`, `budget`,
+  `turns` or `stopped`. It stores the cost, turns and answer, moves the run's queue item, and sends
+  the pushes above.
 - `env -i` drops the rest of the user manager's environment (`SSH_AUTH_SOCK` among it). `gh` signs
   in through the keyring over D-Bus, so the bus address stays.
 - A row still marked running whose unit is gone (it died before `finish`, or the machine lost
@@ -189,8 +197,9 @@ systemd-run --user --unit=agent-run-<id>.service --collect \
   dollar, turns, the answer), `events` (start, resume, tool, note, over100, stop, end, error),
   `queue` (the items above), `lessons` (kind, measured minutes and tokens, detail, open or closed
   with a reason), `pushes` (urgent, good, digest) and `meta` (`paused`, `plan_focus_hash`,
-  `plan_milestone_hash`, `plan_urgent_hash`, `planned_at`). A database from before #257 loses its `weekly_*` columns
-  on first open. Inspect it with `sqlite3`, for example `select at, kind, detail from events where
+  `plan_milestone_hash`, `plan_urgent_hash`, `planned_at`). A database from before #257 loses its
+  `weekly_*` columns on first open, and a queue gains the `handoff` and `waits_on` columns it
+  lacks. Inspect it with `sqlite3`, for example `select at, kind, detail from events where
   run_id = '<id>' order by at`.
 - `<id>/`: `prompt.md` (the latest brief), `brief.md` (every brief, appended), `events.jsonl` (raw
   `stream-json`, which holds tool output and can hold secrets a run read), `stderr.log`.
@@ -207,7 +216,8 @@ The result schema every run fills:
   "noticed": ["claims outside the task, for the lead to file"],
   "alert": "something really bad the owner must know now, or null",
   "good_news": "something really good: a milestone closed, a release, a measured flow win, or null",
-  "handoff": "when parked: the full handoff the next run starts from (the `wave` skill), or null"
+  "handoff": "when parked: the full handoff the next run starts from (the `wave` skill), or null",
+  "waits_on": ["optional, when declined: the issues it waits on, owner/repo#n"]
 }
 ```
 
@@ -377,7 +387,8 @@ stays mode 0700, outside Syncthing, and its nightly backup is encrypted. Nothing
 - `sessions`: one per session. A subagent's id is `<sessionId>:<agentId>`, with `parent_id`,
   `agent_type` and `description`; also project folder, `cwd`, `git_branch`, `entrypoint`, `title`
   and the first and last timestamps.
-- `messages`: every user and assistant entry: uuid, session, time, role, model, API message id, text.
+- `messages`: every user and assistant entry: uuid, session, time, role, model, API message id,
+  text.
 - `api_calls`: usage once per API message id (the last line of each id wins), and `cost_micros`
   (millionths of a dollar, priced by `tools/session-cost.ts`; NULL for a model it has no price for).
 - `tool_calls`: tool-use id, session, name, input JSON, start, end, `duration_ms`, `is_error`,
@@ -451,7 +462,9 @@ SELECT * FROM v_session_rollup WHERE id = '<session id>';
 caught up after sleep: the next tick reads everything since). Setup:
 
 ```bash
-for u in agent-import.service agent-import.timer; do systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/$u; done
+for u in agent-import.service agent-import.timer; do
+  systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/$u
+done
 systemctl --user enable --now agent-import.timer
 ```
 
