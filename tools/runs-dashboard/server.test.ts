@@ -178,7 +178,7 @@ Deno.test(`a database with runs draws every card, the banner and the runs table`
     has(html, /The lead is paused:/)
     has(html, /Import bank statements from CSV/)
     has(html, />\$171 of \$200</)
-    has(html, /1 blocked · 2 queued · 1 claimed · 1 done · 1 dropped/)
+    has(html, /1 blocked · 1 declined · 2 queued · 1 claimed · 1 done · 1 dropped/)
     // Run 309 failed and cost over $100: one banner line names it once, with both facts.
     has(html, /Run #309 \(\w{3} \d\d:\d\d\)<\/a> failed and cost \$104\./)
     assertEquals(html.split(`href="#run-019a5f00-0000-7000-8000-000000000309"`).length - 1, 1)
@@ -270,6 +270,15 @@ Deno.test(`a run without an issue is titled by its mode and start time`, async (
     const html = await (await get(createFixture(dir, { now: NOW }))).text()
     // The fixture's run 310 is a lead run with no issue, started 2.5 hours before local noon.
     has(html, /id="run-019a5f00-0000-7000-8000-000000000310"[^>]*><span[^>]*>Lead run, Fri 09:30</)
+  })
+})
+
+Deno.test(`a declined queue item shows its badge and the reason`, async () => {
+  await withDir(async (dir) => {
+    const html = await (await get(createFixture(dir, { now: NOW }))).text()
+    has(html, /Needs the bank's API keys first/)
+    has(html, /title="Not startable yet\. Back in the queue once the issue changes\.">/)
+    has(html, />Declined</)
   })
 })
 

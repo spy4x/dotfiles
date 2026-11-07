@@ -87,6 +87,15 @@ Deno.test(`a slow step names its tool, project and run, never its input`, async 
   ])
 })
 
+Deno.test(`the open queue lists a declined item with its reason, after blocked ones`, async () => {
+  const { data } = await read()
+  const open = ready(data.queue).open
+  assertEquals(open.slice(0, 2).map((item) => [item.status, item.reason]), [
+    [`blocked`, `failed twice`],
+    [`declined`, `Needs the bank's API keys first`],
+  ])
+})
+
 Deno.test(`a child run carries its parent's issue`, async () => {
   const { data } = await read()
   const child = ready(data.runs).find((run) => run.parent !== null)

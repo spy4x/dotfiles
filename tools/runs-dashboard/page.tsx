@@ -499,7 +499,7 @@ function RunCell({ run, now }: { run: RunRow; now: number }): JSX.Element {
 
 // ===== Queue =====
 
-const QUEUE_COUNT_ORDER = [`blocked`, `queued`, `claimed`, `done`, `dropped`]
+const QUEUE_COUNT_ORDER = [`blocked`, `declined`, `queued`, `claimed`, `done`, `dropped`]
 
 function queueCounts(counts: Record<string, number>): string {
   const known = QUEUE_COUNT_ORDER.filter((status) => counts[status])
@@ -509,6 +509,11 @@ function queueCounts(counts: Record<string, number>): string {
 
 const QUEUE_STATUS: Record<string, { text: string; color: BadgeColor; title?: string }> = {
   blocked: { text: `Blocked`, color: `orange`, title: `Failed twice. Needs a look.` },
+  declined: {
+    text: `Declined`,
+    color: `purple`,
+    title: `Not startable yet. Back in the queue once the issue changes.`,
+  },
   claimed: { text: `Claimed`, color: `blue` },
   queued: { text: `Queued`, color: `gray` },
 }
@@ -554,7 +559,8 @@ function QueueTable({ items }: { items: QueueItem[] }): JSX.Element {
           header: `Status`,
           render: (item) => (
             <StatusBadge
-              status={/^parked/i.test(item.reason ?? ``) && item.status !== `blocked`
+              status={/^parked/i.test(item.reason ?? ``) &&
+                  ![`blocked`, `declined`].includes(item.status)
                 ? PARKED
                 : QUEUE_STATUS[item.status] ?? { text: item.status, color: `gray` }}
             />

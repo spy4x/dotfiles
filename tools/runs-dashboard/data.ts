@@ -76,7 +76,7 @@ export interface RunRow extends BannerRun {
   ciWaitSec: number | null
 }
 
-/** An open queue item. */
+/** A queue item that is open, or declined and waiting for its issue to change. */
 export interface QueueItem {
   issue: string
   title: string
@@ -284,7 +284,8 @@ function readRuns(db: ReadDb): RunRow[] {
   })
 }
 
-const QUEUE_ORDER = `CASE status WHEN 'blocked' THEN 0 WHEN 'claimed' THEN 1 ELSE 2 END, rank`
+const QUEUE_ORDER =
+  `CASE status WHEN 'blocked' THEN 0 WHEN 'declined' THEN 1 WHEN 'claimed' THEN 2 ELSE 3 END, rank`
 
 function readQueue(db: ReadDb) {
   const counts: Record<string, number> = {}
@@ -293,7 +294,7 @@ function readQueue(db: ReadDb) {
   }
   const open = db.all(
     `SELECT issue, title, status, reason, attempts FROM queue
-     WHERE status IN ('blocked', 'claimed', 'queued') ORDER BY ${QUEUE_ORDER}`,
+     WHERE status IN ('blocked', 'declined', 'claimed', 'queued') ORDER BY ${QUEUE_ORDER}`,
   ).map((row) => ({
     issue: String(row.issue),
     title: String(row.title),

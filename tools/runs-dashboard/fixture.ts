@@ -137,6 +137,13 @@ function seed(db: DatabaseSync, now: number) {
       2,
     ),
     q(`spy4x/financy#315`, `Show the budget left per category`, 4, `queued`, null),
+    q(
+      `spy4x/financy#317`,
+      `Sync with the bank's API`,
+      7,
+      `declined`,
+      `Needs the bank's API keys first`,
+    ),
     q(`spy4x/financy#298`, `Recurring transactions`, 5, `done`, null),
     q(`spy4x/financy#290`, `Old idea`, 6, `dropped`, `closed`),
   ])
