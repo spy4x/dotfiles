@@ -308,8 +308,8 @@ export async function itemOfRun(db: SqliteDb, runId: string): Promise<QueueItem 
 }
 
 /**
- * Set an item's status, reason and handoff (`null` unless given, so any status but a parked one
- * clears it); the other fields stay unless given.
+ * Set an item's status and reason (`null` unless given); the handoff and the other fields stay
+ * unless given, so the last handoff survives a run that ends without writing its own.
  */
 export async function setItem(
   db: SqliteDb,
@@ -324,10 +324,12 @@ export async function setItem(
   },
 ): Promise<void> {
   await db.execute(
-    `UPDATE queue SET status = ?, reason = ?, handoff = ?, rank = COALESCE(?, rank),
-       attempts = COALESCE(?, attempts), lease_until = NULL, updated_at = ? WHERE issue = ?`,
+    `UPDATE queue SET status = ?, reason = ?, handoff = CASE WHEN ? THEN ? ELSE handoff END,
+       rank = COALESCE(?, rank), attempts = COALESCE(?, attempts), lease_until = NULL,
+       updated_at = ? WHERE issue = ?`,
     fields.status,
     fields.reason ?? null,
+    fields.handoff === undefined ? 0 : 1,
     fields.handoff ?? null,
     fields.rank ?? null,
     fields.attempts ?? null,
@@ -336,16 +338,30 @@ export async function setItem(
   )
 }
 
-/** Count one failed attempt: back to `queued`, or `blocked` at `MAX_ATTEMPTS`. */
+/**
+ * Count one failed attempt: back to `queued`, or `blocked` at `MAX_ATTEMPTS`. The item keeps its
+ * handoff unless the failed run wrote a new one.
+ */
 export async function failAttempt(
   db: SqliteDb,
   deps: Deps,
   item: QueueItem,
   reason: string,
+  handoff?: string,
 ): Promise<void> {
   const attempts = item.attempts + 1
   const status = attempts >= MAX_ATTEMPTS ? `blocked` : `queued`
-  await setItem(db, deps, item.issue, { status, reason, attempts })
+  await setItem(db, deps, item.issue, { status, reason, attempts, handoff })
+}
+
+/** Give the item `runId` claimed back to the queue untouched, when that run never started. */
+export async function release(db: SqliteDb, deps: Deps, runId: string): Promise<void> {
+  await db.execute(
+    `UPDATE queue SET status = 'queued', lease_until = NULL, run_id = NULL, updated_at = ?
+      WHERE run_id = ? AND status = 'claimed'`,
+    deps.now().toISOString(),
+    runId,
+  )
 }
 
 /**
@@ -470,7 +486,11 @@ export async function replan(
   const planned = new Set(plan.map((candidate) => candidate.issue))
   for (const item of items) {
     if (item.status === `queued` && !planned.has(item.issue)) {
-      await setItem(db, deps, item.issue, { status: `dropped`, reason: `no longer a candidate` })
+      await setItem(db, deps, item.issue, {
+        status: `dropped`,
+        reason: `no longer a candidate`,
+        handoff: null,
+      })
     }
   }
   await setMeta(db, `plan_focus_hash`, focusHash)
