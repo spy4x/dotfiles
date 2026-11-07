@@ -65,6 +65,8 @@ const isoAgo = (now: number, days: number) => new Date(now - days * 86_400_000).
 /** A lead run row of the runs table. */
 export interface RunRow extends BannerRun {
   name: string
+  /** agent-run's `Mode`: 1 read, 2 write, 3 lead; null in a database without the column. */
+  mode: number | null
   title: string | null
   parent: string | null
   /** The parent run's `owner/repo#n`, when it worked on an issue. */
@@ -243,7 +245,7 @@ function readDaily(db: ReadDb, now: number) {
 
 function readRuns(db: ReadDb): RunRow[] {
   const rows = db.all(
-    `SELECT r.id, r.name, r.parent, p.issue AS parent_issue, r.issue, r.started_at, r.ended_at,
+    `SELECT r.id, r.name, r.mode, r.parent, p.issue AS parent_issue, r.issue, r.started_at, r.ended_at,
        r.status, r.cost_micros, q.title
      FROM runs r LEFT JOIN queue q ON q.issue = r.issue LEFT JOIN runs p ON p.id = r.parent
      ORDER BY r.started_at DESC LIMIT 20`,
@@ -267,6 +269,7 @@ function readRuns(db: ReadDb): RunRow[] {
     return {
       id: String(row.id),
       name: String(row.name),
+      mode: row.mode === null ? null : num(row.mode),
       title: str(row.title),
       parent: str(row.parent),
       parentIssue: str(row.parent_issue),

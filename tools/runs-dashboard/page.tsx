@@ -446,7 +446,14 @@ function RunsTable({ runs, now }: { runs: RunRow[]; now: number }): JSX.Element 
               {run.costUsd > RUN_ALERT_USD
                 ? <Badge text={`Over ${usd(RUN_ALERT_USD)}`} color="red" type="filled" />
                 : null}
-              <span class="tabular-nums">{usd(run.costUsd)}</span>
+              {run.status === `running` && run.costUsd === 0
+                ? (
+                  <span>
+                    <span aria-hidden="true">–</span>
+                    <span class="sr-only">No spend yet</span>
+                  </span>
+                )
+                : <span class="tabular-nums">{usd(run.costUsd)}</span>}
             </div>
           ),
         },
@@ -455,10 +462,16 @@ function RunsTable({ runs, now }: { runs: RunRow[]; now: number }): JSX.Element 
   )
 }
 
+const MODE_NAMES: Record<number, string> = { 1: `Read`, 2: `Write`, 3: `Lead` }
+
 function RunCell({ run, now }: { run: RunRow; now: number }): JSX.Element {
   const end = run.endedAt ? Date.parse(run.endedAt) : now
+  const started = timeFormat.format(new Date(run.startedAt))
+  // A run without an issue has no title of its own: its mode and start time name it.
+  const title = run.title ??
+    (run.issue ? run.name : `${MODE_NAMES[run.mode ?? 0] ?? `Agent`} run, ${started}`)
   const details = [
-    timeFormat.format(new Date(run.startedAt)),
+    run.issue ? started : null,
     duration((end - Date.parse(run.startedAt)) / 1000),
     run.reviewRounds ? plural(run.reviewRounds, `review round`) : null,
     run.ciWaitSec ? `CI wait ${duration(run.ciWaitSec)}` : null,
@@ -477,7 +490,7 @@ function RunCell({ run, now }: { run: RunRow; now: number }): JSX.Element {
             </>
           )
           : null}
-        {run.title ?? run.name}
+        {title}
       </span>
       <span class="text-xs text-muted">{details.join(` · `)}</span>
     </div>

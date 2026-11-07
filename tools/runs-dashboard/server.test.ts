@@ -253,6 +253,26 @@ Deno.test(`titles from the database render escaped`, async () => {
   })
 })
 
+Deno.test(`a running run with no spend yet shows a dash, not $0`, async () => {
+  await withDir(async (dir) => {
+    const path = createFixture(dir, { now: NOW })
+    const db = new DatabaseSync(path)
+    db.exec(`UPDATE runs SET cost_micros = NULL WHERE status = 'running'`)
+    db.close()
+    const html = await (await get(path)).text()
+    has(html, /<span aria-hidden="true">–<\/span><span class="sr-only">No spend yet<\/span>/)
+    lacks(html, /tabular-nums">\$0</)
+  })
+})
+
+Deno.test(`a run without an issue is titled by its mode and start time`, async () => {
+  await withDir(async (dir) => {
+    const html = await (await get(createFixture(dir, { now: NOW }))).text()
+    // The fixture's run 310 is a lead run with no issue, started 2.5 hours before local noon.
+    has(html, /id="run-019a5f00-0000-7000-8000-000000000310"[^>]*><span[^>]*>Lead run, Fri 09:30</)
+  })
+})
+
 Deno.test(`dollars show cents below $10, and zero as $0`, () => {
   assertEquals([usd(0), usd(4.2), usd(142)], [`$0`, `$4.20`, `$142`])
 })
