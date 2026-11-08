@@ -34,4 +34,4 @@ rule and a fact are, and that global rules are mine, is in that section.
 - **Review.** Every rule change goes through the reviewer gate. The reviewer compares old and new
   rule by rule. A global rule lost, weakened or changed in meaning that I did not ask for in chat
   fails the gate, and so does a repo rule that overrides or loosens a global one; the PR body quotes
-  my request. A repo's own rules may change without it ("Rules about rules").
+  my request. A repo's own rules may change without my request ("Rules about rules").
