@@ -6,7 +6,7 @@ description: "How agent rules are kept: one source, one place per rule, no histo
 # Writing rules
 
 Part of the global rules (`AGENTS.md`, "Rules about rules"); they bind as if written there. What a
-rule and a fact are, and that rules are mine, is in that section.
+rule and a fact are, and that global rules are mine, is in that section.
 
 - **One source.** Every harness gets its rules, skills, agents and settings from
   `dotfiles/ai-harnesses/`; `deno task ai` renders it into each (`ai-harnesses/README.md`). Edit
@@ -32,5 +32,6 @@ rule and a fact are, and that rules are mine, is in that section.
 - **Wording.** "Language style" in `AGENTS.md` applies: one rule per sentence or short paragraph,
   the action first, then the reason, and plain words.
 - **Review.** Every rule change goes through the reviewer gate. The reviewer compares old and new
-  rule by rule, and a rule lost, weakened or changed in meaning that I did not ask for in chat fails
-  the gate. The PR body quotes my request.
+  rule by rule. A global rule lost, weakened or changed in meaning that I did not ask for in chat
+  fails the gate, and so does a repo rule that overrides or loosens a global one; the PR body quotes
+  my request. A repo's own rules may change without it ("Rules about rules").
