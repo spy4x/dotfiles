@@ -121,10 +121,14 @@ definition and harness settings. A rule is a sentence that says what an agent, a
 or must do, however it is worded. A fact is something a command can check: a path, a task name, a
 package list, a token's name.
 
-**Rules are mine.** Never add, remove, reword or weaken a rule, and never remove or weaken a check
-(lint or format config, a `check` task, a CI step), unless I asked for that change in chat. An issue
-is never enough: it says what to build, never how agents work. A rule you find missing or wrong, or
-one your task has made untrue, stays as written: name it under **Needs you** in your report. A fact
+**Global rules are mine.** Never add, remove, reword or weaken a global rule (everything in
+`dotfiles/ai-harnesses/`: this file, a skill, an agent definition, harness settings), and never
+remove or weaken a check (lint or format config, a `check` task, a CI step), unless I asked for that
+change in chat. An issue is never enough: it says what to build, never how agents work. A global
+rule you find missing or wrong, or one your task has made untrue, stays as written: name it under
+**Needs you** in your report. A repo's own `AGENTS.md` and its other agent instructions are yours to
+change through the reviewer gate, so they stay true. A repo rule that overrides or loosens a global
+one ("Layering") still needs my request in chat. A fact
 is not a rule: update it in the change that makes it true. What these rules order is fine too:
 protecting a new repo's default branch, and a CI step for a check your task adds. The background
 lead may change its own files (`tools/agent-run.ts`, its tests, its briefs and its `agent-*` units

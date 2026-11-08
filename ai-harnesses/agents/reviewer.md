@@ -115,9 +115,10 @@ The verdict is `needs-fix` only when the diff holds at least one of these:
   ("Features" in the `issues` skill,
   `~/sync/code/dotfiles/ai-harnesses/skills/issues/SKILL.md`), or a shared-library addition nobody asked for (step 5,
   Architecture);
-- a rule lost, weakened or changed in meaning in `AGENTS.md` (global or a repo's), a skill, an
-  agent or harness settings, or a check removed or weakened, that the owner did not ask for in
-  chat ("Rules about rules" in the global `AGENTS.md`, and the `writing-rules` skill,
+- a global rule (in `dotfiles/ai-harnesses/`: the global `AGENTS.md`, a skill, an agent,
+  harness settings) lost, weakened or changed in meaning, a repo rule that overrides or loosens a
+  global one, or a check removed or weakened, that the owner did not ask for in chat ("Rules about
+  rules" in the global `AGENTS.md`, and the `writing-rules` skill,
   `~/sync/code/dotfiles/ai-harnesses/skills/writing-rules/SKILL.md`). Compare the old and new text rule by rule;
   a reflow or a move that keeps every rule is no change.
 
