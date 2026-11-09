@@ -28,7 +28,14 @@ RNNoise -> Gain +12dB -> Gate (-25/-30, hold=200ms) -> Compressor (4:1, -15, +3)
 
 Gain before gate = loud phrases survive gate. Don't flip order.
 
-Crop webcam: `left=425, cx=500, cy=730` (user-tuned).
+Webcam: one `v4l2_input` source, MJPG 1920x1080 at 30 fps, shared by both scenes.
+CodingScene shows it through the group `Webcam Portrait`, which holds the filters, so
+CameraOnly gets the full frame.
+
+Crop filter: `left=820, top=150, cx=500, cy=730`, centred on where the owner sits. Nudge it
+in the group's filters.
+The udev rule `system/etc/udev/rules.d/90-c922-fixed-fps.rules` keeps the camera at 30 fps in
+dim light (`docs/host-limits.md`).
 Mask: alpha PNG, color=4294967295, stretch=false.
 
 ## Workflow
@@ -54,6 +61,8 @@ Verify file on disk after every close.
   drops the whole filters array on save
 - 1.7x display scale silently reverts 4K→1080p in `[Video]`. Always verify file on disk
   after a graceful close.
-- Two v4l2_input sources need PipeWire mux. Webcam black on CameraOnly → restart OBS.
-- `/dev/video0 "device busy"` on startup = transient PipeWire race, not a bug.
+- One camera, one V4L2 source: a second source on `/dev/video0` gets "device busy" and
+  stays black. Reuse the source in another scene; per-scene effects go on a group.
+- The PipeWire camera source offers no MJPEG in OBS 32, and the C922 sends uncompressed
+  1080p at 5 fps only. Keep the V4L2 source.
 - RestoreToken rotates per launch; line-level gitignore impossible, small diffs are noise.
