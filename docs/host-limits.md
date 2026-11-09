@@ -100,6 +100,21 @@ systemctl --user show 'app-com.anthropic.Claude-*.scope' -p Id -p TasksMax
 
 The loop caps the running Claude app now; other apps get the new default when they next start.
 
+**Webcam frame rate.** In dim light the Logitech C922's auto exposure lowers its frame rate
+(25 fps or less instead of 30), and OBS records that as stutter. Turning off
+`exposure_dynamic_framerate` holds 30 fps; a side-by-side test showed no visible loss of
+brightness. The camera forgets the setting when it is unplugged, so
+`system/etc/udev/rules.d/90-c922-fixed-fps.rules` sets it again on every plug-in. It needs
+`v4l2-ctl` from `v4l-utils`.
+
+```bash
+sudo dnf install -y v4l-utils
+sudo cp system/etc/udev/rules.d/90-c922-fixed-fps.rules /etc/udev/rules.d/90-c922-fixed-fps.rules
+sudo udevadm control --reload
+sudo udevadm trigger --action=add --settle /sys/class/video4linux/video0
+v4l2-ctl -d /dev/video0 -C exposure_dynamic_framerate   # prints 0
+```
+
 **Syncthing and worktrees.** Agent worktrees are created under `~/sync/code/worktrees/`, inside a
 Syncthing folder. Syncthing indexes and watches everything it does not ignore, so without an
 ignore line it holds an inotify watch per worktree directory and replicates build output to
