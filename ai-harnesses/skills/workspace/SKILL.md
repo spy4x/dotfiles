@@ -32,8 +32,8 @@ Work and production:
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
 
 Homelab, for whatever I choose to run there: my self-hosted services, my products (Seed and Financy
-today) and anything else. Where a product or service runs is my call, made per product: never
-propose or plan a move unless I ask.
+today) and anything else. Moving a product to its own or a shared Hetzner server is my call, made
+per product: never propose or plan it unless I ask.
 
 - `rostok`: CLI that scaffolds a homelab from a catalog of stacks (`stacks/`). Code that both it and
   `seed` need lives in `ts-libs`, never copied between the two.
