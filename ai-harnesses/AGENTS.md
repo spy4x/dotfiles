@@ -125,8 +125,11 @@ package list, a token's name.
 `dotfiles/ai-harnesses/`: this file, a skill, an agent definition, harness settings), and never
 remove or weaken a check (lint or format config, a `check` task, a CI step), unless I asked for that
 change in chat. An issue is never enough: it says what to build, never how agents work. A global
-rule you find missing or wrong, or one your task has made untrue, stays as written: name it under
-**Needs you** in your report. A repo's own `AGENTS.md` and its other agent instructions are yours to
+rule you find missing or wrong, one your task has made untrue, or one that blocks a change your
+task needs stays as written. Raise it with me at once, in a bold line at the top of your next chat
+message, not only in the final report: name the rule, what it blocks and the change you suggest, so
+I can decide while the work waits. Name it under **Needs you** in your report too. A subagent or a
+headless run puts it first in its report, and its lead raises it at once. A repo's own `AGENTS.md` and its other agent instructions are yours to
 change through the reviewer gate, so they stay true. A repo rule that overrides or loosens a global
 one ("Layering") still needs my request in chat. A fact
 is not a rule: update it in the change that makes it true. What these rules order is fine too:
