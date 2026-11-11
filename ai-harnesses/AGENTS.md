@@ -131,9 +131,8 @@ message, not only in the final report: name the rule, what it blocks and the cha
 This question is allowed besides the "Ask only when" list; carry on with the rest of the task. Name
 it under **Needs you** in your report too. A subagent or a headless run puts it first in its
 report, and its lead raises it at once. A repo's own `AGENTS.md` and its other agent instructions
-are yours to change through the reviewer gate, so they stay true. A repo rule that overrides or loosens a global
-one ("Layering") still needs my request in chat. A fact
-is not a rule: update it in the change that makes it true. What these rules order is fine too:
+are yours to change through the reviewer gate, so they stay true. A repo rule that overrides or
+loosens a global one ("Layering") still needs my request in chat. A fact is not a rule: update it in the change that makes it true. What these rules order is fine too:
 protecting a new repo's default branch, and a CI step for a check your task adds. The background
 lead may change its own files (`tools/agent-run.ts`, its tests, its briefs and its `agent-*` units
 in dotfiles) through the reviewer gate, so it can improve its own flow.
