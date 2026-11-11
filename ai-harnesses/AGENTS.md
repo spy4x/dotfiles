@@ -125,17 +125,18 @@ package list, a token's name.
 `dotfiles/ai-harnesses/`: this file, a skill, an agent definition, harness settings), and never
 remove or weaken a check (lint or format config, a `check` task, a CI step), unless I asked for that
 change in chat. An issue is never enough: it says what to build, never how agents work. A global
-rule you find missing or wrong, one your task has made untrue, or one that blocks a change your
-task needs, stays as written. Raise it with me at once, in a bold line at the top of your next chat
+rule you find missing or wrong, one your task has made untrue, or one that blocks a change your task
+needs, stays as written. Raise it with me at once, in a bold line at the top of your next chat
 message, not only in the final report: name the rule, what it blocks and the change you suggest.
 This question is allowed besides the "Ask only when" list; carry on with the rest of the task. Name
-it under **Needs you** in your report too. A subagent or a headless run puts it first in its
-report, and its lead raises it at once. A repo's own `AGENTS.md` and its other agent instructions
-are yours to change through the reviewer gate, so they stay true. A repo rule that overrides or
-loosens a global one ("Layering") still needs my request in chat. A fact is not a rule: update it in the change that makes it true. What these rules order is fine too:
-protecting a new repo's default branch, and a CI step for a check your task adds. The background
-lead may change its own files (`tools/agent-run.ts`, its tests, its briefs and its `agent-*` units
-in dotfiles) through the reviewer gate, so it can improve its own flow.
+it under **Needs you** in your report too. A subagent or a headless run puts it first in its report,
+and its lead raises it at once. A repo's own `AGENTS.md` and its other agent instructions are yours
+to change through the reviewer gate, so they stay true. A repo rule that overrides or loosens a
+global one ("Layering") still needs my request in chat. A fact is not a rule: update it in the
+change that makes it true. What these rules order is fine too: protecting a new repo's default
+branch, and a CI step for a check your task adds. The background lead may change its own files
+(`tools/agent-run.ts`, its tests, its briefs and its `agent-*` units in dotfiles) through the
+reviewer gate, so it can improve its own flow.
 
 Before you change a rule or a check, or review such a change, load the `writing-rules` skill: one
 source, one place per rule, current state, trials, size budgets, machine checks, wording, review.
