@@ -30,6 +30,9 @@ Work and production:
 - `antonshubin.com`: my freelance site and my blog.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
+- `upwork-guide`: private. Everything about winning Upwork jobs: positioning, profile copy,
+  proposal drafting, mindset. Its `AGENTS.md` is the source for drafting a proposal; the
+  `index.html` guide changes only when I ask.
 
 Homelab, for self-hosted services and for my products that earn nothing yet (Seed and Financy
 today); client work never runs there. Moving a product to its own or a shared Hetzner server is my
