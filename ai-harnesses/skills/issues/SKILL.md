@@ -30,7 +30,9 @@ come before priority:
 Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
 issue into one, or move an issue in or out. Never raise an issue's priority, never remove `manual`
 or `needs-decision`, and never remove `p4-low` or `p5-someday` except to raise an obstacle
-("Obstacles" below). Besides setting an issue aside as above, your only label changes on an existing
+("Obstacles" below). One exception: ringmaster removes `needs-decision` when it posts an answer I
+gave on its dashboard, because that answer is mine. Besides setting an issue aside as above, your
+only label changes on an existing
 issue are adding `manual`, `needs-decision` or a missing type
 label, and the `in-progress` claim (the `git-flow` skill). An open issue you find blocked on me
 or another person, with neither label, gets the one "Filing issues" below would give it. Library
