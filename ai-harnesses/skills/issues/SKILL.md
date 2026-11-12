@@ -18,6 +18,8 @@ come before priority:
   first; none left to take there → the next, then the backlog), whatever their priority label, plus
   any `p1-critical` or `p1-tooling` issue, plus, in `spy4x/dotfiles`, any `p2-high` tooling
   polish. Nothing else is picked. An issue I asked for goes into the milestone it belongs to.
+  Never put an agent's own issue that does not count as asked for (below), or one at `p4-low` or
+  `p5-someday`, into a milestone.
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker

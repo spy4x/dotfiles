@@ -81,8 +81,8 @@ Create it with `gh issue create`, in the **Issues and reports** shape from `AGEN
 
 The first lines of the body, after the `<!-- agent -->` marker, are `Asked for by the owner, <date>`
 and my sentence, quoted: without them a later wave treats the issue as an agent's own claim and may
-set it aside ("Picking work yourself" in the `issues` skill). If the repo has an open milestone, put the issue in
-the one it belongs to.
+set it aside ("Picking work yourself" in the `issues` skill, which also says where it goes when the
+repo has an open milestone).
 
 Label it with its priority (`p1-critical`, `p1-tooling`, then `p2-high` to `p5-someday`, defined in
 the `issues` skill), its type
