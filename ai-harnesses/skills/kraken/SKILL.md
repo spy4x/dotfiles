@@ -40,7 +40,7 @@ session, an outside author, an agent-filed issue nobody asked for.
 4. **Nothing.** No candidate anywhere → report that the backlog is done and stop. Never look below
    `p3-medium`, and never pick `p4-low` or `p5-someday` outside a milestone.
 
-Never edit a milestone or a gating label to make room ("Picking work yourself").
+Never change a gating label to make room ("Picking work yourself").
 
 ## Release it
 

@@ -53,7 +53,7 @@ In this order, each part only when it has content:
 1. **The result**, in a few sentences: what merged, released, deployed or changed, and what stays
    open and why.
 2. **Needs you**: what only I can do or decide. An action of mine, a question, an issue waiting for
-   a milestone or label of mine, an outside author's item, a rule found missing, wrong or blocking,
+   a label of mine, an outside author's item, a rule found missing, wrong or blocking,
    and a finding about a repository outside `spy4x/*`.
 3. **Issues**: one line with how many were filed or extended and a link that lists them, plus each
    issue set aside, with the label it had.

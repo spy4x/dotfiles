@@ -17,8 +17,7 @@ come before priority:
 - A repo with an open milestone → the candidates are the issues in it (several open: the one due
   first; none left to take there → the next, then the backlog), whatever their priority label, plus
   any `p1-critical` or `p1-tooling` issue, plus, in `spy4x/dotfiles`, any `p2-high` tooling
-  polish. Nothing else is picked. An issue you file outside it is reported as waiting for me to add
-  it (the library exception, obstacles and dotfiles tooling aside).
+  polish. Nothing else is picked. An issue I asked for goes into the milestone it belongs to.
 - Outside a milestone, an issue whose body starts with `<!-- agent -->` is a candidate only when I
   asked for it or step 2 of "Filing issues" below gives it `p3-medium` or higher. I asked for it
   when its next line is `Asked for by the owner, <date>`, when a comment of mine without the marker
@@ -27,8 +26,7 @@ come before priority:
   asked). Any other is not built: it gets `p4-low`, a one-line comment with the
   reason and the label it had, and a line under **Issues** in the report.
 
-Milestones and the labels that gate work are mine. Never create, edit or close a milestone, file an
-issue into one, or move an issue in or out. Never raise an issue's priority, never remove `manual`
+The labels that gate work are mine. Never raise an issue's priority, never remove `manual`
 or `needs-decision`, and never remove `p4-low` or `p5-someday` except to raise an obstacle
 ("Obstacles" below). Besides setting an issue aside as above, your only label changes on an existing
 issue are adding `manual`, `needs-decision` or a missing type
