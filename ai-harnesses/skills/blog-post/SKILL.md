@@ -20,7 +20,7 @@ category), the month's changelog. Before any issue or draft, put the proposal in
 
 - the title, and the reader in one line;
 - the search question, the exact phrase a reader types or asks, in each language planned;
-- the one next step the post ends with;
+- the one next step the post offers, and where in the body it sits;
 - the outline (the `##` headings);
 - the interactive part, if a claim is worth letting the reader test;
 - the languages.
@@ -98,7 +98,9 @@ own posts. A product site speaks as its maker, the same person. In short: "I" fo
 did, "you" for the reader, short paragraphs, plain words, self-irony and mistakes owned, opinions
 stated. Be fun to read, not only useful: the owner's character is fun while doing tech, so
 every post carries jokes, self-irony and playful asides alongside the substance, never a dry
-manual. The post closes with a push to act and its one ask, never a summary or "In conclusion".
+manual. The post ends on its last useful point or a joke, never a summary or "In conclusion".
+It never ends in a sales pitch for the owner's services: a reader who enjoyed the post finds the
+rest of the site alone. At most one quiet link to the offer, in the body where the text needs it.
 Keep out the phrases that read as generated: "crucial", "It's important to", "powerful, flexible
 and easy to use", filler reassurance, lists where every item says nothing specific.
 
