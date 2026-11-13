@@ -159,6 +159,7 @@ await encodeDemo({
   claim: `One page for every service, with its uptime`,
   end: `github.com/spy4x/oko`,
   poster: 0, // seconds into the take, or an image file
+  threads: 2, // optional: ffmpeg's -threads, so other sessions keep CPU on a shared machine
 })
 ```
 
