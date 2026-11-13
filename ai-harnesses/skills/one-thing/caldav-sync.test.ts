@@ -1,7 +1,7 @@
 import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@std/assert@1.0.19"
-import type { CalDavObject } from "jsr:@spy4x/caldav@1.44.0"
-import { parseIcal, serializeIcal } from "jsr:@spy4x/time@1.44.0/ical"
-import { patchTodo, readTodo, TodoStatus } from "jsr:@spy4x/time@1.44.0/ical-tasks"
+import type { CalDavObject } from "jsr:@spy4x/caldav@1.125.0"
+import { parseIcal, serializeIcal } from "jsr:@spy4x/time@1.125.0/ical"
+import { patchTodo, readTodo, TodoStatus } from "jsr:@spy4x/time@1.125.0/ical-tasks"
 import {
   assignIds,
   commitTasksFile,

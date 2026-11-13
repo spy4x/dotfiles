@@ -22,7 +22,7 @@ import {
   CalDavErrorCode,
   type CalDavObject,
   createCalDavClient,
-} from "jsr:@spy4x/caldav@1.44.0"
+} from "jsr:@spy4x/caldav@1.125.0"
 import {
   newTodo,
   patchTodo,
@@ -30,13 +30,13 @@ import {
   type Todo,
   type TodoPatch,
   TodoStatus,
-} from "jsr:@spy4x/time@1.44.0/ical-tasks"
+} from "jsr:@spy4x/time@1.125.0/ical-tasks"
 import {
   type IcalComponent,
   IcalDateKind,
   parseIcal,
   serializeIcal,
-} from "jsr:@spy4x/time@1.44.0/ical"
+} from "jsr:@spy4x/time@1.125.0/ical"
 
 export const CALENDAR = `1.1 / Plan 90d`
 const UID_PREFIX = `tasksmd-`
