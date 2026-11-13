@@ -61,8 +61,8 @@ third verdict, do that if about ten lines remain; otherwise leave the PR open wi
 is left, and move on. After a second `needs-fix` that names a behaviour defect, the `wave` skill
 says when and how to escalate that fix round. Never count rejections in a summary, PR body or issue.
 A PR body or issue says what the review found and what changed. Gate failed, or a revert can't undo
-it → leave the PR open and say so. Gate passed → comment on the PR once per passed head, starting with
-`<!-- agent -->`, with `Reviewer gate passed on <full head commit>.` and
+it → leave the PR open and say so. Gate passed → comment on the PR once per passed head,
+starting with `<!-- agent -->`, with `Reviewer gate passed on <full head commit>.` and
 `<!-- gate-passed <full head commit> -->`, so the background lead merges it on green even after
 your session ends.
 
