@@ -100,7 +100,8 @@ repository goes in your report. Before the final report:
    by kind: five contrast fixes on five screens are one issue, "fix contrast".
 
 Every issue you file gets a priority label and a type label. It also gets `needs-decision` when
-it waits on my answer, and `manual` when it is blocked on me or another person in any other way:
+it waits on an answer only I may give (the "Ask only when" list in `AGENTS.md`; a choice you decide
+yourself never gets it), and `manual` when it is blocked on me or another person in any other way:
 an action of mine, a client's reply, someone's access or review. My weekly review of parked and
 someday issues is no block. Type labels are the usual open-source ones (`bug`, `enhancement`,
 `documentation`, `refactoring`…); a type `spy4x/dotfiles` lacks is added there first.

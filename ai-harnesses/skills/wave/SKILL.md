@@ -39,9 +39,8 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
   never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
   `gh pr list --state open --limit 500 -S '-author:spy4x'` and
   `gh issue list --state open --limit 500 -S '-author:spy4x'`.
-- Stuck on a decision → comment on the issue in the Issues and reports shape (option A and B, one
-  consequence each, your pick), add `needs-decision`, and move on to the next issue. The owner
-  answers in a comment and removes the label.
+- Stuck on a decision → decide it, comment it on the issue and notify the owner (`AGENTS.md`,
+  "Decide my choices yourself"), and carry on.
 - One session runs one wave. The next wave starts in a new session from the handoff. Never resume
   an old coordinator to run the next wave, write its prompt or answer a small question: resuming it
   rewrites its whole cache. The session ends with its handoff: a new request after it goes to a new

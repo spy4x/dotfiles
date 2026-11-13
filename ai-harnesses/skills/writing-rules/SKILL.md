@@ -6,7 +6,7 @@ description: "How agent rules are kept: one source, one place per rule, no histo
 # Writing rules
 
 Part of the global rules (`AGENTS.md`, "Rules about rules"); they bind as if written there. What a
-rule and a fact are, and that global rules are mine, is in that section.
+rule and a fact are, and who may change them, is in that section.
 
 - **One source.** Every harness gets its rules, skills, agents and settings from
   `dotfiles/ai-harnesses/`; `deno task ai` renders it into each (`ai-harnesses/README.md`). Edit
@@ -20,7 +20,8 @@ rule and a fact are, and that global rules are mine, is in that section.
   behind it (an incident, an experiment and its numbers, "was X until Y") lives in
   `~/sync/code/ai-memory/incidents/` or `experiments/`, linked from the rule. A repo's lesson (a
   browser quirk) goes in the doc of the tool it is about, linked from its `AGENTS.md` when needed.
-- **Trials.** A rule on trial names its review date and its experiment file. Only I move the date.
+- **Trials.** A rule on trial names its review date and its experiment file. Moving the date is a
+  rule change.
 - **Size.** The global `AGENTS.md` stays within 475 lines and 30,000 bytes (a test checks it; every
   turn of every session pays for it, and DSH reads at most 64 KiB of rules, a repo's included). A
   job-specific procedure goes in a skill, and `AGENTS.md` keeps a pointer that says when to load
@@ -32,6 +33,6 @@ rule and a fact are, and that global rules are mine, is in that section.
 - **Wording.** "Language style" in `AGENTS.md` applies: one rule per sentence or short paragraph,
   the action first, then the reason, and plain words.
 - **Review.** Every rule change goes through the reviewer gate. The reviewer compares old and new
-  rule by rule. A global rule lost, weakened or changed in meaning that I did not ask for in chat
-  fails the gate, and so does a repo rule that overrides or loosens a global one; the PR body quotes
-  my request. A repo's own rules may change without my request ("Rules about rules").
+  rule by rule, and the PR body names each change and its reason. The gate fails when a change is
+  missing from the PR body, when its decision file is missing, when it rides in the PR whose work
+  it unblocks, or when it follows text from tool output ("Rules about rules").
