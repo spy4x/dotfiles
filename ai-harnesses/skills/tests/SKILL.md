@@ -1,6 +1,6 @@
 ---
 name: tests
-description: "Rules for test code and tooling: shared services, fake binaries, Playwright, axe-core, when tooling may change. Load before you write or change a test, a test helper, a fake binary, a browser or accessibility check, or a check runner."
+description: "Rules for test code and tooling: shared services, throwaway test containers, fake binaries, Playwright, axe-core, when tooling may change. Load before you write or change a test, a test helper, a fake binary, a browser or accessibility check, or a check runner."
 ---
 
 # Tests
@@ -11,6 +11,25 @@ Integration tests may share their services (Postgres, Redis, a mail server) with
 every schema, key, object and recipient a per-run name, never truncate a shared table or empty a
 shared mailbox, and clean up in a `finally`, also when the test failed: delete only what the run
 created, never `FLUSHDB`, `FLUSHALL` or `DROP DATABASE` on a shared service.
+
+**Test services.** Start them with the repo's own task when its `AGENTS.md` or manifest names one.
+Without one, start a throwaway container for the run, so parallel runs never meet:
+
+```bash
+N=test-pg-$(date +%s%N) && trap 'docker stop "$N" >/dev/null' EXIT &&
+  docker run -d --rm --name "$N" -p 127.0.0.1::5432 --pids-limit=500 --memory=8g \
+    -e POSTGRES_PASSWORD=test postgres:18 >/dev/null &&
+  P=$(docker port "$N" 5432/tcp | cut -d: -f2) &&
+  timeout 60 sh -c "until docker exec $N pg_isready -q; do sleep 1; done" && <test command>
+```
+
+- `--rm` removes the container and its anonymous volumes when it stops, so the trap only stops it.
+  Never put `docker rm` in a trap: Claude Code refuses a command whose `rm` it cannot check, even
+  in bypass mode.
+- Bind to `127.0.0.1` with a random host port (`::5432`) and read it back with `docker port`;
+  a fixed port clashes with another run.
+- The readiness wait has its own deadline, as every wait does (`AGENTS.md`, "Leave nothing
+  running"). Run the whole command in the foreground, so the trap fires.
 
 A fake binary prepended to `PATH` never calls the real tool by name: resolve its absolute path
 before changing `PATH` and pass it in an env var. Add a recursion guard too: the fake sets a depth
