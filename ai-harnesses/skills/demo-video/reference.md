@@ -23,8 +23,11 @@ await cdp.send(`Page.startScreencast`, {
 
 - Frames arrive only when the page paints. Each frame lasts until the next one; the concat list
   says so (`file '<jpg>'` then `duration <s>`), and the list ends with the last file once more,
-  because the demuxer ignores the last entry's duration. `encodeDemo()`'s `fps` filter then holds
-  each frame for its listed time.
+  because the demuxer ignores the last entry's duration. `encodeDemo()` holds each frame for its
+  listed time in three steps: it writes a copy of the list with `option framerate 30` on every
+  file (the demuxer otherwise reads stills at 25 fps and shows the wrong one where a frame lasts
+  under 1/25 s), resamples the take to 30 fps, then trims it to the list's total, because the
+  resampling holds the last still too long.
 - A shot list that cuts (Seed's `Recorder.begin()`/`end()`) keeps only the frames inside each shot,
   so loading pages never reach the video.
 - The screencast hands frames over at `maxWidth`/`maxHeight`; with `deviceScaleFactor: 2` and
