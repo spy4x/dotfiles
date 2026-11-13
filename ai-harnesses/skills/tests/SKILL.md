@@ -26,10 +26,9 @@ N=test-pg-$(date +%s%N) && trap 'docker stop "$N" >/dev/null' EXIT &&
 
 - The wait checks over TCP (`-h 127.0.0.1`): the image's first start runs a temporary server on
   the Unix socket only, then restarts, so a socket check can pass too early.
-- The resource flags follow the `leave-nothing-running` skill, "Containers".
+- The resource flags follow the `leave-nothing-running` skill, "Cap anything that spawns processes".
 - A shell keeps one `EXIT` trap, so a test command that sets its own (the CI emulation in
   `AGENTS.md`) puts `docker stop "$N"` in that trap too.
-
 - `--rm` removes the container and its anonymous volumes when it stops, so the trap only stops it.
   Never put `docker rm` in a trap: Claude Code refuses a command whose `rm` it cannot check, even
   in bypass mode.
