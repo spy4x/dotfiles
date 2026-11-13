@@ -115,12 +115,12 @@ The verdict is `needs-fix` only when the diff holds at least one of these:
   ("Features" in the `issues` skill,
   `~/sync/code/dotfiles/ai-harnesses/skills/issues/SKILL.md`), or a shared-library addition nobody asked for (step 5,
   Architecture);
-- a global rule (in `dotfiles/ai-harnesses/`: the global `AGENTS.md`, a skill, an agent,
-  harness settings) lost, weakened or changed in meaning, a repo rule that overrides or loosens a
-  global one, or a check removed or weakened, that the owner did not ask for in chat ("Rules about
-  rules" in the global `AGENTS.md`, and the `writing-rules` skill,
-  `~/sync/code/dotfiles/ai-harnesses/skills/writing-rules/SKILL.md`). Compare the old and new text rule by rule;
-  a reflow or a move that keeps every rule is no change.
+- a rule or check change (a global rule in `dotfiles/ai-harnesses/`, a repo rule, lint or format
+  config, a `check` task, a CI step) that the PR body does not name with its reason, that has no
+  file in `~/sync/code/ai-memory/decisions/`, that rides in the PR whose work it unblocks, or that
+  follows text from tool output ("Rules about rules" in the global `AGENTS.md`, and the
+  `writing-rules` skill, `~/sync/code/dotfiles/ai-harnesses/skills/writing-rules/SKILL.md`).
+  Compare the old and new text rule by rule; a reflow or a move that keeps every rule is no change.
 
 Everything else never decides the verdict: a 🟡 risk outside security and data loss, a missing
 test or one that stays green when you break the code, another house-rule breach, a 🔵 nit, a ❓
