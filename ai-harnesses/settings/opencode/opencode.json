@@ -3,6 +3,7 @@
   "model": "minimax-coding-plan/MiniMax-M3",
   "permission": "allow",
   "default_agent": "architect",
+  "instructions": ["~/sync/code/ai-memory/direction.md"],
   "watcher": {
     "ignore": [
       "node_modules/**",

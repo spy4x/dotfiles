@@ -141,9 +141,10 @@ Deno.test(`a file removed from the source is removed from the home; foreign file
     ])
     await apply(ops)
     assertEquals(
-      await Deno.lstat(join(home, `.claude`, `skills`, `lookup`, `SKILL.md`)).catch(() => null),
+      await Deno.lstat(join(home, `.claude`, `skills`, `lookup`)).catch(() => null),
       null,
     )
+    assertEquals((await Deno.lstat(join(home, `.claude`, `skills`))).isDirectory, true)
     assertEquals(
       await Deno.readTextFile(join(home, `.claude`, `skills`, `mine`, `SKILL.md`)),
       `hand-made\n`,
@@ -209,8 +210,11 @@ Deno.test(`the CLI applies from a main checkout, refuses in a linked worktree, a
       await copy(join(import.meta.dirname!, file), join(dir, file))
     }
     await copy(join(import.meta.dirname!, `adapters`), join(dir, `adapters`))
-    // The scripts import the shared libraries through the import map of the repo root.
-    await copy(join(import.meta.dirname!, `..`, `deno.jsonc`), join(repo, `deno.jsonc`))
+    // The scripts import the shared libraries through the import map of the repo root, and its
+    // lockfile: without it, Deno refuses a library release younger than its minimum age.
+    for (const file of [`deno.jsonc`, `deno.lock`]) {
+      await copy(join(import.meta.dirname!, `..`, file), join(repo, file))
+    }
 
     const run = async (...flags: string[]) => {
       const { code } = await new Deno.Command(Deno.execPath(), {

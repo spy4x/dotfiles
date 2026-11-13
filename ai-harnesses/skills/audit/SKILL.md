@@ -31,8 +31,9 @@ Per unit: exported API, source vs test line counts, dependencies added, and **pr
 repo(s) the code came from and who imports it today (`grep` the consumer repos for the package name
 and for near-duplicates of its main functions).
 
-The reuse test, applied to every unit: **two or more real consumers, or a stated reason it is
-platform-level.** One consumer = project code living in the wrong repo, however clean it is.
+The need test, applied to every unit: **a real consumer today.** The global `AGENTS.md` decides
+where reusable code lives by whether a future project could use it, so one consumer is enough. No
+consumer and no request from the owner = it was built on a guess, however clean it is.
 
 ## 2. Deep review (parallel reviewer subagents, one per unit, file-disjoint)
 
@@ -43,7 +44,7 @@ secrets/env tooling say so in their brief, so the reviewer checks those risks fi
 
 Each reviewer answers:
 
-1. Does it belong? (reuse test, scope statement, deps policy — "own the small, keep the huge":
+1. Does it belong? (need test, scope statement, deps policy — "own the small, keep the huge":
    a hand-rolled SMTP/TLS/timezone/XML/crypto implementation is a finding by default)
 2. Is it correct? Read the riskiest paths, not the longest files.
 3. Are the tests real? Mutation-sample 3–5 behaviours, and report each one I could break with the

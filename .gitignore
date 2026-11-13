@@ -71,7 +71,7 @@ jspm_packages/
 !.env*.age
 !.env*.example
 
-# age64 private key for the committed *.env.age files (deno task env:*)
+# age64 private key; never tracked
 .age/
 
 # CalDAV MCP credentials (exposed to git in the past — DO NOT TRACK)
@@ -94,6 +94,8 @@ volumes/
 # System and runtime files
 *.sock
 *.lock
+# The Deno lockfile is committed, so CI resolves the same versions as this machine.
+!deno.lock
 
 # Playwright MCP runtime cache (session logs, page snapshots)
 .playwright-mcp/
@@ -124,3 +126,6 @@ volumes/
 # Claude Code project-local state for sessions opened in this repo
 .claude/settings.local.json
 .claude/worktrees/
+
+# Raw demo takes: media/demo/recipe/record.sh writes them, encode.sh reads them.
+media/demo/.raw/

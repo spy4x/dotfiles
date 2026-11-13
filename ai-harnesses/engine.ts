@@ -47,6 +47,8 @@ export interface Op {
   content?: string
   /** Recomputes `content` from the file as it is at apply time (merged files only). */
   rebuild?: () => Promise<string>
+  /** For a `remove`: the harness home. Folders the removal leaves empty go too, up to it. */
+  prune?: string
 }
 
 /** The environment the engine reads, injectable for tests. */
@@ -246,6 +248,7 @@ export async function planTarget(target: Target, rendered: RenderedFile[]): Prom
         path,
         action: `remove`,
         reason: `no longer tracked`,
+        prune: target.home,
       })
     }
   }
@@ -288,6 +291,7 @@ export async function apply(ops: Op[]): Promise<number> {
     // Deno.writeTextFile follows symlinks; remove one first so the write creates a real file.
     const lstat = await Deno.lstat(op.path).catch(() => null)
     if (lstat && (lstat.isSymlink || op.action === `remove`)) await Deno.remove(op.path)
+    if (op.action === `remove` && op.prune) await removeEmptyFolders(dirname(op.path), op.prune)
     if (op.action === `write`) {
       await Deno.mkdir(dirname(op.path), { recursive: true })
       if (op.rebuild) await writeAtomic(op.path, content)
@@ -296,4 +300,16 @@ export async function apply(ops: Op[]): Promise<number> {
     changed++
   }
   return changed
+}
+
+/**
+ * Removes `folder`, then each parent, while it is empty, and stops below `home`: a deleted skill
+ * leaves no empty folder behind, and the harness home itself always stays.
+ */
+async function removeEmptyFolders(folder: string, home: string): Promise<void> {
+  while (folder.startsWith(`${home}/`)) {
+    if ((await denoFileSystem.readDir(folder)).length > 0) return
+    await denoFileSystem.remove(folder)
+    folder = dirname(folder)
+  }
 }

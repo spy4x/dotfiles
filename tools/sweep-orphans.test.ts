@@ -6,6 +6,102 @@ const ME = `sweep-test-me`
 const SIBLING = `sweep-test-sibling`
 
 /**
+ * A fake `docker` first on PATH for every sweep this file runs, so `--all` and `--stale --kill`
+ * never reach the machine's real volumes. It answers from the files in FAKE_DOCKER_DIR and logs
+ * each call to `calls`: `volumes` (dangling) and `in-use` volumes and `networks` hold `NAME CREATED`
+ * lines, `named` the volumes that are not anonymous, `used` the networks a container joins. It never calls the real `docker`, and exits non-zero when it finds itself nested.
+ */
+const FAKE_DOCKER = await Deno.realPath(await Deno.makeTempDir({ prefix: `sweep-docker-` }))
+await Deno.mkdir(join(FAKE_DOCKER, `bin`))
+await Deno.writeTextFile(
+  join(FAKE_DOCKER, `bin`, `docker`),
+  `#!/bin/sh
+[ -z "$FAKE_DOCKER_DEPTH" ] || exit 99
+export FAKE_DOCKER_DEPTH=1
+d=$FAKE_DOCKER_DIR
+echo "$*" >>"$d/calls"
+case "$1 $2" in
+  "volume ls")
+    {
+      cut -d' ' -f1 "$d/volumes"
+      case " $* " in *" dangling=true "*) ;; *) cut -d' ' -f1 "$d/in-use" ;; esac
+    } | case " $* " in
+      *" label=com.docker.volume.anonymous "*) grep -vxF -f "$d/named" ;;
+      *) cat ;;
+    esac
+    ;;
+  "network ls") cut -d' ' -f1 "$d/networks" ;;
+  "volume inspect")
+    shift 4
+    for n; do grep -h "^$n " "$d/volumes" "$d/in-use" || exit 1; done
+    ;;
+  "network inspect")
+    shift 4
+    for n; do grep "^$n " "$d/networks" || exit 1; done
+    ;;
+  "ps -aq") [ -s "$d/used" ] && echo container-1 ;;
+  "inspect --format") cat "$d/used" ;;
+  "volume rm" | "network rm")
+    shift 2
+    for n; do echo "$n"; done
+    ;;
+  *) exit 1 ;;
+esac
+exit 0
+`,
+  { mode: 0o755 },
+)
+Deno.env.set(`PATH`, `${join(FAKE_DOCKER, `bin`)}:${Deno.env.get(`PATH`)}`)
+const NO_DOCKER = join(FAKE_DOCKER, `none`)
+await Deno.mkdir(NO_DOCKER)
+for (const file of [`volumes`, `in-use`, `named`, `networks`, `used`, `calls`]) {
+  await Deno.writeTextFile(join(NO_DOCKER, file), ``)
+}
+Deno.env.set(`FAKE_DOCKER_DIR`, NO_DOCKER)
+globalThis.addEventListener(`unload`, () => Deno.removeSync(FAKE_DOCKER, { recursive: true }))
+
+/** Gives the fake `docker` a fresh state for `body`: these volumes, networks and used networks. */
+async function withDocker(
+  state: {
+    volumes?: string[]
+    inUse?: string[]
+    named?: string[]
+    networks?: string[]
+    used?: string[]
+  },
+  body: (calls: () => Promise<string[]>) => Promise<void>,
+): Promise<void> {
+  const dir = await Deno.makeTempDir({ dir: FAKE_DOCKER })
+  const files = { volumes: state.volumes, "in-use": state.inUse, named: state.named }
+  for (
+    const [file, lines] of Object.entries({ ...files, networks: state.networks, used: state.used })
+  ) {
+    await Deno.writeTextFile(join(dir, file), (lines ?? []).map((l) => `${l}\n`).join(``))
+  }
+  await Deno.writeTextFile(join(dir, `calls`), ``)
+  Deno.env.set(`FAKE_DOCKER_DIR`, dir)
+  try {
+    await body(async () =>
+      (await Deno.readTextFile(join(dir, `calls`))).split(`\n`).filter(Boolean)
+    )
+  } finally {
+    Deno.env.set(`FAKE_DOCKER_DIR`, NO_DOCKER)
+    await Deno.remove(dir, { recursive: true })
+  }
+}
+
+/** Runs the sweep as session `ME` and returns its stdout lines and exit code. */
+async function sweepLines(...args: string[]): Promise<{ lines: string[]; code: number }> {
+  const { code, stdout } = await new Deno.Command(`bash`, {
+    args: [SCRIPT, ...args],
+    env: { CLAUDE_CODE_SESSION_ID: ME },
+    stdout: `piped`,
+    stderr: `null`,
+  }).output()
+  return { lines: new TextDecoder().decode(stdout).split(`\n`).filter(Boolean), code }
+}
+
+/**
  * Starts a `sleep` that is orphaned the way a leaked agent process is: its parent exits, so it is
  * reparented to the user manager, and it stays in this test's cgroup. It runs in `cwd`, tagged
  * with `session` as its CLAUDE_CODE_SESSION_ID, and ends by itself after two minutes.
@@ -186,6 +282,40 @@ Deno.test(`refuses to kill other sessions' orphans`, async () => {
   })
 })
 
+Deno.test(`--stale --kill refuses a --min-age below a day without --under`, async () => {
+  // One second short of a day: if the refusal ever breaks, it can only stop what is nearly a day
+  // old, which the rule stops anyway. A lower age would stop other sessions' live work.
+  assertEquals((await sweep(`--stale`, `--kill`, `--min-age`, `86399`)).code, 2)
+})
+
+Deno.test(`--stale leaves another session's orphan alone until it is a day old`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const lane = await dir(`lane`)
+    const pid = await orphan(lane, SIBLING)
+    spawned.push(pid)
+    const { pids, code } = await sweep(`--stale`, `--kill`, `--under`, lane)
+    assertEquals(code, 0)
+    assertEquals(pids, [])
+    assert(await exists(`/proc/${pid}`), `a fresh orphan of another session was killed`)
+  })
+})
+
+Deno.test(`--stale --kill stops another session's orphan older than --min-age`, async () => {
+  await withOrphans(async (dir, spawned) => {
+    const lane = await dir(`lane`)
+    const old = await orphan(lane, SIBLING)
+    const outside = await orphan(await dir(`theirs`), SIBLING)
+    spawned.push(old, outside)
+    await new Promise((r) => setTimeout(r, 1100))
+    const { pids, code } = await sweep(`--stale`, `--kill`, `--min-age`, `1`, `--under`, lane)
+    assertEquals(code, 0)
+    assertEquals(pids, [old])
+    await new Promise((r) => setTimeout(r, 200))
+    assert(!(await exists(`/proc/${old}`)), `the stale orphan still runs`)
+    assert(await exists(`/proc/${outside}`), `an orphan outside --under was killed`)
+  })
+})
+
 /** Whether a systemd user manager answers; `systemctl` itself may be missing. */
 async function hasUserManager(): Promise<boolean> {
   try {
@@ -313,6 +443,29 @@ Deno.test({
 })
 
 Deno.test({
+  name: `--stale --kill stops another session's scope only past --min-age`,
+  ignore: noScopes,
+  fn: () =>
+    withScopes(async (dir, scopes) => {
+      const lane = await dir(`lane`)
+      const unit = await withScope(lane, SIBLING, scopes)
+      assertEquals((await sweepNames(`--stale`, `--kill`, `--under`, lane)).names, [])
+      assert(await active(unit), `a fresh scope of another session was stopped`)
+      const { names, code } = await sweepNames(
+        `--stale`,
+        `--kill`,
+        `--min-age`,
+        `0`,
+        `--under`,
+        lane,
+      )
+      assertEquals(code, 0)
+      assertEquals(names, [unit])
+      assert(!(await active(unit)), `the stale scope is still active`)
+    }),
+})
+
+Deno.test({
   name: `lists a scope without a session ID only with --all or --under`,
   ignore: noScopes,
   fn: () =>
@@ -398,4 +551,74 @@ Deno.test({
       assertEquals(code, 0)
       assertEquals(new TextDecoder().decode(stdout), ``)
     }),
+})
+
+const OLD = `2020-01-01T00:00:00+00:00`
+const OLD_UNIX = 1577836800
+/** An ISO date `seconds` ago, as `docker volume inspect` prints it. */
+const ago = (seconds: number) => new Date(Date.now() - seconds * 1000).toISOString()
+
+Deno.test(`--all lists the Docker volumes and networks no container uses`, async () => {
+  const hour = Math.floor(Date.now() / 1000) - 7200
+  await withDocker({
+    volumes: [`old-vol ${OLD}`, `new-vol ${ago(60)}`],
+    networks: [`old-net ${OLD_UNIX}`, `joined-net ${OLD_UNIX}`, `new-net ${hour + 7140}`],
+    used: [`joined-net bridge`],
+  }, async () => {
+    const { lines, code } = await sweepLines(`--all`)
+    assertEquals(code, 0)
+    const docker = lines.filter((l) => l.startsWith(`docker-`))
+    assertEquals(docker.map((l) => l.split(` `)[0]), [
+      `docker-volume/old-vol`,
+      `docker-network/old-net`,
+    ])
+    for (const line of docker) {
+      assert(/^docker-(volume|network)\/\S+ [\d:-]+ 0\.0 docker \w+$/.test(line), line)
+    }
+  })
+})
+
+Deno.test(`lists no Docker leftovers without --all`, async () => {
+  await withDocker(
+    { volumes: [`old-vol ${OLD}`], networks: [`old-net ${OLD_UNIX}`] },
+    async (calls) => {
+      const { lines } = await sweepLines()
+      assert(!lines.some((l) => l.startsWith(`docker-`)), lines.join(`\n`))
+      assertEquals(await calls(), [])
+    },
+  )
+})
+
+Deno.test(`fails loudly when Docker cannot list its volumes`, async () => {
+  // `ghost` is listed but has no line `docker volume inspect` can find, so the fake fails.
+  await withDocker({ volumes: [`old-vol ${OLD}`, `ghost`] }, async () => {
+    const { code } = await sweepLines(`--all`)
+    assertEquals(code, 1)
+  })
+})
+
+Deno.test(`--stale --kill removes only unused anonymous Docker leftovers a day old`, async () => {
+  await withOrphans(async (dir) => {
+    await withDocker({
+      volumes: [`old-vol ${OLD}`, `hour-vol ${ago(7200)}`, `pgdata ${OLD}`],
+      inUse: [`busy-vol ${OLD}`],
+      named: [`pgdata`],
+      networks: [`old-net ${OLD_UNIX}`, `hour-net ${Math.floor(Date.now() / 1000) - 7200}`],
+    }, async (calls) => {
+      // --under an empty directory keeps every real orphan and scope of the machine out of reach,
+      // and --min-age 0 must not lower the day Docker leftovers need. `pgdata` is named, as a volume
+      // `docker compose down` keeps, and `busy-vol` belongs to a container: both stay.
+      const { code } = await sweepLines(
+        `--stale`,
+        `--kill`,
+        `--min-age`,
+        `0`,
+        `--under`,
+        await dir(`empty`),
+      )
+      assertEquals(code, 0)
+      const removed = (await calls()).filter((c) => / rm /.test(` ${c} `))
+      assertEquals(removed, [`volume rm old-vol`, `network rm old-net`])
+    })
+  })
 })

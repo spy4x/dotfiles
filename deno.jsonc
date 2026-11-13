@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@spy4x/platform": "jsr:@spy4x/platform@1.9.0",
+    "@spy4x/platform": "jsr:@spy4x/platform@1.118.0",
     "@spy4x/validation": "jsr:@spy4x/validation@1.9.0",
     "arktype": "npm:arktype@2.2.3"
   },
@@ -11,17 +11,8 @@
     "configure-hibernate": "deno run -A configure-hibernate-on-fedora-btrfs.ts",
     "ai": "deno run -A ai-harnesses/manage.ts",
     "test": "deno test -A tools/ ai-harnesses/",
-    // Experiment kit: lanes.jsonl from transcripts, then the analysis. See tools/experiments/README.md.
-    "experiment:collect": "deno run -A tools/experiments/collect.ts",
-    "experiment:analyse": "deno run -A tools/experiments/analyse.ts",
-    "experiment:report": "deno run -A tools/experiments/report.ts",
-    "experiment:daily": "deno run -A tools/experiments/daily.ts",
-    "experiment:trial": "deno run -A tools/experiments/trial.ts",
-    "experiment:followup": "deno run -A tools/experiments/followup.ts",
-    // age64 env files: every .env* in the repo <-> its committed .env*.age, key in .age/key.txt.
-    "env:encrypt": "deno run --no-prompt -R -W=. jsr:@spy4x/server@1.2.0/env-age64/cli encrypt",
-    "env:decrypt": "deno run --no-prompt -R -W=. jsr:@spy4x/server@1.2.0/env-age64/cli decrypt",
-    "env:status": "deno run --no-prompt -R jsr:@spy4x/server@1.2.0/env-age64/cli status"
+    // Records and encodes the README demo video into media/demo/. See media/demo/recipe/README.md.
+    "demo-video": "media/demo/recipe/record.sh"
   },
   "exclude": [
     "**/.cache/*",

@@ -2,15 +2,36 @@ import type { EngineInterface, Register } from "claude-code"
 import {
   ALLOW,
   bashVerdict,
+  bodyFilePath,
+  builtVerdict,
+  compactionNotice,
+  compactionsSoFar,
+  DIRECTION_PATH,
+  directionBlock,
   ghPost,
   leakVerdict,
   markerVerdict,
   spawnVerdict,
-  type Verdict,
+  unplacedVerdict,
+  uuidVerdict,
+  type Where,
 } from "./rules.ts"
 
-const STDIN_BODY = `Write the body to a file and pass its absolute path to --body-file: ` +
-  `this mod cannot read a body from standard input.`
+/**
+ * Added to every refused Bash call. Agents often fix a body (`sed -i '1i <!-- agent -->'`) and
+ * post it in one command, then retry that same command after the refusal.
+ */
+const NOTHING_RAN = `Nothing in this command ran, not even the steps before the refused one: ` +
+  `run any fix in a command of its own, then retry.`
+
+/** The file's text, or undefined when it cannot be read yet. */
+async function readable($: EngineInterface, path: string): Promise<string | undefined> {
+  try {
+    return await $.fs.read(path)
+  } catch {
+    return undefined
+  }
+}
 
 /**
  * Appends one JSON line to ~/.claude/mods-log/harness-rules.jsonl: every spawn and every
@@ -43,7 +64,75 @@ async function fiveHourPercent($: EngineInterface): Promise<number | undefined> 
   return rateLimits.find((limit) => limit.kind === `five_hour`)?.percentUsed
 }
 
+/**
+ * The session's directory and home, for the `rm` rule. Each is left out when it cannot be read:
+ * the rule then still refuses variable paths and the paths it can judge without them.
+ */
+async function whereOf($: EngineInterface): Promise<Where> {
+  const [cwd, home] = await Promise.all([
+    $.session.cwd().catch(() => undefined),
+    $.env.get(`HOME`).catch(() => undefined),
+  ])
+  return { cwd, home }
+}
+
+/**
+ * The owner's direction.md as a context block, or undefined. Fail-open: a missing file, an
+ * unknown home or a failed read starts the session without it. Reads that one path only.
+ */
+async function direction($: EngineInterface) {
+  try {
+    const home = await $.env.get(`HOME`)
+    if (!home) return undefined
+    return directionBlock(await readable($, `${home}/${DIRECTION_PATH}`))
+  } catch {
+    return undefined
+  }
+}
+
 export const register: Register = (on) => {
+  // The conversation's first message carries direction.md, as it carries CLAUDE.md.
+  on(`prompt.context`, async ($, e, next) => {
+    const context = await next(e)
+    const block = await direction($)
+    return block ? { ...context, blocks: [...context.blocks, block] } : context
+  })
+
+  // After each compaction of the main conversation, a message counts it, and from the second on
+  // tells the session to hand off. The count lives in that message, so the next compaction reads
+  // it back from `e.messages`. Fail-open: it never vetoes, and any error keeps the compaction as
+  // the engine made it. A subagent's compaction and a precompute (which installs nothing) pass.
+  // A headless run (`AGENT_RUN_ID` set) is told to park with its handoff instead.
+  on(`session.compact`, async ($, e, next) => {
+    const compacted = await next(e)
+    if (e.agentId !== undefined || e.trigger === `precompute` || compacted.skip !== undefined) {
+      return compacted
+    }
+    try {
+      const count = compactionsSoFar(e.messages.map((message) => message.text)) + 1
+      const headless = Boolean(await $.env.get(`AGENT_RUN_ID`).catch(() => undefined))
+      const text = compactionNotice(count, headless)
+      const notice = { role: `user` as const, text, toolUses: [] }
+      return { ...compacted, messages: [...compacted.messages, notice] }
+    } catch {
+      return compacted
+    }
+  })
+
+  on(`tool.call`, { tool: `Write` }, async ($, e, next) => {
+    const verdict = uuidVerdict(e.file_path, (await readable($, e.file_path)) ?? ``, e.content)
+    if (!verdict.deny) return next(e)
+    await log($, { event: `write`, path: e.file_path, deny: verdict.deny })
+    return { deny: verdict.deny }
+  })
+
+  on(`tool.call`, { tool: `Edit` }, async ($, e, next) => {
+    const verdict = uuidVerdict(e.file_path, e.old_string, e.new_string)
+    if (!verdict.deny) return next(e)
+    await log($, { event: `edit`, path: e.file_path, deny: verdict.deny })
+    return { deny: verdict.deny }
+  })
+
   on(`agent.spawn`, async ($, e, next) => {
     const verdict = spawnVerdict(e, await fiveHourPercent($))
     await log($, {
@@ -58,10 +147,13 @@ export const register: Register = (on) => {
   })
 
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
-    const verdict = bashVerdict(e.command)
+    const verdict = bashVerdict(e.command, await whereOf($))
     if (!verdict.deny) return next(e)
-    await log($, { event: `bash`, command: e.command.slice(0, 200), deny: verdict.deny })
-    return { deny: verdict.deny }
+    // The whole command, read on this machine to judge each refusal; none when it also posts,
+    // since a post's body may hold a secret.
+    const command = ghPost(e.command).kind === `none` ? e.command : null
+    await log($, { event: `bash`, command, deny: verdict.deny })
+    return { deny: `${verdict.deny} ${NOTHING_RAN}` }
   })
 
   // A body we post leaves the machine, so this guard fails closed: a hook that throws refuses,
@@ -69,32 +161,54 @@ export const register: Register = (on) => {
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const post = ghPost(e.command)
     if (post.kind === `none`) return next(e)
-    let verdict: Verdict = post.kind === `stdin` ? { deny: STDIN_BODY } : ALLOW
-    const body = post.kind === `file`
-      ? await $.fs.read(post.path)
-      : post.kind === `inline`
-      ? post.body
-      : ``
-    if (!verdict.deny) verdict = markerVerdict(body)
+    // A body file is often written earlier in this same command (a heredoc), so it cannot be
+    // read yet; a variable in its path resolves only when this command sets it once to a literal
+    // (`ghPost`), or when it is `$HOME`. A file inside what a `mktemp` in the command made
+    // (`fresh`), beside only the allowlisted commands of `freshSafe`, holds only what the command
+    // wrote; it is never read.
+    // `--body-file -` reads a heredoc.
+    // A file that can be read is judged by its own text: a marker elsewhere in the command (a
+    // shell comment) does not count. Only when it cannot be read does the command text, which
+    // then holds a heredoc body, count for the marker; it is always scanned. A command that also
+    // writes the body file with anything but a literal heredoc, `printf` or `echo` (`cat f >>`,
+    // `cp`, `sed -i`, a script naming it) is refused (`built`); a body filled without naming the
+    // file, or through `--body-file -`, goes out unscanned.
+    // The shell expands `~/` and `$HOME`; a path it would change in any other way is unplaced.
+    // A relative path is read from the folder a `cd` in the command moved to (`ghPost`), or else
+    // from the session's directory, where the shell runs.
+    const path = post.kind === `file` ? bodyFilePath(post.path, await whereOf($)) : undefined
+    const file = path === undefined ? undefined : await readable($, path)
+    let verdict = post.kind === `unplaced` || (post.kind === `file` && path === undefined)
+      ? unplacedVerdict(e.command)
+      : post.kind === `built`
+      ? builtVerdict(e.command)
+      : post.kind === `subject`
+      // A commit subject is a title: it is scanned below, but a marker there would be wrong.
+      ? ALLOW
+      : markerVerdict(post.kind === `inline` ? post.body : file ?? e.command)
     if (!verdict.deny) {
       const scan = await $.process.run(
         [`gitleaks`, `stdin`, `--no-banner`, `--redact`],
         // The whole command too: the word parser is not a shell, and a body it cut short
         // (an escaped quote, `$(…)`) must not hide a secret.
-        { stdin: post.kind === `file` ? `${body}\n${e.command}` : e.command, timeoutMs: 8000 },
+        { stdin: file === undefined ? e.command : `${file}\n${e.command}`, timeoutMs: 8000 },
       )
       verdict = leakVerdict(scan.exitCode)
     }
     if (!verdict.deny) return next(e)
     // The command can hold the secret gitleaks found, so the log keeps only the refusal.
     await log($, { event: `gh`, deny: verdict.deny })
-    return { deny: verdict.deny }
-  }).catch((_$, e, next) => {
-    const refusal = {
-      deny: `The check of this post failed: its body file could not be read, or gitleaks did ` +
-        `not run. It was not sent.`,
-    }
-    if (next.error.kind === `re-entry`) return ghPost(e.command).kind === `none` ? next(e) : refusal
-    return next.called ? next(e) : refusal
+    return { deny: `${verdict.deny} ${NOTHING_RAN}` }
+  }).catch(async ($, e, next) => {
+    if (next.error.kind === `re-entry` && ghPost(e.command).kind === `none`) return next(e)
+    if (next.error.kind !== `re-entry` && next.called) return next(e)
+    const deny = `The check of this post failed: gitleaks did not run, or the check broke. ` +
+      `It was not sent.`
+    // The handler's grace is 1 second of its own time (`HookBudget.catchMs`); past it the hook
+    // counts as absent and the post would go. Its `$` calls are free, so a slow log write
+    // cannot use the grace up. On a re-entry the engine rejects this handler's own `$` calls
+    // (`CatchHandler`), so nothing is logged.
+    await log($, { event: `gh`, deny })
+    return { deny: `${deny} ${NOTHING_RAN}` }
   })
 }

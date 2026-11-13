@@ -19,6 +19,31 @@ sudo sysctl --system
 The watch limit (`fs.inotify.max_user_watches`) is a separate number and is already generous on
 Fedora — check it before assuming it is the one being hit.
 
+**Docker MTU behind the VPN.** Every packet this machine sends to the internet, forwarded
+container traffic included, leaves through the `wg2` WireGuard tunnel, whose MTU is 1420.
+Docker's networks default to 1500, so a container's large TLS packets do not fit the tunnel and
+the connection is reset:
+`git ls-remote https://github.com/…` failed from every container on the default bridge and worked
+on a network created with MTU 1420 (2026-10-30). That broke every CI clone when this machine ran a
+Woodpecker agent. `system/etc/docker/daemon.json` sets 1420 through `default-network-opts` for
+every bridge network created after a restart, such as each pipeline's own network, and through
+`mtu` for the default bridge. A restart would normally stop every running container (the shared
+integration-test services have no restart policy). `live-restore` keeps them running through it,
+and unlike the MTU it is applied by a reload, so reload first:
+
+```bash
+sudo mkdir -p /etc/docker
+sudo cp system/etc/docker/daemon.json /etc/docker/daemon.json
+sudo systemctl reload docker    # turns on live-restore
+sudo systemctl restart docker   # new networks get 1420; containers keep running
+```
+
+Networks that already exist keep MTU 1500 until they are recreated (`docker compose down` and
+`up`). The default bridge (`docker0`) changes only on a restart with no container running: while
+containers run, Docker logs that it kept the old network settings. So a plain `docker run` stays
+on 1500 until a restart with every container stopped. Live-restore is meant for restarts within
+one Docker release; a dnf upgrade to a new major version may still stop containers.
+
 **`/tmp` on tmpfs.** Fedora mounts `/tmp` as tmpfs and cleans it at an age of 10 days. Throwaway
 Deno caches from CI-emulation runs accumulate far faster than that, and because tmpfs is RAM
 they cost memory the whole time. `system/etc/tmpfiles.d/tmp.conf` shortens the age to 2 days;
@@ -57,10 +82,10 @@ crashed. Nothing stopped it, because systemd lets each app create up to 111,895 
 `system/etc/systemd/user.conf.d/50-tasks-max.conf` lowers that default to 16,384 tasks for each
 app, service and scope. A task is a process or a thread. Each app keeps its own budget, so a runaway
 in the Claude app cannot use up the game's or the browser's. When this was written, the Claude app
-held about 900 tasks and no other app more than 900. The agent rules still cap each command at 500
-tasks; this file is the backstop for a command that skips that cap. When the Claude app reaches the
-limit, every session in it fails to start new processes until the runaway ends, and the kernel log
-says `fork rejected by pids controller`.
+held about 900 tasks and no other app more than 900. The agent rules still cap each command at
+4,000 tasks (500 until 2026-10-14); this file is the backstop for a command that skips that cap.
+When the Claude app reaches the limit, every session in it fails to start new processes until the
+runaway ends, and the kernel log says `fork rejected by pids controller`.
 
 ```bash
 sudo mkdir -p /etc/systemd/user.conf.d
@@ -75,12 +100,35 @@ systemctl --user show 'app-com.anthropic.Claude-*.scope' -p Id -p TasksMax
 
 The loop caps the running Claude app now; other apps get the new default when they next start.
 
+**Webcam frame rate.** In dim light the Logitech C922's auto exposure lowers its frame rate
+(25 fps or less instead of 30), and OBS records that as stutter. Turning off
+`exposure_dynamic_framerate` holds 30 fps; a side-by-side test showed no visible loss of
+brightness. The camera forgets the setting when it is unplugged, so
+`system/etc/udev/rules.d/90-c922-fixed-fps.rules` sets it again on every plug-in. It needs
+`v4l2-ctl` from `v4l-utils`.
+
+```bash
+sudo dnf install -y v4l-utils
+sudo cp system/etc/udev/rules.d/90-c922-fixed-fps.rules /etc/udev/rules.d/90-c922-fixed-fps.rules
+sudo udevadm control --reload
+sudo udevadm trigger --action=add --settle /sys/class/video4linux/video0
+v4l2-ctl -d /dev/video0 -C exposure_dynamic_framerate   # prints 0
+```
+
 **Syncthing and worktrees.** Agent worktrees are created under `~/sync/code/worktrees/`, inside a
 Syncthing folder. Syncthing indexes and watches everything it does not ignore, so without an
 ignore line it holds an inotify watch per worktree directory and replicates build output to
 every other machine. A worktree is not worth syncing: it is rebuilt from `origin` on demand, and
 its `.git` file names an absolute path in the main checkout, so the copy is broken anyway.
 `system/syncthing-code.stignore` is the tracked copy of the ignore list for the `code` folder.
+
+The same file keeps plaintext env files and age keys off the other machines. It ignores names
+that start with `.env`, names that end in `.env` or contain `.env.bak`, and `.age` directories;
+it still syncs `.env*.age` and `.env*.example` files. A secret under any other name still syncs.
+An ignore list is local to each machine, so copy it on every machine that shares the folder
+first. It stops new copies only: after that, delete the ones a machine already received by hand,
+including older versions under `.stversions`, and give each machine a repo's age key once, then
+decrypt there.
 
 ```bash
 cp system/syncthing-code.stignore ~/sync/code/.stignore

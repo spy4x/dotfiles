@@ -1,6 +1,6 @@
 ---
 name: marketing-micro-saas
-description: "Open-core microSaaS marketing playbook for solo indie devs. Load for pricing tier design, license choice (AGPLv3 + commercial), channel strategy, distribution platforms, launch checklists, conversion math, GitHub README optimization, IndieHackers/Hacker News/Reddit/Twitter tactics, and IndieHackers-style build-in-public playbook. Reference templates modeled on Plausible, Cal.com, Dub.co, Papermark, Logto, Coolify patterns. Stack-aware: Deno 2 + Hono + Fresh + Preact + SQLite + Litestream, Hetzner BM, syncthing + restic, shared Traefik + VictoriaMetrics + Authelia + Woodpecker CI."
+description: "Open-core microSaaS marketing playbook for solo indie devs. Load for positioning (what a product is, for whom, against what), pricing tier design, license choice (AGPLv3 + commercial), channel strategy, distribution platforms, launch checklists, conversion math, GitHub README optimization, IndieHackers/Hacker News/Reddit/Twitter tactics, and IndieHackers-style build-in-public playbook. Reference templates modeled on Plausible, Cal.com, Dub.co, Papermark, Logto, Coolify patterns. Stack-aware: Deno 2 + Hono + Fresh + Preact + SQLite + Litestream, Hetzner BM, syncthing + restic, shared Traefik + VictoriaMetrics + Authelia + Woodpecker CI."
 ---
 
 # Marketing Playbook — Solo microSaaS (Open Core)
@@ -13,6 +13,7 @@ Give you a concrete, executable playbook for launching and growing an open-core 
 
 Load when:
 
+- Positioning a product, offer or site: the one-line description, the home page, the README
 - Picking license for a new project (AGPLv3 vs MIT vs BSL vs source-available)
 - Designing pricing tiers (free + pro + team math)
 - Writing the GitHub README that converts cold traffic
@@ -24,7 +25,39 @@ Load when:
 
 Do NOT load for: domain purchasing, payment processor setup, hosting basics, deploy mechanics — those are infra, covered elsewhere.
 
+Writing a blog post, changelog post or question page → the `blog-post` skill. Search and answer
+engines in detail → the `marketing-seo` agent. The values every piece keeps (value first, honest
+persuasion, one ask, written as the owner) → the `owner-voice` skill.
+
 ---
+
+## 0. Positioning first
+
+Positioning decides what the home page, the README, the pricing page and every post say first.
+Do it before them, and redo it when the product, the buyer or the alternatives change. The method
+is April Dunford's (_Obviously Awesome_, 2019, and her positioning canvas). Work through it in this
+order, because each step rests on the one before:
+
+1. **Competitive alternatives**: what the best-fit customer would do if the product did not exist.
+   Often not a competitor but the status quo: a spreadsheet, a hired developer, doing nothing.
+2. **Differentiated capabilities**: what the product has or does that those alternatives lack.
+3. **Value**: what each capability gives the customer, with proof the owner can show. Many
+   capabilities collapse into a few points of value.
+4. **Best-fit customers**: who cares most about that value, by traits that can be observed
+   (a solo founder shipping a SaaS, a family tracking shared spending), not demographics.
+5. **Market category**: the frame that makes the value obvious at once ("a SaaS starter", "a
+   self-hosted finance tracker"). Pick an existing one unless none fits.
+6. **Relevant trends**, only when one makes the product more interesting now; never a hype word.
+
+The output is one sentence used everywhere, with the same facts on every page, in the README and in
+the structured data (the `marketing-seo` agent, "One set of facts"): "<Product> is a <category>
+for <best-fit customers> who <alternative falls short>; unlike <alternative>, it <value>."
+
+**Values in practice.** Honest persuasion only (the `owner-voice` skill; the reasoning and the research
+behind it are in `profile.md` "How I market"). Beyond trust, fake proof is unlawful in the US: the
+FTC rule on consumer reviews and testimonials bans fake or bought reviews, undisclosed insider
+reviews and bought follower counts, with civil penalties
+([16 CFR Part 465](https://www.ecfr.gov/current/title-16/chapter-I/subchapter-D/part-465)).
 
 ## 1. The model: Open Core
 
@@ -145,6 +178,7 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 | Blog SEO content             | 1 post/wk   | $0   | Week 4+  | "[Open-source] alt to X" ranks forever   |
 | Awesome-* niche lists        | 30 min each | $0   | Week 4   | Stacks of discovery                      |
 | Customer interviews          | 1 hr each   | $0   | Week 3+  | Word-of-mouth + testimonials             |
+| The owner's Telegram channel | per post    | $0   | Day 1    | Followers who know him; in every set     |
 
 **Skip for Y1** (zero ROI at $0-1K MRR):
 
@@ -256,7 +290,7 @@ Commercial license available for hosted resale.
 **Why each section matters:**
 
 - **Hero screenshot/GIF**: bounce in <5s without one
-- **"Open-source alternative to X"**: SEO goldmine — exact phrase people search
+- **"Open-source alternative to X"**: the exact phrase people search and ask AI assistants
 - **One-liner install**: self-hosters bounce if not 5-min simple
 - **Cloud CTA visible**: self-hosters might pay $9/mo to skip upgrade pain
 - **License at bottom**: trust signal for enterprise/regulated buyers
@@ -369,7 +403,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa @tony_dinh), join conversations
 - **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer quotes
 
-**Your authentic angle** (per "Voice with clients" in the global rules):
+**Your authentic angle** (per "Voice with clients" in the `owner-voice` skill):
 
 - Show the work: screenshots, numbers and shipped features
 - Warm, plain and transparent: explain the trade-offs you chose, invite replies, no fluff
@@ -650,23 +684,31 @@ For cloud version:
 
 ## 20. SEO content calendar (week 4+)
 
-Post 1 SEO-optimized blog post per week. Each targets "[competitor] alternative" or "[problem] open source" search intent.
+Post 1 search-led blog post per week. Each targets one intent a real buyer has, such as
+"[competitor] alternative" or "[problem] open source". Each post follows the `blog-post` skill:
+proposed to the owner in chat first, then briefed, written per language and published. Run the
+`marketing-seo` agent on the brief and on the finished draft: it holds the search and
+answer-engine rules, with sources.
 
-**Week 4**: "[Product] vs [Main Competitor]" (1,500 words, comparison table, screenshots)
+**Week 4**: "[Product] vs [Main Competitor]" (comparison table, screenshots, a fair verdict)
 **Week 5**: "Why I switched from [BigSaaS] to [Product]" (personal story, before/after)
-**Week 6**: "Self-hosting [Product] on Hetzner" (technical tutorial, 1,500 words + screenshots)
+**Week 6**: "Self-hosting [Product] on Hetzner" (technical tutorial + screenshots)
 **Week 7**: "Open source [category] tools in 2026" (roundup post, link to competitors too)
 **Week 8**: "How we built [Product] with Deno + SQLite" (technical deep-dive, your authority)
 **Week 9**: "Why we use AGPLv3 (and you should too)" (license decision post)
 
-**SEO rules**:
+**Search rules** (detail and sources in the `marketing-seo` agent):
 
-- 1,500+ words per post
-- Title with primary keyword ("[Product] vs [Competitor]")
-- Comparison table (Google loves these)
-- Screenshots with alt text
-- Internal links to your other posts
-- Submit URL to Google Search Console after publish
+- One intent and one main phrase per post, in the title, description, URL and first paragraph
+- Open with the answer: the first two or three sentences answer the post's question on their own,
+  so search snippets and AI answers can quote them
+- Length follows the question; no word-count target
+- First-hand proof: real screenshots with alt text, code, numbers you measured
+- A comparison is a table, with sources and dates for the competitor's facts
+- Two or three internal links to related posts, the product and its docs
+- Named author, published and updated dates, `BlogPosting` JSON-LD that matches the page
+- After publishing: submit the URL in Google Search Console and Bing Webmaster Tools (or ping
+  IndexNow), then post it where its readers already are
 
 ---
 

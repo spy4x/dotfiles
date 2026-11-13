@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "jsr:@std/assert@1.0.19"
+import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1.0.19"
 import { copy } from "jsr:@std/fs@^1.0.0/copy"
 import { join } from "jsr:@std/path@^1.0.0"
 import { ADAPTERS, loadConfig } from "./engine.ts"
@@ -15,12 +15,27 @@ Deno.test(`the real source validates and renders for every harness`, async () =>
     const paths = rendered.map((file) => file.path)
     assertEquals(new Set(paths).size, paths.length, `${harness}: two items render one path`)
   }
-  // Each diverged item exists once and reaches every harness.
-  for (const name of [`audit`, `release`]) {
-    assertEquals(source.skills.filter((skill) => skill.meta.name === name).length, 1)
-  }
+  // The diverged skill exists once.
+  assertEquals(source.skills.filter((skill) => skill.meta.name === `audit`).length, 1)
   const reviewer = source.agents.find((agent) => agent.meta.name === `reviewer`)
   assertEquals(reviewer?.meta.targets, undefined)
+})
+
+/**
+ * The global rules' budget (the `writing-rules` skill, "Size"): DSH renders at most 64 KiB of rules,
+ * the repo's own `AGENTS.md` included, and drops whole files past that.
+ */
+const RULES_MAX_LINES = 475
+const RULES_MAX_BYTES = 30_000
+
+Deno.test(`the global rules stay within their size budget`, async () => {
+  const rules = await Deno.readFile(join(ROOT, `AGENTS.md`))
+  const lines = new TextDecoder().decode(rules).split(`\n`).length
+  assert(lines <= RULES_MAX_LINES, `AGENTS.md has ${lines} lines; the budget is ${RULES_MAX_LINES}`)
+  assert(
+    rules.byteLength <= RULES_MAX_BYTES,
+    `AGENTS.md has ${rules.byteLength} bytes; the budget is ${RULES_MAX_BYTES}`,
+  )
 })
 
 /** A copy of the fixture source with one file replaced. */
@@ -123,7 +138,7 @@ for (
   })
 }
 
-Deno.test(`the real mcp.jsonc keeps playwright's OpenCode entry as it was in opencode.json`, async () => {
+Deno.test(`the real mcp.jsonc renders playwright's OpenCode entry with a pinned version`, async () => {
   const source = await loadSource(ROOT)
   const config = await loadConfig(join(ROOT, `config.jsonc`))
   const file = ADAPTERS.opencode.render(source, config.harnesses.opencode)
@@ -132,7 +147,7 @@ Deno.test(`the real mcp.jsonc keeps playwright's OpenCode entry as it was in ope
     type: `local`,
     command: [
       `npx`,
-      `@playwright/mcp@latest`,
+      `@playwright/mcp@0.0.83`,
       `--browser`,
       `chromium`,
       `--headless`,

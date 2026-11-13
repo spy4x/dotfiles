@@ -45,4 +45,5 @@ block, one line per finding:
 
 Severity tiers: critical (exposure now) | high (exploitable with conditions) | suggestion (defence-in-depth).
 
-Triggered by /security-review command or by /review when auth/crypto/billing/tenant code touched.
+Triggered by /security-review. The reviewer applies the same checklist itself (its step 6) to every
+change that needs a security review.

@@ -9,17 +9,18 @@
 
 [AI harness config](ai-harnesses/README.md) · [Global agent rules](ai-harnesses/AGENTS.md) ·
 [Apps](docs/apps.md) · [Shell](docs/shell.md) · [Sync](docs/sync.md) ·
-[Host limits](docs/host-limits.md) · [Development](docs/development.md)
+[Host limits](docs/host-limits.md) ·
+[Development](docs/development.md)
 
-![A terminal runs "deno task ai --check". It lists the three harness homes (Claude Code, OpenCode, DSH) and prints "All targets in sync."](docs/ai-check.gif)
+[![Demo video, 58 seconds: one reviewer agent from ai-harnesses/ shown side by side as Claude Code, OpenCode and DSH render it. One edit to the source reaches all three, and deno task ai --check catches a hand edit to one copy.](media/demo/poster.webp)](https://antonshubin.com/tools/dotfiles)
 
 </div>
 
 I run several AI coding agents at once, in Claude Code, OpenCode and DSH (a DeepSeek harness).
 Their rules, skills, agents and settings are written once, in `ai-harnesses/`, and
-`deno task ai` renders them into the format each harness reads. `deno task ai --check`, shown
-above, writes nothing: it compares what every harness on this machine reads with what is
-committed, and exits 1 if they differ.
+`deno task ai` renders them into the format each harness reads. `deno task ai --check` writes
+nothing: it compares what every harness on this machine reads with what is committed, and
+exits 1 if they differ.
 
 The rest of the repository is the workstation those agents run on: the apps, the shell, the
 config files synced into my home directory, and the kernel and systemd limits a dozen parallel
@@ -39,11 +40,9 @@ is applied here.
   the checks itself, breaks the code to prove each test goes red, and counts every claim in the
   PR body. Its verdict is what authorises a merge.
 - **Nothing left running.** [`tools/sweep-orphans.sh`](tools/sweep-orphans.sh) lists the
-  processes and stale `systemd-run` scopes an agent session left behind, and stops exactly
-  those on request. The rules cap the processes and memory of anything that spawns processes,
-  and give every wait a deadline.
-- **Costs you can see.** [`tools/session-cost.ts`](tools/session-cost.ts) reports each session's
-  and subagent's cost, peak context and compactions from Claude Code's transcripts.
+  processes and stale `systemd-run` scopes an agent session left behind, and the anonymous Docker
+  volumes and networks no container uses, and stops exactly those on request. The rules cap the
+  processes and memory of anything that spawns processes, and give every wait a deadline.
 - **Secrets stay local.** Committed env files are age-encrypted one value per line, and
   [`tools/env-key-copy.ts`](tools/env-key-copy.ts) gives a worktree its key without the key
   ever being printed.
@@ -55,12 +54,21 @@ How the rendering works, the file layout per harness and how to write a skill or
 
 - **Apps.** [`install-apps.ts`](docs/apps.md) installs everything in `apps.jsonc` with dnf, apt
   or zypper, and falls back to Flatpak.
+- **Claude Desktop.** [`tools/claude-desktop-update.sh`](tools/claude-desktop-update.sh)
+  installs or updates the app from Anthropic's Debian package, which Fedora has no updater for.
+  A [nightly timer](docs/sync.md#claude-desktop-nightly-update) runs it and says when to restart.
+- **Secrets backup.** [`tools/secrets-backup.sh`](tools/secrets-backup.sh) backs up the age keys
+  and plaintext env files that Syncthing keeps on this machine, with restic, every
+  [night](docs/sync.md#secrets-backup).
 - **Shell.** [`install-shell.ts`](docs/shell.md) sets up Zsh, Oh My Zsh, Powerlevel10k and the
   aliases in `aliases.sh`.
 - **Config in home.** tmux, Neovim, Zsh and the prompt are [symlinked](docs/sync.md) from this
   repository.
 - **Limits for many agents.** [`system/`](docs/host-limits.md) raises inotify instances and zram
   swap, cleans `/tmp` sooner, and caps the tasks each app can start.
+- **Unattended agent runs** and session costs live in a separate private repository, ringmaster.
+- **VPN only while it works.** [`tools/vpn-guard/`](docs/vpn-guard.md) connects a full-tunnel VPN
+  at boot and every 30 minutes, and drops it when the internet does not work through it.
 - **Synced, not cloned.** The repository lives in a Syncthing folder, and agent worktrees are
   [ignored](docs/host-limits.md) so they never replicate.
 
@@ -73,9 +81,12 @@ settings, not a configurable product.
 ```bash
 curl -fsSL https://deno.land/install.sh | sh   # install Deno
 git clone https://github.com/spy4x/dotfiles && cd dotfiles
-deno task install-all      # apps, then the shell
 deno task ai --check       # compare your harness homes with ai-harnesses/, write nothing
+deno task install-all      # installs my apps and replaces your shell setup
 ```
+
+Only the last line installs my setup: it adds my apps and replaces your shell configuration. Read
+[docs/apps.md](docs/apps.md) and [docs/shell.md](docs/shell.md) before you run it.
 
 `deno task ai` without `--check` replaces the global rules, skills and agents of every installed
 harness with mine, and merges my settings into theirs. Read

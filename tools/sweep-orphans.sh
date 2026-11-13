@@ -26,6 +26,15 @@
 # of the given directories, so a lane can clean up after itself without touching
 # a sibling lane in the same session.
 #
+# A test container that died before its cleanup leaves its Docker volumes and
+# networks behind, and they fill the disk. They belong to no
+# session, so only `--all` (and `--stale`) lists them, and `--under` does not
+# narrow them: each anonymous volume no container uses and each custom network
+# no container joins, older than `--min-age`, as `docker-volume/NAME ELAPSED 0.0
+# docker volume` (or `docker-network/...`). `--kill` removes only those a day
+# old, whatever `--min-age` says, so it never takes a running test's volume.
+# Without a `docker` command this part is skipped.
+#
 # Three exclusions: the desktop app, matched by its executable so its flags do
 # not matter; the login shells it abandons, one per session, matched by the full
 # command line; and Chromium's crash reporter, which outlives its browser by a
@@ -39,30 +48,43 @@
 # target ran `kill <pid> <ppid>`, which logged the desktop out.
 #
 # `--kill` stops what it lists: SIGTERM, then SIGKILL for anything still alive
-# after three seconds, and `systemctl --user stop` for each listed scope. It
+# after three seconds, `systemctl --user stop` for each listed scope, and
+# `docker volume rm` or `docker network rm` for each listed leftover. It
 # never signals PID 1, the user manager or its own ancestors, nor stops a scope
 # holding one of them, so there is no PID to copy by hand. A scope still active
 # after its stop is named on stderr, and the exit code is 1. Pair it with
-# `--under`.
+# `--under`, except in `--stale` mode.
+#
+# `--stale` is `--all` limited to what is older than `--min-age`,
+# which defaults to a day here. Unlike `--all`, it may be paired with `--kill`:
+# whatever another session left running for a day is abandoned, not in use.
+# Without `--under`, `--stale --kill` refuses a `--min-age` below a day, so it
+# cannot stop another session's live work.
 #
 # Needs Linux with cgroup v2 and a systemd user manager. Elsewhere it fails
 # loudly instead of printing a falsely clean result; fall back to
 # `ps -eo pcpu,etime,args --sort=-pcpu | head`, which finds only CPU burners.
 #
-# Usage: sweep-orphans.sh [--all] [--kill] [--min-age <seconds>] [--under <dir>...]
+# Usage: sweep-orphans.sh [--all | --stale] [--kill] [--min-age <seconds>] [--under <dir>...]
 set -euo pipefail
 shopt -s extglob
 
-USAGE="usage: sweep-orphans.sh [--all] [--kill] [--min-age <seconds>] [--under <dir>...]"
+USAGE="usage: sweep-orphans.sh [--all | --stale] [--kill] [--min-age <seconds>] [--under <dir>...]"
 ALL=0
+STALE=0
 KILL=0
-MIN_AGE=3600
+MIN_AGE=
 FAILED=0
 UNDER=()
 while (($#)); do
   case $1 in
     --all)
       ALL=1
+      shift
+      ;;
+    --stale)
+      ALL=1
+      STALE=1
       shift
       ;;
     --kill)
@@ -91,6 +113,14 @@ while (($#)); do
   esac
 done
 
+[[ -n $MIN_AGE ]] || MIN_AGE=$((STALE ? 86400 : 3600))
+
+if ((STALE && KILL && !${#UNDER[@]} && 10#$MIN_AGE < 86400)); then
+  echo "sweep-orphans.sh: --stale --kill stops only what is a day old; --min-age below 86400" \
+    "needs --under" >&2
+  exit 2
+fi
+
 MGR=$(pgrep -xu "${USER:-$(id -un)}" systemd || echo 1)
 
 # Never signal these: init, the user manager (SIGTERM = log out) and this script's ancestors.
@@ -102,8 +132,9 @@ while ((p > 1)); do
   p=${p// /}
 done
 
-if ((ALL && KILL)); then
-  echo "sweep-orphans.sh: --all lists other sessions' orphans; report those, never --kill them" >&2
+if ((ALL && KILL && !STALE)); then
+  echo "sweep-orphans.sh: --all lists other sessions' orphans; report those, never --kill them;" \
+    "--stale --kill stops those older than a day" >&2
   exit 2
 fi
 
@@ -172,6 +203,10 @@ while IFS= read -r line; do
   foreign "$pid" && continue
   under "$pid" || continue
   [[ $SAFE == *" $pid "* ]] && continue
+  if ((STALE)); then
+    age=$(ps -o etimes= -p "$pid") || continue
+    ((age >= 10#$MIN_AGE)) || continue
+  fi
   LISTED+=("$line")
 done <<<"$ORPHANS"
 
@@ -212,10 +247,66 @@ if ((MGR != 1)); then
   done <<<"$UNITS"
 fi
 
-for line in "${LISTED[@]}" "${SCOPES[@]}"; do
+LEFTOVERS=()
+if ((ALL)) && command -v docker >/dev/null 2>&1; then
+  docker_failed() {
+    echo "sweep-orphans.sh: could not list the Docker volumes and networks; this is not a clean" \
+      "result" >&2
+    exit 1
+  }
+  NOW=$(date +%s)
+  AGE=$((10#$MIN_AGE))
+  ((!KILL || AGE >= 86400)) || AGE=86400
+  # Only anonymous volumes: `docker compose down` keeps a named one on purpose, for the next `up`.
+  vols=$(docker volume ls -q --filter dangling=true --filter label=com.docker.volume.anonymous) ||
+    docker_failed
+  vols=$(xargs -r docker volume inspect --format '{{.Name}} {{.CreatedAt}}' <<<"$vols") ||
+    docker_failed
+  nets=$(docker network ls --filter type=custom --format '{{.Name}}') || docker_failed
+  nets=$(xargs -r docker network inspect --format '{{.Name}} {{.Created.Unix}}' <<<"$nets") ||
+    docker_failed
+  used=$(docker ps -aq) || docker_failed
+  used=$(xargs -r docker inspect \
+    --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' <<<"$used") ||
+    docker_failed
+  used=" $(tr '\n' ' ' <<<"$used") "
+  while read -r name created; do
+    [[ -n $name ]] || continue
+    created=$(date -d "$created" +%s 2>/dev/null) || continue
+    ((NOW - created >= AGE)) || continue
+    LEFTOVERS+=("docker-volume/$name $(etime $((NOW - created))) 0.0 docker volume")
+  done <<<"$vols"
+  while read -r name created; do
+    [[ -n $name && $created == +([0-9]) && $used != *" $name "* ]] || continue
+    ((NOW - created >= AGE)) || continue
+    LEFTOVERS+=("docker-network/$name $(etime $((NOW - created))) 0.0 docker network")
+  done <<<"$nets"
+fi
+
+for line in "${LISTED[@]}" "${SCOPES[@]}" "${LEFTOVERS[@]}"; do
   printf '%s\n' "$line"
 done
 ((KILL)) || exit 0
+
+if ((${#LEFTOVERS[@]})); then
+  VOLS=()
+  NETS=()
+  for line in "${LEFTOVERS[@]}"; do
+    item=${line%% *}
+    case $item in
+      docker-volume/*) VOLS+=("${item#docker-volume/}") ;;
+      docker-network/*) NETS+=("${item#docker-network/}") ;;
+    esac
+  done
+  # A volume or network a container took meanwhile refuses removal, so it stays.
+  gone=$( ((${#VOLS[@]})) && printf '%s\n' "${VOLS[@]}" | xargs docker volume rm 2>/dev/null |
+    wc -l) || true
+  netsgone=$( ((${#NETS[@]})) && printf '%s\n' "${NETS[@]}" | xargs docker network rm 2>/dev/null |
+    wc -l) || true
+  echo "removed ${gone:-0} of ${#VOLS[@]} Docker volumes and ${netsgone:-0} of ${#NETS[@]}" \
+    "networks" >&2
+  ((${gone:-0} == ${#VOLS[@]} && ${netsgone:-0} == ${#NETS[@]})) || FAILED=1
+fi
 
 if ((${#SCOPES[@]})); then
   STOP=()
