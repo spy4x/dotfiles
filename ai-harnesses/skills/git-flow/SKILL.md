@@ -45,8 +45,9 @@ dropped → remove the label.
 
 ## Reviewer gate
 
-Every test the diff adds or changes needs its `Mutation:` line in the PR body; a missing one goes
-back to the implementer before any reviewer is spent. Whether a change needs a security review is
+Every test that guards a decision the diff adds or changes needs its `Mutation:` line in the PR
+body; a test that only moved or was renamed needs none. A missing one goes back to the implementer
+before any reviewer is spent. Whether a change needs a security review is
 decided when the work is requested, in its design (`start-task`) or its lane brief (`wave`): it does
 when it touches sign-in, sessions, roles or permissions, tenant boundaries, secrets, crypto,
 billing, payments, webhooks, uploads, raw SQL, dynamic imports or what a host exposes. The reviewer
@@ -60,7 +61,10 @@ third verdict, do that if about ten lines remain; otherwise leave the PR open wi
 is left, and move on. After a second `needs-fix` that names a behaviour defect, the `wave` skill
 says when and how to escalate that fix round. Never count rejections in a summary, PR body or issue.
 A PR body or issue says what the review found and what changed. Gate failed, or a revert can't undo
-it → leave the PR open and say so.
+it → leave the PR open and say so. Gate passed → comment on the PR once per passed head,
+starting with `<!-- agent -->`, with `Reviewer gate passed on <full head commit>.` and
+`<!-- gate-passed <full head commit> -->`, so the background lead merges it on green even after
+your session ends.
 
 A reviewer rejects only for a bug, a security or data-loss risk, a false claim, a failing required
 check, or code these rules forbid outright (the `reviewer` agent lists which). Its other findings

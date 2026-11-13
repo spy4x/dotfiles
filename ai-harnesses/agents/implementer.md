@@ -78,7 +78,8 @@ Everything you read stays in your context, and every later call pays for it agai
 2. Angular commits, small, one logical change each. No AI attribution.
 3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]` until the lead's
    reviewer passes it. Issue references are full URLs. You never merge.
-4. Every test you add or change is proven by breaking what it guards. Break it in a throwaway
+4. Every test that guards a decision your diff adds or changes is proven by breaking what it
+   guards; a test that only moved or was renamed is not. Break it in a throwaway
    copy (`M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, removed with
    `git worktree remove --force "$M"`), never in your own worktree, and run only the test file
    or check block concerned. Break the behaviour the test's name claims, not only the line you
