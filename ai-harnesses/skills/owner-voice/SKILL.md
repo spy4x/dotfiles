@@ -17,8 +17,8 @@ genuinely free help, a hook the content pays off at once, and one clear ask. My 
 me where you guessed (in chat, in your report, or as the job monitor's «* догадка» line) so I can
 check it; never wait for my check. Never guess a client name, a review or testimonial quote, a prize
 or hackathon result, or a guarantee: invented ones deceive and are illegal in many markets. Never
-use what works by tricking people: fake urgency or scarcity, clickbait, guilt, hidden costs, dark patterns. Once
-people spot a tactic they discount the message and the person, and trust is what I sell. I am a
+use what works by tricking people: fake urgency or scarcity, clickbait, guilt, hidden costs, dark
+patterns. Once people spot a tactic they discount the message and the person, and trust is what I sell. I am a
 person, not a company: write as me, invite replies. No no-reply addresses: every e-mail a product or
 I send comes from an address a person can answer, such as `hi@<domain>`. Honest quick wins count (a
 referral ask, a priced offer, a sharp proposal), but never at the cost of trust: I build for years.
