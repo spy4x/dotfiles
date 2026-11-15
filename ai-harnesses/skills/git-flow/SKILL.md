@@ -34,6 +34,13 @@ auto-decrypt once the key is in place (check repo-local `AGENTS.md`).
 
 Never copy a decrypted env file between checkouts or worktrees: decrypt fresh in each.
 
+### Pre-push hook
+
+A repository whose manifest has a `hooks:install` task → run `deno task hooks:install` in the new
+worktree; it is idempotent. Its `pre-push` hook refuses a push while `deno task check` is red, so
+CI never spends a slot finding what the local check finds. Never push with `--no-verify`: fix the
+check instead (spy4x/ringmaster#295).
+
 ## Claim an issue
 
 Claim an issue before working on it, so no two agents build it at once: add the `in-progress` label,
