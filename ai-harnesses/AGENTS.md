@@ -150,8 +150,9 @@ source, one place per rule, current state, trials, size budgets, machine checks,
 
 # Stack
 
-Deno 2 + Hono + Fresh + Preact + syncthing + restic. Hetzner BM/VM, Docker Compose per project. DB
-per project: SQLite + Litestream or Postgres — scaffolding a new project → ask which, never assume.
+Hono + Preact (`@spy4x/preact-server` for pages, Vite for SPAs) + syncthing + restic.
+Hetzner BM/VM, Docker Compose per project. DB per project: SQLite + Litestream or Postgres —
+scaffolding a new project → ask which, never assume.
 Shared: Traefik, VictoriaMetrics, Woodpecker CI, Watchtower, Syncthing, NTFY, Gatus, Authelia.
 
 Cost-aware: fixed price per month (Hetzner BM/VM) or usage-based with hard or prepaid caps (DeepSeek
@@ -161,14 +162,15 @@ Rust or Go may speed up one CPU-heavy part (image processing, parsing). Go servi
 `gofmt`-clean, standard library first, errors wrapped with `%w`, `log/slog` for logs, no package
 globals or `init()` side effects (wire config through `main()`), and a distroless nonroot image.
 
-**Runtime-agnostic code.** Deno gets fixes only until about October 2027, so new code, and the old
-functions you change anyway, must run unchanged on Deno, Node and Bun. Use web standards (`fetch`,
-`Request`/`Response`, `URL`, Web Crypto, Web Streams, `AbortController`, `TextEncoder`) and `@std/*`
-packages that run on all three (JSR's compatibility list is a hint, not the test). Anything
-runtime-specific (`Deno.*`, `process`, `Bun.*`, `node:*` for env, files, subprocesses, sockets, KV)
-goes behind a small adapter in `@spy4x/platform` (`ts-libs`), never in business code; the first task
-that needs one adds it there. Never rewrite old code only to drop `Deno.*`. Until the review due
-2027-01-10 decides, Deno stays the runtime and toolchain, and `Deno.test` and Fresh apps are exempt.
+**Web standards only.** New code, and old code you change anyway, must run unchanged in any modern
+web-standards-compatible environment. Use web standards (`fetch`, `Request`/`Response`, `URL`, Web
+Crypto, Web Streams) and `@std/*` packages that do. Anything runtime-specific (`Deno.*`, `process`,
+`Bun.*`, `node:*`: env, files, processes, sockets, KV) goes behind an adapter in
+`@spy4x/platform`, never in business code; the first task needing one adds it. A project claiming
+this runs CI on two or more runtimes, as Seed does. Never rewrite old code only to drop `Deno.*`.
+Moving a server: adapters, then CI on other runtimes, then diff responses with the old one's.
+`Deno.test` and existing Fresh apps are exempt until moved (Fresh → `@spy4x/preact-server`); no
+new app starts on Fresh.
 
 **Build less.** Less code and fewer words for the same result, never fewer features: screens of
 hard-to-read code that a short implementation could replace, and long, vague descriptions, are the
@@ -187,7 +189,7 @@ handling that prevents data loss, security, accessibility, tests, docs and clean
 `crypto`, `URL`, `structuredClone`), then `@std/*`. Write anything small and opinionated whose
 defaults we'd fight — UI components especially (no shadcn/Radix/Headless UI/Material/Chakra). Keep
 the giant, well-solved ones: postgres.js, arktype, preact, wouter, tailwind, `@std/*`, signals,
-hono, qrcode, webpush, otpauth, playwright, axe-core, ioredis, fresh, vite, d3, leaflet, an SMTP
+hono, qrcode, webpush, otpauth, playwright, axe-core, ioredis, vite, d3, leaflet, an SMTP
 lib, a date/tz lib — never reimplement these. Libraries are design references, never code sources:
 port markup and behaviour, not the dependency. Owning a component means owning its accessibility:
 roles, labels, keyboard handling, focus.
