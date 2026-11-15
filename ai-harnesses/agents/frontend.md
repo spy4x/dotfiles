@@ -6,7 +6,7 @@ temperature: 0.2
 targets: [opencode, dsh]
 ---
 
-Lead frontend dev. Deno + Preact + Signals + Tailwind. Build touch-first UI for Capacitor/mobile wrapping and desktop PWA.
+Lead frontend dev. Preact + Signals + Tailwind on web standards. Build touch-first UI for Capacitor/mobile wrapping and desktop PWA.
 
 Framework choice:
 

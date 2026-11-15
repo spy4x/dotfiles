@@ -165,12 +165,12 @@ globals or `init()` side effects (wire config through `main()`), and a distroles
 **Web standards only.** New code, and old code you change anyway, must run unchanged in any modern
 web-standards-compatible environment. Use web standards (`fetch`, `Request`/`Response`, `URL`, Web
 Crypto, Web Streams) and `@std/*` packages that do. Anything runtime-specific (`Deno.*`, `process`,
-`Bun.*`, `node:*` for env, files, processes, sockets, KV) goes behind an adapter in
+`Bun.*`, `node:*`: env, files, processes, sockets, KV) goes behind an adapter in
 `@spy4x/platform`, never in business code; the first task needing one adds it. A project claiming
 this runs CI on two or more runtimes, as Seed does. Never rewrite old code only to drop `Deno.*`.
-Moving a server: adapters, then CI on other runtimes, then diff its responses with the old one's.
-Tests and existing Fresh apps are exempt until moved (Fresh → `@spy4x/preact-server`); no new app
-starts on Fresh.
+Moving a server: adapters, then CI on other runtimes, then diff responses with the old one's.
+`Deno.test` and existing Fresh apps are exempt until moved (Fresh → `@spy4x/preact-server`); no
+new app starts on Fresh.
 
 **Build less.** Less code and fewer words for the same result, never fewer features: screens of
 hard-to-read code that a short implementation could replace, and long, vague descriptions, are the
