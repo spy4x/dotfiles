@@ -40,11 +40,11 @@ folder whose `deno.json` holds `{ "minimumDependencyAge": "0" }`.
 ## Library first, never "move it later"
 
 Reusable code is born in the library. Never write a local version in a consumer repo (seed, financy,
-mig and the rest) and file an issue to move it later: that step is how copies pile up. Make the
-library change first, in the library's own worktree, by you or a subagent. Review, merge and release
-it there, then import the released version in the consumer. A consumer change that needs a library
-change waits for that release; it never ships a local stand-in. If the library change is blocked on
-a decision, the consumer change is blocked too.
+ringmaster-next, mig and the rest) and file an issue to move it later: that step is how copies pile
+up. Make the library change first, in the library's own worktree, by you or a subagent. Review,
+merge and release it there, then import the released version in the consumer. A consumer change that
+needs a library change waits for that release; it never ships a local stand-in. If the library
+change is blocked on a decision, the consumer change is blocked too.
 
 Both ways: an app feeds the libraries, and every app, old or new, imports from them instead of
 keeping its own copy. Details: each library's `AGENTS.md`, "What belongs in this library".
