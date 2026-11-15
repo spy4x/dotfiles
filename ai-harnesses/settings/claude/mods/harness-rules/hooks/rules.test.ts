@@ -611,6 +611,14 @@ test(`refuses ulimit -u in any spelling and allows other ulimit flags`, () => {
   expect(bashVerdict(`ulimit -a`).deny).toBeUndefined()
 })
 
+test(`refuses git push --no-verify and allows a plain push`, () => {
+  expect(bashVerdict(`git push --no-verify origin x`).deny).toContain(`--no-verify`)
+  expect(bashVerdict(`git -C /r push -u origin x --no-verify`).deny).toContain(`--no-verify`)
+  expect(bashVerdict(`deno task fmt && git push --no-verify`).deny).toContain(`--no-verify`)
+  expect(bashVerdict(`git push -u origin x`).deny).toBeUndefined()
+  expect(bashVerdict(`git commit --no-verify -m x`).deny).toBeUndefined()
+})
+
 test(`refuses gh pr merge with --admin`, () => {
   expect(bashVerdict(`gh pr merge 5 --repo a/b --squash --admin`).deny).toContain(`--admin`)
 })

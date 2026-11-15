@@ -318,6 +318,12 @@ export function bashVerdict(command: string, where: Where = {}): Verdict {
           `-p MemoryMax=8G timeout <seconds> <cmd>\`.`,
       }
     }
+    if (name === `git` && words.includes(`push`) && words.includes(`--no-verify`)) {
+      return {
+        deny: `Never \`git push --no-verify\`: the pre-push hook refuses a push while ` +
+          `\`deno task check\` is red. Fix the check, then push (git-flow skill, "Pre-push hook").`,
+      }
+    }
     if (words[0] === `gh` && words[1] === `pr` && words[2] === `merge`) {
       const verdict = mergeVerdict(words)
       if (verdict.deny) return verdict
