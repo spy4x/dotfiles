@@ -214,9 +214,9 @@ before you build, change or review anything a person sees.
 
 Each project is `~/sync/code/<name>` and `github.com/spy4x/<name>`. Before working in one or
 answering about it, read its `AGENTS.md` at the root. The list of projects, the files in
-`~/sync/code/ai-memory/` (read on demand only, except `direction.md`), the self-hosted
-services and the account-wide tokens: the `workspace` skill. Never read `ai-memory/personal.md`
-unless I say so in this session.
+`~/sync/code/ai-memory/` (read on demand, except `direction.md`; every file, `personal.md`
+included, is open to agents), the self-hosted services and the account-wide tokens: the
+`workspace` skill.
 
 Durable project knowledge → the repo (`AGENTS.md`, `docs/`). Harness-local memory only for facts no
 repo owns.
