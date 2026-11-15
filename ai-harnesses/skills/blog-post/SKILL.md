@@ -25,10 +25,10 @@ category), the month's changelog. Before any issue or draft, put the proposal in
 - the interactive part, if a claim is worth letting the reader test;
 - the languages.
 
-Wait for the owner's yes. Then file the issue; its first line after `<!-- agent -->` is
-`Asked for by the owner, <date>`, then his answer quoted (the `issues` skill, "Features"). A subagent follows
-`AGENTS.md`, "Issues". A post the owner asked for in chat skips the wait, not the proposal: show
-it, then go on.
+Never wait for the owner's yes, here or later: show the proposal, then go on. File the issue; its
+first line after `<!-- agent -->` is `Asked for by the owner, <date>`, then his words quoted: his
+request when he asked for this post, else his standing rule "Never wait for me to approve blog
+posts. Just go." (the `issues` skill, "Features"). A subagent follows `AGENTS.md`, "Issues".
 
 ## 2. The brief: four lenses
 
@@ -161,7 +161,7 @@ Before the PR, check each; the `marketing-seo` agent has the detail and sources.
 
 Which languages:
 
-- A blog post: the languages the owner picks from the proposal (step 1).
+- A blog post: the languages the proposal names (step 1).
 - A question page ("Alternatives to ShipFast" / "Альтернативы ShipFast"): every language the site
   has, each answering one exact question.
 
@@ -183,7 +183,9 @@ How:
 ## 11. Publish and the newsletter
 
 PR, reviewer gate (plus the `design-reviewer`, the `design` skill, "Design gate"), merge, deploy, then
-the repo's publish task. Typical steps, each in the repo's own tool: check the post answers 200
+the repo's publish task. The gate is the only approval: never label a post `manual` or leave it for
+the owner to read first. A fact only the owner could confirm is cut or rewritten to what the repo or
+this session supports (step 6), never a reason to wait. Typical steps, each in the repo's own tool: check the post answers 200
 live; cross-post (Dev.to and the like) with `canonical_url` pointing at the original; ping IndexNow;
 send the newsletter. The newsletter goes out once per post (a rerun never mails anyone twice), from
 an address a person can answer, with a one-click unsubscribe. Report the sent and failed counts the
