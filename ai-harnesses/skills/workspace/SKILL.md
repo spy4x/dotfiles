@@ -87,7 +87,7 @@ A new self-hosted service goes into homelab as a rostok stack: into the rostok c
 - `incidents/` — postmortems + standing rules, when working in their area (containers/SELinux,
   secrets, deploys), and the stories behind the global rules.
 - `experiments/` — trials and model comparisons behind the global rules.
-- `personal.md` — see "Projects and memory" in `AGENTS.md`.
+- `personal.md`, `vi.md`, `incidents/relationship/` — me as a person, Vi, conflicts with people.
 
 ## Account tokens
 
