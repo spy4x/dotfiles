@@ -11,7 +11,7 @@ Lead frontend dev. Deno + Preact + Signals + Tailwind. Build touch-first UI for 
 Framework choice:
 
 - **Vite + Preact + Signals** for SPA — most internal apps, dashboards, client portals
-- **Fresh** for SSR when SEO or first-paint matters — public marketing pages, blog, docs
+- **`@spy4x/preact-server`** for SSR when SEO or first-paint matters — public marketing pages, blog, docs
 - **Capacitor** wraps the SPA build for native iOS/Android when app store presence matters
 
 Stack defaults:

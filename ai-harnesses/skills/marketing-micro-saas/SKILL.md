@@ -1,6 +1,6 @@
 ---
 name: marketing-micro-saas
-description: "Open-core microSaaS marketing playbook for solo indie devs. Load for positioning (what a product is, for whom, against what), pricing tier design, license choice (AGPLv3 + commercial), channel strategy, distribution platforms, launch checklists, conversion math, GitHub README optimization, IndieHackers/Hacker News/Reddit/Twitter tactics, and IndieHackers-style build-in-public playbook. Reference templates modeled on Plausible, Cal.com, Dub.co, Papermark, Logto, Coolify patterns. Stack-aware: Deno 2 + Hono + Fresh + Preact + SQLite + Litestream, Hetzner BM, syncthing + restic, shared Traefik + VictoriaMetrics + Authelia + Woodpecker CI."
+description: "Open-core microSaaS marketing playbook for solo indie devs. Load for positioning (what a product is, for whom, against what), pricing tier design, license choice (AGPLv3 + commercial), channel strategy, distribution platforms, launch checklists, conversion math, GitHub README optimization, IndieHackers/Hacker News/Reddit/Twitter tactics, and IndieHackers-style build-in-public playbook. Reference templates modeled on Plausible, Cal.com, Dub.co, Papermark, Logto, Coolify patterns. Stack-aware: Hono + Preact on web standards + SQLite + Litestream, Hetzner BM, syncthing + restic, shared Traefik + VictoriaMetrics + Authelia + Woodpecker CI."
 ---
 
 # Marketing Playbook — Solo microSaaS (Open Core)
@@ -357,7 +357,7 @@ Hi HN, I built [Product] because [pain]. It's:
 - Cloud version from $9/mo
 - [2-3 sentences on what's different]
 
-Tech: Deno 2 + Hono + SQLite. Live demo: https://...
+Tech: Hono + SQLite on web standards. Live demo: https://...
 GitHub: https://github.com/yourorg/product
 
 Would love feedback on [specific question].
