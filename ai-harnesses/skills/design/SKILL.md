@@ -69,8 +69,8 @@ reviewers pass, and both reviewers' `needs-fix` verdicts count toward the gate's
   1440 px, in every theme the app has. A screen that does not exist yet is reviewed as its nearest
   neighbour plus the plan. Close the browser and server in a `finally`.
 - Write one shared brief for the roles: the job of the screen (what a person must understand, then
-  do), the audience, the constraints (house style, content rule: no invented claim, number or
-  quote), the screenshots, and the reference products.
+  do), the audience, the constraints (house style, content rule: proof as the `owner-voice`
+  skill allows, and no invented quote), the screenshots, and the reference products.
 
 ## 2. Roles in parallel, no code
 
