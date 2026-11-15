@@ -27,6 +27,11 @@ Work and production:
   starts from it.
 - `financy`: self-hosted finance tracker for a person or a family, being rebuilt on `seed`
   (Seed). Its `AGENTS.md` says what goes to Seed or the libraries first.
+- `ringmaster`: Ringmaster, the background lead: headless Claude Code runs on GitHub issues, every
+  session measured in one database, and a dashboard. A product I sell (AGPL-3.0, private repository
+  for now). Its main checkout is live: it runs this machine's lead.
+- `ringmaster-next`: Ringmaster rebuilt on `seed`. It replaces `ringmaster` at the handover; until
+  then the lead's code changes go to `ringmaster`.
 - `antonshubin.com`: my freelance site and my blog.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
