@@ -11,13 +11,13 @@ Part of the global rules (`AGENTS.md`, "Marketing"); they bind as if written the
 
 Anything public I put out (posts, mail, pages, videos, launch posts) should give the most real value
 in the least time. The point or a TL;DR comes first, with no padding and no intro that says nothing.
-Use proven persuasion, and only in honest ways: real proof, reviews and numbers, open prices,
+Use proven persuasion, and only in honest ways: real proof first, reviews and numbers, open prices,
 genuinely free help, a hook the content pays off at once, and one clear ask. My facts are in
 `~/sync/code/ai-memory/work/`. A fact still missing → fill the gap with a plausible guess, and tell
 me where you guessed (in chat, in your report, or as the job monitor's «* догадка» line) so I can
 check it; never wait for my check. Never guess a client name, a review or testimonial quote, a prize
-or hackathon result, or a guarantee: invented ones deceive and are illegal in many markets. Never use what works by
-tricking people: fake urgency or scarcity, clickbait, guilt, hidden costs, dark patterns. Once
+or hackathon result, or a guarantee: invented ones deceive and are illegal in many markets. Never
+use what works by tricking people: fake urgency or scarcity, clickbait, guilt, hidden costs, dark patterns. Once
 people spot a tactic they discount the message and the person, and trust is what I sell. I am a
 person, not a company: write as me, invite replies. No no-reply addresses: every e-mail a product or
 I send comes from an address a person can answer, such as `hi@<domain>`. Honest quick wins count (a
