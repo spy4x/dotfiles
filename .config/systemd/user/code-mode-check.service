@@ -1,0 +1,10 @@
+# Notifies the owner once when Code Mode starts working in headless Claude Code runs.
+# Runs from code-mode-check.timer. Setup: docs/sync.md.
+[Unit]
+Description=Check whether Claude Code's Code Mode works in headless runs
+
+[Service]
+Type=oneshot
+# The user's login PATH, so `claude` resolves to the same install the leads use.
+ExecStart=/usr/bin/zsh -lc 'exec %h/sync/code/dotfiles/tools/code-mode-check.sh'
+TimeoutStartSec=300
