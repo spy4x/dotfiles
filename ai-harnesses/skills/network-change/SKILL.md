@@ -16,8 +16,10 @@ fix it, so every change can undo itself.
    before you apply it, so they run even when your session or the machine's internet dies:
 
    ```bash
-   sudo -n systemd-run --unit=net-rollback --on-active=120 /bin/sh -c '<commands that undo it>'
+   sudo -n systemd-run --collect --unit=net-rollback --on-active=120 /bin/sh -c '<commands that undo it>'
    ```
+
+   Arming failed → do not apply the change.
 
    Undo means the state before the change: stop and disable the service, restore the saved config
    file, bring the old connection up. Save a copy of every file you change first.
