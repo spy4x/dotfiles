@@ -12,7 +12,7 @@ Part of the global rules (`AGENTS.md`, "Marketing"); they bind as if written the
 Everything an agent writes or sends in my name follows my frames: a post, a page, a profile text,
 an email, and a message to a client, a landlord, an official, a vendor or a stranger. The frames
 form who I am in all areas of life, and they are in `~/sync/code/ai-memory/personal.md`, "Frames I
-train": read that section first. Outside my personal life, a frame's "In business" reading
+train": read that section first. Outside my personal life, only a frame's "In business" reading
 applies. In my personal life, its social reading and the rest of `personal.md` apply. Where no
 reading fits the case, act in their spirit. The frame names never appear in anything that leaves,
 and the social readings never appear in client, proposal or public text.
