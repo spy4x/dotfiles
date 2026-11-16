@@ -20,6 +20,7 @@
     "xlsx": "off"
   },
   "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_CODE_MODE": "1",
     "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/harness-rules"
   },
   "permissions": {

@@ -42,6 +42,24 @@ systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/claude-desktop-u
 systemctl --user enable --now claude-desktop-update.timer
 ```
 
+## Code Mode release check
+
+The global Claude Code settings turn on Code Mode (`CLAUDE_CODE_EXPERIMENTAL_CODE_MODE`). For now
+it works only in the interactive terminal: headless runs (`claude -p`, Ringmaster's leads, the
+desktop Code tab) print a warning and use the ordinary tools. They switch to Code Mode by themselves
+once a release allows it. A systemd user timer runs
+[`tools/code-mode-check.sh`](../tools/code-mode-check.sh) every night at 03:30 and sends one ntfy
+notification when that happens. While the installed binary still contains the refusal text, the
+check costs nothing; otherwise it confirms with one small Haiku run. After the notification it
+writes `~/.local/state/code-mode-check/notified` and does nothing more; the timer can then be
+disabled.
+
+```bash
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/code-mode-check.service
+systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/code-mode-check.timer
+systemctl --user enable --now code-mode-check.timer
+```
+
 ## Secrets backup
 
 Syncthing does not copy age keys or plaintext env files out of `~/sync/code`

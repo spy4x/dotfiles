@@ -1,0 +1,11 @@
+# Runs code-mode-check.service every night, after Claude Code may have updated itself. Persistent
+# catches up a night the machine was off. Setup: docs/sync.md.
+[Unit]
+Description=Check nightly whether Claude Code's Code Mode works in headless runs
+
+[Timer]
+OnCalendar=*-*-* 03:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target
