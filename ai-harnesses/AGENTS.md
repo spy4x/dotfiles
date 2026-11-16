@@ -442,7 +442,7 @@ why.
 
 # Marketing
 
-Anything public I put out, and anything to a client: load the `owner-voice` skill first.
+Anything put out, written or sent in my name: load the `owner-voice` skill first.
 
 # Issues and reports
 

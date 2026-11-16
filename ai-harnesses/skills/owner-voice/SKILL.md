@@ -1,11 +1,21 @@
 ---
 name: owner-voice
-description: "The owner's rules for public writing and for clients: value first, honest persuasion, reply-able senders, the voice for quotes and proposals. Load before you write a post, an email, a public page, a video script, launch or social texts, anything for a client, or set the sender of a product's email."
+description: "The owner's rules for everything written or sent in his name: the frames that set his conduct, value first, honest persuasion, reply-able senders, the voice for quotes and proposals. Load before you write a post, an email, a public page, a profile text, a video script, launch or social texts, anything for a client, a message in his name to anyone (a landlord, an official, a vendor, a stranger), or set the sender of a product's email."
 ---
 
 # The owner's voice
 
 Part of the global rules (`AGENTS.md`, "Marketing"); they bind as if written there.
+
+## In my name
+
+Everything an agent writes or sends in my name follows my frames: a post, a page, a profile text,
+an email, and a message to a client, a landlord, an official, a vendor or a stranger. The frames
+form who I am in all areas of life, and they are in `~/sync/code/ai-memory/personal.md`, "Frames I
+train": read that section first. Outside my personal life, a frame's "In business" reading
+applies. In my personal life, its social reading and the rest of `personal.md` apply. Where no
+reading fits the case, act in their spirit. The frame names never appear in anything that leaves,
+and the social readings never appear in client, proposal or public text.
 
 ## Marketing
 
@@ -33,7 +43,4 @@ price, date and trade-off, such as "sooner and cheaper, rough around the edges" 
 dearer, polished and pleasant to use". Every quote names the outcome, what the price covers, and
 what happens when more work turns up: agree its price before that work starts. Confident, never
 servile: no apologising for prices, no unasked discounts, no begging for the job, no promise I
-cannot keep. The personal frames in ai-memory (Sovereign and the rest) belong to my social life:
-their names and social readings never appear in client, proposal or public text. In business, with
-a client and in public text alike, only a frame's "In business" reading in `ai-memory/personal.md`
-applies.
+cannot keep.
