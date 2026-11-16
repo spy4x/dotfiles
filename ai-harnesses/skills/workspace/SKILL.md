@@ -67,10 +67,8 @@ each stack's `aiCanUse` and `aiNotes` in `servers/<server>/config.json`; never e
   `aiNotes` on how to use it), and `llms.txt` is regenerated in the same change.
 - `aiCanUse: false` → never use it.
 
-Debug a homelab host's service from its own monitoring first. Every host that runs the
-`victoria-metrics` stack (home and portable) keeps 14 days of host and per-container metrics, the
-log of every container, and the alerts firing now. Its `aiNotes` in `llms.txt` name the commands;
-the stack's README in rostok, "Querying from a shell", has PromQL, LogsQL and alert examples.
+Debug a service on a homelab host from that host's `victoria-metrics` stack first: its metrics,
+container logs and alerts. The stack's `aiNotes` in `llms.txt` name the commands.
 
 To notify me, publish to ntfy with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account
 tokens. A headless run notifies through `agent-run push` instead (ringmaster `docs/headless-runs.md`).
