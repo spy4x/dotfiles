@@ -40,7 +40,7 @@ gate"). Where a sensible default exists, take it and record it in the PR body. A
   friend's or client's project), or one that looks like production rather than a local test or dev
   instance, mine included, and the task did not name that exact service. Silencing an error or a
   log never justifies taking down what produces it. When a doc or issue calls the choice mine, ask
-  (`~/sync/code/ai-memory/incidents/agent-rule-stories.md`);
+  (`ai-memory/incidents/agent-rule-stories.md`);
 - the reviewer gate fails twice on the same cause — the brief is wrong;
 - a rule and `direction.md` disagree.
 
@@ -270,7 +270,7 @@ Every agent may run `sudo` on this machine. It is passwordless and unrestricted,
 # Fail-open
 
 Non-critical external calls (monitoring/reporting/analytics) → `|| true`. Secret-bearing sends
-fail-closed (see Hard rule).
+fail-closed.
 
 # Idempotency
 
@@ -279,6 +279,10 @@ the same result as running it once. Retries, crashes and reruns are normal, and 
 repeats its effect corrupts data or acts twice. This covers scripts, setup and deploy tasks,
 migrations, and handlers of anything that can arrive twice (webhooks, payments, queue jobs,
 retried requests).
+
+# Network changes
+
+No network change may cut off a machine's internet or your way back in: `network-change` skill.
 
 # Leave nothing running
 
@@ -313,11 +317,9 @@ so reuse the literal path, not `$S`. The harness scratchpad
 (`/tmp/claude-<uid>/<project>/<session>/scratchpad`) is not yours, although the prompt calls it
 session-specific and suggests it for temporary files: the lead and every subagent it spawns share
 it. To keep your folder inside it, create the folder with `mktemp -d -p <scratchpad>`; never delete
-or empty the scratchpad itself: other agents' worktrees can live there
-(`ai-memory/incidents/agent-rule-stories.md`).
+or empty the scratchpad itself: other agents' worktrees can live there.
 
-**Every wait has a deadline**, since a run can finish or die unseen
-(`ai-memory/incidents/agent-rule-stories.md`).
+**Every wait has a deadline**, since a run can finish or die unseen.
 
 - A background command (`run_in_background`) runs inside `timeout <seconds>`, sized to the job with
   slack (a browser test suite: 900).
