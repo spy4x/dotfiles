@@ -403,7 +403,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa @tony_dinh), join conversations
 - **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer quotes
 
-**Your authentic angle** (per "Voice with clients" in the `owner-voice` skill):
+**Your authentic angle** (per "In my name" and "Voice with clients" in the `owner-voice` skill):
 
 - Show the work: screenshots, numbers and shipped features
 - Warm, plain and transparent: explain the trade-offs you chose, invite replies, no fluff
