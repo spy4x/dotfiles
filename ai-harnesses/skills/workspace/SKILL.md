@@ -1,6 +1,6 @@
 ---
 name: workspace
-description: "The owner's repositories and what may be hosted where, the self-hosted services agents may use, the ai-memory files, and the account-wide API tokens. Load before you look for or choose a project, read or write ai-memory, decide where something is hosted or deployed, use or add a self-hosted service (notify the owner, send mail, check uptime or metrics, search the web, push an image), or need, add or rotate an account-wide token."
+description: "The owner's repositories and what may be hosted where, the self-hosted services agents may use, the ai-memory files, and the account-wide API tokens. Load before you look for or choose a project, read or write ai-memory, decide where something is hosted or deployed, use or add a self-hosted service (notify the owner, send mail, check uptime, metrics or logs, debug a service on a homelab host, search the web, push an image), or need, add or rotate an account-wide token."
 ---
 
 # Workspace
@@ -66,6 +66,11 @@ each stack's `aiCanUse` and `aiNotes` in `servers/<server>/config.json`; never e
 - No flag → ask me before the first use. My answer goes into that stack's `aiCanUse` (with
   `aiNotes` on how to use it), and `llms.txt` is regenerated in the same change.
 - `aiCanUse: false` → never use it.
+
+Debug a homelab host's service from its own monitoring first. Every host that runs the
+`victoria-metrics` stack (home and portable) keeps 14 days of host and per-container metrics, the
+log of every container, and the alerts firing now. Its `aiNotes` in `llms.txt` name the commands;
+the stack's README in rostok, "Querying from a shell", has PromQL, LogsQL and alert examples.
 
 To notify me, publish to ntfy with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account
 tokens. A headless run notifies through `agent-run push` instead (ringmaster `docs/headless-runs.md`).
