@@ -75,35 +75,39 @@ Everything you read stays in your context, and every later call pays for it agai
 A whole suite, a slow file or a rerun holds a lead slot for an hour and slows every session on the
 machine (spy4x/ringmaster#282).
 
-- Run each test file your brief names once, inside `timeout 600`. A test your diff needs that the
-  brief misses → run it once and name it in `Doubts`. No list in the brief → the tests that cover
-  the files you changed, never the whole suite.
+- Run each test file your brief names once, inside `timeout 600`; one that hits the timeout is
+  filtered (next item), never rerun whole. A test your diff needs that the brief misses → run it
+  once and name it in `Doubts`. No list in the brief → the tests that cover the files you changed,
+  never the whole suite.
 - In a test file that runs for minutes, run only the tests your change touches, with the runner's
   filter (`deno test --filter "<test name>"`). Run local e2e against a built app when the repo has a
   switch for it (`E2E_SPA=built`), never a cold dev server.
 - A browser spec red or timed out while the load average (`cat /proc/loadavg`) is above the CPU
-  count (`nproc`) → rerun it once; still red → stop, leave it to CI, and say so in `Doubts` and
-  the PR body.
-- Run `deno fmt --check` and `deno lint` on the changed files first, then the full check once (Done
-  means, step 1). Rerun it only after a code change. When your brief says the host is loaded, skip
-  the full check: run the scoped tests, format, lint and type check, and say in the PR body that
-  CI runs the rest.
+  count (`nproc`) → rerun it once; still red → stop rerunning it, leave it to CI, and say so in
+  `Doubts` and the PR body.
+- Run `deno fmt --check` and `deno lint` on the changed files first, then the full check (Done
+  means, step 1) once per round of changes, never again after a passing run. When your brief says
+  the host is loaded, run only the scoped tests, format, lint and type check, and say in the PR
+  body that CI runs the rest; a pre-push hook still runs the full check at push, and that run is
+  the one.
 
 ## Done means
 
-1. `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D deno task check` (or
-   the repo's equivalent) exits 0. Run it once: it is the only full check. A warm local run is not
-   evidence.
+1. The full check passes with a throwaway cache, run once per round. With a pre-push hook that
+   runs it, the push is that run: `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true
+   DENO_DIR=$D git push`. Without one: the same with `deno task check` (or the repo's equivalent)
+   in place of `git push`; on a loaded host CI runs it instead (see above). A warm local run is
+   not evidence.
 2. Angular commits, small, one logical change each. No AI attribution.
 3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]` until the lead's
    reviewer passes it. Issue references are full URLs. You never merge.
 4. Every test that guards a decision your diff adds or changes is proven by breaking what it
-   guards; a test that only moved or was renamed is not. One mutation per decision, no more.
+   guards; a test that only moved or was renamed is not. One mutation per such test, no more.
    Break it in one throwaway copy for all of them (`M=$(mktemp -d) && git worktree add --detach
    "$M" HEAD`, removed with `git worktree remove --force "$M"`), never in your own worktree;
-   revert each mutation with Edit before the next, and run only the test concerned. Break the
-   behaviour the test's name claims, not only the line you wrote. Each run is one line in the PR
-   body:
+   revert each mutation with Edit before the next, and run only the test file or check block
+   concerned. Break the behaviour the test's name claims, not only the line you wrote. Each run
+   is one line in the PR body:
    `Mutation: <file:line> <what you changed> → <test name> → <its first failing line>`. A test
    whose name or comment claims more than its mutations show is renamed or reworded.
 5. In a fix round, rerun every check above and confirm that every item of every earlier review
