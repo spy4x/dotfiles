@@ -85,6 +85,12 @@ What the `design-reviewer` checks, and how its verdicts count: the `design` skil
 
 ## Merge
 
+`[WIP]` stays in the title until the reviewer gate has passed on the head commit, and the lead
+removes it as the last act before the merge: removing it starts the pull request's one full CI run,
+and every push while `[WIP]` is on runs only the light pipeline. A fix pushed after `[WIP]` is gone
+→ put `[WIP]` back first when more than one push is likely (a `needs-fix` verdict), and remove it
+again once the reviewer confirms; a single wording fix is pushed as is.
+
 One feature → `gh pr merge <n> --repo <owner>/<repo> --squash --delete-branch`; independent
 commits → the same with `--rebase`. Always pass `--repo`: without it, gh tries to delete the local
 branch, fails while its worktree exists, and skips the remote delete.
