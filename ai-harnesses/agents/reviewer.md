@@ -46,9 +46,11 @@ never `docker rm` in a trap.
    with a throwaway cache that is removed afterwards:
    `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true DENO_DIR=$D deno task check`. Report
    exit codes and the decisive line. `deno fmt --check` and `deno lint` must be clean: when CI does
-   not run them, run them yourself. A green run on the head commit stands for every check CI runs,
-   so never rerun those locally: run only the mutations (step 3) and what CI does not run. Never
-   run Lighthouse locally: CI measures it, and the `design-reviewer` checks it by hand.
+   not run them, run them yourself; on changed files only, use the `xargs -0` recipe in the
+   `implementer` agent, never a zsh array, which the harness refuses. A green run on the head
+   commit stands for every check CI runs, so never rerun those locally: run only the mutations
+   (step 3) and what CI does not run. Never run Lighthouse locally: CI measures it, and the
+   `design-reviewer` checks it by hand.
 3. **Verify by mutation.** For each behaviour the change claims to test, break the implementation
    and confirm the test goes red. Do it in a disposable copy, never in the author's tree:
    `M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, mutate there with the Edit tool (not
