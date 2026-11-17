@@ -68,7 +68,7 @@ Everything you read stays in your context, and every later call pays for it agai
   shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running").
 - Pass changed files to a check through `xargs`, from the repository root:
   `git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt --check`
-  (the same for `deno lint` or `deno test`). Never build the list as a zsh array
+  (the same for `deno lint`). Never build the list as a zsh array
   (`F=(${(f)"$(…)"})`) or an unquoted `$(…)`: the harness cannot parse it and refuses the command.
 - Every body you post after the PR exists (`gh pr edit`, a comment) starts with `<!-- agent -->`.
   Write it to a file in its own command first, then pass that file's literal path: the hook cannot
