@@ -107,3 +107,15 @@ Write `Decisions` and `Doubts` as full sentences — the lead and the reviewer r
 none of your context. State only what you ran and saw. "Should pass" is not a result. Every number
 and every "done" in the report and the PR body must be countable from the diff or from a command
 you ran.
+
+Back every claim with what you saw, because the lead copies your report into the PR and a claim
+without evidence is a common reason a review fails:
+
+- A check you call green carries its command and its summary line with the pass and fail counts,
+  as the log printed it; run the check with `NO_COLOR=1` so no colour codes reach the PR. Find
+  that line with `grep -n` for the runner's summary and every `FAIL` or `failed` in the whole log,
+  never by reading its tail alone: a tail can miss an earlier failure.
+- A claim about existing code or text ("the key already says X", "no caller passes Y") cites the
+  `file:line` you read.
+- A claim you could not back this way goes under `Doubts` as unchecked, never under `Checks` or in
+  the PR body as a fact.
