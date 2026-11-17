@@ -65,7 +65,11 @@ Everything you read stays in your context, and every later call pays for it agai
   command after it: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
 - Give `rm` and `rmdir` a literal path, never `"$S"` or `$(…)`: the hook refuses it. Delete a
   folder with `find <path> -delete`; in a later tool call, use the literal path you recorded, since
-  shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running").
+  shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running"). A test
+  container follows the `tests` skill, "Test services": `docker run --rm` and
+  `trap 'docker stop "$N"' EXIT`, never `docker rm` in a trap.
+- Edit and write files with the Edit and Write tools, never a shell heredoc or `python3 - <<EOF`:
+  Claude Code refuses those even in bypass mode.
 - Every body you post after the PR exists (`gh pr edit`, a comment) starts with `<!-- agent -->`.
   Write it to a file in its own command first, then pass that file's literal path: the hook cannot
   read a file written in the same command.
