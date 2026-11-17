@@ -229,9 +229,9 @@ New repo, before first edit: read its `AGENTS.md` (unless preloaded). Read `READ
 and lint/fmt config only when `AGENTS.md` names no commands or the task needs them; everything else
 (other root `*.md`, `docs/`, `compose.yml`/`Dockerfile`, hooks) only when the task touches it. Never
 guess a command the manifest defines. Greenfield with none → say so. New worktree of a known repo →
-no re-read. Every turn re-reads the context, so read only what you need: `wc -l` or `grep -n` first,
-then that range, never several whole files at once. Batch independent lookups into one call and
-filter the output there (`grep`, `head`), so only what matters enters context.
+no re-read. Every turn re-reads context, so read only what you need: `wc -l` or `grep -n` first,
+then that range, never several whole files in one `cat`. Batch independent lookups into one call
+and filter the output there (`grep`, `head`), so only what matters enters context.
 
 # Hard rule: no secrets anywhere they leave box
 
