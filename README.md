@@ -60,6 +60,9 @@ How the rendering works, the file layout per harness and how to write a skill or
 - **Secrets backup.** [`tools/secrets-backup.sh`](tools/secrets-backup.sh) backs up the age keys
   and plaintext env files that Syncthing keeps on this machine, with restic, every
   [night](docs/sync.md#secrets-backup).
+- **Work backup.** [`tools/work-backup.sh`](tools/work-backup.sh) backs up the work under
+  `~/sync/code` that is not on GitHub (uncommitted files, unpushed commits, folders with no
+  repository), with restic, every [night](docs/sync.md#work-backup).
 - **Shell.** [`install-shell.ts`](docs/shell.md) sets up Zsh, Oh My Zsh, Powerlevel10k and the
   aliases in `aliases.sh`.
 - **Config in home.** tmux, Neovim, Zsh and the prompt are [symlinked](docs/sync.md) from this
