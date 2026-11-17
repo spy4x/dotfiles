@@ -1,0 +1,11 @@
+# Runs work-backup.service every night, an hour after secrets-backup.timer. Persistent catches up a
+# night the machine was off or asleep at the next start. Setup: docs/sync.md.
+[Unit]
+Description=Back up local work that is not on GitHub nightly
+
+[Timer]
+OnCalendar=*-*-* 03:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target
