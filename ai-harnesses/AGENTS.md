@@ -231,7 +231,7 @@ and lint/fmt config only when `AGENTS.md` names no commands or the task needs th
 guess a command the manifest defines. Greenfield with none → say so. New worktree of a known repo →
 no re-read. Every turn re-reads context, so read only what you need: `wc -l` or `grep -n` first,
 then that range, never several whole files in one `cat`. Batch independent lookups into one call
-and filter the output there (`grep`, `head`), so only what matters enters context.
+and filter its output there (`grep`, `head`): unfiltered output stays in context.
 
 # Hard rule: no secrets anywhere they leave box
 
