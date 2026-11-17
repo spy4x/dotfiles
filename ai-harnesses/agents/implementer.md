@@ -65,7 +65,11 @@ Everything you read stays in your context, and every later call pays for it agai
   command after it: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
 - Give `rm` and `rmdir` a literal path, never `"$S"` or `$(…)`: the hook refuses it. Delete a
   folder with `find <path> -delete`; in a later tool call, use the literal path you recorded, since
-  shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running").
+  shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running"). A test
+  container follows the `tests` skill, "Test services": `docker run --rm` and
+  `trap 'docker stop "$N"' EXIT`, never `docker rm` in a trap.
+- Edit and write files with the Edit and Write tools, never a shell heredoc or `python3 - <<EOF`:
+  Claude Code refuses those even in bypass mode.
 - Pass changed files to a check through `xargs`, from the repository root:
   `git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt --check`
   (the same for `deno lint`). Never build the list as a zsh array
