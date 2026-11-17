@@ -107,8 +107,8 @@ machine (spy4x/ringmaster#282).
    in place of `git push`; on a loaded host CI runs it instead (see above). A warm local run is
    not evidence.
 2. Angular commits, small, one logical change each. No AI attribution.
-3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]` until the lead's
-   reviewer passes it. Issue references are full URLs. You never merge.
+3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]`; the lead removes it
+   (`git-flow` skill, "Merge"). Issue references are full URLs. You never merge.
 4. Every test that guards a decision your diff adds or changes is proven by breaking what it
    guards; a test that only moved or was renamed is not. One mutation per such test, no more.
    Break it in one throwaway copy for all of them (`M=$(mktemp -d) && git worktree add --detach

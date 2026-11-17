@@ -338,7 +338,7 @@ checkouts into fmt/type-check). Already in a linked worktree (`.git` is a file) 
 nest. Else create one with the `git-flow` skill's command.
 
 Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR always exists,
-`[WIP]` in the title until done; `gh pr create --fill` right after push, never ask.
+`[WIP]` in the title until the gate passes; `gh pr create --fill` right after push, never ask.
 
 **Reviewer gate** before push: one separate `reviewer` agent per diff, never self-review, plus a
 `design-reviewer` when the diff changes what a person sees ("Design" above). Pass → merge your own
