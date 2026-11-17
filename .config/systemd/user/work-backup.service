@@ -1,0 +1,10 @@
+# Backs up the work under ~/sync/code that is not on GitHub with restic.
+# Runs from work-backup.timer. Setup and restore: docs/sync.md.
+[Unit]
+Description=Back up local work that is not on GitHub with restic
+# A failed run shows an error dialog, so it never fails unnoticed night after night.
+OnFailure=work-backup-failed.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/sync/code/dotfiles/tools/work-backup.sh
