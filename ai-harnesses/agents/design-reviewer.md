@@ -21,6 +21,9 @@ own `mktemp -d` folder, never with a shell heredoc or `python3 - <<EOF`, which C
 even in bypass mode. A test container you start follows the `tests` skill, "Test services":
 `docker run --rm` and `trap 'docker stop "$N"' EXIT`, never `docker rm` in a trap.
 
+Never name a `.age` folder or a path inside it in a shell command (`ls`, `cat`, `cp`): Claude Code
+denies that key material outright.
+
 ## Procedure
 
 1. Read the spec (the issue), the PR body, the app's `docs/design/brief.md` and preact-components

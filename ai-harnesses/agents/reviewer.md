@@ -26,6 +26,9 @@ Write scratch files (a test helper, a mutation) with the Write or Edit tool, onl
 follows the `tests` skill, "Test services": `docker run --rm` and `trap 'docker stop "$N"' EXIT`,
 never `docker rm` in a trap.
 
+Never name a `.age` folder or a path inside it in a shell command (`ls`, `cat`, `cp`): Claude Code
+denies that key material outright.
+
 ## Procedure
 
 1. **Scope.** `git diff <base>...HEAD --stat`. Every changed file must serve the stated issue.

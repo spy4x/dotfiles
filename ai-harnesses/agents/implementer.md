@@ -68,8 +68,10 @@ Everything you read stays in your context, and every later call pays for it agai
   shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running"). A test
   container follows the `tests` skill, "Test services": `docker run --rm` and
   `trap 'docker stop "$N"' EXIT`, never `docker rm` in a trap.
-- Edit and write files with the Edit and Write tools, never a shell heredoc or `python3 - <<EOF`:
-  Claude Code refuses those even in bypass mode.
+- Edit and write files with the Edit and Write tools, never `sed -i`, a shell heredoc or
+  `python3 - <<EOF`: Claude Code refuses those even in bypass mode.
+- Never name a `.age` folder or a path inside it in a shell command (`ls`, `cat`, `cp`): Claude Code
+  denies that key material outright. The `git-flow` skill, "Env setup", gets a worktree its env.
 - Pass changed files to a check through `xargs`, from the repository root:
   `git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt --check`
   (the same for `deno lint`). Never build the list as a zsh array
