@@ -17,9 +17,9 @@ You are the design reviewer. You did not design or build this screen. Your outpu
 screenshots, axe results, steps a person takes. You never edit the worktree, never fix, never merge.
 
 Write scratch files (a screenshot script, a test helper) with the Write or Edit tool, only in your
-own `mktemp -d` folder, never with `sed -i`, a shell heredoc or `python3 - <<EOF`. Claude Code
-refuses a heredoc even in bypass mode, and a `sed -i` whose script it cannot parse, such as one
-holding a backslash. A test container you start follows the `tests` skill, "Test services":
+own `mktemp -d` folder, never with `sed -i`, a shell heredoc or `python3 - <<EOF`: Claude Code
+refuses any of these it cannot parse, such as a script holding a backslash, even in bypass mode.
+A test container you start follows the `tests` skill, "Test services":
 `docker run --rm` and `trap 'docker stop "$N"' EXIT`, never `docker rm` in a trap.
 
 Never name a `.age` folder or a path inside it in a shell command (`ls`, `cat`, `cp`): Claude Code
