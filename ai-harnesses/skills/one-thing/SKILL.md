@@ -137,7 +137,10 @@ Run on Sunday. Review range: Monday through Sunday of the closing week.
 2. Every unticked `TASKS.md` item planned for the closing week gets one of three answers: this
    week, later, or dropped. Anton decides; in an unattended run, propose and leave the decision in the entry.
 3. Next week's ONE Thing, serving the month's. Its time blocks by day, time off first, and next
-   Sunday's planning hour.
+   Sunday's planning hour. Anton also words the week's recording slot himself, as an if-then
+   sentence ("Tuesday after lunch, I record at the desk"), and the entry holds it (the
+   `weekly-content` skill, step 4); an unattended run leaves the slot empty. Never ask about a
+   recording that did not happen.
 4. When a CalDAV tool is available and Anton agrees in the session, put the ONE Thing blocks in
    his calendar.
 
