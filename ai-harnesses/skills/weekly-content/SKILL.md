@@ -72,8 +72,8 @@ and the video is added to it once approved. A week without a recording still pub
 
 ## 4. The recording kit
 
-The owner's stated reason for seven missed recordings was procrastination, so the kit removes
-every decision from the recording. An agent prepares it when he asks for the week's content or
+Recording is the one step agents cannot do and the one that slips, so the kit removes every
+decision from it. An agent prepares it when he asks for the week's content or
 his weekly planning reaches it, from merged work and the `Content ideas` issue, without asking him
 anything. It is one page, `~/recordings/<slug>/kit.md`, always in this shape:
 
