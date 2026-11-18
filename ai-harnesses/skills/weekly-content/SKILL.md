@@ -12,8 +12,8 @@ source before it goes into anything public.
 
 ## 1. The unit
 
-Every project the owner builds is built in public. Each week one unit goes out, from that week's
-real work:
+Every project the owner builds is built in public. Each week at least one unit goes out, from that
+week's real work:
 
 - **a post**, written by the `blog-post` skill;
 - **a video** of 5–10 minutes on the same topic, recorded by the owner and finished by the
@@ -21,8 +21,10 @@ real work:
 - **one Short**, cut from the video's footage or recorded to point at it. One per video, never
   more, so Shorts never outnumber the long videos.
 
-One unit a week in total, never one per project, because the owner records once a week. The unit
-is about the project whose turn it is:
+One unit a week is the floor, for the owner's one channel and all projects together. Agents plan
+and prepare that one unit, never one per project. A second recording in a week happens only when
+the owner chooses to make it: no agent plans, prepares or proposes it. The planned unit is about
+the project whose turn it is:
 
 1. Seed, now.
 2. The owner's blog (lessons, techniques, scars, advice for founders, his other projects), once
