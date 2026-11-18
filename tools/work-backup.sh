@@ -115,21 +115,53 @@ uncommitted() {
   )
 }
 
+# The name a repository's files get in the bundle folder.
+flat() {
+  local rel="${1#"$SOURCE"/}"
+  printf '%s' "${rel//\//__}"
+}
+
+# Bundles the commits only a detached HEAD holds: no branch points at them, so the branch bundle
+# misses them. Repositories with no remote are saved whole already.
+detached() {
+  local repo="$1" tree="$2" head
+  [ -n "$(git -C "$repo" remote)" ] || return 0
+  git -C "$tree" symbolic-ref -q HEAD >/dev/null && return 0
+  [ -n "$(git -C "$tree" rev-list -n 1 HEAD --not --branches --remotes)" ] || return 0
+  head="$(git -C "$tree" rev-parse --short=12 HEAD)"
+  git -C "$tree" bundle create --quiet "$BUNDLES/$(flat "$repo").detached-$head.bundle" \
+    HEAD --not --branches --remotes
+}
+
+# Saves each stash as a patch that `git apply` restores, untracked files included. A stash is no
+# branch, so no bundle holds it. Repositories with no remote are saved whole already.
+stashes() {
+  local repo="$1" n=0 total
+  [ -n "$(git -C "$repo" remote)" ] || return 0
+  total="$(git -C "$repo" stash list | wc -l)"
+  while [ "$n" -lt "$total" ]; do
+    git -C "$repo" stash show --patch --binary --include-untracked "stash@{$n}" \
+      >"$BUNDLES/$(flat "$repo").stash-$n.patch"
+    n=$((n + 1))
+  done
+}
+
 for repo in ${REPOS[@]+"${REPOS[@]}"}; do
   if [ -z "$(git -C "$repo" remote)" ]; then
     add "$repo"
   else
     uncommitted "$repo"
     if [ -n "$(git -C "$repo" rev-list -n 1 --branches --not --remotes)" ]; then
-      rel="${repo#"$SOURCE"/}"
-      git -C "$repo" bundle create --quiet "$BUNDLES/${rel//\//__}.bundle" --branches --not --remotes
+      git -C "$repo" bundle create --quiet "$BUNDLES/$(flat "$repo").bundle" --branches --not --remotes
     fi
   fi
   while IFS= read -r line; do
     tree="${line#worktree }"
     [ "$tree" = "$line" ] && continue
     case "$tree" in "$WORKTREES"/*) [ -d "$tree" ] && uncommitted "$tree" ;; esac
+    [ -d "$tree" ] && detached "$repo" "$tree"
   done < <(git -C "$repo" worktree list --porcelain)
+  stashes "$repo"
 done
 
 if [ -n "$(ls -A "$BUNDLES")" ]; then add "$BUNDLES"; fi

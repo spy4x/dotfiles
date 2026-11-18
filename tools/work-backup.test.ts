@@ -189,6 +189,63 @@ Deno.test(`bundles the commits on no remote, and makes no bundle for a repositor
   })
 })
 
+Deno.test(`saves each stash as a patch that restores it, untracked files included`, async () => {
+  await withTree(async (root) => {
+    const code = join(root, `code`)
+    const app = join(code, `app`)
+    await pushedRepo(root, app)
+    await write(join(app, `tracked.txt`), `stashed change\n`)
+    await write(join(app, `new.txt`), `stashed new file\n`)
+    await git(app, `stash`, `push`, `--quiet`, `--include-untracked`)
+
+    const env = await envOf(root)
+    assertEquals((await run(`bash`, [SCRIPT], env)).code, 0, `the backup failed`)
+    const patches = (await backedUp(env)).filter((path) => path.endsWith(`.patch`))
+    assertEquals(patches.map((path) => path.split(`/`).pop()), [`app.stash-0.patch`])
+
+    const target = join(root, `restore`)
+    const restored = await run(`restic`, [`restore`, `latest`, `--target`, target], {
+      ...env,
+      RESTIC_PASSWORD: PASSWORD,
+    })
+    assertEquals(restored.code, 0, restored.stderr)
+    await git(app, `apply`, join(target, patches[0]))
+    assertEquals(await Deno.readTextFile(join(app, `tracked.txt`)), `stashed change\n`)
+    assertEquals(await Deno.readTextFile(join(app, `new.txt`)), `stashed new file\n`)
+  })
+})
+
+Deno.test(`bundles commits only a detached HEAD holds, and none for a detached HEAD on pushed work`, async () => {
+  await withTree(async (root) => {
+    const code = join(root, `code`)
+    const app = join(code, `app`)
+    const clean = join(code, `clean`)
+    await pushedRepo(root, app)
+    await pushedRepo(root, clean)
+    await git(clean, `switch`, `--quiet`, `--detach`)
+    await git(app, `switch`, `--quiet`, `--detach`)
+    await write(join(app, `local.txt`))
+    await git(app, `add`, `local.txt`)
+    await git(app, `commit`, `--quiet`, `-m`, `detached only`)
+    const head = await git(app, `rev-parse`, `HEAD`)
+
+    const env = await envOf(root)
+    assertEquals((await run(`bash`, [SCRIPT], env)).code, 0, `the backup failed`)
+    const bundles = (await backedUp(env)).filter((path) => path.endsWith(`.bundle`))
+    assertEquals(bundles.map((path) => path.split(`/`).pop()), [
+      `app.detached-${head.slice(0, 12)}.bundle`,
+    ])
+
+    const target = join(root, `restore`)
+    const restored = await run(`restic`, [`restore`, `latest`, `--target`, target], {
+      ...env,
+      RESTIC_PASSWORD: PASSWORD,
+    })
+    assertEquals(restored.code, 0, restored.stderr)
+    assert((await git(app, `bundle`, `list-heads`, join(target, bundles[0]))).includes(head))
+  })
+})
+
 // restic 0.17 and later also keep the oldest snapshot while fewer days than the policy exist, so
 // three runs on one day leave two snapshots when retention sees them as one series, and three when
 // each run's new bundle folder name makes a series of its own.
