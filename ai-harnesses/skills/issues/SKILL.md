@@ -127,7 +127,8 @@ fault, a bug in Seed or a shared library that costs an app time.
   Run `git fetch origin`, because a stale default branch hides the newest fix. Find the newest
   commit on that branch that changed the test's file:
   `git log -1 --format=%H origin/main -- <file>`. For each pipeline where the test failed, run
-  `git fetch origin <pipeline commit>`, then `git merge-base --is-ancestor <newest> <pipeline commit>`.
+  `git fetch origin <pipeline commit>`, then
+  `git merge-base --is-ancestor <newest> <pipeline commit>`.
   Exit 0 means the commit contains the change, exit 1 means it does not, and any other exit is an
   error to resolve before you decide. No pipeline with exit 0 → file nothing. The issue links a
   pipeline with exit 0. Compare commits, never dates: a pipeline that starts after a fix can still
