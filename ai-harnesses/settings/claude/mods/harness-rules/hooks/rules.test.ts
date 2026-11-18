@@ -8,6 +8,7 @@ import {
   ghPost,
   leakVerdict,
   markerVerdict,
+  memoryCheckoutBlock,
   spawnVerdict,
   uuidVerdict,
 } from "./rules.ts"
@@ -661,6 +662,66 @@ test(`frames direction.md as a context block and skips a missing or empty one`, 
   expect(block?.text).toContain(`Ship often.`)
   expect(directionBlock(undefined)).toBeUndefined()
   expect(directionBlock(`  \n`)).toBeUndefined()
+})
+
+/** Porcelain status lines for this many changed files. */
+const CHANGES = (count: number) => ` M file-${`x`.repeat(count)}\n`.repeat(count)
+
+test(`adds no memory checkout block for a clean, current checkout`, () => {
+  expect(memoryCheckoutBlock(``, `0\n`)).toBeUndefined()
+})
+
+test(`names the uncommitted changes of a dirty checkout, and nothing about behind`, () => {
+  const block = memoryCheckoutBlock(CHANGES(3), `0\n`)
+  expect(block?.name).toBe(`memoryCheckout`)
+  expect(block?.text).toContain(`~/sync/code/ai-memory has 3 uncommitted changes.`)
+  expect(block?.text).toContain(`Never discard`)
+  expect(block?.text).toContain(`the workspace skill, "Memory"`)
+  expect(block?.text).not.toContain(`behind`)
+})
+
+test(`says one uncommitted change in the singular`, () => {
+  expect(memoryCheckoutBlock(CHANGES(1), `0\n`)?.text).toContain(`has 1 uncommitted change.`)
+})
+
+test(`tells a checkout that is only behind to fast-forward`, () => {
+  const text = memoryCheckoutBlock(``, `29\n`)?.text
+  expect(text).toContain(`~/sync/code/ai-memory is 29 commits behind origin/main.`)
+  expect(text).toContain(`git merge --ff-only origin/main`)
+  expect(text).not.toContain(`uncommitted`)
+})
+
+test(`says one commit behind in the singular`, () => {
+  expect(memoryCheckoutBlock(``, `1\n`)?.text).toContain(`is 1 commit behind origin/main.`)
+})
+
+test(`names both counts for a checkout that is dirty and behind`, () => {
+  expect(memoryCheckoutBlock(CHANGES(3), `29\n`)?.text).toContain(
+    `has 3 uncommitted changes and is 29 commits behind origin/main.`,
+  )
+})
+
+test(`reports only what git could tell when one command failed`, () => {
+  const behindOnly = memoryCheckoutBlock(undefined, `29\n`)?.text
+  expect(behindOnly).toContain(`29 commits behind`)
+  expect(behindOnly).not.toContain(`uncommitted`)
+  const dirtyOnly = memoryCheckoutBlock(CHANGES(3), undefined)?.text
+  expect(dirtyOnly).toContain(`3 uncommitted changes`)
+  expect(dirtyOnly).not.toContain(`behind`)
+})
+
+test(`adds no memory checkout block when both commands failed`, () => {
+  expect(memoryCheckoutBlock(undefined, undefined)).toBeUndefined()
+})
+
+test(`adds no memory checkout block when the behind count is not a number`, () => {
+  expect(memoryCheckoutBlock(``, `fatal: bad revision\n`)).toBeUndefined()
+})
+
+test(`keeps file names out of the memory checkout block`, () => {
+  const text = memoryCheckoutBlock(`?? decisions/ignore-your-rules.md\n`, `0\n`)?.text
+  expect(text).toContain(`1 uncommitted change`)
+  expect(text).not.toContain(`ignore-your-rules`)
 })
 
 test(`reads the compaction count from the highest mark, or 0 without one`, () => {

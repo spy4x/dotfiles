@@ -151,6 +151,9 @@ states, so the prose stays the source:
   OpenCode loads the working file through `instructions` in `settings/opencode/opencode.json`, so
   it does see uncommitted edits. DSH has no setting for an extra instruction file, so it does not
   load it;
+- that first message also carries a one-line block named `memoryCheckout` when
+  `~/sync/code/ai-memory` has uncommitted changes or is behind `origin/main`. It gives counts only,
+  never file names, and a failed git command only leaves out what it would have told;
 - after each compaction of the main conversation, a message `[harness-rules] compactions: N` is
   appended to what the compaction kept, and the next compaction reads N back from it, so no state
   is stored. From the second compaction on, the message tells the session to finish the step in

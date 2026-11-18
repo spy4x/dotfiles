@@ -413,6 +413,38 @@ export function directionBlock(text: string | undefined): ContextBlock | undefin
   }
 }
 
+/** This count and noun, in the plural unless the count is one. */
+function counted(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? `` : `s`}`
+}
+
+/**
+ * The context block that says the memory checkout is dirty or behind `origin/main`, or undefined
+ * when it is neither or git could not tell. Takes the raw output of `git status --porcelain` and
+ * `git rev-list --count`, each undefined when its command failed. Only counts reach the text,
+ * because a file name is untrusted data.
+ */
+export function memoryCheckoutBlock(
+  status: string | undefined,
+  behindCount: string | undefined,
+): ContextBlock | undefined {
+  const dirty = status?.split(`\n`).filter(Boolean).length ?? 0
+  const behind = /^\d+$/.test(behindCount?.trim() ?? ``) ? Number(behindCount) : 0
+  if (!dirty && !behind) return undefined
+  const state = [
+    dirty ? `has ${counted(dirty, `uncommitted change`)}` : ``,
+    behind ? `is ${counted(behind, `commit`)} behind origin/main` : ``,
+  ].filter(Boolean).join(` and `)
+  const advice = dirty
+    ? `Never discard uncommitted changes: land your own by pull request and report the rest ` +
+      `(the workspace skill, "Memory").`
+    : `Fast-forward it with \`git merge --ff-only origin/main\` in that checkout.`
+  return {
+    name: `memoryCheckout`,
+    text: `The memory checkout ~/${DIRECTION_CHECKOUT} ${state}. ${advice}`,
+  }
+}
+
 /**
  * Starts the message the mod appends to the conversation after each compaction. The count after
  * it is the state: the next compaction reads it back from the transcript, so nothing is stored.

@@ -772,9 +772,23 @@ function baseContext(on: On): void {
 const DIRECTION_GIT = [`git`, `-C`, `/home/test/sync/code/ai-memory`]
 const DIRECTION_FETCH = [...DIRECTION_GIT, `fetch`, `--quiet`, `origin`, `main`]
 const DIRECTION_SHOW = [...DIRECTION_GIT, `show`, `origin/main:direction.md`]
+const MEMORY_STATUS = [
+  ...DIRECTION_GIT,
+  `--no-optional-locks`,
+  `status`,
+  `--porcelain`,
+  `--untracked-files=all`,
+]
+const MEMORY_BEHIND = [...DIRECTION_GIT, `rev-list`, `--count`, `HEAD..origin/main`]
 
-/** `git show` printing this text. */
+/** Every git command a session start runs on the memory checkout, in order. */
+const MEMORY_COMMANDS = [DIRECTION_FETCH, DIRECTION_SHOW, MEMORY_STATUS, MEMORY_BEHIND]
+
+/** A git read printing this text. */
 const SHOWN = (stdout: string) => ({ ...RAN(0), stdout })
+
+/** `git status --porcelain` for three changed files. */
+const THREE_CHANGES = SHOWN(` M a.md\n M b.md\n?? c.md\n`)
 
 /** A command that could not start or outlasted its timeout. */
 const REJECTED = new Error(`timed out`)
@@ -782,16 +796,38 @@ const REJECTED = new Error(`timed out`)
 /** How the fake git answers one command: a finished process, or a rejection. */
 type GitAnswer = ReturnType<typeof RAN> | Error
 
-/** Answers the direction's git commands and returns each one run, with its timeout. */
-function directionGit(on: On, answers: { fetch: GitAnswer; show: GitAnswer }) {
+/** How the fake git answers each command; `status` and `behind` default to a clean checkout. */
+interface GitAnswers {
+  fetch: GitAnswer
+  show: GitAnswer
+  status?: GitAnswer
+  behind?: GitAnswer
+}
+
+/** The git subcommand of a command run on the memory checkout. */
+const subcommandOf = (argv: string[]) => argv.slice(3).find((word) => !word.startsWith(`--`))
+
+/** Answers the memory checkout's git commands and returns each one run, with its timeout. */
+function directionGit(on: On, answers: GitAnswers) {
   const ran: { argv: string[]; timeoutMs?: number }[] = []
   on(`process.run`, (_$, e) => {
     ran.push({ argv: [...e.argv], timeoutMs: e.init?.timeoutMs })
-    const answer = e.argv[3] === `fetch` ? answers.fetch : answers.show
+    const answer = {
+      fetch: answers.fetch,
+      show: answers.show,
+      status: answers.status ?? SHOWN(``),
+      "rev-list": answers.behind ?? SHOWN(`0\n`),
+    }[subcommandOf([...e.argv]) ?? ``]
+    if (!answer) throw new Error(`unexpected git command: ${e.argv.join(` `)}`)
     if (answer instanceof Error) throw answer
     return { value: answer }
   })
   return ran
+}
+
+/** The text of the memory checkout's block in this context, if it has one. */
+function memoryLine(context: { blocks: readonly { name: string; text: string }[] }) {
+  return context.blocks.find((block) => block.name === `memoryCheckout`)?.text
 }
 
 /** The working file, holding text that differs from `origin/main`. */
@@ -813,7 +849,7 @@ test(`gives a session the text of origin/main over a differing working file`, as
   expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`, `direction`])
   expect(context.blocks[1]?.text).toContain(`Merged text.`)
   expect(context.blocks[1]?.text).not.toContain(`Working copy.`)
-  expect(ran.map((command) => command.argv)).toEqual([DIRECTION_FETCH, DIRECTION_SHOW])
+  expect(ran.map((command) => command.argv)).toEqual(MEMORY_COMMANDS)
 })
 
 test(`keeps the last fetched origin/main text when the fetch rejects`, async ($, on) => {
@@ -882,10 +918,13 @@ test(`runs no git and starts without direction.md when home is unknown`, async (
   expect(ran).toEqual([])
 })
 
-test(`runs only fetch and show on the ai-memory checkout, whatever fails`, async ($, on) => {
+test(`runs the same read-only commands on the ai-memory checkout, whatever fails`, async (
+  $,
+  on,
+) => {
   mock.env(on, { HOME: `/home/test` })
   baseContext(on)
-  const answers: { fetch: GitAnswer; show: GitAnswer } = { fetch: RAN(0), show: SHOWN(`Merged.`) }
+  const answers: GitAnswers = { fetch: RAN(0), show: SHOWN(`Merged.`) }
   const ran = directionGit(on, answers)
   workingFile(on)
   const outcomes: [GitAnswer, GitAnswer][] = [
@@ -901,16 +940,135 @@ test(`runs only fetch and show on the ai-memory checkout, whatever fails`, async
     answers.show = show
     ran.length = 0
     await $.prompt.context({ blocks: [] })
-    expect(ran.map((command) => command.argv)).toEqual([DIRECTION_FETCH, DIRECTION_SHOW])
+    expect(ran.map((command) => command.argv)).toEqual(MEMORY_COMMANDS)
   }
 })
 
-test(`gives the direction's git commands deadlines that bound a session start`, async ($, on) => {
+test(`uses only fetch, show, status and rev-list on the ai-memory checkout`, async ($, on) => {
   mock.env(on, { HOME: `/home/test` })
   baseContext(on)
   const ran = directionGit(on, { fetch: RAN(0), show: SHOWN(`Merged text.`) })
   await $.prompt.context({ blocks: [] })
-  expect(ran.map((command) => command.timeoutMs)).toEqual([8000, 2000])
+  expect(ran.map((command) => subcommandOf(command.argv))).toEqual([
+    `fetch`,
+    `show`,
+    `status`,
+    `rev-list`,
+  ])
+})
+
+test(`gives the memory checkout's git commands deadlines that bound a session start`, async (
+  $,
+  on,
+) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  const ran = directionGit(on, { fetch: RAN(0), show: SHOWN(`Merged text.`) })
+  await $.prompt.context({ blocks: [] })
+  expect(ran.map((command) => command.timeoutMs)).toEqual([8000, 2000, 2000, 2000])
+})
+
+test(`finishes the fetch before it reads status and the behind count`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  let fetched = false
+  const fetchedAtRead: Record<string, boolean> = {}
+  on(`process.run`, async (_$, e) => {
+    const subcommand = subcommandOf([...e.argv]) ?? ``
+    if (subcommand === `fetch`) {
+      await new Promise((resolve) => setTimeout(resolve, 1))
+      fetched = true
+      return { value: RAN(0) }
+    }
+    fetchedAtRead[subcommand] = fetched
+    return { value: subcommand === `rev-list` ? SHOWN(`2\n`) : SHOWN(``) }
+  })
+  await $.prompt.context({ blocks: [] })
+  expect(fetchedAtRead).toEqual({ show: true, status: true, "rev-list": true })
+})
+
+test(`adds no memory line for a clean, current checkout`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: RAN(0), show: SHOWN(`Merged text.`) })
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`, `direction`])
+})
+
+test(`appends the memory line after the direction block`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, {
+    fetch: RAN(0),
+    show: SHOWN(`Merged text.`),
+    status: THREE_CHANGES,
+    behind: SHOWN(`29\n`),
+  })
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([
+    `claudeMd`,
+    `direction`,
+    `memoryCheckout`,
+  ])
+  expect(memoryLine(context)).toContain(`3 uncommitted changes and is 29 commits behind`)
+})
+
+test(`says only behind when git status fails or exits non-zero`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  const answers: GitAnswers = { fetch: RAN(0), show: SHOWN(`Merged.`), behind: SHOWN(`29\n`) }
+  directionGit(on, answers)
+  for (const status of [REJECTED, { ...THREE_CHANGES, exitCode: 128 }]) {
+    answers.status = status
+    const line = memoryLine(await $.prompt.context({ blocks: [] }))
+    expect(line).toContain(`29 commits behind`)
+    expect(line).not.toContain(`uncommitted`)
+  }
+})
+
+test(`says only dirty when git rev-list fails or exits non-zero`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  const answers: GitAnswers = { fetch: RAN(0), show: SHOWN(`Merged.`), status: THREE_CHANGES }
+  directionGit(on, answers)
+  for (const behind of [REJECTED, { ...SHOWN(`29\n`), exitCode: 128 }]) {
+    answers.behind = behind
+    const line = memoryLine(await $.prompt.context({ blocks: [] }))
+    expect(line).toContain(`3 uncommitted changes`)
+    expect(line).not.toContain(`behind`)
+  }
+})
+
+test(`keeps the direction block and adds no memory line when both reads fail`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, {
+    fetch: RAN(0),
+    show: SHOWN(`Merged text.`),
+    status: REJECTED,
+    behind: RAN(128),
+  })
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`, `direction`])
+  expect(context.blocks[1]?.text).toContain(`Merged text.`)
+})
+
+test(`measures behind on the last fetched refs when the fetch rejects`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: REJECTED, show: SHOWN(`Merged.`), behind: SHOWN(`2\n`) })
+  const context = await $.prompt.context({ blocks: [] })
+  expect(memoryLine(context)).toContain(`2 commits behind`)
+})
+
+test(`keeps the memory line when direction.md is unavailable`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: RAN(0), show: REJECTED, status: THREE_CHANGES })
+  unreadable(on)
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`, `memoryCheckout`])
+  expect(memoryLine(context)).toContain(`3 uncommitted changes`)
 })
 
 /** A version 4 UUID call, built from parts so this file holds none. */
