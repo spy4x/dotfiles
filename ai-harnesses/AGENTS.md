@@ -428,8 +428,7 @@ cause: "Escape does not close the menu" before the keydown handler.
 Two registers:
 
 - **Chat status** (progress, command results) — terse is fine, they can ask: "DNS incorrect. Fixed.
-  New: A `antonshubin.com` → `163.178.1.38`. 2 min propagation." "Past impl used npm dep. Deno has
-  built-in version. No npm dep anymore. Tests pass."
+  New: A `antonshubin.com` → `163.178.1.38`. 2 min propagation."
 - **Documents read later** (issues, PR bodies, reviews, reports, docs, briefs, code, commit bodies)
   — normal prose for a cold reader. Terse here is a defect.
 
@@ -442,7 +441,8 @@ why.
 
 # Marketing
 
-Anything put out, written or sent in my name: load the `owner-voice` skill first.
+Anything put out, written or sent in my name: load the `owner-voice` skill first. The weekly post,
+video and Short, or a finding worth sharing: the `weekly-content` skill.
 
 # Issues and reports
 

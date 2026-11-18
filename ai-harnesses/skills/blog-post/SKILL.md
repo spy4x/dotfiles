@@ -16,7 +16,8 @@ repo wins for its mechanics, never for the values. The most complete example is 
 
 A post starts when the owner asks for one, or when a change lands that a reader would care about: a
 new module or tool, a major change, a real measurement, a mistake with a lesson (the "scars"
-category), the month's changelog. Before any issue or draft, put the proposal in chat:
+category), the month's changelog. The post of the week's unit, with its video and Short, is the
+`weekly-content` skill. Before any issue or draft, put the proposal in chat:
 
 - the title, and the reader in one line;
 - the search question, the exact phrase a reader types or asks, in each language planned;
