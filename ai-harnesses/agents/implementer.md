@@ -69,8 +69,7 @@ Everything you read stays in your context, and every later call pays for it agai
   container follows the `tests` skill, "Test services": `docker run --rm` and
   `trap 'docker stop "$N"' EXIT`, never `docker rm` in a trap.
 - Edit and write files with the Edit and Write tools, never `sed -i`, a shell heredoc or
-  `python3 - <<EOF`: Claude Code refuses any of these it cannot parse, such as a script holding a
-  backslash, even in bypass mode.
+  `python3 - <<EOF`: Claude Code refuses any of these it cannot parse, even in bypass mode.
 - Never name a `.age` folder or a path inside it in a shell command (`ls`, `cat`, `cp`): Claude Code
   denies that key material outright. The `git-flow` skill, "Env setup", gets a worktree its env.
 - Pass changed files to a check through `xargs`, from the repository root:
