@@ -21,10 +21,10 @@ week's real work:
 - **one Short**, cut from the video's footage or recorded to point at it. One per video, never
   more, so Shorts never outnumber the long videos.
 
-One unit a week is the floor, for the owner's one channel and all projects together. Agents plan
-and prepare that one unit, never one per project. A second recording in a week happens only when
-the owner chooses to make it: no agent plans, prepares or proposes it. The planned unit is about
-the project whose turn it is:
+One unit a week is the floor the owner set, for his one channel and all projects together. Agents
+plan and prepare that one unit, never one per project. A second recording in a week happens only
+when the owner chooses to make it: no agent plans, prepares or proposes it. The planned unit is
+about the project whose turn it is:
 
 1. Seed, now.
 2. The owner's blog (lessons, techniques, scars, advice for founders, his other projects), once
