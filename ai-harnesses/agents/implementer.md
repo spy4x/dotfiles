@@ -109,15 +109,14 @@ machine (spy4x/ringmaster#282).
 2. Angular commits, small, one logical change each. No AI attribution.
 3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]`; the lead removes it
    (`git-flow` skill, "Merge"). Issue references are full URLs. You never merge.
-4. Every test that guards a decision your diff adds or changes is proven by breaking what it
-   guards; a test that only moved or was renamed is not. One mutation per such test, no more.
-   Break it in one throwaway copy for all of them (`M=$(mktemp -d) && git worktree add --detach
-   "$M" HEAD`, removed with `git worktree remove --force "$M"`), never in your own worktree;
-   revert each mutation with Edit before the next, and run only the test file or check block
-   concerned. Break the behaviour the test's name claims, not only the line you wrote. Each run
-   is one line in the PR body:
-   `Mutation: <file:line> <what you changed> → <test name> → <its first failing line>`. A test
-   whose name or comment claims more than its mutations show is renamed or reworded.
+4. Each decision the done-when names is proven by breaking what guards it: one mutation per
+   decision, no more, however many tests guard it. Make every break in one throwaway copy
+   (`M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, removed with `git worktree remove
+   --force "$M"`), never in your own worktree, and reuse its build; revert each mutation with
+   Edit before the next, and run only the test file or check block concerned. Break the behaviour
+   the test's name claims, not only the line you wrote. Each run is one line in the PR body:
+   `Mutation: <file:line> <what you changed> → <test name> → <its first failing line>`. A mutated
+   test whose name or comment claims more than its mutation shows is renamed or reworded.
 5. In a fix round, rerun every check above and confirm that every item of every earlier review
    still holds, not only the new ones, before you report.
 
