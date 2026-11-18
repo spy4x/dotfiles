@@ -123,6 +123,16 @@ fault, a bug in Seed or a shared library that costs an app time.
 - A subagent does neither: it puts the obstacle in its report, and its lead fixes or files it.
 - A background run (ringmaster) files it and stays on its own issue; the queue takes `p1-tooling`
   issues first, and the daily digest lists the open ones.
+- **A flaky test** is filed only when it still fails, because an earlier change may have cured it.
+  Run `git fetch origin`, because a stale default branch hides the newest fix. Find the newest
+  commit on that branch that changed the test's file:
+  `git log -1 --format=%H origin/main -- <file>`. For each pipeline where the test failed, run
+  `git fetch origin <pipeline commit>`, then
+  `git merge-base --is-ancestor <newest> <pipeline commit>`.
+  Exit 0 means the commit contains the change, exit 1 means it does not, and any other exit is an
+  error to resolve before you decide. No pipeline with exit 0 → file nothing. The issue links a
+  pipeline with exit 0. Compare commits, never dates: a pipeline that starts after a fix can still
+  test a branch without it.
 
 A product bug that users hit is no obstacle: it keeps its priority from "Filing issues".
 
