@@ -48,8 +48,9 @@ dropped → remove the label.
 
 ## Reviewer gate
 
-Every decision the done-when names needs one `Mutation:` line in the PR body. A missing one goes
-back to the implementer before any reviewer is spent. Whether a change needs a security review is
+Every decision the done-when names that a test guards needs one `Mutation:` line in the PR body; a
+decision no test guards needs none. A missing one goes back to the implementer before any reviewer
+is spent. Whether a change needs a security review is
 decided when the work is requested, in its design (`start-task`) or its lane brief (`wave`): it does
 when it touches sign-in, sessions, roles or permissions, tenant boundaries, secrets, crypto,
 billing, payments, webhooks, uploads, raw SQL, dynamic imports or what a host exposes. The reviewer

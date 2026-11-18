@@ -109,8 +109,9 @@ machine (spy4x/ringmaster#282).
 2. Angular commits, small, one logical change each. No AI attribution.
 3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]`; the lead removes it
    (`git-flow` skill, "Merge"). Issue references are full URLs. You never merge.
-4. Each decision the done-when names is proven by breaking what guards it: one mutation per
-   decision, no more, however many tests guard it. Make every break in one throwaway copy
+4. Each decision the done-when names that a test guards is proven by breaking it: one mutation
+   per decision, no more, however many tests guard it. A decision no test guards needs none. Make
+   every break in one throwaway copy
    (`M=$(mktemp -d) && git worktree add --detach "$M" HEAD`, removed with `git worktree remove
    --force "$M"`), never in your own worktree, and reuse its build; revert each mutation with
    Edit before the next, and run only the test file or check block concerned. Break the behaviour
