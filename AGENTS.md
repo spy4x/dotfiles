@@ -11,9 +11,7 @@ here. After every merge, from the main checkout (never a worktree):
 3. Touched `ai-harnesses/` → `deno task ai`, then `deno task ai --check` must print
    `All targets in sync.` That covers Claude Code, OpenCode and DSH; they are real
    directories, never symlinks into this repo.
-4. Touched `system/syncthing-code.stignore` → `cp system/syncthing-code.stignore
-   ~/sync/code/.stignore`.
-5. Touched `system/etc/` → apply it with the commands in `docs/host-limits.md`, using
+4. Touched `system/etc/` → apply it with the commands in `docs/host-limits.md`, using
    `sudo -n`, and list those commands in the report.
 
 Report what was applied and what is left for me.

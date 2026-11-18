@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Back up the age keys and plaintext env files under ~/sync/code with restic.
 #
-# Syncthing does not copy these files to other machines (system/syncthing-code.stignore), so
-# without this backup a key made here exists on this disk only, and the `.env.age` it encrypts
-# could never be read again. The restic repository lives in the `backups` Syncthing folder, so the
-# other machines receive it, encrypted. Its password is homelab's BACKUPS_PASSWORD, the one every
-# server's backups use. Runs nightly from secrets-backup.timer. Setup and restore: docs/sync.md.
+# Nothing copies these files to other machines, so without this backup a key made here exists on
+# this disk only, and the `.env.age` it encrypts could never be read again. The restic repository
+# lives in the `backups` Syncthing folder, so the machines that share it receive it, encrypted. Its
+# password is homelab's BACKUPS_PASSWORD, the one every server's backups use. Runs nightly from
+# secrets-backup.timer. Setup and restore: docs/sync.md.
 #
 #   --alert  show an error dialog that the backup failed, and back up nothing
 #            (secrets-backup-failed.service runs it when a nightly run fails)
@@ -53,9 +53,8 @@ fi
 LIST="$(mktemp)"
 trap 'shred -u "$LIST" 2>/dev/null || true' EXIT
 
-# The same names system/syncthing-code.stignore ignores, whatever their type (file, folder or
-# symlink): `.age` and plaintext env names, not `.env*.age` or `.env*.example`. Keep the two lists
-# in step. A matched folder is backed up whole.
+# `.age` and plaintext env names, whatever their type (file, folder or symlink), not `.env*.age` or
+# `.env*.example`. A matched folder is backed up whole.
 find "$SOURCE" \
   \( -name node_modules -o -name .volumes -o -name .git -o -name .stversions \
   -o -path "$SOURCE/worktrees" \) -prune -o \

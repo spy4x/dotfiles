@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Back up, with restic, the work under ~/sync/code that exists on this machine only, not on GitHub.
 #
-# Syncthing's `code` folder is not a backup: a bad delete is copied to every machine. Each run saves:
+# Syncthing does not share ~/sync/code, so work that is not pushed is on this machine only. Each
+# run saves:
 # - every top-level folder that is not a git repository (`mcps/`), whole;
 # - every git repository with no remote, whole, `.git` included;
 # - in every other repository and in its linked worktrees under ~/sync/code/worktrees, the files
@@ -87,10 +88,9 @@ while IFS= read -r -d '' git; do
 done < <(find "$SOURCE" \( -name node_modules -o -name .volumes -o -name .stversions \
   -o -path "$WORKTREES" ${WHOLE[@]+"${WHOLE[@]}"} \) -prune -o -name .git -type d -print0 -prune)
 
-# Whether a path lies in or is one of the secret names secrets-backup.sh saves
-# (system/syncthing-code.stignore): `.age` and plaintext env names, but not `.env*.age` ciphertext or
-# `.env*.example`. restic's --exclude below matches the same names inside a folder backed up whole,
-# but never a file named on its list.
+# Whether a path lies in or is one of the secret names secrets-backup.sh saves: `.age` and plaintext
+# env names, but not `.env*.age` ciphertext or `.env*.example`. restic's --exclude below matches the
+# same names inside a folder backed up whole, but never a file named on its list.
 secret() {
   local part parts
   IFS=/ read -ra parts <<<"$1"

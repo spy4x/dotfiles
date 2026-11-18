@@ -58,7 +58,7 @@ How the rendering works, the file layout per harness and how to write a skill or
   installs or updates the app from Anthropic's Debian package, which Fedora has no updater for.
   A [nightly timer](docs/sync.md#claude-desktop-nightly-update) runs it and says when to restart.
 - **Secrets backup.** [`tools/secrets-backup.sh`](tools/secrets-backup.sh) backs up the age keys
-  and plaintext env files that Syncthing keeps on this machine, with restic, every
+  and plaintext env files that exist only on this machine, with restic, every
   [night](docs/sync.md#secrets-backup).
 - **Work backup.** [`tools/work-backup.sh`](tools/work-backup.sh) backs up the work under
   `~/sync/code` that is not on GitHub (uncommitted files, unpushed commits, folders with no
@@ -72,8 +72,8 @@ How the rendering works, the file layout per harness and how to write a skill or
 - **Unattended agent runs** and session costs live in a separate private repository, ringmaster.
 - **VPN only while it works.** [`tools/vpn-guard/`](docs/vpn-guard.md) connects a full-tunnel VPN
   at boot and every 30 minutes, and drops it when the internet does not work through it.
-- **Synced, not cloned.** The repository lives in a Syncthing folder, and agent worktrees are
-  [ignored](docs/host-limits.md) so they never replicate.
+- **Cloned, not synced.** Each machine clones this repository from GitHub and pushes its work, and
+  a [nightly backup](docs/sync.md#work-backup) saves what is not pushed yet.
 
 **Use it if** you want a working example of one rules source driving several AI coding agents,
 or a Linux workstation set up by script. **Skip it if** you want a framework: these are my own
