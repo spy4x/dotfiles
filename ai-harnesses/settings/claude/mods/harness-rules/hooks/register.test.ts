@@ -769,26 +769,148 @@ function baseContext(on: On): void {
   on(`prompt.context`, () => ({ blocks: [{ name: `claudeMd`, text: `rules` }] }))
 }
 
-test(`adds direction.md to the conversation's context, reading only that file`, async ($, on) => {
-  mock.env(on, { HOME: `/home/test` })
-  baseContext(on)
+const DIRECTION_GIT = [`git`, `-C`, `/home/test/sync/code/ai-memory`]
+const DIRECTION_FETCH = [...DIRECTION_GIT, `fetch`, `--quiet`, `origin`, `main`]
+const DIRECTION_SHOW = [...DIRECTION_GIT, `show`, `origin/main:direction.md`]
+
+/** `git show` printing this text. */
+const SHOWN = (stdout: string) => ({ ...RAN(0), stdout })
+
+/** A command that could not start or outlasted its timeout. */
+const REJECTED = new Error(`timed out`)
+
+/** How the fake git answers one command: a finished process, or a rejection. */
+type GitAnswer = ReturnType<typeof RAN> | Error
+
+/** Answers the direction's git commands and returns each one run, with its timeout. */
+function directionGit(on: On, answers: { fetch: GitAnswer; show: GitAnswer }) {
+  const ran: { argv: string[]; timeoutMs?: number }[] = []
+  on(`process.run`, (_$, e) => {
+    ran.push({ argv: [...e.argv], timeoutMs: e.init?.timeoutMs })
+    const answer = e.argv[3] === `fetch` ? answers.fetch : answers.show
+    if (answer instanceof Error) throw answer
+    return { value: answer }
+  })
+  return ran
+}
+
+/** The working file, holding text that differs from `origin/main`. */
+function workingFile(on: On): string[] {
   const read: string[] = []
   on(`fs.read`, (_$, e) => {
     read.push(e.path)
-    return { value: `Ship often.` }
+    return { value: `Working copy.` }
   })
+  return read
+}
+
+test(`gives a session the text of origin/main over a differing working file`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  const ran = directionGit(on, { fetch: RAN(0), show: SHOWN(`Merged text.`) })
+  workingFile(on)
   const context = await $.prompt.context({ blocks: [] })
   expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`, `direction`])
-  expect(context.blocks[1]?.text).toContain(`Ship often.`)
+  expect(context.blocks[1]?.text).toContain(`Merged text.`)
+  expect(context.blocks[1]?.text).not.toContain(`Working copy.`)
+  expect(ran.map((command) => command.argv)).toEqual([DIRECTION_FETCH, DIRECTION_SHOW])
+})
+
+test(`keeps the last fetched origin/main text when the fetch rejects`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: REJECTED, show: SHOWN(`Last fetched.`) })
+  workingFile(on)
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks[1]?.text).toContain(`Last fetched.`)
+})
+
+test(`keeps the last fetched origin/main text when the fetch exits non-zero`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: RAN(1), show: SHOWN(`Last fetched.`) })
+  workingFile(on)
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks[1]?.text).toContain(`Last fetched.`)
+})
+
+test(`falls back to the working file when git show rejects`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: RAN(0), show: REJECTED })
+  const read = workingFile(on)
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks[1]?.text).toContain(`Working copy.`)
   expect(read).toEqual([`/home/test/sync/code/ai-memory/direction.md`])
 })
 
-test(`starts without direction.md when the file is missing`, async ($, on) => {
+test(`falls back to the working file when git show exits non-zero`, async ($, on) => {
   mock.env(on, { HOME: `/home/test` })
   baseContext(on)
+  directionGit(on, { fetch: RAN(128), show: { ...RAN(128), stdout: `not the direction` } })
+  workingFile(on)
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks[1]?.text).toContain(`Working copy.`)
+  expect(context.blocks[1]?.text).not.toContain(`not the direction`)
+})
+
+test(`starts without direction.md when git fails and the file is missing`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: REJECTED, show: REJECTED })
   unreadable(on)
   const context = await $.prompt.context({ blocks: [] })
   expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`])
+})
+
+test(`adds nothing when direction.md on origin/main is empty`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  directionGit(on, { fetch: RAN(0), show: SHOWN(``) })
+  const read = workingFile(on)
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`])
+  expect(read).toEqual([])
+})
+
+test(`runs no git and starts without direction.md when home is unknown`, async ($, on) => {
+  mock.env(on, {})
+  baseContext(on)
+  const ran = directionGit(on, { fetch: RAN(0), show: SHOWN(`Merged text.`) })
+  const context = await $.prompt.context({ blocks: [] })
+  expect(context.blocks.map((block) => block.name)).toEqual([`claudeMd`])
+  expect(ran).toEqual([])
+})
+
+test(`runs only fetch and show on the ai-memory checkout, whatever fails`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  const answers: { fetch: GitAnswer; show: GitAnswer } = { fetch: RAN(0), show: SHOWN(`Merged.`) }
+  const ran = directionGit(on, answers)
+  workingFile(on)
+  const outcomes: [GitAnswer, GitAnswer][] = [
+    [RAN(0), SHOWN(`Merged.`)],
+    [RAN(1), SHOWN(`Merged.`)],
+    [REJECTED, SHOWN(`Merged.`)],
+    [RAN(0), RAN(128)],
+    [RAN(1), RAN(128)],
+    [REJECTED, REJECTED],
+  ]
+  for (const [fetch, show] of outcomes) {
+    answers.fetch = fetch
+    answers.show = show
+    ran.length = 0
+    await $.prompt.context({ blocks: [] })
+    expect(ran.map((command) => command.argv)).toEqual([DIRECTION_FETCH, DIRECTION_SHOW])
+  }
+})
+
+test(`gives the direction's git commands deadlines that bound a session start`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test` })
+  baseContext(on)
+  const ran = directionGit(on, { fetch: RAN(0), show: SHOWN(`Merged text.`) })
+  await $.prompt.context({ blocks: [] })
+  expect(ran.map((command) => command.timeoutMs)).toEqual([8000, 2000])
 })
 
 /** A version 4 UUID call, built from parts so this file holds none. */
