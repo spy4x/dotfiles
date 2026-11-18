@@ -21,7 +21,7 @@ outcome.
 You never edit the author's worktree. You never fix. You never merge.
 
 Write scratch files (a test helper, a mutation) with the Write or Edit tool, only in your own
-`mktemp -d` folder or the disposable mutation copy, never with a shell heredoc or
+`mktemp -d` folder or the disposable mutation copy, never with `sed -i`, a shell heredoc or
 `python3 - <<EOF`, which Claude Code refuses even in bypass mode. A test container you start
 follows the `tests` skill, "Test services": `docker run --rm` and `trap 'docker stop "$N"' EXIT`,
 never `docker rm` in a trap.
