@@ -62,13 +62,13 @@ systemctl --user enable --now code-mode-check.timer
 
 ## Secrets backup
 
-Syncthing does not copy age keys or plaintext env files out of `~/sync/code`
-([host limits](host-limits.md)), so a key made on this machine exists on its disk only. A systemd
-user timer runs [`tools/secrets-backup.sh`](../tools/secrets-backup.sh) every night at 02:30; a
-night the machine was off is caught up at the next start. It backs up every `.age` folder and every
-plaintext env file, folder or symlink under `~/sync/code` (the names the Syncthing ignore list
-skips), leaving out worktrees, `node_modules`, `.volumes`, `.git` and `.stversions`. It keeps 7
-daily, 4 weekly and 12 monthly snapshots.
+Age keys and plaintext env files stay on the machine that uses them, so a key made on this machine
+exists on its disk only. Give each machine a repository's age key once, then decrypt there. A
+systemd user timer runs [`tools/secrets-backup.sh`](../tools/secrets-backup.sh) every night at
+02:30; a night the machine was off is caught up at the next start. It backs up every `.age` folder
+and every plaintext env file, folder or symlink under `~/sync/code`, leaving out worktrees,
+`node_modules`, `.volumes`, `.git` and `.stversions`. It keeps 7 daily, 4 weekly and 12 monthly
+snapshots.
 
 The restic repository is `~/sync/backups/workstation-secrets`, inside the `backups` Syncthing
 folder, so the other machines that share that folder hold an encrypted copy. Its password is
@@ -106,9 +106,10 @@ rm -rf /dev/shm/restore
 
 ## Work backup
 
-Syncthing's `code` folder is no backup: a bad delete reaches every machine. A systemd user timer
-runs [`tools/work-backup.sh`](../tools/work-backup.sh) every night at 03:30, catching up a night
-the machine was off, and saves with restic what under `~/sync/code` exists only here:
+Syncthing does not share `~/sync/code` between machines. Each machine clones from GitHub and
+pushes, so work that is not pushed exists on that machine only. A systemd user timer runs
+[`tools/work-backup.sh`](../tools/work-backup.sh) every night at 03:30, catching up a night the
+machine was off, and saves with restic what under `~/sync/code` exists only here:
 
 - every top-level folder that is not a git repository, such as `mcps/`, whole;
 - every repository with no remote, whole, `.git` included;
@@ -125,9 +126,13 @@ them. It keeps 7 daily, 4 weekly and 12 monthly snapshots, tagged `work`. The re
 `~/sync/backups/workstation-work`, with the same `BACKUPS_PASSWORD` as the secrets backup, read by
 restic at run time and never printed. A failed run shows an error dialog.
 
-Enable the timer on one machine per repository. The `backups` folder syncs between machines, and
-every run ends with a prune, so two machines writing to one repository can delete each other's
-data. A second machine sets its own `RESTIC_REPOSITORY` in a drop-in for `work-backup.service`.
+Enable the timer on one machine per repository: every run ends with a prune, so two machines
+writing to one repository can delete each other's data. A second machine sets its own
+`RESTIC_REPOSITORY` in a drop-in for `work-backup.service`. The laptop uses
+`~/sync/backups/laptop-work`. It does not share the `backups` folder, so the Syncthing folder
+`backups-laptop-work` sends that repository to the workstation, send-only on the laptop and
+receive-only on the workstation. From there the `backups` folder carries it to the other machines
+that share that folder.
 
 ```bash
 systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/work-backup.service

@@ -114,29 +114,3 @@ sudo udevadm control --reload
 sudo udevadm trigger --action=add --settle /sys/class/video4linux/video0
 v4l2-ctl -d /dev/video0 -C exposure_dynamic_framerate   # prints 0
 ```
-
-**Syncthing and worktrees.** Agent worktrees are created under `~/sync/code/worktrees/`, inside a
-Syncthing folder. Syncthing indexes and watches everything it does not ignore, so without an
-ignore line it holds an inotify watch per worktree directory and replicates build output to
-every other machine. A worktree is not worth syncing: it is rebuilt from `origin` on demand, and
-its `.git` file names an absolute path in the main checkout, so the copy is broken anyway.
-`system/syncthing-code.stignore` is the tracked copy of the ignore list for the `code` folder.
-
-The same file keeps plaintext env files and age keys off the other machines. It ignores names
-that start with `.env`, names that end in `.env` or contain `.env.bak`, and `.age` directories;
-it still syncs `.env*.age` and `.env*.example` files. A secret under any other name still syncs.
-An ignore list is local to each machine, so copy it on every machine that shares the folder
-first. It stops new copies only: after that, delete the ones a machine already received by hand,
-including older versions under `.stversions`, and give each machine a repo's age key once, then
-decrypt there.
-
-```bash
-cp system/syncthing-code.stignore ~/sync/code/.stignore
-```
-
-Syncthing re-reads the file on the next scan. To confirm it took effect, open the web UI and
-rescan the folder, then check that the Syncthing process is holding far fewer inotify watches:
-
-```bash
-for p in $(pgrep -x syncthing); do echo "$p $(cat /proc/$p/fdinfo/* 2>/dev/null | grep -c '^inotify ')"; done
-```
