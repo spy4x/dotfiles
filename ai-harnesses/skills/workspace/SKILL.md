@@ -96,6 +96,16 @@ A new self-hosted service goes into homelab as a rostok stack: into the rostok c
 - `experiments/` — trials and model comparisons behind the global rules.
 - `personal.md`, `vi.md`, `incidents/relationship/` — me as a person, Vi, conflicts with people.
 
+Write any change to `~/sync/code/ai-memory/`, a decision file included, in a worktree of that
+repository cut from `origin/main`, and land it by pull request. Never edit the main checkout: a
+file left there exists on one disk only and can block the checkout's fast-forward. The only
+exceptions are the direct commits to `main` that the "Rules" list in that repository's `README.md`
+names.
+
+A session start can report that the checkout has uncommitted changes or is behind `origin/main`.
+Never discard changes you did not make: land your own by pull request and report the rest. When it
+is only behind, run `git merge --ff-only origin/main` in that checkout.
+
 ## Account tokens
 
 `~/sync/code/homelab/.env.accounts` (gitignored; encrypted copy `.env.accounts.age`, in the private
