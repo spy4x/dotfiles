@@ -6,7 +6,9 @@
 # - every git repository with no remote, whole, `.git` included;
 # - in every other repository and in its linked worktrees under ~/sync/code/worktrees, the files
 #   not committed yet: modified, staged, and untracked but not ignored;
-# - for each such repository, a `git bundle` of the local commits that are on no remote.
+# - for each such repository, a `git bundle` of the local commits that are on no remote, of those
+#   only a detached HEAD holds, and of the commits its stashes were made on;
+# - one patch per stash, untracked files included.
 # Plaintext env files and `.age` keys are left out: secrets-backup.sh saves those. The restic
 # repository lives in the `backups` Syncthing folder; its password is homelab's BACKUPS_PASSWORD,
 # as for secrets-backup. Runs nightly from work-backup.timer. Setup and restore: docs/sync.md.
@@ -133,17 +135,54 @@ detached() {
     HEAD --not --branches --remotes
 }
 
-# Saves each stash as a patch that `git apply` restores, untracked files included. A stash is no
-# branch, so no bundle holds it. Repositories with no remote are saved whole already.
+# Prints the difference between two trees as a patch, leaving out the names secret() matches.
+secret_free_diff() {
+  local repo="$1" from="$2" to="$3" rel
+  while IFS= read -r -d '' rel; do
+    secret "$rel" || printf '%s\0' "$rel"
+  done < <(git -C "$repo" diff --name-only --no-renames -z "$from" "$to") |
+    GIT_LITERAL_PATHSPECS=1 xargs -0 -r git -C "$repo" diff --binary --no-renames --no-color \
+      --src-prefix=a/ --dst-prefix=b/ "$from" "$to" --
+}
+
+# Saves each stash as a patch that `git apply` restores, untracked files included, with the commit
+# it was made on in its first line. A base commit that no branch or remote holds goes into a bundle
+# of its own; the stash commit never does, because it can hold secrets. The bundle is built in a
+# throwaway repository that borrows the objects, so the real one gets no new ref. Repositories with
+# no remote are saved whole already.
 stashes() {
-  local repo="$1" n=0 total
+  local repo="$1" n=0 total base empty name borrowed=""
   [ -n "$(git -C "$repo" remote)" ] || return 0
   total="$(git -C "$repo" stash list | wc -l)"
+  [ "$total" -gt 0 ] || return 0
+  name="$(flat "$repo")"
+  empty="$(git -C "$repo" hash-object -t tree /dev/null)"
   while [ "$n" -lt "$total" ]; do
-    git -C "$repo" stash show --patch --binary --include-untracked "stash@{$n}" \
-      >"$BUNDLES/$(flat "$repo").stash-$n.patch"
+    base="$(git -C "$repo" rev-parse "stash@{$n}^1")"
+    {
+      printf 'Stash made on commit %s\n\n' "$base"
+      secret_free_diff "$repo" "$base" "stash@{$n}"
+      if git -C "$repo" rev-parse -q --verify "stash@{$n}^3" >/dev/null; then
+        secret_free_diff "$repo" "$empty" "stash@{$n}^3"
+      fi
+    } >"$BUNDLES/$name.stash-$n.patch"
+    if [ -n "$(git -C "$repo" rev-list -n 1 "$base" --not --branches --remotes)" ]; then
+      if [ -z "$borrowed" ]; then
+        borrowed="$(mktemp -d -p "$D")"
+        git init --quiet --bare --template= "$borrowed"
+        mkdir -p "$borrowed/objects/info"
+        printf '%s/objects\n' "$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)" \
+          >"$borrowed/objects/info/alternates"
+      fi
+      git -C "$borrowed" update-ref "refs/heads/stash-$n" "$base"
+    fi
     n=$((n + 1))
   done
+  [ -n "$borrowed" ] || return 0
+  {
+    git -C "$borrowed" for-each-ref --format='%(refname)'
+    git -C "$repo" for-each-ref --format='^%(objectname)' refs/heads refs/remotes
+  } | git -C "$borrowed" bundle create --quiet "$BUNDLES/$name.stash-bases.bundle" --stdin
 }
 
 for repo in ${REPOS[@]+"${REPOS[@]}"}; do

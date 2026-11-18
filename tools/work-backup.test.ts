@@ -215,6 +215,71 @@ Deno.test(`saves each stash as a patch that restores it, untracked files include
   })
 })
 
+Deno.test(`restores a stash from the backup alone when no branch holds the commit under it`, async () => {
+  await withTree(async (root) => {
+    const code = join(root, `code`)
+    const app = join(code, `app`)
+    await pushedRepo(root, app)
+    const main = await git(app, `branch`, `--show-current`)
+    await git(app, `switch`, `--quiet`, `-c`, `gone`)
+    await write(join(app, `base.txt`), `only on the deleted branch\n`)
+    await git(app, `add`, `base.txt`)
+    await git(app, `commit`, `--quiet`, `-m`, `local base`)
+    const base = await git(app, `rev-parse`, `HEAD`)
+    await write(join(app, `base.txt`), `stashed on top\n`)
+    await git(app, `stash`, `push`, `--quiet`)
+    await git(app, `switch`, `--quiet`, main)
+    await git(app, `branch`, `--quiet`, `-D`, `gone`)
+
+    const env = await envOf(root)
+    assertEquals((await run(`bash`, [SCRIPT], env)).code, 0, `the backup failed`)
+    const target = join(root, `restore`)
+    const restored = await run(`restic`, [`restore`, `latest`, `--target`, target], {
+      ...env,
+      RESTIC_PASSWORD: PASSWORD,
+    })
+    assertEquals(restored.code, 0, restored.stderr)
+    const files = await backedUp(env)
+    const patch = join(target, files.find((path) => path.endsWith(`app.stash-0.patch`))!)
+    const bundle = join(target, files.find((path) => path.endsWith(`app.stash-bases.bundle`))!)
+    const named = (await Deno.readTextFile(patch)).split(`\n`)[0].split(` `).pop()!
+    assertEquals(named, base)
+
+    const clone = join(root, `clone`)
+    await git(root, `clone`, `--quiet`, await git(app, `remote`, `get-url`, `origin`), clone)
+    await git(clone, `fetch`, `--quiet`, bundle, `refs/heads/*:refs/heads/restored/*`)
+    await git(clone, `switch`, `--quiet`, `--detach`, named)
+    await git(clone, `apply`, patch)
+    assertEquals(await Deno.readTextFile(join(clone, `base.txt`)), `stashed on top\n`)
+  })
+})
+
+Deno.test(`keeps secret files out of stash patches and keeps env examples in`, async () => {
+  await withTree(async (root) => {
+    const code = join(root, `code`)
+    const app = join(code, `app`)
+    await pushedRepo(root, app)
+    await write(join(app, `.env`), `canary-env\n`)
+    await write(join(app, `.age/key.txt`), `canary-key\n`)
+    await write(join(app, `prod.env.bak1`), `canary-bak\n`)
+    await write(join(app, `.env.example`), `example-kept\n`)
+    await git(app, `stash`, `push`, `--quiet`, `--include-untracked`)
+
+    const env = await envOf(root)
+    assertEquals((await run(`bash`, [SCRIPT], env)).code, 0, `the backup failed`)
+    const target = join(root, `restore`)
+    const restored = await run(`restic`, [`restore`, `latest`, `--target`, target], {
+      ...env,
+      RESTIC_PASSWORD: PASSWORD,
+    })
+    assertEquals(restored.code, 0, restored.stderr)
+    const path = (await backedUp(env)).find((file) => file.endsWith(`app.stash-0.patch`))!
+    const patch = await Deno.readTextFile(join(target, path))
+    assertEquals(patch.includes(`canary`), false, patch)
+    assertEquals(patch.includes(`example-kept`), true, patch)
+  })
+})
+
 Deno.test(`bundles commits only a detached HEAD holds, and none for a detached HEAD on pushed work`, async () => {
   await withTree(async (root) => {
     const code = join(root, `code`)
