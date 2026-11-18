@@ -13,7 +13,8 @@ harness:
 Goal: an evidence-backed verdict on every unit in scope. You are verifying someone else's work, not
 extending it. **No code edits, no PRs, no comments on existing issues.** Default deliverable is the
 report. File GitHub issues only when the user asked for them: one per verdict, labelled `audit`,
-evidence in the body, plus one index issue — never a fix.
+evidence in the body, plus one index issue — never a fix. A flaky test is filed only after the check
+in the `issues` skill, "Obstacles".
 
 Scope: `$ARGUMENTS`, or the whole repo when empty. A unit = one package / top-level directory.
 
