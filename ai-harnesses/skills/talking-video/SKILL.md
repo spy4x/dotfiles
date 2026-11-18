@@ -26,14 +26,18 @@ One folder per video, `~/recordings/<slug>/`, where the kit already is (`kit.md`
 ## 2. Transcript
 
 Transcribe with whisper.cpp (`whisper-cli`) and `--output-json-full`, which gives a time for every
-word. The cut tool needs those word times: a transcript without them is no substitute, and a
-missing `whisper-cli` is installed first (dotfiles `apps.jsonc`).
+word. The cut tool needs those word times: a transcript without them is no substitute. dotfiles
+does not install `whisper-cli` yet: when it is missing, build whisper.cpp and fetch a model with
+its `models/download-ggml-model.sh` first.
+
+Then correct, in the JSON, the spelling of names, products and commands the transcript got wrong:
+the Shorts' captions are burned in from it. Never change what he said.
 
 ## 3. The edit list
 
-`deno task video-cut prepare <whisper.json> <raw.mkv> <slug>` decides the silences and writes
-`edit-brief.md`. Answer the brief yourself, in the session, and save the JSON. On top of the
-brief:
+`deno task video-cut prepare <whisper.json> <raw.mkv> <slug> --out <cut dir>` decides the silences
+and writes `edit-brief.md`. Answer the brief yourself, in the session, and save the JSON. On top
+of the brief:
 
 - **Retakes.** When a sentence is said two or more times, keep the last complete try and cut the
   earlier ones (`retake`). The owner records in one take and repeats what he fumbles.
@@ -59,19 +63,20 @@ most −1 dBTP, in two passes, the video stream copied:
 
 ```bash
 ffmpeg -i long.mp4 -af loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json -f null -
-ffmpeg -i long.mp4 -c:v copy -c:a aac -b:a 192k -af \
+ffmpeg -i long.mp4 -c:v copy -c:a aac -b:a 192k -ar 48000 -af \
   loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=<i>:measured_TP=<tp>:measured_LRA=<lra>:measured_thresh=<t>:offset=<o>:linear=true \
   long.final.mp4
 ```
 
-The first command prints the measured values the second takes. Use a noise remover only when the
+The first command prints the measured values the second takes; `-ar 48000` undoes the filter's
+upsampling. Run both for the long cut and for each Short. Use a noise remover only when the
 noise is audible, and compare before and after: it can make a voice sound processed. No music, no
 sound effects.
 
 ## 6. Captions and packaging
 
-- **Captions** (`long.srt`): correct the spelling of names, products and commands that the
-  transcript got wrong. Never change what he said.
+- **Captions** (`long.srt`): read them once; a name still misspelt is fixed in the transcript
+  (step 2) and the render runs again.
 - **Title:** the question the video answers, as a person types it (`weekly-content`, step 7).
   Offer three, the recommended one first.
 - **Description:** two lines that answer the question and link the post with the site's tagged
@@ -109,7 +114,7 @@ to paste and the link:
 - YouTube, the long video: title, description with chapters, `long.srt` as captions, the chosen
   thumbnail, "not made for kids", and "altered content: no" (editing help needs no label).
 - YouTube, the Short: its own title, and the long video's link in the description.
-- LinkedIn, Telegram and Bluesky: the Short's file, uploaded as a video, with its text.
+- LinkedIn, Telegram, Bluesky and Mastodon: the Short's file, uploaded as a video, with its text.
 
 After he publishes, add the video's link to the post (the post page shows the video) and to the
 `Content ideas` comment the topic came from.

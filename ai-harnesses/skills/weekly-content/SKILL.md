@@ -160,8 +160,8 @@ after the owner's approval for a video.
   (`spy4x/seed`, `docs/blog.md`, "Automatic posts").
 - **The video and the Short:** YouTube (the channel the site's settings name; every project uses
   the owner's one channel today), LinkedIn as an uploaded video, never as a YouTube link, the
-  Telegram channel, and Bluesky. No product uploads video yet, so `talking-video` ends with a page
-  the owner uploads from by hand.
+  Telegram channel, Bluesky and Mastodon. No product uploads video yet, so `talking-video` ends
+  with a page the owner uploads from by hand.
 - **By hand, always:** X (its API bills by use with no cap), Reddit and Hacker News.
 - **Skipped:** TikTok and Instagram (an audit or a business account for little of this audience),
   and a second posting system beside the product's own.
