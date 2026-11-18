@@ -98,9 +98,9 @@ A new self-hosted service goes into homelab as a rostok stack: into the rostok c
 
 Write any change to `~/sync/code/ai-memory/`, a decision file included, in a worktree of that
 repository cut from `origin/main`, and land it by pull request. Never edit the main checkout: a
-file left there exists on one disk only and can block the checkout's fast-forward. The only
-exceptions are the direct commits to `main` that the "Rules" list in that repository's `README.md`
-names.
+file left there is in no commit, so no clone has it, and it can block the checkout's fast-forward.
+The only exceptions are the direct commits to `main` that the "Rules" list in that repository's
+`README.md` names.
 
 A session start can report that the checkout has uncommitted changes or is behind `origin/main`.
 Never discard changes you did not make: land your own by pull request and report the rest. When it
