@@ -143,10 +143,14 @@ One exception, an experiment until 2026-10-15: the Claude Code mod `harness-rule
 through `CLAUDE_CODE_PLUGIN_DIRS` in `settings.json`). It enforces rules `AGENTS.md` already
 states, so the prose stays the source:
 
-- the first message of every conversation carries `~/sync/code/ai-memory/direction.md` as a context
-  block named `direction`, as it carries `CLAUDE.md`; a missing or empty file adds nothing.
-  OpenCode loads the same file through `instructions` in `settings/opencode/opencode.json`. DSH has
-  no setting for an extra instruction file, so it does not;
+- the first message of every conversation carries the owner's direction as a context block named
+  `direction`, as it carries `CLAUDE.md`. The text is `direction.md` on `origin/main` of
+  `~/sync/code/ai-memory`, after a fetch, so uncommitted edits do not reach Claude Code sessions.
+  A failed fetch keeps the last fetched text. When git cannot show that file, the working file
+  `~/sync/code/ai-memory/direction.md` is read instead; no text from either adds nothing.
+  OpenCode loads the working file through `instructions` in `settings/opencode/opencode.json`, so
+  it does see uncommitted edits. DSH has no setting for an extra instruction file, so it does not
+  load it;
 - after each compaction of the main conversation, a message `[harness-rules] compactions: N` is
   appended to what the compaction kept, and the next compaction reads N back from it, so no state
   is stored. From the second compaction on, the message tells the session to finish the step in

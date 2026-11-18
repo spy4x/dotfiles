@@ -6,6 +6,8 @@ import {
   builtVerdict,
   compactionNotice,
   compactionsSoFar,
+  DIRECTION_CHECKOUT,
+  DIRECTION_FILE,
   DIRECTION_PATH,
   directionBlock,
   ghPost,
@@ -77,14 +79,41 @@ async function whereOf($: EngineInterface): Promise<Where> {
 }
 
 /**
- * The owner's direction.md as a context block, or undefined. Fail-open: a missing file, an
- * unknown home or a failed read starts the session without it. Reads that one path only.
+ * How long a session start waits for the direction fetch: more than twice the 3.1 s it measured,
+ * and short enough that an unreachable remote delays the session by seconds only.
+ */
+const DIRECTION_FETCH_MS = 8000
+
+/** How long `git show` may take: a local read that measured under 10 ms. */
+const DIRECTION_SHOW_MS = 2000
+
+/**
+ * The direction.md merged on `origin/main`, fetched first, or undefined when git cannot show it.
+ * A failed fetch leaves the last fetched text. Only `fetch` and `show` run, so uncommitted edits
+ * in the checkout stay untouched.
+ */
+async function mergedDirection($: EngineInterface, home: string) {
+  const git = [`git`, `-C`, `${home}/${DIRECTION_CHECKOUT}`]
+  await $.process.run([...git, `fetch`, `--quiet`, `origin`, `main`], {
+    timeoutMs: DIRECTION_FETCH_MS,
+  }).catch(() => undefined)
+  const shown = await $.process.run([...git, `show`, `origin/main:${DIRECTION_FILE}`], {
+    timeoutMs: DIRECTION_SHOW_MS,
+  }).catch(() => undefined)
+  return shown?.exitCode === 0 ? shown.stdout : undefined
+}
+
+/**
+ * The owner's direction as a context block, or undefined: the text merged on `origin/main`, else
+ * the working file on a machine where git cannot show it. Fail-open: an unknown home, or no text
+ * from either source, starts the session without it.
  */
 async function direction($: EngineInterface) {
   try {
     const home = await $.env.get(`HOME`)
     if (!home) return undefined
-    return directionBlock(await readable($, `${home}/${DIRECTION_PATH}`))
+    const merged = await mergedDirection($, home)
+    return directionBlock(merged ?? await readable($, `${home}/${DIRECTION_PATH}`))
   } catch {
     return undefined
   }

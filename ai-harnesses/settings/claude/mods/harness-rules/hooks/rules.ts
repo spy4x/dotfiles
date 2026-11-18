@@ -385,8 +385,14 @@ export function uuidVerdict(path: string, before: string, after: string): Verdic
   }
 }
 
-/** Where the owner's direction lives, relative to home (global CLAUDE.md, "Direction"). */
-export const DIRECTION_PATH = `sync/code/ai-memory/direction.md`
+/** The git checkout that holds the owner's direction, relative to home. */
+export const DIRECTION_CHECKOUT = `sync/code/ai-memory`
+
+/** The owner's direction, relative to its checkout (global CLAUDE.md, "Direction"). */
+export const DIRECTION_FILE = `direction.md`
+
+/** Where the owner's direction lives, relative to home. */
+export const DIRECTION_PATH = `${DIRECTION_CHECKOUT}/${DIRECTION_FILE}`
 
 /** A context block the conversation's first message carries. */
 export interface ContextBlock {
