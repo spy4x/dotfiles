@@ -114,13 +114,20 @@ the machine was off, and saves with restic what under `~/sync/code` exists only 
 - every repository with no remote, whole, `.git` included;
 - in every other repository, and in its worktrees under `~/sync/code/worktrees`, the files no
   commit holds: modified, staged, and untracked but not ignored;
-- per repository, a `git bundle` of the local commits that are on no remote.
+- per repository, a `git bundle` of the local commits that are on no remote, one more for each
+  detached HEAD whose commits no branch holds, and one patch per stash, untracked files included
+  and secret names left out. When no branch or remote holds the commit a stash was made on,
+  `<repository>.stash-bases.bundle` holds it.
 
 It leaves out `node_modules`, `.volumes`, `.stversions`, and the age keys and plaintext env files
 that the [secrets backup](#secrets-backup) saves. It reads the repositories and changes nothing in
 them. It keeps 7 daily, 4 weekly and 12 monthly snapshots, tagged `work`. The repository is
 `~/sync/backups/workstation-work`, with the same `BACKUPS_PASSWORD` as the secrets backup, read by
 restic at run time and never printed. A failed run shows an error dialog.
+
+Enable the timer on one machine per repository. The `backups` folder syncs between machines, and
+every run ends with a prune, so two machines writing to one repository can delete each other's
+data. A second machine sets its own `RESTIC_REPOSITORY` in a drop-in for `work-backup.service`.
 
 ```bash
 systemctl --user link ~/sync/code/dotfiles/.config/systemd/user/work-backup.service
@@ -135,10 +142,23 @@ what a snapshot holds, then restore the paths you need into an empty folder:
 
 ```bash
 restic -r ~/sync/backups/workstation-work snapshots
-restic -r ~/sync/backups/workstation-work ls latest | grep -e mcps/ -e '\.bundle$'
+restic -r ~/sync/backups/workstation-work ls latest | grep -e mcps/ -e '\.bundle$' -e '\.patch$'
 restic -r ~/sync/backups/workstation-work restore latest --target ~/restore \
   --include ~/sync/code/mcps
 ```
+
+A stash comes back as `<repository>.stash-<n>.patch` next to the bundles. Its first line names the
+commit it was made on. Fetch that commit from `<repository>.stash-bases.bundle` if the clone lacks
+it, then apply the patch:
+
+```bash
+git -C ~/sync/code/seed fetch ~/restore/tmp/tmp.AbC123/bundles/seed.stash-bases.bundle 'refs/heads/*:refs/heads/restored/*'
+git -C ~/sync/code/seed switch --detach <commit>
+git -C ~/sync/code/seed apply ~/restore/tmp/tmp.AbC123/bundles/seed.stash-0.patch
+```
+
+A detached HEAD's bundle, `<repository>.detached-<commit>.bundle`, restores with
+`git fetch <bundle> HEAD:refs/heads/restored/detached`.
 
 Files come back under `~/restore` with their full original paths. The bundles come back under the
 temporary folder the run used, such as `~/restore/tmp/tmp.AbC123/bundles/seed.bundle` (a nested
