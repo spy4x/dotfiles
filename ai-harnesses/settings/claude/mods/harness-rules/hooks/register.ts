@@ -13,6 +13,7 @@ import {
   ghPost,
   leakVerdict,
   markerVerdict,
+  memoryCheckoutBlock,
   spawnVerdict,
   unplacedVerdict,
   uuidVerdict,
@@ -84,38 +85,43 @@ async function whereOf($: EngineInterface): Promise<Where> {
  */
 const DIRECTION_FETCH_MS = 8000
 
-/** How long `git show` may take: a local read that measured under 10 ms. */
+/** How long a local git read may take: `git show` measured under 10 ms. */
 const DIRECTION_SHOW_MS = 2000
 
-/**
- * The direction.md merged on `origin/main`, fetched first, or undefined when git cannot show it.
- * A failed fetch leaves the last fetched text. Only `fetch` and `show` run, so uncommitted edits
- * in the checkout stay untouched.
- */
-async function mergedDirection($: EngineInterface, home: string) {
-  const git = [`git`, `-C`, `${home}/${DIRECTION_CHECKOUT}`]
-  await $.process.run([...git, `fetch`, `--quiet`, `origin`, `main`], {
-    timeoutMs: DIRECTION_FETCH_MS,
-  }).catch(() => undefined)
-  const shown = await $.process.run([...git, `show`, `origin/main:${DIRECTION_FILE}`], {
-    timeoutMs: DIRECTION_SHOW_MS,
-  }).catch(() => undefined)
-  return shown?.exitCode === 0 ? shown.stdout : undefined
+/** What this local git read printed, or undefined when it failed. */
+async function gitRead($: EngineInterface, argv: string[]) {
+  const done = await $.process.run(argv, { timeoutMs: DIRECTION_SHOW_MS }).catch(() => undefined)
+  return done?.exitCode === 0 ? done.stdout : undefined
 }
 
 /**
- * The owner's direction as a context block, or undefined: the text merged on `origin/main`, else
- * the working file on a machine where git cannot show it. Fail-open: an unknown home, or no text
- * from either source, starts the session without it.
+ * The context blocks read from the memory checkout: the owner's direction, then a line when the
+ * checkout is dirty or behind. The direction is the text merged on `origin/main`, else the working
+ * file on a machine where git cannot show it. The fetch finishes first, so "behind" is measured
+ * on fresh refs; a failed fetch leaves the last fetched ones. Only `fetch`, `show`, `status` and
+ * `rev-list` run, so uncommitted edits stay untouched, and `--no-optional-locks` keeps `status`
+ * from taking the index lock from a running agent. Fail-open: an unknown home or a failed command
+ * only leaves out what it would have told.
  */
-async function direction($: EngineInterface) {
+async function memoryBlocks($: EngineInterface) {
   try {
     const home = await $.env.get(`HOME`)
-    if (!home) return undefined
-    const merged = await mergedDirection($, home)
-    return directionBlock(merged ?? await readable($, `${home}/${DIRECTION_PATH}`))
+    if (!home) return []
+    const git = [`git`, `-C`, `${home}/${DIRECTION_CHECKOUT}`]
+    await $.process.run([...git, `fetch`, `--quiet`, `origin`, `main`], {
+      timeoutMs: DIRECTION_FETCH_MS,
+    }).catch(() => undefined)
+    const [merged, status, behind] = await Promise.all([
+      gitRead($, [...git, `show`, `origin/main:${DIRECTION_FILE}`]),
+      gitRead($, [...git, `--no-optional-locks`, `status`, `--porcelain`, `--untracked-files=all`]),
+      gitRead($, [...git, `rev-list`, `--count`, `HEAD..origin/main`]),
+    ])
+    return [
+      directionBlock(merged ?? await readable($, `${home}/${DIRECTION_PATH}`)),
+      memoryCheckoutBlock(status, behind),
+    ].filter((block) => block !== undefined)
   } catch {
-    return undefined
+    return []
   }
 }
 
@@ -123,8 +129,7 @@ export const register: Register = (on) => {
   // The conversation's first message carries direction.md, as it carries CLAUDE.md.
   on(`prompt.context`, async ($, e, next) => {
     const context = await next(e)
-    const block = await direction($)
-    return block ? { ...context, blocks: [...context.blocks, block] } : context
+    return { ...context, blocks: [...context.blocks, ...await memoryBlocks($)] }
   })
 
   // After each compaction of the main conversation, a message counts it, and from the second on
