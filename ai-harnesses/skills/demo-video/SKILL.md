@@ -187,9 +187,10 @@ ffprobe -v error -show_entries stream=codec_name,avg_frame_rate,color_range -of 
   anything but staged data.
 - **Streams:** 30 fps video in TV range (`color_range=tv`) and an audio stream in both files; the
   length you expect. Chromium refuses full-range VP9, which ffmpeg itself decodes without a word.
-- **Plays in a browser:** in Chromium, a `<video>` of each file reaches `canplaythrough` and seeks
-  to its last second with no `error`. A page tries the WebM first and does not fall back to the
-  MP4 after a decode error.
+- **Plays in a browser:** in Chromium with a window open (headless Chromium plays clips the
+  windowed one refuses), a `<video>` of each file reaches `canplaythrough` and seeks to its last
+  second with no `error`. A page tries the WebM first and does not fall back to the MP4 after a
+  decode error.
 - **Pointer:** consecutive frames of one move advance a little each and never jump, including
   across a page load; each click mark shows for 4–6 frames and is gone after a navigating click.
 - **No flash:** `reference.md`, "Checks", measures luma on a plain margin and between frames.
