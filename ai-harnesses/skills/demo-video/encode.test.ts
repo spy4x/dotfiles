@@ -9,6 +9,7 @@ import {
   loudnessProblems,
   musicGain,
   parseVtt,
+  rangeProblems,
 } from "./encode.ts"
 
 Deno.test(`parseVtt reads cue times in both stamp forms and joins a cue's lines`, () => {
@@ -57,6 +58,12 @@ Deno.test(`loudnessProblems refuses a mix louder than -27 LUFS or peaking above 
   assertEquals(loudnessProblems({ integrated: -28, peak: -3 }), [])
   assertEquals(loudnessProblems({ integrated: -26.9, peak: -3 }).length, 1)
   assertEquals(loudnessProblems({ integrated: -28, peak: -0.9 }).length, 1)
+})
+
+Deno.test(`rangeProblems passes TV range and refuses full or unknown range`, () => {
+  assertEquals(rangeProblems(`tv`), [])
+  assertEquals(rangeProblems(`pc`), [`colour range pc, not tv (limited)`])
+  assertEquals(rangeProblems(``), [`colour range unknown, not tv (limited)`])
 })
 
 Deno.test(`musicGain brings music to -28 LUFS unless its peak would pass -2 dBTP`, () => {
