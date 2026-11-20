@@ -23,7 +23,10 @@ Files next to this one, which each project copies into its recipe and owns from 
 - `human-mouse.ts`: `moveLike`, `clickLike`, `typeLike`, `scrollLike`, `parkLike`, which drive the
   real mouse the way a person would.
 - `encode.ts`: `encodeDemo()`, a raw take plus `captions.vtt` plus `music.opus` → the four outputs,
-  with the cards, and refusals for unreadable captions and a loud mix.
+  with the cards, and refusals for unreadable captions, a loud mix and a full colour range.
+
+Before you remake or re-encode a video, diff the recipe's copies with these files and take every
+fix the project's copy lacks: a copy keeps the bugs fixed here after it was made.
 
 ## Where a video lives
 
@@ -176,13 +179,17 @@ Look at the result before calling it done:
 
 ```bash
 ffmpeg -i media/demo/demo.mp4 -vf "fps=1,scale=320:-1,tile=6x8" -frames:v 1 sheet.png
-ffprobe -v error -show_entries stream=codec_name,avg_frame_rate -of csv=p=0 media/demo/demo.webm
+ffprobe -v error -show_entries stream=codec_name,avg_frame_rate,color_range -of csv=p=0 media/demo/demo.webm
 ```
 
 - **Contact sheet:** the title and end cards are there, every caption is readable and nothing it
   describes sits under it, every step of the flow is there in the video's theme, and no frame shows
   anything but staged data.
-- **Streams:** 30 fps video and an audio stream in both files; the length you expect.
+- **Streams:** 30 fps video in TV range (`color_range=tv`) and an audio stream in both files; the
+  length you expect. Chromium refuses full-range VP9, which ffmpeg itself decodes without a word.
+- **Plays in a browser:** in Chromium, a `<video>` of each file reaches `canplaythrough` and seeks
+  to its last second with no `error`. A page tries the WebM first and does not fall back to the
+  MP4 after a decode error.
 - **Pointer:** consecutive frames of one move advance a little each and never jump, including
   across a page load; each click mark shows for 4–6 frames and is gone after a navigating click.
 - **No flash:** `reference.md`, "Checks", measures luma on a plain margin and between frames.

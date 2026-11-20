@@ -159,6 +159,14 @@ export function loudnessProblems(sound: Loudness): string[] {
   return problems
 }
 
+/**
+ * Why a finished file's colour range cannot ship; empty when it is TV (limited) range. Chromium
+ * refuses to decode full-range (`pc`) VP9, so the page shows its error box instead of the clip.
+ */
+export function rangeProblems(range: string): string[] {
+  return range === `tv` ? [] : [`colour range ${range || `unknown`}, not tv (limited)`]
+}
+
 /** The gain, in dB, that brings music measured at `sound` to the target, with 1 dB of headroom. */
 export function musicGain(sound: Loudness): number {
   const gain = Math.min(LOUDNESS.target - sound.integrated, LOUDNESS.maxPeak - 1 - sound.peak)
@@ -285,6 +293,21 @@ export async function encodeDemo(options: EncodeOptions): Promise<EncodeSummary>
       throw new Error(`the mix is too loud, so both videos were deleted: ${loud.join(`; `)}`)
     }
 
+    const ranges = {
+      webm: await colourRange(`${out}/demo.webm`),
+      mp4: await colourRange(`${out}/demo.mp4`),
+    }
+    const wrong = Object.entries(ranges).flatMap(([file, range]) =>
+      rangeProblems(range).map((problem) => `demo.${file}: ${problem}`)
+    )
+    if (wrong.length) {
+      await fs.remove(`${out}/demo.webm`)
+      await fs.remove(`${out}/demo.mp4`)
+      throw new Error(
+        `browsers may not play this, so both videos were deleted: ${wrong.join(`; `)}`,
+      )
+    }
+
     const still = typeof options.poster === `string`
       ? [`-i`, options.poster]
       : [...input(source), `-ss`, `${trim + (options.poster ?? 0)}`]
@@ -379,6 +402,15 @@ async function duration(file: string): Promise<number> {
   const value = Number(out)
   if (!value) throw new Error(`ffprobe could not read the length of ${file}`)
   return value
+}
+
+/** A video file's colour range as ffprobe reads it: `tv`, `pc` or `unknown`. */
+async function colourRange(file: string): Promise<string> {
+  const out = await run([
+    ...[`ffprobe`, `-v`, `error`, `-select_streams`, `v:0`, `-show_entries`, `stream=color_range`],
+    ...[`-of`, `csv=p=0`, file],
+  ])
+  return out.trim()
 }
 
 /** A file's size in bytes, as ffprobe reads it. */
