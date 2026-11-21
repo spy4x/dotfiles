@@ -38,9 +38,12 @@ Reasoning and sources: `ai-memory/profile.md` "How I market".
 
 Once anything goes out in public in my name, add one dated line for it to
 `~/sync/code/ai-memory/public-activity.md`, in that file's format, by pull request (the
-`workspace` skill, "Memory"): a blog post, a Dev.to cross-post, a LinkedIn or Telegram post, a
-YouTube video or Short, a launch post. It counts whether a product's job, an agent or I put it
-out; when I post texts an agent wrote, add the line once I say it is out. Agents read that file
+`workspace` skill, "Memory"). That covers a post on any of my blogs (antonshubin.com,
+seedsaas.com, each product's blog), a LinkedIn, Telegram or Dev.to post, a YouTube video or
+Short, and a launch post. A blog post and the cross-posts its site sends out automatically are one
+line that names every channel it reached; the agent that published the post adds it once the
+automation has run. It counts whether a product's job, an agent or I put it out; when I post texts
+or upload a video an agent prepared, add the line once I say it is out. Agents read that file
 before they plan or suggest the next piece, so a missing line means a repeat or a gap.
 
 ## Voice with clients
