@@ -168,6 +168,7 @@ after the owner's approval for a video.
 - **Skipped:** TikTok and Instagram (an audit or a business account for little of this audience),
   and a second posting system beside the product's own.
 - Every channel gets the master file, never a copy downloaded from another platform.
+- Each piece that goes out gets its line in public activity (`owner-voice`, "Public record").
 
 ## 9. Numbers
 

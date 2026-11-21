@@ -117,4 +117,5 @@ to paste and the link:
 - LinkedIn, Telegram, Bluesky and Mastodon: the Short's file, uploaded as a video, with its text.
 
 After he publishes, add the video's link to the post (the post page shows the video) and to the
-`Content ideas` comment the topic came from.
+`Content ideas` comment the topic came from, and log each upload in public activity
+(`owner-voice`, "Public record").

@@ -192,6 +192,7 @@ send the newsletter. The newsletter goes out once per post (a rerun never mails 
 an address a person can answer, with a one-click unsubscribe. Report the sent and failed counts the
 tool printed; a non-zero exit is not a success. Reuse the post across the video, newsletter,
 LinkedIn and Dev.to rather than writing each from scratch.
+Log the post and each cross-post in public activity (`owner-voice`, "Public record").
 
 ## 12. Channel texts
 
