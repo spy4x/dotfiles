@@ -52,6 +52,8 @@ One canonical copy, in the repository of the thing it shows, under `media/demo/`
   antonshubin.com (`https://antonshubin.com/tools/<slug>`), because GitHub does not play a
   committed video inline. Other sites (antonshubin.com, the product's own site) copy the files at a
   pinned commit with a pull script.
+- **Log it.** A new or remade video, once a public page shows it, gets its line in public activity
+  (`owner-voice`, "Public record").
 
 ## What the video contains
 

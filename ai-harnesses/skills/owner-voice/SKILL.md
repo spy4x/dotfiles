@@ -1,6 +1,6 @@
 ---
 name: owner-voice
-description: "The owner's rules for everything written or sent in his name: the frames that set his conduct, value first, honest persuasion, reply-able senders, the voice for quotes and proposals. Load before you write a post, an email, a public page, a profile text, a video script, launch or social texts, anything for a client, a message in his name to anyone (a landlord, an official, a vendor, a stranger), or set the sender of a product's email."
+description: "The owner's rules for everything written or sent in his name: the frames that set his conduct, value first, honest persuasion, reply-able senders, the voice for quotes and proposals. Load before you write a post, an email, a public page, a profile text, a video script, launch or social texts, anything for a client, a message in his name to anyone (a landlord, an official, a vendor, a stranger), or set the sender of a product's email, and after anything goes out in public in his name."
 ---
 
 # The owner's voice
@@ -33,6 +33,19 @@ person, not a company: write as me, invite replies. No no-reply addresses: every
 I send comes from an address a person can answer, such as `hi@<domain>`. Honest quick wins count (a
 referral ask, a priced offer, a sharp proposal), but never at the cost of trust: I build for years.
 Reasoning and sources: `ai-memory/profile.md` "How I market".
+
+## Public record
+
+Once anything goes out in public in my name, add one dated line for it to
+`~/sync/code/ai-memory/public-activity.md`, in that file's format, by pull request (the
+`workspace` skill, "Memory"). That covers a post on any of my blogs (antonshubin.com,
+seedsaas.com, each product's blog), a LinkedIn, Telegram or Dev.to post, a YouTube video or
+Short, and a launch post. Library and tool releases on JSR or GitHub are not logged: the registry
+records them. A blog post and the cross-posts its site sends out automatically are one
+line that names every channel it reached; the agent that published the post adds it once the
+automation has run. It counts whether a product's job, an agent or I put it out; when I post texts
+or upload a video an agent prepared, add the line once I say it is out. Agents read that file
+before they plan or suggest the next piece, so a missing line means a repeat or a gap.
 
 ## Voice with clients
 
