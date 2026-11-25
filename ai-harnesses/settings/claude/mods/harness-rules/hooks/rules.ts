@@ -25,9 +25,9 @@ export interface Spawn {
 const OPUS_ONLY = new Set([`implementer`, `implementer-xhigh`, `reviewer`, `design-reviewer`])
 
 /**
- * Judges a subagent spawn. A fork inherits its parent's model by design, so only the quota
- * applies to it. Everything else must name its model, and implementers and reviewers must run on
- * Opus.
+ * Judges a subagent spawn. Nothing starts past the 5-hour limit, and a fork never starts: it copies
+ * the whole conversation. Every other spawn must name its model, and implementers and reviewers
+ * must run on Opus.
  */
 export function spawnVerdict(spawn: Spawn, fiveHourPercent: number | undefined): Verdict {
   if (fiveHourPercent !== undefined && fiveHourPercent >= FIVE_HOUR_STOP) {
