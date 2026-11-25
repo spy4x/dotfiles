@@ -19,8 +19,8 @@ test(`refuses a spawn without a model`, () => {
   expect(spawnVerdict({ subagentType: `Explore`, fork: false }, 10).deny).toContain(`model`)
 })
 
-test(`lets a fork inherit its parent's model`, () => {
-  expect(spawnVerdict({ subagentType: `fork`, fork: true }, 10).deny).toBeUndefined()
+test(`refuses a fork`, () => {
+  expect(spawnVerdict({ subagentType: `fork`, fork: true }, 10).deny).toContain(`Never fork`)
 })
 
 test(`refuses a reviewer on sonnet and allows one on opus`, () => {
@@ -739,7 +739,7 @@ test(`asks for a handoff only from the second compaction`, () => {
   const second = compactionNotice(2)
   expect(second.startsWith(`[harness-rules] compactions: 2`)).toBe(true)
   expect(second).toContain(`handoff`)
-  expect(second).toContain(`hand_off_to_session`)
+  expect(second).toContain(`context: "fresh"`)
   expect(compactionsSoFar([compactionNotice(5)])).toBe(5)
 })
 

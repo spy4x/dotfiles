@@ -162,9 +162,9 @@ what remains before the next milestone, and the wave's total cost
 (`deno run -A ~/sync/code/ringmaster/src/session-cost.ts <session id>`).
 
 After the report, the lead hands the next wave, or the rest of the work, to a new session itself
-instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__hand_off_to_session` with
-the next wave's prompt as the remaining plan, or `mcp__ccd_session__start_session` with that prompt
-as a complete brief. It always makes one of those calls first. When the app refuses it, the lead
+instead of stopping. In the Claude desktop app it calls
+`mcp__ccd_session__start_session` with `context: "fresh"` and the next wave's prompt as a complete
+brief, never a fork or `hand_off_to_session` (global "Subagents"). It always makes that call first. When the app refuses it, the lead
 starts the next wave with `~/sync/code/ringmaster/src/agent-run.ts start --mode lead` and names the run id in the report;
 only when that refuses too does a proposal card for that session become the handoff. A harness
 without these tools, such as a plain terminal, ends the report with the prompt instead, ready to
