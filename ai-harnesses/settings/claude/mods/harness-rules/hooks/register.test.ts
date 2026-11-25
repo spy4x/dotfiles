@@ -1148,7 +1148,7 @@ test(`asks for a handoff from the second compaction on`, async ($, on) => {
   })
   const notice = textsOf(compacted).at(-1) ?? ``
   expect(notice).toContain(`[harness-rules] compactions: 2`)
-  expect(notice).toContain(`hand_off_to_session`)
+  expect(notice).toContain(`context: "fresh"`)
 })
 
 test(`tells a headless run to park with its handoff after the second compaction`, async ($, on) => {

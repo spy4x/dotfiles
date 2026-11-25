@@ -36,7 +36,12 @@ export function spawnVerdict(spawn: Spawn, fiveHourPercent: number | undefined):
         `ones finish, post the handoff and end the turn.`,
     }
   }
-  if (spawn.fork) return ALLOW
+  if (spawn.fork) {
+    return {
+      deny: `Never fork (global CLAUDE.md, "Subagents"): a fork copies the whole conversation. ` +
+        `Start a fresh agent with a complete brief and a \`model\`.`,
+    }
+  }
   if (spawn.model === undefined) {
     return {
       deny: `Pass \`model\` on every Agent call: an omitted one inherits the lead's model. ` +
@@ -486,7 +491,8 @@ export function compactionNotice(count: number, headless = false): string {
   }
   return `${intro} Finish the step in hand, then write the handoff the \`wave\` ` +
     `skill describes ("The handoff") and hand the rest of the work to a new session: in the ` +
-    `Claude desktop app with \`mcp__ccd_session__hand_off_to_session\`; in a terminal, end your ` +
+    `Claude desktop app with \`mcp__ccd_session__start_session\` and \`context: "fresh"\`, never a ` +
+    `fork or \`hand_off_to_session\`, which copy this conversation; in a terminal, end your ` +
     `reply with the next session's prompt, ready to paste. Start nothing new in this session.`
 }
 

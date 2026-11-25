@@ -412,7 +412,7 @@ except search/inventory → `haiku`. Implementers and reviewers stay on `opus` i
 names one directory or one question; an inventory of a whole repo gets one `haiku` agent per
 top-level directory, and the lead merges their lists: past 100,000 prompt tokens a Haiku 5.5 call
 costs five times as much (`ai-memory/experiments/haiku55-and-mods.md`). Architecture and final
-verdicts stay with the lead. Fresh subagents over forks (a fork copies the whole conversation).
+verdicts stay with the lead. Never fork an agent or session: a fork copies the whole conversation.
 
 **Effort.** `medium` for sessions, leads, implementers and every review, except the background
 lead's daily retro, which runs at `high`. Effort belongs to the agent type, not to the call.
