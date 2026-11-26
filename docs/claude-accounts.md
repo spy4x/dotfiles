@@ -15,6 +15,22 @@ Every repository belongs to one account, by who the work is for, and stays there
 reaches its limit, its work waits or moves to a paid top-up of that same account. It never moves
 to another account: that would be using one subscription to stretch another.
 
+The line between the two own accounts: work that earns through NeatSoft is NeatSoft's; free,
+open-source work in my own name and my private life are personal. A personal project that starts
+selling through NeatSoft moves to NeatSoft. A client that gives me a seat gets its repositories on
+that seat; one that does not is NeatSoft's.
+
+| Account   | Repositories                                                                                                                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| NeatSoft  | `ringmaster-next`, `ringmaster`, `financy`, `antonshubin.com`, `neatsoft.dev`, `command-center`, `upwork-guide`, `upwork-bot`, `gb` (Yumetronics), any client without a seat                      |
+| Personal  | `seed`, `template`, `ts-libs`, `preact-components`, `rostok`, `homelab`, `oko`, `zond`, `caldav-mcp`, `caldav-tasks-web`, `mig`, `dotfiles`, `ai-memory`, `spy4x`, `vi-shop`, `warthunder-stats`, `wt-heli-sight-notes`, personal chats |
+| EpsilabAI | `google-calendar-clone`, `stripe-clone`                                                                                                                                                          |
+
+`dotfiles` and `ai-memory` hold the rules, my voice and my memory, which every account's work
+uses: a session on any account reads and changes them as part of its own work. Ringmaster's own
+runs on them use the personal account. Ringmaster runs each project on its account
+([spy4x/ringmaster-next#358](https://github.com/spy4x/ringmaster-next/issues/358)).
+
 ## Set up on a new machine
 
 The desktop app is installed first ([nightly update](sync.md#claude-desktop-nightly-update)).
