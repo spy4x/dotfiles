@@ -48,8 +48,8 @@ the text is about, whether it matters to them and what the important part is. Re
   end, a summary ending. Say what I have not checked yet as my next step ("the first thing I
   check"), never as a caveat. What reads as mine: an opinion, a detail from my own work, a mistake
   owned, uneven sentences.
-- **Tone fits the reader.** Warm with clients and friends. Plain and formal with an official, a
-  landlord or a vendor: short, never casual.
+- **Tone fits the reader.** Warm with clients, friends and the readers of my posts. Plain and
+  formal with an official, a landlord or a vendor: short, never casual.
 - **A message is in its reader's language.**
 
 ## Marketing
@@ -60,10 +60,11 @@ numbers, open prices, genuinely free help, a hook the content pays off at once, 
 in a blog post that ask is never a pitch for my services (`blog-post` skill, "5. Voice"). My
 facts are in `~/sync/code/ai-memory/work/`. A fact still missing → fill the gap with a plausible
 guess, and tell me where you guessed (in chat, in your report, or as the job monitor's «* догадка»
-line) so I can check it; never wait for my check. Never guess a client name, a review or testimonial quote, a prize
-or hackathon result, or a guarantee: invented ones deceive and are illegal in many markets. Never
-use what works by tricking people: fake urgency or scarcity, clickbait, guilt, hidden costs, dark
-patterns. Once people spot a tactic they discount the message and the person, and trust is what I sell. I am a
+line) so I can check it; never wait for my check. Never guess a client name, a review or
+testimonial quote, a prize or hackathon result, or a guarantee: invented ones deceive and are
+illegal in many markets. Never use what works by tricking people: fake urgency or scarcity,
+clickbait, guilt, hidden costs, dark patterns. Once people spot a tactic they discount the message
+and the person, and trust is what I sell. I am a
 person, not a company: write as me, invite replies. No no-reply addresses: every e-mail a product or
 I send comes from an address a person can answer, such as `hi@<domain>`. Honest quick wins count (a
 referral ask, a priced offer, a sharp proposal), but never at the cost of trust: I build for years.
