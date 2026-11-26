@@ -1,7 +1,7 @@
 # Several Claude accounts on one machine
 
-One account per purpose, each paid for and used only for its own work: a personal one for my own
-projects, a company one for the company's work, and a client's one for that client's work. They
+One account per purpose, each paid for and used only for its own work: a personal one for my free
+open-source work and private life, a company one for the company's work, and a client's one for that client's work. They
 run side by side, in the desktop app and in the terminal. All of them share `~/.claude`, so the
 rules, skills, MCP servers and memory are the same everywhere.
 
@@ -24,7 +24,7 @@ that seat; one that does not is NeatSoft's.
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | NeatSoft  | `ringmaster-next`, `ringmaster`, `financy`, `antonshubin.com`, `neatsoft.dev`, `command-center`, `upwork-guide`, `upwork-bot`, `gb` (Yumetronics), any client without a seat                      |
 | Personal  | `seed`, `template`, `ts-libs`, `preact-components`, `rostok`, `homelab`, `oko`, `zond`, `caldav-mcp`, `caldav-tasks-web`, `mig`, `dotfiles`, `ai-memory`, `spy4x`, `vi-shop`, `warthunder-stats`, `wt-heli-sight-notes`, personal chats |
-| EpsilabAI | `google-calendar-clone`, `stripe-clone`                                                                                                                                                          |
+| A client  | `google-calendar-clone`, `stripe-clone` (its seat)                                                                                                                                                  |
 
 `dotfiles` and `ai-memory` hold the rules, my voice and my memory, which every account's work
 uses: a session on any account reads and changes them as part of its own work. Ringmaster's own
