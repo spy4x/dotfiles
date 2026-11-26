@@ -125,7 +125,7 @@ Never:
 - generated footage of something that did not happen, generated B-roll, or automatic dubbing;
 - words he did not say: captions and quotes hold only what the recording holds;
 - videos mass-produced from one template: YouTube removes monetisation from the whole channel;
-- a text that reads as generated (`blog-post`, step 5).
+- a text that reads as generated (`owner-voice`, "Every text").
 
 What a viewer sees and hears in a video is recorded. A post's cover picture follows `blog-post`.
 

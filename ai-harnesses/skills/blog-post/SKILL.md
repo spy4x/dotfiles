@@ -5,8 +5,8 @@ description: 'How to propose, brief, write, translate and publish a blog post, c
 
 # Blog post
 
-The `owner-voice` skill, "Marketing", sets the values: the most value in the least time, the
-point first, honest persuasion only, one clear ask, written as the owner. This skill is the steps.
+The `owner-voice` skill sets the values: "Every text" for how any text is built, "Marketing" for
+the most value in the least time, honest persuasion only and one clear ask. This skill is the steps.
 A site's mechanics (where posts live, their front matter, the tasks that build, publish and send
 them) are in that repo's `AGENTS.md` and the docs it names; where they differ from a step here, the
 repo wins for its mechanics, never for the values. The most complete example is antonshubin.com
@@ -73,11 +73,12 @@ A long post gets a contents list, so give it real headings.
 ## 4. How a post opens
 
 1. A TL;DR of two to four lines, each one plain claim the reader can act on or remember. Write it
-   last, from the finished post; it says nothing the post does not.
+   last, from the finished post; it says nothing the post does not. A post's TL;DR block is the
+   one exception to "no TL;DR label" in `owner-voice`, "Every text".
 2. A first paragraph that answers the post's question on its own, with the main phrase in it
-   naturally, so a search snippet or an AI answer can quote it alone.
-3. Then what the post is and who it is for. A post about something visible opens with a real
-   screenshot right under the TL;DR.
+   naturally, so a search snippet or an AI answer can quote it alone. It is the answer or the
+   finding itself, never a paragraph about what the post is or who it is for.
+3. A post about something visible opens with a real screenshot right under the TL;DR.
 
 No "Welcome to", no background first, no stacked sales questions ("Are you tired of…?").
 
@@ -95,21 +96,19 @@ thing itself.
 ## 5. Voice
 
 The site's voice guide decides; antonshubin.com `docs/voice.md` is the owner's, learned from his
-own posts. A product site speaks as its maker, the same person. In short: "I" for what the owner
-did, "you" for the reader, short paragraphs, plain words, self-irony and mistakes owned, opinions
-stated. Be fun to read, not only useful: the owner's character is fun while doing tech, so
-every post carries jokes, self-irony and playful asides alongside the substance, never a dry
-manual. The post ends on its last useful point or a joke, never a summary or "In conclusion".
-It never ends in a sales pitch for the owner's services: a reader who enjoyed the post finds the
-rest of the site alone. At most one quiet link to the offer, in the body where the text needs it.
-Keep out the phrases that read as generated: "crucial", "It's important to", "powerful, flexible
-and easy to use", filler reassurance, lists where every item says nothing specific.
+own posts. A product site speaks as its maker, the same person. How every text is built, the
+phrases that read as generated included, is in `owner-voice`, "Every text". On top of it: "I" for
+what the owner did, "you" for the reader, self-irony and mistakes owned, opinions stated. Be fun
+to read, not only useful: the owner's character is fun while doing tech, so every post carries
+jokes, self-irony and playful asides alongside the substance, never a dry manual. The post ends
+on its last useful point or a joke, never a summary or "In conclusion". It never ends in a sales
+pitch for the owner's services: a reader who enjoyed the post finds the rest of the site alone.
+At most one quiet link to the offer, in the body where the text needs it.
 
 ## 6. Proof and numbers
 
-- No client, number, quote, testimonial, prize, guarantee or result unless the owner gave it as
-  fact in this session or the repo holds it as data (the `owner-voice` skill, the site's content rule).
-  Missing one → ask, or write the post without it. Never estimate one.
+- A missing fact follows `owner-voice`, "Marketing": a flagged guess where it allows one, and
+  never a guessed client name, review or testimonial quote, prize, hackathon result or guarantee.
 - A measurement states its method, date and versions, and commits its raw data where the site
   supports that. Real statistics and cited sources raise a page's share of AI answers
   ([GEO study][geo]); measurable facts beat "fast" or "next-gen" ([Microsoft][bing]).
