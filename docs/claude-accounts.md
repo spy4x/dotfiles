@@ -1,0 +1,79 @@
+# Several Claude accounts on one machine
+
+One account per purpose, each paid for and used only for its own work: a personal one for my own
+projects, a company one for the company's work, and a client's one for that client's work. They
+run side by side, in the desktop app and in the terminal. All of them share `~/.claude`, so the
+rules, skills, MCP servers and memory are the same everywhere.
+
+This is a workaround, not a feature Anthropic documents: the desktop app has no account switcher
+and no profiles. It works because the app is built on Electron, which keeps one running copy per
+data folder, and because the app hands its own sign-in to the Claude Code it starts.
+
+## Which account does what
+
+Every repository belongs to one account, by who the work is for, and stays there. When an account
+reaches its limit, its work waits or moves to a paid top-up of that same account. It never moves
+to another account: that would be using one subscription to stretch another.
+
+## Set up on a new machine
+
+The desktop app is installed first ([nightly update](sync.md#claude-desktop-nightly-update)).
+
+```bash
+ln -sfn ~/sync/code/dotfiles/tools/claude-desktop-as.sh ~/.local/bin/claude-desktop-as
+ln -sfn ~/sync/code/dotfiles/tools/claude-as.sh ~/.local/bin/claude-as
+```
+
+The default app and plain `claude` are the personal account. Sign in to them as usual.
+
+## Add an account
+
+Pick a short profile name, such as `work`. The recoloured icon needs ImageMagick (`magick`).
+
+```bash
+claude-desktop-as --install work "Work"
+```
+
+That adds "Claude Work" to the application menu, with its own icon colour; a fourth argument sets
+the hue (0 to 200, 100 leaves the icon unchanged). Start it from the menu and sign in with that
+account's email. Its data is in `~/.config/Claude-work`; the default app keeps `~/.config/Claude`.
+
+For the terminal:
+
+```bash
+claude-as work --setup
+```
+
+It opens the browser to sign in, then stores a long-lived token in `~/.config/claude-work/token`,
+readable only by you. After that, `claude-as work` runs Claude Code on that account. Tokens are
+never committed and never synced: repeat the setup on each machine.
+
+Check which account a session uses with `claude-as work auth status`, or in the app under the
+account menu.
+
+## How it works
+
+- `claude-desktop-as <profile>` starts the app with `--user-data-dir=~/.config/Claude-<profile>`.
+  A second start of the same profile focuses its window; a different profile is a separate app.
+- The app does not use the `claude` from the terminal. It downloads its own copy of Claude Code
+  into its data folder and passes its sign-in to each session in `CLAUDE_CODE_OAUTH_TOKEN`, so a
+  session's account is always the one its app is signed in to. `claude-as` sets the same variable
+  from the stored token.
+- Neither reads `~/.claude/.credentials.json`, which holds the terminal's default login.
+
+## Known limits
+
+- All the apps report one application id, so a taskbar that groups windows shows them under the
+  default Claude icon. The menu entries keep their own icons; tell the windows apart by the
+  account name in the app.
+- A link that opens the app from outside (`claude://`, including the one that ends a browser
+  sign-in) goes to the default app. If a new profile does not finish signing in, use the sign-in
+  option that shows a code to paste.
+- Cowork starts one helper per machine, so use it in one app only. The Code tab does not need it.
+- Sessions of every account are stored together under `~/.claude/projects`.
+- An app update replaces the app for all profiles at once; restart each of them.
+
+## On macOS
+
+The same idea, not tried here: `open -n -a Claude --args --user-data-dir="$HOME/Library/Application Support/Claude-work"`.
+`-n` starts a new copy although one is running, and a plain double-click never passes the flag.
