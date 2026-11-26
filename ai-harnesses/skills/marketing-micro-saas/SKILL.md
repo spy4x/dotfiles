@@ -403,10 +403,11 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa @tony_dinh), join conversations
 - **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer quotes
 
-**Your authentic angle** (per "In my name" and "Voice with clients" in the `owner-voice` skill):
+**Your authentic angle** (per "In my name", "Every text" and "Voice with clients" in the
+`owner-voice` skill):
 
 - Show the work: screenshots, numbers and shipped features
-- Warm, plain and transparent: explain the trade-offs you chose, invite replies, no fluff
+- Explain the trade-offs you chose and invite replies
 - 15 years experience = technical authority most indie devs lack
 
 **Tone**: don't shill, share the journey. The product sells itself if the journey is interesting.
@@ -632,7 +633,7 @@ You think you're zero on marketing. You're not. You have:
 2. **15 years experience**: write "Why I chose X over Y" technical posts with authority. Junior indie devs can't.
 3. **Infrastructure depth**: most indie devs skip self-host. You = self-host-first + cloud-optional. Position as "I respect your infra choices."
 4. **Blog muscle** (antonshubin.com): already has blog + RSS + AI crawler optimization. Repurpose technical decisions as blog posts on product site (cross-link).
-5. **Show the work** (per `profile.md`): screenshots, numbers and shipped things suit build-in-public. Write them in the friendly, plain voice clients describe, never as a "sovereign vendor".
+5. **Show the work** (per `profile.md`): screenshots, numbers and shipped things suit build-in-public. Write them as `owner-voice`, "Every text", says, never as a "sovereign vendor".
 6. **Hackathon credibility**: "I won 2 hackathons building this" in product bio = trust signal.
 7. **Already productized** (Upwork catalog, antonshubin.com B2B funnel): you've done the hard mental work of "what's my offer." Repackage for indie audience.
 
@@ -694,8 +695,8 @@ answer-engine rules, with sources.
 **Week 5**: "Why I switched from [BigSaaS] to [Product]" (personal story, before/after)
 **Week 6**: "Self-hosting [Product] on Hetzner" (technical tutorial + screenshots)
 **Week 7**: "Open source [category] tools in 2026" (roundup post, link to competitors too)
-**Week 8**: "How we built [Product] with Deno + SQLite" (technical deep-dive, your authority)
-**Week 9**: "Why we use AGPLv3 (and you should too)" (license decision post)
+**Week 8**: "How I built [Product] with Deno + SQLite" (technical deep-dive, your authority)
+**Week 9**: "Why I use AGPLv3 (and you should too)" (license decision post)
 
 **Search rules** (detail and sources in the `marketing-seo` agent):
 
