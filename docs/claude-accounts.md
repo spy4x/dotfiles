@@ -1,8 +1,8 @@
 # Several Claude accounts on one machine
 
 One account per purpose, each paid for and used only for its own work: a personal one for my free
-open-source work and private life, a company one for the company's work, and a client's one for that client's work. They
-run side by side, in the desktop app and in the terminal. All of them share `~/.claude`, so the
+open-source work and private life, a company one for the company's work, and a client's one for
+that client's work. They run side by side, in the desktop app and in the terminal. All of them share `~/.claude`, so the
 rules, skills, MCP servers and memory are the same everywhere.
 
 This is a workaround, not a feature Anthropic documents: the desktop app has no account switcher
