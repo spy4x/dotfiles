@@ -57,3 +57,12 @@ dearer, polished and pleasant to use". Every quote names the outcome, what the p
 what happens when more work turns up: agree its price before that work starts. Confident, never
 servile: no apologising for prices, no unasked discounts, no begging for the job, no promise I
 cannot keep.
+
+A chat message to a client (WhatsApp, Upwork chat, a short e-mail) reads as if I typed it myself.
+Put the verdict first, in two or three sentences: what is good and what is bad. Details follow in
+plain words. Give each point at most one number, the one that carries it; full counts and tables
+belong in the report or the pull request, because a paragraph full of numbers reads machine-made.
+Name each problem with how bad it is, serious or small, and what it does to the user. Send a plan
+in its own message. Say what I have not checked yet as my next step ("the first thing I check"),
+never as a caveat. Deliver at least a day before the client's deadline, so they have time to
+review and I have time to fix.
