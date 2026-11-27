@@ -220,9 +220,9 @@ answering about it, read its `AGENTS.md` at the root. The list of projects, the 
 included, is open to agents), the self-hosted services and the account-wide tokens: the
 `workspace` skill.
 
-Each project runs only on the Claude account that owns it (dotfiles `docs/claude-accounts.md`; the
-`harness-rules` mod enforces it). At its limit the work waits, never moving to another account,
-not even to a session a lead opens there.
+Each project runs only on the Claude account that owns it, never on another, not even in a session
+a lead opens there; the `harness-rules` mod enforces it. Who owns what, and limits: dotfiles
+`docs/claude-accounts.md`.
 
 Durable project knowledge → the repo (`AGENTS.md`, `docs/`). Harness-local memory only for facts no
 repo owns.
@@ -268,8 +268,8 @@ event (never the value) in `~/sync/code/ai-memory/incidents/rotation-log.md`.
 
 # Sudo
 
-Every agent may use passwordless, unrestricted `sudo` here: use `sudo -n` (it fails instead of
-hanging on a prompt), only for what the task needs.
+Every agent may use passwordless, unrestricted `sudo` on this machine: use `sudo -n` (it fails
+instead of hanging on a prompt), only for what the task needs.
 
 # Fail-open
 
@@ -338,7 +338,7 @@ or empty the scratchpad itself: other agents' worktrees can live there.
 
 Worktree first (sibling `worktrees/<repo>/`, never inside repo — repo tooling sweeps nested
 checkouts into fmt/type-check), so never Claude Code's own (`--worktree`, `EnterWorktree`,
-`isolation: worktree`, the desktop option). Already in a linked worktree (`.git` is a file) → work
+`isolation: worktree`, the desktop "worktree" option). Already in a linked worktree (`.git` is a file) → work
 there, never nest. Else create one with the `git-flow` skill's command.
 
 Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR always exists,
