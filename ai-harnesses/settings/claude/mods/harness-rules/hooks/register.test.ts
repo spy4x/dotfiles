@@ -146,6 +146,7 @@ function onAccount(
 
 test(`drops a prompt in a repository of another account, naming both`, async ($, on) => {
   onAccount(on, `neatsoft`, `/home/test/sync/code/seed`)
+  on(`prompt.submit`, () => ({ text: `hi` }))
   const submitted = await $.prompt.submit({ text: `hi` })
   expect(submitted.drop).toContain(`seed belongs to the personal account`)
   expect(submitted.drop).toContain(`this session runs on neatsoft`)
@@ -153,6 +154,7 @@ test(`drops a prompt in a repository of another account, naming both`, async ($,
 
 test(`refuses a cd into a repository of another account`, async ($, on) => {
   onAccount(on, `personal`)
+  on(`tool.call`, () => BASH_OK)
   const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/financy && ls` })
   expect(ran.deny).toContain(`financy belongs to the neatsoft account`)
 })
