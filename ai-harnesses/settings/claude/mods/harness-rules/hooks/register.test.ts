@@ -193,7 +193,9 @@ test(`treats a missing private client list as empty and logs it`, async ($, on) 
   on(`tool.call`, () => BASH_OK)
   const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/client-repo` })
   expect(ran.deny).toContain(`client-repo belongs to no Claude account yet`)
-  expect(logged.join(``)).toContain(`claude-accounts.json`)
+  expect(logged.join(``)).toContain(
+    `"clients":"/home/test/sync/code/ai-memory/claude-accounts.json"`,
+  )
 })
 
 test(`lets a cd into a repository of the session's own account through`, async ($, on) => {

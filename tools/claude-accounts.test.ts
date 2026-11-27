@@ -257,7 +257,8 @@ Deno.test(`keeps the doc's account table and the hook's list the same`, async ()
   const listed = (cell: string) => [...cell.matchAll(/`([^`]+)`/g)].map((m) => m[1]).sort()
   const fromDoc = Object.fromEntries(rows.map((row) => {
     const [, , profile = ``, repos = ``] = row.split(`|`)
-    return [listed(profile)[0] ?? `every`, listed(repos)]
+    const name = listed(profile)[0] ?? profile.trim()
+    return [name === `any` ? `every` : name, listed(repos)]
   }))
   const fromList = Object.fromEntries([
     ...Object.entries(REPOSITORIES).map(([profile, repos]) => [profile, [...repos].sort()]),
