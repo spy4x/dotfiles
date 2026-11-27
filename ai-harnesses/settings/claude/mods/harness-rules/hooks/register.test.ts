@@ -130,18 +130,33 @@ test(`refuses a gh body gitleaks flags`, async ($, on) => {
   expect(ran.deny).toContain(`secret`)
 })
 
-/** A session on `profile` whose folder is `cwd`, where every folder under ~/sync/code is a repo. */
+/**
+ * A session on `profile` whose folder is `cwd`, where every folder under ~/sync/code is a repo and
+ * the private client list holds `clients` (no file when null). Returns the log lines written.
+ */
 function onAccount(
   on: On,
   profile: string,
   cwd = `/home/test`,
   extra: Record<string, string> = {},
-) {
+  clients: string | null = `{"client-repo":"acme"}`,
+): string[] {
+  const logged: string[] = []
   mock.env(on, { HOME: `/home/test`, CLAUDE_ACCOUNT_PROFILE: profile, ...extra })
   mock.clock(on)
   on(`session.cwd`, () => ({ value: cwd }))
   on(`fs.exists`, () => ({ value: true }))
-  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`fs.read`, (_$, e) => {
+    if (e.path !== `/home/test/sync/code/ai-memory/claude-accounts.json` || clients === null) {
+      throw new Error(`ENOENT: ${e.path}`)
+    }
+    return { value: clients }
+  })
+  on(`process.run`, (_$, e) => {
+    logged.push(e.init?.stdin ?? ``)
+    return { value: RAN(0) }
+  })
+  return logged
 }
 
 test(`drops a prompt in a repository of another account, naming both`, async ($, on) => {
@@ -157,6 +172,28 @@ test(`refuses a cd into a repository of another account`, async ($, on) => {
   on(`tool.call`, () => BASH_OK)
   const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/financy && ls` })
   expect(ran.deny).toContain(`financy belongs to the neatsoft account`)
+})
+
+test(`refuses a relative cd into a repository of another account`, async ($, on) => {
+  onAccount(on, `personal`, `/home/test/sync/code/seed`)
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ../financy && ls` })
+  expect(ran.deny).toContain(`financy belongs to the neatsoft account`)
+})
+
+test(`keeps a client repository on the profile the private list names`, async ($, on) => {
+  onAccount(on, `personal`)
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/client-repo` })
+  expect(ran.deny).toContain(`client-repo belongs to the acme account`)
+})
+
+test(`treats a missing private client list as empty and logs it`, async ($, on) => {
+  const logged = onAccount(on, `acme`, `/home/test`, {}, null)
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/client-repo` })
+  expect(ran.deny).toContain(`client-repo belongs to no Claude account yet`)
+  expect(logged.join(``)).toContain(`claude-accounts.json`)
 })
 
 test(`lets a cd into a repository of the session's own account through`, async ($, on) => {

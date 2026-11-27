@@ -20,7 +20,15 @@ import {
   type Verdict,
   type Where,
 } from "./rules.ts"
-import { sessionProfile, workPaths, workVerdict } from "./accounts.ts"
+import {
+  type Clients,
+  CLIENTS_PATH,
+  isAbsolute,
+  parseClients,
+  sessionProfile,
+  workPaths,
+  workVerdict,
+} from "./accounts.ts"
 
 /**
  * Added to every refused Bash call. Agents often fix a body (`sed -i '1i <!-- agent -->'`) and
@@ -127,6 +135,16 @@ async function memoryBlocks($: EngineInterface) {
   }
 }
 
+/** The private client list; a missing, unreadable or malformed one is logged and empty. */
+async function clients($: EngineInterface, path: string): Promise<Clients> {
+  try {
+    return parseClients(await $.fs.read(path))
+  } catch (error) {
+    await log($, { event: `account`, clients: path, error: String(error) })
+    return {}
+  }
+}
+
 /**
  * Judges the folders a session is about to work in against the account it runs on
  * (`workVerdict`). A headless run (`AGENT_RUN_ID`) passes: the engine that starts it keeps it on
@@ -148,7 +166,13 @@ async function accountCheck(
     ])
     if (run || !home) return ALLOW
     const profile = sessionProfile(execPath, named)
-    const verdict = await workVerdict(paths, home, profile, (dir) => $.fs.exists(`${dir}/.git`))
+    const verdict = await workVerdict(
+      paths,
+      home,
+      profile,
+      (dir) => $.fs.exists(`${dir}/.git`),
+      () => clients($, `${home}/${CLIENTS_PATH}`),
+    )
     if (verdict.deny) await log($, { event: `account`, profile, ...verdict })
     return verdict
   } catch (error) {
@@ -172,10 +196,15 @@ export const register: Register = (on) => {
   })
 
   // Moving into another repository mid-session: a `cd` or `-C` there, a file written there.
-  // A call that names no folder costs string work only; one that does adds one `.git` look.
+  // A call that names no folder costs string work only; one that does adds one `.git` look. The
+  // call's input carries no working directory, so a relative target is read from the directory
+  // the hook runs in, a subagent's own included (`$.session.cwd()`), fetched only when needed.
   on(`tool.call`, async ($, e, next) => {
-    const paths = workPaths(e.tool, e as unknown as Record<string, unknown>)
-    const verdict = await accountCheck($, async () => paths)
+    const input = e as unknown as Record<string, unknown>
+    const verdict = await accountCheck($, async () => {
+      const paths = workPaths(e.tool, input)
+      return paths.every(isAbsolute) ? paths : workPaths(e.tool, input, await $.session.cwd())
+    })
     return verdict.deny ? { deny: verdict.deny } : next(e)
   })
 

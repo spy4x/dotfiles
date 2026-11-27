@@ -1,7 +1,8 @@
-import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.19"
+import { assert, assertEquals, assertStringIncludes, assertThrows } from "jsr:@std/assert@1.0.19"
 import { fromFileUrl, join } from "jsr:@std/path@^1.0.0"
 import {
   EVERY_ACCOUNT,
+  parseClients,
   REPOSITORIES,
   sessionProfile,
   workPaths,
@@ -102,9 +103,13 @@ Deno.test(`refuses to run the CLI on a profile that has no token yet`, async () 
   })
 })
 
+/** A private client list that also names a repository the tracked list owns. */
+const CLIENTS = { "client-repo": `acme`, financy: `acme` }
+
 /**
- * A temp home with ~/sync/code holding a few repositories, a worktree, a plain folder and an
- * unlisted repository; runs `body` with the verdict for a session on `profile`, then removes it.
+ * A temp home with ~/sync/code holding a few repositories, a client's, a worktree, a plain folder
+ * and an unlisted repository; runs `body` with the verdict for a session on `profile`, then
+ * removes it.
  */
 async function withCode(
   body: (judge: (path: string, profile: string) => Promise<string | undefined>) => Promise<void>,
@@ -112,14 +117,15 @@ async function withCode(
   const home = await Deno.makeTempDir({ prefix: `claude-accounts-code-` })
   try {
     const code = join(home, `sync/code`)
-    for (const repo of [`seed`, `financy`, `dotfiles`, `unlisted`]) {
+    for (const repo of [`seed`, `financy`, `dotfiles`, `unlisted`, `client-repo`]) {
       await Deno.mkdir(join(code, repo, `.git`), { recursive: true })
     }
     await Deno.mkdir(join(code, `notes`), { recursive: true })
     await Deno.mkdir(join(code, `worktrees/financy/feat/x`), { recursive: true })
     const hasGit = (dir: string) => Deno.stat(join(dir, `.git`)).then(() => true, () => false)
+    const clients = () => Promise.resolve(CLIENTS)
     await body(async (path, profile) =>
-      (await workVerdict([path.replace(`~`, home)], home, profile, hasGit)).deny
+      (await workVerdict([path.replace(`~`, home)], home, profile, hasGit, clients)).deny
     )
   } finally {
     await Deno.remove(home, { recursive: true })
@@ -153,7 +159,35 @@ Deno.test(`refuses an unlisted repository and says where to add it`, async () =>
     const deny = await judge(`~/sync/code/unlisted`, `personal`)
     assertStringIncludes(deny ?? ``, `unlisted belongs to no Claude account yet`)
     assertStringIncludes(deny ?? ``, `docs/claude-accounts.md`)
+    assertStringIncludes(deny ?? ``, `~/sync/code/ai-memory/claude-accounts.json`)
   })
+})
+
+Deno.test(`keeps a client repository on the profile the private list names`, async () => {
+  await withCode(async (judge) => {
+    assertEquals(await judge(`~/sync/code/client-repo`, `acme`), undefined)
+    assertStringIncludes(
+      await judge(`~/sync/code/client-repo`, `personal`) ?? ``,
+      `client-repo belongs to the acme account`,
+    )
+  })
+})
+
+Deno.test(`lets the tracked list win over the private list for a repository in both`, async () => {
+  await withCode(async (judge) => {
+    assertEquals(await judge(`~/sync/code/financy`, `neatsoft`), undefined)
+    assertStringIncludes(
+      await judge(`~/sync/code/financy`, `acme`) ?? ``,
+      `financy belongs to the neatsoft account`,
+    )
+  })
+})
+
+Deno.test(`reads the private client list only when it maps names to profiles`, () => {
+  assertEquals(parseClients(`{"client-repo":"acme"}`), { "client-repo": `acme` })
+  for (const text of [`[]`, `null`, `{"client-repo":1}`, `not json`]) {
+    assertThrows(() => parseClients(text))
+  }
 })
 
 Deno.test(`judges a linked worktree as its repository`, async () => {
@@ -197,11 +231,29 @@ Deno.test(`finds the folders a tool call works in, and none for a read`, () => {
   assertEquals(workPaths(`Read`, { file_path: `/a/b.ts` }), [])
 })
 
+Deno.test(`reads a relative target from the call's working directory`, async () => {
+  const seed = `/h/sync/code/seed`
+  assertEquals(
+    workPaths(`Bash`, { command: `cd ../financy && git -C sub status; cd -` }, seed),
+    [`${seed}/../financy`, `${seed}/../financy/sub`],
+  )
+  assertEquals(workPaths(`Bash`, { command: `cd /x && cd y` }), [`/x`, `/x/y`])
+  assertEquals(workPaths(`Write`, { file_path: `../financy/a.ts` }, seed), [
+    `${seed}/../financy/a.ts`,
+  ])
+  await withCode(async (judge) => {
+    const [path = ``] = workPaths(`Bash`, { command: `cd ../financy` }, `~/sync/code/seed`)
+    assertStringIncludes(await judge(path, `personal`) ?? ``, `financy belongs to the neatsoft`)
+  })
+})
+
 Deno.test(`keeps the doc's account table and the hook's list the same`, async () => {
   const doc = await Deno.readTextFile(new URL(`../docs/claude-accounts.md`, import.meta.url))
   const table = doc.split(`## Which account does what`)[1]?.split(`\n## `)[0] ?? ``
-  // The rows below the header and its `| ---` line.
+  // The rows below the header and its `| ---` line, but the client row: its repositories and
+  // profile are in the private list, which this public repository never reads.
   const rows = table.split(`\n`).filter((line) => line.startsWith(`| `)).slice(2)
+    .filter((row) => row.split(`|`)[2]?.trim() !== `private`)
   const listed = (cell: string) => [...cell.matchAll(/`([^`]+)`/g)].map((m) => m[1]).sort()
   const fromDoc = Object.fromEntries(rows.map((row) => {
     const [, , profile = ``, repos = ``] = row.split(`|`)
