@@ -42,7 +42,8 @@ systemd-run --user --scope --quiet -p TasksMax=4000 -p MemoryMax=8G timeout 120 
 the cap stopped, or a runaway it caught, gets a row in that file.
 
 Never `ulimit -u`: it counts every thread the user owns (over 3,000 here), so the first fork fails.
-Containers: `--pids-limit=500 --memory=8g`.
+Containers: `--pids-limit=500 --memory=8g`. CPU load for a test: `stress-ng --cpu 0 --timeout 60s`,
+or at least `timeout 60s yes >/dev/null &`, never `while :; do :; done &`.
 
 ## Browsers and cloud servers
 
