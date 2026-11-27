@@ -29,4 +29,4 @@ if [[ "${1:-}" == "--setup" ]]; then
 fi
 
 [[ -s "$token_file" ]] || { echo "No token yet. Run: claude-as $profile --setup" >&2; exit 1; }
-CLAUDE_CODE_OAUTH_TOKEN="$(cat "$token_file")" exec "$claude" "$@"
+CLAUDE_ACCOUNT_PROFILE="$profile" CLAUDE_CODE_OAUTH_TOKEN="$(cat "$token_file")" exec "$claude" "$@"

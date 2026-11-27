@@ -130,6 +130,69 @@ test(`refuses a gh body gitleaks flags`, async ($, on) => {
   expect(ran.deny).toContain(`secret`)
 })
 
+/** A session on `profile` whose folder is `cwd`, where every folder under ~/sync/code is a repo. */
+function onAccount(
+  on: On,
+  profile: string,
+  cwd = `/home/test`,
+  extra: Record<string, string> = {},
+) {
+  mock.env(on, { HOME: `/home/test`, CLAUDE_ACCOUNT_PROFILE: profile, ...extra })
+  mock.clock(on)
+  on(`session.cwd`, () => ({ value: cwd }))
+  on(`fs.exists`, () => ({ value: true }))
+  on(`process.run`, () => ({ value: RAN(0) }))
+}
+
+test(`drops a prompt in a repository of another account, naming both`, async ($, on) => {
+  onAccount(on, `neatsoft`, `/home/test/sync/code/seed`)
+  const submitted = await $.prompt.submit({ text: `hi` })
+  expect(submitted.drop).toContain(`seed belongs to the personal account`)
+  expect(submitted.drop).toContain(`this session runs on neatsoft`)
+})
+
+test(`refuses a cd into a repository of another account`, async ($, on) => {
+  onAccount(on, `personal`)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/financy && ls` })
+  expect(ran.deny).toContain(`financy belongs to the neatsoft account`)
+})
+
+test(`lets a cd into a repository of the session's own account through`, async ($, on) => {
+  onAccount(on, `neatsoft`)
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/financy && ls` })
+  expect(ran.deny).toBeUndefined()
+})
+
+test(`refuses a subagent started in a repository of another account`, async ($, on) => {
+  onAccount(on, `personal`)
+  usage(on, [])
+  spawnable(on)
+  const spawned = await $.agent.spawn(
+    spawnOf({ model: `opus`, cwd: `/home/test/sync/code/worktrees/financy/fix/a` }),
+  )
+  expect(spawned.deny).toContain(`financy belongs to the neatsoft account`)
+})
+
+test(`leaves a headless run's account to the engine that started it`, async ($, on) => {
+  onAccount(on, `personal`, `/home/test`, { AGENT_RUN_ID: `r1` })
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/financy && ls` })
+  expect(ran.deny).toBeUndefined()
+})
+
+test(`lets work through when the account check itself breaks`, async ($, on) => {
+  mock.env(on, { HOME: `/home/test`, CLAUDE_ACCOUNT_PROFILE: `personal` })
+  mock.clock(on)
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`fs.exists`, () => {
+    throw new Error(`disk gone`)
+  })
+  on(`tool.call`, () => BASH_OK)
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/financy && ls` })
+  expect(ran.deny).toBeUndefined()
+})
+
 test(`lets a spawn with a model through under the limit`, async ($, on) => {
   usage(on, [{ kind: `five_hour`, percentUsed: 40 }])
   spawnable(on)
