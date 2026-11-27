@@ -20,7 +20,7 @@ async function withHome(body: (home: string, fake: string) => Promise<void>): Pr
     await Deno.writeTextFile(
       fake,
       `#!/usr/bin/env bash\nprintf '%s\\n' "args: $*" "token: \${CLAUDE_CODE_OAUTH_TOKEN:-none}" ` +
-        `"profile: \${CLAUDE_ACCOUNT_PROFILE:-none}"\n`,
+        `"profile: \${CLAUDE_ACCOUNT_PROFILE:-none}" "execpath: \${CLAUDE_CODE_EXECPATH:-none}"\n`,
       { mode: 0o755 },
     )
     await body(home, fake)
@@ -90,7 +90,26 @@ Deno.test(`runs the CLI with the profile's stored token and tells it the profile
     await Deno.writeTextFile(join(home, `.config/claude-work/token`), `test-token`)
     const out = await run(CLI, [`work`, `auth`, `status`], { HOME: home, CLAUDE_BIN: fake })
     assertEquals(out.code, 0, out.stderr)
-    assertEquals(out.stdout, `args: auth status\ntoken: test-token\nprofile: work\n`)
+    assertEquals(
+      out.stdout,
+      `args: auth status\ntoken: test-token\nprofile: work\nexecpath: none\n`,
+    )
+  })
+})
+
+Deno.test(`counts claude-as neatsoft from a personal desktop shell as neatsoft`, async () => {
+  await withHome(async (home, fake) => {
+    await Deno.mkdir(join(home, `.config/claude-neatsoft`), { recursive: true })
+    await Deno.writeTextFile(join(home, `.config/claude-neatsoft/token`), `test-token`)
+    const out = await run(CLI, [`neatsoft`, `-p`, `hi`], {
+      HOME: home,
+      CLAUDE_BIN: fake,
+      CLAUDE_CODE_EXECPATH: `${home}/.config/Claude-personal/claude-code/2.1.330/x/claude`,
+    })
+    assertEquals(out.code, 0, out.stderr)
+    const seen = (key: string) => out.stdout.match(new RegExp(`^${key}: (.*)$`, `m`))?.[1]
+    const execPath = seen(`execpath`) === `none` ? undefined : seen(`execpath`)
+    assertEquals(sessionProfile(execPath, seen(`profile`)), `neatsoft`)
   })
 })
 
@@ -112,7 +131,9 @@ const CLIENTS = { "client-repo": `acme`, financy: `acme` }
  * removes it.
  */
 async function withCode(
-  body: (judge: (path: string, profile: string) => Promise<string | undefined>) => Promise<void>,
+  body: (
+    judge: (path: string | string[], profile: string) => Promise<string | undefined>,
+  ) => Promise<void>,
 ): Promise<void> {
   const home = await Deno.makeTempDir({ prefix: `claude-accounts-code-` })
   try {
@@ -124,9 +145,10 @@ async function withCode(
     await Deno.mkdir(join(code, `worktrees/financy/feat/x`), { recursive: true })
     const hasGit = (dir: string) => Deno.stat(join(dir, `.git`)).then(() => true, () => false)
     const clients = () => Promise.resolve(CLIENTS)
-    await body(async (path, profile) =>
-      (await workVerdict([path.replace(`~`, home)], home, profile, hasGit, clients)).deny
-    )
+    await body(async (path, profile) => {
+      const paths = [path].flat().map((one) => one.replace(`~`, home))
+      return (await workVerdict(paths, home, profile, hasGit, clients)).deny
+    })
   } finally {
     await Deno.remove(home, { recursive: true })
   }
@@ -229,6 +251,24 @@ Deno.test(`finds the folders a tool call works in, and none for a read`, () => {
   assertEquals(workPaths(`Write`, { file_path: `/a/b.ts` }), [`/a/b.ts`])
   assertEquals(workPaths(`Edit`, { file_path: `/a/b.ts` }), [`/a/b.ts`])
   assertEquals(workPaths(`Read`, { file_path: `/a/b.ts` }), [])
+})
+
+Deno.test(`finds a cd inside a group or a bash -c script`, () => {
+  const paths = (command: string) => workPaths(`Bash`, { command })
+  assertEquals(paths(`(cd /a && ls)`), [`/a`])
+  assertEquals(paths(`( cd /a; ls )`), [`/a`])
+  assertEquals(paths(`{ cd /a; ls; }`), [`/a`])
+  assertEquals(paths(`bash -c "cd /a && git -C b status"`), [`/a`, `/a/b`])
+})
+
+Deno.test(`judges every folder a command moves into, not only the first`, async () => {
+  await withCode(async (judge) => {
+    const [first = ``, second = ``] = workPaths(`Bash`, {
+      command: `cd ~/sync/code/seed && cd ~/sync/code/financy`,
+    })
+    assertEquals(await judge(first, `personal`), undefined)
+    assertStringIncludes(await judge([first, second], `personal`) ?? ``, `financy belongs to`)
+  })
 })
 
 Deno.test(`reads a relative target from the call's working directory`, async () => {

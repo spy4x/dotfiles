@@ -22,7 +22,7 @@ that seat; one that does not is NeatSoft's.
 
 | Account       | Profile    | Repositories                                                                                                                                                              |
 | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NeatSoft      | `neatsoft` | `ringmaster-next`, `ringmaster`, `financy`, `antonshubin.com`, `neatsoft.dev`, `command-center`, `upwork-guide`, `upwork-bot`, `gb` (Yumetronics), any client without a seat |
+| NeatSoft      | `neatsoft` | `ringmaster-next`, `ringmaster`, `financy`, `antonshubin.com`, `neatsoft.dev`, `command-center`, `upwork-guide`, `upwork-bot`, `gb`, any client without a seat |
 | Personal      | `personal` | `seed`, `template`, `ts-libs`, `preact-components`, `rostok`, `homelab`, `oko`, `zond`, `caldav-mcp`, `caldav-tasks-web`, `mig`, `spy4x`, `vi-shop`, `warthunder-stats`, `wt-heli-sight-notes`, `rostok-cli-v1-test`, `skill-state`, personal chats |
 | A client      | private    | its repositories on its seat, listed privately                                                                                                                             |
 | Every account | any        | `dotfiles`, `ai-memory`                                                                                                                                                   |
@@ -39,13 +39,18 @@ fails when it and this table disagree. A client's repositories and its profile s
 public repository: the mod reads them from `~/sync/code/ai-memory/claude-accounts.json`
 (`{ "<repo>": "<profile>" }`), and a repository in both lists keeps the account this one gives
 it. A session stops, with a line naming both accounts, when it
-works in a repository of another account: its prompt is dropped when it starts there, and a
-`cd` (a relative one too), a `git -C`, a file write or a subagent's folder there is refused. A
+moves into a repository of another account: its prompt is dropped when it starts there, and a
+shell `cd`, `pushd` or `-C` into it (relative, inside `( … )`, `{ …; }` or `bash -c` too), a
+Write, Edit or NotebookEdit there, or a subagent's folder there is refused. Writes from the shell
+(`sed -i`, redirects, `cp`) and other ways in (`git --git-dir`, `deno task --cwd`) are not
+checked. A
 repository under `~/sync/code` that no list names is refused until it is added: to this table and
 `accounts.ts`, or to the private list. The mod reads the
 session's account from the path of the Claude Code a desktop app runs
 (`~/.config/Claude-<profile>/claude-code/`, the default app's under `~/.config/Claude/`), else from
-`CLAUDE_ACCOUNT_PROFILE`, which `claude-as` exports, else takes `personal`. Headless runs
+`CLAUDE_ACCOUNT_PROFILE`, which `claude-as` exports, else takes `personal`. A shell a desktop
+session opens passes that desktop's path on, so `claude-as` drops it; a plain `claude` started in
+such a shell counts as the desktop's account. Headless runs
 (`AGENT_RUN_ID` set) are left to the engine that starts them.
 
 ## Set up on a new machine

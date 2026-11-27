@@ -80,7 +80,9 @@ const LIST = `the owner's own accounts: dotfiles ` +
  * The profile a session runs on. A desktop app's session runs the Claude Code copy kept in that
  * app's data folder (`~/.config/Claude-<profile>/claude-code/…`, the default app's in
  * `~/.config/Claude/`), so its path names the account even when the app was started without the
- * variable. Else the variable `claude-as` exports, else the default account.
+ * variable. Else the variable `claude-as` exports, else the default account. The path is inherited
+ * by a CLI started from a desktop session's shell, so `claude-as` removes it; a plain `claude`
+ * started there is read as that desktop's account.
  */
 export function sessionProfile(execPath: string | undefined, profile: string | undefined): string {
   const desktop = execPath?.match(/\/\.config\/Claude(?:-([a-z0-9][a-z0-9-]*))?\/claude-code\//)
@@ -98,33 +100,53 @@ function resolve(base: string | undefined, path: string): string {
   return isAbsolute(path) || base === undefined ? path : `${base}/${path}`
 }
 
+/** A simple command's words without the `(` or `{` that opens a group and the `)` that ends one. */
+function ungrouped(words: readonly string[]): string[] {
+  const rest = words[0] === `(` || words[0] === `{` ? words.slice(1) : [...words]
+  if (rest[0]?.startsWith(`(`)) rest[0] = rest[0].slice(1)
+  return rest.map((word) => word.replace(/\)+$/, ``))
+}
+
 /**
- * The folders a tool call works in: a Bash command's `cd`, `pushd` and `-C` targets, and the file a
- * write or an edit changes. Reads are left out: looking at another repository's code is not doing
- * its work. A relative target is read from `cwd`, the call's working directory, or from the folder
- * an earlier `cd` in the same command moved to; without either it stays relative.
+ * The folders a shell command moves into: its `cd` and `pushd` targets, inside a `( … )` or
+ * `{ …; }` group or a `bash -c` script too, and every `-C` target. A relative target is read from
+ * `base`, which a `cd` moves for the commands after it.
+ */
+function shellPaths(command: string, cwd: string | undefined): string[] {
+  let base = cwd
+  return commandsOf(command).flatMap((all) => {
+    const words = ungrouped(all)
+    const script = words.indexOf(`-c`) + 1
+    if (/^(.*\/)?(ba|z|da)?sh$/.test(words[0] ?? ``) && script > 0 && words[script]) {
+      return shellPaths(words[script], base)
+    }
+    const targets: string[] = []
+    const target = words[1] === `--` ? words[2] : words[1]
+    if ((words[0] === `cd` || words[0] === `pushd`) && target && target !== `-`) {
+      base = resolve(base, target)
+      targets.push(base)
+    }
+    words.forEach((word, i) => {
+      const next = words[i + 1]
+      if (word === `-C` && next !== undefined) targets.push(resolve(base, next))
+    })
+    return targets
+  })
+}
+
+/**
+ * The folders a tool call works in: the folders a Bash command moves into (`shellPaths`) and the
+ * file the Write, Edit or NotebookEdit tool changes. Reads are left out: looking at another
+ * repository's code is not doing its work. Writes from the shell (`sed -i`, a redirect, `cp`) are
+ * not judged. A relative target is read from `cwd`, the call's working directory; without it, it
+ * stays relative.
  */
 export function workPaths(
   tool: string,
   input: Readonly<Record<string, unknown>>,
   cwd?: string,
 ): string[] {
-  if (tool === `Bash` && typeof input.command === `string`) {
-    let base = cwd
-    return commandsOf(input.command).flatMap((words) => {
-      const targets: string[] = []
-      const target = words[1] === `--` ? words[2] : words[1]
-      if ((words[0] === `cd` || words[0] === `pushd`) && target && target !== `-`) {
-        base = resolve(base, target)
-        targets.push(base)
-      }
-      words.forEach((word, i) => {
-        const next = words[i + 1]
-        if (word === `-C` && next !== undefined) targets.push(resolve(base, next))
-      })
-      return targets
-    })
-  }
+  if (tool === `Bash` && typeof input.command === `string`) return shellPaths(input.command, cwd)
   const path = input.file_path ?? input.notebook_path
   return [`Write`, `Edit`, `NotebookEdit`].includes(tool) && typeof path === `string`
     ? [resolve(cwd, path)]

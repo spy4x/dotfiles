@@ -161,9 +161,10 @@ states, so the prose stays the source:
   compaction and leaves a subagent's and a precompute untouched;
 - an Agent call without `model` is refused, and so is a reviewer on anything but Opus;
 - at 90% of the 5-hour limit, no new agent starts;
-- work in a repository of another Claude account is stopped: a prompt in its folder is dropped,
-  and a `cd` or `-C` there, a file written there and a subagent started there are refused, each
-  with a line naming both accounts. The list, the edge cases and how the session's account is read
+- moving into a repository of another Claude account is stopped: a prompt in its folder is
+  dropped, and a shell `cd`, `pushd` or `-C` into it, a Write, Edit or NotebookEdit there and a
+  subagent started there are refused, each with a line naming both accounts. Shell writes (`sed
+  -i`, redirects, `cp`) and other ways in (`--git-dir`, `--cwd`) are not checked. The list, the edge cases and how the session's account is read
   are in [`docs/claude-accounts.md`](../docs/claude-accounts.md#which-account-does-what);
 - `rm` and `rmdir` of a variable or a command substitution (`$`, `$(…)`, backticks), recursive or
   not, are refused: an empty one deletes from `/`. So are `/`, a top-level directory, home, `.`,
