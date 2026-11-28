@@ -14,7 +14,8 @@ Enc: AV1 VAAPI (Mesa 26.x ✓), HEVC VAAPI ✗, x264 burns CPU.
 └── (logs/ profiler_data/ updates/ .sentinel/ — local only)
 ```
 
-~/.config/obs-studio/{basic,plugin_config,plugin_manager} → symlinks here.
+~/.config/obs-studio/{basic,plugin_config,plugin_manager} → symlinks here. `layout.json` lives
+only in the repo (`.config/obs-studio/layout.json`); OBS never reads it.
 
 ## Recording
 
@@ -39,6 +40,14 @@ in the group's filters.
 The udev rule `system/etc/udev/rules.d/90-c922-fixed-fps.rules` keeps the camera at 30 fps in
 dim light (`docs/host-limits.md`).
 Mask: alpha PNG, color=4294967295, stretch=false.
+
+Face rectangle: `layout.json` (this directory) gives the canvas size and the rectangle the face
+covers in CodingScene, for tools that cut a recording, such as the stacked Short. OBS fits the
+500x730 crop into the group's 508x784 bounds (scale 1.016, centred), so at `pos 3175,1324` the
+group covers x 3175, y 1345, 508x742. The mask (`stretch=false`) keeps its 2:3 shape inside the
+crop, and its last column is transparent, so the right 8 px show the screen: the face is 500x742.
+Its corners are rounded (radius about 50 px). Moving or resizing the group, or changing the crop
+or the mask, means updating `layout.json` in the same change.
 
 ## Workflow
 
