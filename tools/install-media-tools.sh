@@ -7,7 +7,8 @@
 set -euo pipefail
 
 WHISPER_TAG=v1.9.6
-WHISPER_COMMIT=00c1630c14fc8fc187aa4c5ae3975d81ac2e6517
+# The commit the annotated tag points at (`git ls-remote` shows it as `v1.9.6^{}`).
+WHISPER_COMMIT=96ec4d9823e9d0211944172da35f9f29134af990
 WHISPER_REPO=https://github.com/ggml-org/whisper.cpp
 MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 MODEL_SHA256=c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d
@@ -61,7 +62,7 @@ install_whisper_cli() {
   src=$(mktemp -d)
   CLEAN+=("$src")
   echo "building whisper-cli $WHISPER_TAG"
-  git clone --quiet --depth 1 --branch "$WHISPER_TAG" "$WHISPER_REPO" "$src/whisper.cpp"
+  git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$WHISPER_TAG" "$WHISPER_REPO" "$src/whisper.cpp"
   head=$(git -C "$src/whisper.cpp" rev-parse HEAD)
   if [[ $head != "$WHISPER_COMMIT" ]]; then
     echo "error: $WHISPER_TAG resolved to $head, expected $WHISPER_COMMIT" >&2

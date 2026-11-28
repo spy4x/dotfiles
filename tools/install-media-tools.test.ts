@@ -3,7 +3,7 @@ import { exists } from "jsr:@std/fs@^1.0.0/exists"
 import { fromFileUrl, join } from "jsr:@std/path@^1.0.0"
 
 const SCRIPT = fromFileUrl(new URL(`./install-media-tools.sh`, import.meta.url))
-const COMMIT = `00c1630c14fc8fc187aa4c5ae3975d81ac2e6517`
+const COMMIT = `96ec4d9823e9d0211944172da35f9f29134af990`
 const MODEL_SUM = `c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d`
 const DF_X86 = `deep-filter-0.5.6-x86_64-unknown-linux-musl`
 const DF_X86_SUM = `70775e251eee44c0f2451a1e833326cf8bcbbe304d3e7cd12851e6fce72ef7da`
@@ -30,7 +30,8 @@ esac
 if [ -n "$FAKE_CURL_BAD" ]; then printf corrupt >"$out"; else printf "good:$sum" >"$out"; fi`,
   sha256sum:
     `c=$(cat "$1"); case "$c" in good:*) echo "\${c#good:}  $1" ;; *) echo "0000  $1" ;; esac`,
-  git: `case "$1" in
+  git: `[ "$1" = -c ] && shift 2
+case "$1" in
   clone) for d; do :; done; mkdir -p "$d" ;;
   -C) echo "\${FAKE_COMMIT:-${COMMIT}}" ;;
 esac`,
