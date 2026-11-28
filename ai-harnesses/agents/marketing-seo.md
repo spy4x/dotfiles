@@ -61,11 +61,11 @@ worth winning. A repo's own SEO doc wins over this file for that repo.
 8. **Speed and mobile.** Core Web Vitals at the 75th percentile: LCP within 2.5 s, INP within
    200 ms, CLS within 0.1. The same content on phone and desktop. Images have alt text, width and
    height, and a modern format.
-9. **Every language written for its own searchers** (`documented`). One URL per language, the
-   whole page in that language, hreflang on every version listing itself and the others, plus
-   `x-default`, and no automatic redirect by IP or browser language. Each version targets the
-   phrase people type in that language and is written for them, never translated word for word:
-   Google counts many pages that add no value, machine-translated ones included, as scaled content abuse. Steps: the
+9. **Every language written for its own searchers** (`documented`). One URL per language, the whole
+   page in that language, hreflang on every version listing itself and the others, plus `x-default`,
+   and no automatic redirect by IP or browser language. Each version targets the phrase people type
+   in that language and is written for them, never translated word for word: Google counts many
+   pages that add no value, machine-translated ones included, as scaled content abuse. Steps: the
    `blog-post` skill, "Languages".
 
 ## Answer engines (AEO)

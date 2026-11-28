@@ -7,7 +7,11 @@ description: "Open-core microSaaS marketing playbook for solo indie devs. Load f
 
 ## What I do
 
-Give you a concrete, executable playbook for launching and growing an open-core microSaaS as a solo indie dev. Covers the bits most solo devs don't have prior art for: license choice, pricing tier design, channel prioritization, distribution platform submission, launch-week timing, and conversion math. Modeled on indie-scale references (Plausible, Cal.com, Dub, Papermark, Logto, Coolify, Infisical) — NOT GitLab/Sentry tier.
+Give you a concrete, executable playbook for launching and growing an open-core microSaaS as a solo
+indie dev. Covers the bits most solo devs don't have prior art for: license choice, pricing tier
+design, channel prioritization, distribution platform submission, launch-week timing, and conversion
+math. Modeled on indie-scale references (Plausible, Cal.com, Dub, Papermark, Logto, Coolify,
+Infisical) — NOT GitLab/Sentry tier.
 
 ## When to use me
 
@@ -23,7 +27,8 @@ Load when:
 - Writing "why I built X" or "[X] vs [competitor]" SEO content
 - Optimizing a landing page for a $9-49/mo indie SaaS
 
-Do NOT load for: domain purchasing, payment processor setup, hosting basics, deploy mechanics — those are infra, covered elsewhere.
+Do NOT load for: domain purchasing, payment processor setup, hosting basics, deploy mechanics —
+those are infra, covered elsewhere.
 
 Writing a blog post, changelog post or question page → the `blog-post` skill. Search and answer
 engines in detail → the `marketing-seo` agent. The values every piece keeps (value first, honest
@@ -53,15 +58,16 @@ The output is one sentence used everywhere, with the same facts on every page, i
 the structured data (the `marketing-seo` agent, "One set of facts"): "<Product> is a <category>
 for <best-fit customers> who <alternative falls short>; unlike <alternative>, it <value>."
 
-**Values in practice.** Honest persuasion only (the `owner-voice` skill; the reasoning and the research
-behind it are in `profile.md` "How I market"). Beyond trust, fake proof is unlawful in the US: the
-FTC rule on consumer reviews and testimonials bans fake or bought reviews, undisclosed insider
-reviews and bought follower counts, with civil penalties
+**Values in practice.** Honest persuasion only (the `owner-voice` skill; the reasoning and the
+research behind it are in `profile.md` "How I market"). Beyond trust, fake proof is unlawful in the
+US: the FTC rule on consumer reviews and testimonials bans fake or bought reviews, undisclosed
+insider reviews and bought follower counts, with civil penalties
 ([16 CFR Part 465](https://www.ecfr.gov/current/title-16/chapter-I/subchapter-D/part-465)).
 
 ## 1. The model: Open Core
 
-**Pattern**: Open-source self-hostable core (free, forever) + commercial cloud SaaS (paid) + optional commercial enterprise tier (later).
+**Pattern**: Open-source self-hostable core (free, forever) + commercial cloud SaaS (paid) +
+optional commercial enterprise tier (later).
 
 **Validated at indie scale** (solo or 2-5 people, $1K-$5M ARR):
 
@@ -79,8 +85,11 @@ All use the same recipe: OSS core + commercial cloud + GitHub-first distribution
 
 **Why this works for you specifically:**
 
-- You're shipping 5-10 microSaaS in 18 months. Open-core compounds across products (same marketing playbook each time).
-- YouTube dev tutorial + Twitter build-in-public = natural content about a web-standards stack: Hono + Preact that runs unchanged on any modern runtime. Rare among indie SaaS, so it is built-in differentiation.
+- You're shipping 5-10 microSaaS in 18 months. Open-core compounds across products (same marketing
+  playbook each time).
+- YouTube dev tutorial + Twitter build-in-public = natural content about a web-standards stack:
+  Hono + Preact that runs unchanged on any modern runtime. Rare among indie SaaS, so it is built-in
+  differentiation.
 - Self-host first + cloud optional = respects infra-savvy devs (your peers).
 
 ---
@@ -91,7 +100,8 @@ All use the same recipe: OSS core + commercial cloud + GitHub-first distribution
 
 Why AGPL, not MIT/Apache:
 
-- MIT lets AWS/GCP fork your code and host as competitor. AGPL forces them to either open-source changes OR buy commercial license.
+- MIT lets AWS/GCP fork your code and host as competitor. AGPL forces them to either open-source
+  changes OR buy commercial license.
 - Plausible moved MIT→AGPL at $6.4K MRR. Same move as Dub, Papermark, Infisical, Cal.com.
 - Your cloud is the moat, not the code. AGPL protects cloud without limiting self-host.
 - Switching licenses later is painful (not retroactively enforceable). Start AGPL.
@@ -107,10 +117,13 @@ JSR/npm libs:        MIT or Apache 2.0 (don't gatekeep reusable utilities)
 
 Alternative licenses if AGPL doesn't fit:
 
-- **BSL (Business Source License)**: source-available, no AGPL contagion. Saleor uses this. Risk: less contribution.
-- **Elastic License v2 / SSPL**: source-available, restricts hosted resale. Infisical evaluated these.
+- **BSL (Business Source License)**: source-available, no AGPL contagion. Saleor uses this. Risk:
+  less contribution.
+- **Elastic License v2 / SSPL**: source-available, restricts hosted resale. Infisical evaluated
+  these.
 - **MPL-2.0**: file-level copyleft, weaker than AGPL. Logto uses this for self-host.
-- **Apache 2.0 / MIT**: only if you're not worried about hosted competitors (Saleor model, $11M raised).
+- **Apache 2.0 / MIT**: only if you're not worried about hosted competitors (Saleor model, $11M
+  raised).
 
 **For solo indie + cloud SaaS, AGPLv3 is the default choice.** Don't second-guess.
 
@@ -130,7 +143,8 @@ Team:    $29-49/mo     — teams, custom domain, priority support, RBAC
 - 30-day free trial, NO credit card upfront → 33.5% trial-to-paid (Plausible's actual rate)
 - No "Contact us" wall on Team tier — show the price
 - Charge by usage OR seat, not both (avoid double-charge confusion)
-- Forever-free tier alternative: 2-5% conversion rate, much higher signup volume (Cal.com/Logto model)
+- Forever-free tier alternative: 2-5% conversion rate, much higher signup volume (Cal.com/Logto
+  model)
 
 **$1K MRR math**:
 
@@ -190,7 +204,8 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 
 **Show HN timing**: Tue-Thu, 8-10am US Eastern. Plausible's hits were Tuesday + Thursday mornings.
 
-**Reddit prerequisites**: brand-new accounts throttled. Engage on r/programming + IndieHackers for 1-2 weeks BEFORE posting to r/selfhosted. Need karma.
+**Reddit prerequisites**: brand-new accounts throttled. Engage on r/programming + IndieHackers for
+1-2 weeks BEFORE posting to r/selfhosted. Need karma.
 
 ---
 
@@ -211,7 +226,10 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 | awesome-`<niche>` lists         | $0      | Week 4 | Niche discovery (e.g., awesome-react, awesome-selfhosted)      |
 | Backblaze B2 / S3               | $0-5/mo | Week 2 | Static binaries, demo images                                   |
 
-**Cloud SaaS hosting**: host the cloud edition on your Hetzner server (the homelab or a VM/BM) with Docker Compose behind the shared Traefik, at a fixed monthly price. Never a serverless or usage-billed host without a hard cap: a traffic spike or an attack turns into a bill. Self-host demo on the same box. Don't over-engineer.
+**Cloud SaaS hosting**: host the cloud edition on your Hetzner server (the homelab or a VM/BM) with
+Docker Compose behind the shared Traefik, at a fixed monthly price. Never a serverless or
+usage-billed host without a hard cap: a traffic spike or an attack turns into a bill. Self-host demo
+on the same box. Don't over-engineer.
 
 **Your existing infra pattern** (per AGENTS.md Operating context):
 
@@ -223,13 +241,15 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 - NTFY for notifications, Gatus for healthchecks, Authelia for SSO
 - 1× Hetzner BM (auction EX-series)
 
-This pattern makes self-host installs trivial. Submit your `docker-compose.yml` to Coolify/Elestio/Cloudron catalogs with the shared labels and let them auto-discover.
+This pattern makes self-host installs trivial. Submit your `docker-compose.yml` to
+Coolify/Elestio/Cloudron catalogs with the shared labels and let them auto-discover.
 
 ---
 
 ## 6. GitHub README template
 
-The single most important page. Most devs land here first from Google/GitHub search. Convert with this format:
+The single most important page. Most devs land here first from Google/GitHub search. Convert with
+this format:
 
 ```markdown
 # ProductName
@@ -299,13 +319,15 @@ Commercial license available for hosted resale.
 
 ## 7. IndieHackers playbook (Day 1 channel)
 
-Plausible's founder posted every milestone on IndieHackers for 2 years. First 100 users came from here.
+Plausible's founder posted every milestone on IndieHackers for 2 years. First 100 users came from
+here.
 
 **Posting cadence:**
 
 - **Day 1**: "Building [Product] in public" intro post
 - **Every Friday**: milestone update (users, MRR, what shipped)
-- **Every interesting problem**: post-mortem / decision post (e.g., "Why I switched from MIT to AGPL")
+- **Every interesting problem**: post-mortem / decision post (e.g., "Why I switched from MIT to
+  AGPL")
 - **Daily**: engage on other IH threads, 30 min = ~200 followers/month
 
 **What NOT to do:**
@@ -344,8 +366,10 @@ HN's official Show HN guidelines (news.ycombinator.com/showhn.html):
 
 - "On topic: things people can run on their computers or hold in their hands"
 - "The project should be non-trivial. Don't post quickly-generated one-offs"
-- "Please make it easy for users to try your thing out, ideally without barriers such as signups or emails"
-- "A Show HN needn't be complicated or look slick. The community is comfortable with work that's at an early stage"
+- "Please make it easy for users to try your thing out, ideally without barriers such as signups or
+  emails"
+- "A Show HN needn't be complicated or look slick. The community is comfortable with work that's at
+  an early stage"
 
 **Format that converts:**
 
@@ -363,17 +387,21 @@ GitHub: https://github.com/yourorg/product
 Would love feedback on [specific question].
 ```
 
-**What gets upvoted**: genuine problem-solver, polished enough to be runnable, addresses specific HN-crowd pain (Calendly costs too much, Bitly is bloated, GA is too complex).
+**What gets upvoted**: genuine problem-solver, polished enough to be runnable, addresses specific
+HN-crowd pain (Calendly costs too much, Bitly is bloated, GA is too complex).
 
-**What kills Show HN submissions**: "Sign up for early access" landing pages, closed beta/waitlist, crypto/AI buzzword stuffing, polished marketing site with no real product.
+**What kills Show HN submissions**: "Sign up for early access" landing pages, closed beta/waitlist,
+crypto/AI buzzword stuffing, polished marketing site with no real product.
 
-**Lifetime value**: 1 Show HN that hits = 1-3K visitors in 24h, 100-500 GitHub stars over the week, 50-200 trial signups.
+**Lifetime value**: 1 Show HN that hits = 1-3K visitors in 24h, 100-500 GitHub stars over the week,
+50-200 trial signups.
 
 ---
 
 ## 9. ProductHunt (launch-day spike, NOT growth)
 
-Plausible's Aug 2020 PH launch: 1,000 visitors + 15 trial signups that day, fewer than 20/day after. PH = spike of hope followed by flat line.
+Plausible's Aug 2020 PH launch: 1,000 visitors + 15 trial signups that day, fewer than 20/day after.
+PH = spike of hope followed by flat line.
 
 **Use PH for**:
 
@@ -383,7 +411,9 @@ Plausible's Aug 2020 PH launch: 1,000 visitors + 15 trial signups that day, fewe
 
 **Don't expect**: sustained traffic, real revenue, real customers.
 
-**Hunter outreach**: PH lets you pick a "hunter" who submits your product. A hunter with 5K+ followers adds momentum. Top hunters 2026: Chris Messina, Ben Tossell, Kevin William David, Hiten Shah. DM 2 weeks before with 1-line pitch + demo link.
+**Hunter outreach**: PH lets you pick a "hunter" who submits your product. A hunter with 5K+
+followers adds momentum. Top hunters 2026: Chris Messina, Ben Tossell, Kevin William David, Hiten
+Shah. DM 2 weeks before with 1-line pitch + demo link.
 
 **PH launch day checklist**:
 
@@ -396,12 +426,15 @@ Plausible's Aug 2020 PH launch: 1,000 visitors + 15 trial signups that day, fewe
 
 ## 10. Twitter/X build-in-public (Marc Lou playbook)
 
-Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months primarily through daily Twitter build-in-public. His formula:
+Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months primarily through
+daily Twitter build-in-public. His formula:
 
 - **Daily tweet**: shipping update, MRR screenshot, "I just shipped X" with screenshot
 - **Weekly thread**: milestone recap (numbers, lessons, what next)
-- **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa @tony_dinh), join conversations
-- **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer quotes
+- **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa
+  @tony_dinh), join conversations
+- **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer
+  quotes
 
 **Your authentic angle** (per "In my name", "Every text" and "Voice with clients" in the
 `owner-voice` skill):
@@ -421,7 +454,8 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 ### Pre-launch (build before Day 1)
 
 - [ ] Buy domain (Cloudflare Registrar, $10/yr)
-- [ ] Landing page (Hono + Preact SSR + Tailwind, deployed on the same Hetzner box behind the shared Traefik)
+- [ ] Landing page (Hono + Preact SSR + Tailwind, deployed on the same Hetzner box behind the shared
+      Traefik)
 - [ ] Pricing page with 3 tiers (Free, Pro $9-19, Team $29-49)
 - [ ] Self-host `docker-compose.yml` works end-to-end in <5 min
 - [ ] GitHub repo public with README (template §6)
@@ -531,7 +565,8 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 | MRR                               | $1,000-1,500 | Month 6 (if product hits)   |
 | MRR                               | $2,000-3,000 | Month 12 (if hit + persist) |
 
-**Kill criteria** (per Levels's 8% rule): if month 6 doesn't hit 500 stars + 50 self-hosts + $100 MRR → kill it, start product 2 with lessons.
+**Kill criteria** (per Levels's 8% rule): if month 6 doesn't hit 500 stars + 50 self-hosts + $100
+MRR → kill it, start product 2 with lessons.
 
 ---
 
@@ -579,7 +614,8 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - Reddit: r/webdev, r/selfhosted
 - Conferences: JS meetups and conferences
 
-**Tactic**: engage in the Hono and Preact communities, r/webdev and r/selfhosted 30 min/day for 2 weeks pre-launch. Become known. Then announce.
+**Tactic**: engage in the Hono and Preact communities, r/webdev and r/selfhosted 30 min/day for 2
+weeks pre-launch. Become known. Then announce.
 
 **References for the open-core model:**
 
@@ -597,18 +633,23 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 ## 16. Common pitfalls to avoid
 
 - **Starting MIT** — switch later is painful. AGPLv3 day 1.
-- **Skipping IndieHackers** — only platform without audience-gating. Free distribution, wasted if ignored.
+- **Skipping IndieHackers** — only platform without audience-gating. Free distribution, wasted if
+  ignored.
 - **Treating ProductHunt as growth strategy** — 1-day spike, not a channel.
-- **Feature-gating the free tier** — cripple = no adoption. Gate by usage limits (events, projects, seats), not features.
-- **Building 5 products before launching 1** — Levels 8% rule: 1-2 of 10 hit. Plan launches, expect kills.
+- **Feature-gating the free tier** — cripple = no adoption. Gate by usage limits (events, projects,
+  seats), not features.
+- **Building 5 products before launching 1** — Levels 8% rule: 1-2 of 10 hit. Plan launches, expect
+  kills.
 - **Paid ads in Y1** — zero ROI at $0-1K MRR. Content + IH + HN > ads.
 - **No demo GIF in README** — bounce in <5s without one.
-- **Hiding cloud signup behind self-host** — self-hosters WILL pay $9 to skip upgrade pain. Show both CTAs.
+- **Hiding cloud signup behind self-host** — self-hosters WILL pay $9 to skip upgrade pain. Show
+  both CTAs.
 - **Polished landing + no product** — HN crowd detects instantly, downvote.
 - **No affiliate program** — missing 20-30% of word-of-mouth growth.
 - **Engaging on Reddit without karma** — new accounts throttled. Pre-engage 1-2 weeks.
 - **Per-launch IndieHackers burst** — bury the launch in normal activity first.
-- **Forgetting the OG insight** — Plausible's "what NOT to do": no popups, no retargeting, no email sequences, no video (until MRR > $2K).
+- **Forgetting the OG insight** — Plausible's "what NOT to do": no popups, no retargeting, no email
+  sequences, no video (until MRR > $2K).
 
 ---
 
@@ -616,13 +657,20 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 
 You think you're zero on marketing. You're not. You have:
 
-1. **Web-standards angle**: 95% of indie SaaS is Next.js + Vercel. Your stack runs unchanged on any modern runtime and self-hosts on a fixed-price server, so "runs anywhere, no vendor lock-in" is the differentiation.
-2. **15 years experience**: write "Why I chose X over Y" technical posts with authority. Junior indie devs can't.
-3. **Infrastructure depth**: most indie devs skip self-host. You = self-host-first + cloud-optional. Position as "I respect your infra choices."
-4. **Blog muscle** (antonshubin.com): already has blog + RSS + AI crawler optimization. Repurpose technical decisions as blog posts on product site (cross-link).
-5. **Show the work** (per `profile.md`): screenshots, numbers and shipped things suit build-in-public. Write them as `owner-voice`, "Every text", says, never as a "sovereign vendor".
+1. **Web-standards angle**: 95% of indie SaaS is Next.js + Vercel. Your stack runs unchanged on any
+   modern runtime and self-hosts on a fixed-price server, so "runs anywhere, no vendor lock-in" is
+   the differentiation.
+2. **15 years experience**: write "Why I chose X over Y" technical posts with authority. Junior
+   indie devs can't.
+3. **Infrastructure depth**: most indie devs skip self-host. You = self-host-first + cloud-optional.
+   Position as "I respect your infra choices."
+4. **Blog muscle** (antonshubin.com): already has blog + RSS + AI crawler optimization. Repurpose
+   technical decisions as blog posts on product site (cross-link).
+5. **Show the work** (per `profile.md`): screenshots, numbers and shipped things suit
+   build-in-public. Write them as `owner-voice`, "Every text", says, never as a "sovereign vendor".
 6. **Hackathon credibility**: "I won 2 hackathons building this" in product bio = trust signal.
-7. **Already productized** (Upwork catalog, antonshubin.com B2B funnel): you've done the hard mental work of "what's my offer." Repackage for indie audience.
+7. **Already productized** (Upwork catalog, antonshubin.com B2B funnel): you've done the hard mental
+   work of "what's my offer." Repackage for indie audience.
 
 ---
 
@@ -664,7 +712,8 @@ For cloud version:
 8. **Trial day 28**: email "trial ends tomorrow" + upgrade CTA
 9. **Trial day 30**: convert to free tier (limited), email with upgrade CTA
 
-**Stripe setup**: use Customer Portal for self-service plan changes + cancellations. Don't build custom billing UI.
+**Stripe setup**: use Customer Portal for self-service plan changes + cancellations. Don't build
+custom billing UI.
 
 **Resend** for transactional email (3K/mo free): verifications, receipts, trial notifications.
 
@@ -678,12 +727,12 @@ proposed to the owner in chat first, then briefed, written per language and publ
 `marketing-seo` agent on the brief and on the finished draft: it holds the search and
 answer-engine rules, with sources.
 
-**Week 4**: "[Product] vs [Main Competitor]" (comparison table, screenshots, a fair verdict)
-**Week 5**: "Why I switched from [BigSaaS] to [Product]" (personal story, before/after)
-**Week 6**: "Self-hosting [Product] on Hetzner" (technical tutorial + screenshots)
-**Week 7**: "Open source [category] tools in 2026" (roundup post, link to competitors too)
-**Week 8**: "How I built [Product] with Hono, Preact and SQLite" (technical deep-dive, your authority)
-**Week 9**: "Why I use AGPLv3 (and you should too)" (license decision post)
+**Week 4**: "[Product] vs [Main Competitor]" (comparison table, screenshots, a fair verdict) **Week
+5**: "Why I switched from [BigSaaS] to [Product]" (personal story, before/after) **Week 6**:
+"Self-hosting [Product] on Hetzner" (technical tutorial + screenshots) **Week 7**: "Open source
+[category] tools in 2026" (roundup post, link to competitors too) **Week 8**: "How I built [Product]
+with Hono, Preact and SQLite" (technical deep-dive, your authority) **Week 9**: "Why I use AGPLv3
+(and you should too)" (license decision post)
 
 **Search rules** (detail and sources in the `marketing-seo` agent):
 
@@ -704,7 +753,8 @@ answer-engine rules, with sources.
 
 **Setup**: 20-30% lifetime commission via Lemon Squeezy or Stripe.
 
-**Why it works**: word-of-mouth is 20-30% of open-core growth. Affiliates convert better than ads because they have trusted audience.
+**Why it works**: word-of-mouth is 20-30% of open-core growth. Affiliates convert better than ads
+because they have trusted audience.
 
 **Tiers**:
 
@@ -712,7 +762,8 @@ answer-engine rules, with sources.
 - 30% for affiliates with >10 referrals (incentivize top performers)
 - Special program for newsletters + podcasts (custom rates)
 
-**Systeme.io model**: $83K/mo with 60% revenue from affiliate program (cited in research). Most successful indie affiliates use this exact structure.
+**Systeme.io model**: $83K/mo with 60% revenue from affiliate program (cited in research). Most
+successful indie affiliates use this exact structure.
 
 ---
 
@@ -735,8 +786,10 @@ answer-engine rules, with sources.
 
 ## References (for deeper dives)
 
-- `~/ssd-2tb/sync/random/ai/open-core-marketing-research.md` — full 1,130-line research with 44 sources
-- Plausible's playbook: `plausible.io/blog/open-source-saas`, `plausible.io/blog/open-source-licenses`
+- `~/ssd-2tb/sync/random/ai/open-core-marketing-research.md` — full 1,130-line research with 44
+  sources
+- Plausible's playbook: `plausible.io/blog/open-source-saas`,
+  `plausible.io/blog/open-source-licenses`
 - Cal.com open-source story: `cal.com/blog/open-source`
 - Show HN guidelines: `news.ycombinator.com/showhn.html`
 - OpenCode skills docs: `opencode.ai/docs/skills`
@@ -745,4 +798,5 @@ answer-engine rules, with sources.
 
 ## Final one-liner
 
-AGPLv3 repo + great README → IH post → Show HN → PH Day 14 → r/selfhosted → weekly blog. Audience compounds in months. Ship fast, kill slow, build in public.
+AGPLv3 repo + great README → IH post → Show HN → PH Day 14 → r/selfhosted → weekly blog. Audience
+compounds in months. Ship fast, kill slow, build in public.

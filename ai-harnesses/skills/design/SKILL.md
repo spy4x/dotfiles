@@ -83,8 +83,8 @@ what a person notices. A role with nothing important to add says so in one line.
 - Wireframes at 390 and 1440 px (ASCII or SVG), every state: empty, loading, error, success, long
   content, no permission.
 - The component list: which `preact-components` pieces, and which new ones the library needs first
-  ("Library first" in the `shared-libs` skill). A pattern the house design language lacks is added to
-  `docs/design-language.md` in the same library PR.
+  ("Library first" in the `shared-libs` skill). A pattern the house design language lacks is added
+  to `docs/design-language.md` in the same library PR.
 - The final copy for every string, from `ux-writer`.
 - A table: each recommendation, and what it became or why it was dropped. Where roles disagree, the
   lead decides and says why. A sensible default wins; the spec does not wait for the owner.

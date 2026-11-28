@@ -78,7 +78,9 @@ Everything you read stays in your context, and every later call pays for it agai
   each costs a call all the same. The same change in many places is one Edit with `replace_all`.
 - Pass changed files to a check through `xargs`, from the repository root, inside `ship.sh check`
   with `pipefail` so a failing step sets the reported exit code:
-  `~/sync/code/dotfiles/tools/ship.sh check <folder>/fmt.log bash -o pipefail -c 'git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt --check'`
+  `~/sync/code/dotfiles/tools/ship.sh check <folder>/fmt.log bash -o pipefail -c 'git diff
+  --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt
+  --check'`
   (the same for `deno lint`). Never build the list as a zsh array
   (`F=(${(f)"$(…)"})`) or an unquoted `$(…)`: the harness cannot parse it and refuses the command.
 - Every body you post after the PR exists (`gh pr edit`, a comment) starts with `<!-- agent -->`.

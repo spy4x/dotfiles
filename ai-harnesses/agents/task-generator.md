@@ -12,9 +12,11 @@ Process:
 
 1. Ask for the PRD and design doc paths if not provided. Read both fully.
 2. Generate 3-6 parent tasks, each suitable for one PR.
-3. First task is always `"0.0 Create feature branch + worktree"` (covers worktree creation per global AGENTS.md rule).
+3. First task is always `"0.0 Create feature branch + worktree"` (covers worktree creation per
+   global AGENTS.md rule).
 4. Order tasks so each unblocks the next: backend before frontend, schema before consumers.
-5. Save files in `tasks/` directory alongside the PRD (`docs/prd/tasks/`). Files numbered `NN-task-slug.md`.
+5. Save files in `tasks/` directory alongside the PRD (`docs/prd/tasks/`). Files numbered
+   `NN-task-slug.md`.
 
 Each task file format:
 
@@ -49,6 +51,7 @@ Rules:
 
 - Each task file has 3-6 DoD items (verifiable outcomes, NOT steps)
 - Code tasks MUST include a "tests pass" DoD item with the exact command
-- DoD items must be observable from outside (commands, screenshots, API responses) — not "I think it's done"
+- DoD items must be observable from outside (commands, screenshots, API responses) — not "I think
+  it's done"
 - First task always branch creation
 - Return list of created files + suggested invocation for task 1 (`/start-task <task file path>`)

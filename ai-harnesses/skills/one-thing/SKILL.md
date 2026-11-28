@@ -134,8 +134,9 @@ Run on Sunday. Review range: Monday through Sunday of the closing week.
 
 1. Review the week: last week's ONE Thing, each day entry's result, Traggo totals, and what
    shipped.
-2. Every unticked `TASKS.md` item planned for the closing week gets one of three answers: this
-   week, later, or dropped. Anton decides; in an unattended run, propose and leave the decision in the entry.
+2. Every unticked `TASKS.md` item planned for the closing week gets one of three answers: this week,
+   later, or dropped. Anton decides; in an unattended run, propose and leave the decision in the
+   entry.
 3. Next week's ONE Thing, serving the month's. Its time blocks by day, time off first, and next
    Sunday's planning hour. Anton also words the week's recording slot himself, as an if-then
    sentence ("Tuesday after lunch, I record at the desk"), and the entry holds it (the
@@ -184,8 +185,8 @@ Write the entry with this shape:
 ```
 
 Then update `TASKS.md`: tick items the evidence shows are done, editing that line to say what
-shipped and when. Daily runs only tick. A new order comes only from the weekly and monthly runs, with Anton's
-agreement in the session.
+shipped and when. Daily runs only tick. A new order comes only from the weekly and monthly runs,
+with Anton's agreement in the session.
 
 Commit straight to `main` in `~/sync/code/ai-memory`, as its README allows for journal entries,
 and ticks. Stage the new entry, then commit only named paths, `git add <entry> &&
