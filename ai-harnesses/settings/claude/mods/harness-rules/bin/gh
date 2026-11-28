@@ -82,7 +82,8 @@ done
 printf '%s' "$text" | gitleaks stdin --no-banner --redact >/dev/null 2>&1
 status=$?
 if [ "$status" -eq 1 ]; then
-  echo "harness-rules: gitleaks found a secret in what this gh post would send. It was not sent." >&2
+  echo "harness-rules: gitleaks found a secret in what this gh post would send." \
+    "It was not sent." >&2
   exit 1
 elif [ "$status" -ne 0 ]; then
   echo "harness-rules: the gitleaks check failed (exit $status, 127: gitleaks is missing)," \
