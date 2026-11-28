@@ -48,7 +48,8 @@ is applied here.
   one call, so an implementer's context stays small.
 - **Secrets stay local.** Committed env files are age-encrypted one value per line, and
   [`tools/env-key-copy.ts`](tools/env-key-copy.ts) gives a worktree its key without the key
-  ever being printed.
+  ever being printed. [`tools/woodpecker-api.sh`](tools/woodpecker-api.sh) calls the
+  Woodpecker CI API with the token on curl's stdin, so `ps` never shows it.
 
 How the rendering works, the file layout per harness and how to write a skill or an agent:
 [ai-harnesses/README.md](ai-harnesses/README.md).
