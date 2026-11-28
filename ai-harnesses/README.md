@@ -157,7 +157,7 @@ states, so the prose stays the source:
   `~/sync/code/ai-memory` has uncommitted changes or is behind `origin/main`. It gives counts only,
   never file names, and a failed git command only leaves out what it would have told;
 - with `RINGMASTER_CONTEXT_ARM=slim` in the environment (the slim arm of the trial in
-  spy4x/ringmaster-next#289), each role reads only its part of the global rules file, the
+  spy4x/ringmaster#289), each role reads only its part of the global rules file, the
   direction and the skills listing: a headless lead (main loop with `AGENT_RUN_ID` set), an
   `implementer` or `implementer-xhigh`, a `reviewer` and a `design-reviewer`. Its `instructions`
   then start with `<!-- context-arm: slim -->`. The keep lists live in `hooks/context-arm.ts`; a

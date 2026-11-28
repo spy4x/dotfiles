@@ -71,7 +71,7 @@ In this order, each part only when it has content:
 Nothing else: no review rounds, holes found and fixed, failed attempts or retries; no defaults taken
 (they are in the PR bodies); no per-agent costs; no "None" lines; no word on a clean sweep or a
 finished cleanup. The background lead's daily digest names failures and bottlenecks too, since
-they are what its retro improves (`ringmaster/docs/headless-runs.md`).
+they are what its retro improves (`ringmaster-prototype/docs/headless-runs.md`).
 
 A request I make in chat is started now. A plan, a schedule or a milestone date never makes an agent
 refuse or postpone it; the milestone limits of the `issues` skill apply only to work you pick
@@ -292,8 +292,8 @@ of preference:
 
 1. Run in the foreground.
 2. Background through the harness (`run_in_background`), never bare `&`. Work that must outlive the
-   session (a headless `claude -p` run) → `ringmaster/src/agent-run.ts`, a systemd service with
-   its own deadline.
+   session (a headless `claude -p` run) → `ringmaster-prototype/src/agent-run.ts`, a systemd service
+   with its own deadline.
 3. Unavoidable `&` → own deadline, `timeout 300 <cmd> &` (the timer lives in the child), plus `trap
    'kill $PIDS 2>/dev/null' EXIT INT TERM` (no help on SIGKILL).
 

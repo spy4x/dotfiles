@@ -35,7 +35,7 @@ Never copy a decrypted env file between checkouts or worktrees: decrypt fresh in
 A repository whose manifest has a `hooks:install` task → run `deno task hooks:install` in the new
 worktree; it is idempotent. Its `pre-push` hook refuses a push while `deno task check` is red, so
 CI never spends a slot finding what the local check finds. Never push with `--no-verify`: fix the
-check instead (spy4x/ringmaster#295).
+check instead (spy4x/ringmaster-prototype#295).
 
 ## Claim an issue
 

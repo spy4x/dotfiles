@@ -184,5 +184,5 @@ git -C ~/sync/code/seed fetch ~/restore/tmp/tmp.AbC123/bundles/seed.bundle 'refs
 
 ## Run database backup
 
-The run database `~/.local/state/agent-run/runs.sqlite` is backed up by spy4x/ringmaster, which
-owns it: `~/sync/code/ringmaster/docs/backup.md`.
+The run database `~/.local/state/agent-run/runs.sqlite` is backed up by spy4x/ringmaster-prototype,
+which owns it: `~/sync/code/ringmaster-prototype/docs/backup.md`.

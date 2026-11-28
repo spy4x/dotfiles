@@ -1,4 +1,4 @@
-// The slim start-up context of the trial in spy4x/ringmaster-next#289, as pure functions: with
+// The slim start-up context of the trial in spy4x/ringmaster#289, as pure functions: with
 // `RINGMASTER_CONTEXT_ARM=slim`, each role reads only the parts of the global rules file, the
 // owner's direction and the skills listing it uses. register.ts wires them to
 // `prompt.attachment`.

@@ -22,7 +22,7 @@ that seat; one that does not is NeatSoft's.
 
 | Account       | Profile    | Repositories                                                                                                                                                              |
 | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NeatSoft      | `neatsoft` | `ringmaster-next`, `ringmaster`, `financy`, `antonshubin.com`, `neatsoft.dev`, `command-center`, `upwork-guide`, `upwork-bot`, `gb`, any client without a seat |
+| NeatSoft      | `neatsoft` | `ringmaster`, `ringmaster-prototype`, `financy`, `antonshubin.com`, `neatsoft.dev`, `command-center`, `upwork-guide`, `upwork-bot`, `gb`, any client without a seat |
 | Personal      | `personal` | `seed`, `template`, `ts-libs`, `preact-components`, `rostok`, `homelab`, `oko`, `zond`, `caldav-mcp`, `caldav-tasks-web`, `mig`, `spy4x`, `vi-shop`, `warthunder-stats`, `wt-heli-sight-notes`, `rostok-cli-v1-test`, `skill-state`, personal chats |
 | A client      | private    | its repositories on its seat, listed privately                                                                                                                             |
 | Every account | any        | `dotfiles`, `ai-memory`                                                                                                                                                   |
@@ -30,7 +30,7 @@ that seat; one that does not is NeatSoft's.
 `dotfiles` and `ai-memory` hold the rules, my voice and my memory, which every account's work
 uses: a session on any account reads and changes them as part of its own work. Ringmaster's own
 runs on them use the personal account. Ringmaster runs each project on its account
-([spy4x/ringmaster-next#358](https://github.com/spy4x/ringmaster-next/issues/358)).
+([spy4x/ringmaster#358](https://github.com/spy4x/ringmaster/issues/358)).
 
 The profile is the name `claude-as` and `claude-desktop-as` take. Nothing checks which account a
 session runs on: I choose it when I open the session.

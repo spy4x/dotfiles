@@ -183,7 +183,7 @@ async function shimmed($: EngineInterface, command: string, post: boolean): Prom
 }
 
 export const register: Register = (on) => {
-  // The slim arm of the context trial (spy4x/ringmaster-next#289): each role reads only its part
+  // The slim arm of the context trial (spy4x/ringmaster#289): each role reads only its part
   // of the rules, the direction and the skills listing. Fail-open: any error keeps the full text.
   on(`prompt.attachment`, async ($, e, next) => {
     const answer = await next(e)
