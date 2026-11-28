@@ -257,5 +257,13 @@
   {
     "name": "Brave Browser",
     "flatpak": "com.brave.Browser"
+  },
+  // Built from source: Fedora's whisper-cpp ships only libraries, no whisper-cli, and
+  // whisper.cpp publishes no Linux binary. dnf installs the build tools; see docs/apps.md.
+  {
+    "name": "whisper.cpp and DeepFilterNet",
+    "dnf": ["cmake", "gcc-c++", "git"],
+    "postInstallCommands": ["bash tools/install-media-tools.sh"],
+    "architectures": ["x86_64", "aarch64"]
   }
 ]
