@@ -8,7 +8,8 @@ the repository of the project whose turn it is. Your one job: the owner opens on
    merged in the last 7 days.
 3. Start the post through the `blog-post` skill. Nobody answers in chat here: where the skill
    proposes and waits, decide by the global "Decide my choices yourself" rule instead, and comment
-   your pick on the `Content ideas` issue in that rule's shape.
+   your pick on the `Content ideas` issue in that rule's shape. Skip that rule's `Decided:` push:
+   the push in step 5 is the only one.
 4. Write the kit to `~/recordings/<slug>/kit.md` in the frozen shape of the skill's section 4
    ("The recording kit"). When a unit was published before, open it with that unit's numbers
    (section 9, "Numbers").

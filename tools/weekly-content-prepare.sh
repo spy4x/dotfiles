@@ -14,6 +14,7 @@ CODE=${WEEKLY_CONTENT_CODE:-$HOME/sync/code}
 PRESSURE=${WEEKLY_CONTENT_PRESSURE:-/sys/fs/cgroup/user.slice/cpu.pressure}
 WEEK=${WEEKLY_CONTENT_WEEK:-$(date +%G-W%V)}
 read -ra AGENT_RUN <<<"${AGENT_RUN:-deno run -A $HOME/sync/code/ringmaster/src/agent-run.ts}"
+# The same limit as ringmaster's DEFAULT_PRESSURE_PERCENT (src/limits.ts), which holds its leads.
 MAX_PRESSURE=40
 
 [ -e "$STATE/$WEEK" ] && exit 0
@@ -25,7 +26,7 @@ if [ -n "$avg60" ] && awk -v p="$avg60" -v m="$MAX_PRESSURE" 'BEGIN { exit !(p >
   exit 0
 fi
 
-name=$(sed -n 's/^[0-9][0-9]*\. \(.*\), now\.$/\1/p' "$SKILL" 2>/dev/null | head -n1)
+name=$(sed -n 's/^[0-9][0-9]*\. \(.*\), now\.$/\1/p' "$SKILL" 2>/dev/null | head -n1 || true)
 if [ -z "$name" ]; then
   echo "no line '<n>. <Name>, now.' in $SKILL: cannot tell whose turn it is" >&2
   exit 1
