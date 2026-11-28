@@ -9,7 +9,7 @@
 
 [AI harness config](ai-harnesses/README.md) · [Global agent rules](ai-harnesses/AGENTS.md) ·
 [Apps](docs/apps.md) · [Shell](docs/shell.md) · [Sync](docs/sync.md) ·
-[Host limits](docs/host-limits.md) ·
+[Host limits](docs/host-limits.md) · [Weekly content](docs/weekly-content.md) ·
 [Development](docs/development.md)
 
 [![Demo video, 58 seconds: one reviewer agent from ai-harnesses/ shown side by side as Claude Code, OpenCode and DSH render it. One edit to the source reaches all three, and deno task ai --check catches a hand edit to one copy.](media/demo/poster.webp)](https://antonshubin.com/tools/dotfiles)
@@ -72,6 +72,8 @@ How the rendering works, the file layout per harness and how to write a skill or
   repository), with restic, every [night](docs/sync.md#work-backup).
 - **Shell.** [`install-shell.ts`](docs/shell.md) sets up Zsh, Oh My Zsh, Powerlevel10k and the
   aliases in `aliases.sh`.
+- **Weekly recording kit.** [`tools/weekly-content-prepare.sh`](docs/weekly-content.md) starts
+  one headless lead on Monday that writes the week's recording kit and sends one push.
 - **Config in home.** tmux, Neovim, Zsh and the prompt are [symlinked](docs/sync.md) from this
   repository.
 - **Limits for many agents.** [`system/`](docs/host-limits.md) raises inotify instances and zram
