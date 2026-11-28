@@ -220,6 +220,10 @@ answering about it, read its `AGENTS.md` at the root. The list of projects, the 
 included, is open to agents), the self-hosted services and the account-wide tokens: the
 `workspace` skill.
 
+Each project runs only on the Claude account that owns it, never on another, not even in a session
+a lead opens there; the `harness-rules` mod enforces it. Who owns what, and limits: dotfiles
+`docs/claude-accounts.md`.
+
 Durable project knowledge → the repo (`AGENTS.md`, `docs/`). Harness-local memory only for facts no
 repo owns.
 
@@ -264,8 +268,8 @@ event (never the value) in `~/sync/code/ai-memory/incidents/rotation-log.md`.
 
 # Sudo
 
-Every agent may run `sudo` on this machine. It is passwordless and unrestricted, so use `sudo -n`
-(it fails instead of hanging on a prompt) and only for what the task needs.
+Every agent may use passwordless, unrestricted `sudo` on this machine: use `sudo -n` (it fails
+instead of hanging on a prompt), only for what the task needs.
 
 # Fail-open
 
@@ -295,13 +299,12 @@ of preference:
    session (a headless `claude -p` run) → `tools/agent-run.ts`, a systemd service with its own
    deadline.
 3. Unavoidable `&` → own deadline, `timeout 300 <cmd> &` (the timer lives in the child), plus `trap
-   'kill $PIDS 2>/dev/null' EXIT INT TERM` (no help on SIGKILL). CPU load: `stress-ng --cpu 0
-   --timeout 60s` or at least `timeout 60s yes >/dev/null &`, never `while :; do :; done &`.
+   'kill $PIDS 2>/dev/null' EXIT INT TERM` (no help on SIGKILL).
 
 Same for temp dirs, `DENO_DIR` caches, dev servers, ports, watchers, containers, `tmux` sessions:
 clean up in a `trap`, not a trailing line. The orphan sweep before you report done, killing
-processes, the process cap, containers, browsers and cloud servers: the `leave-nothing-running`
-skill.
+processes, the process cap, CPU load, containers, browsers and cloud servers: the
+`leave-nothing-running` skill.
 
 Never give `rm` or `rmdir` a variable or a command substitution (`"$D"`, `"$(mktemp -d)"`),
 recursive or not, guarded or not: an empty one deletes from `/`. Never give it `/`, a top-level
@@ -334,8 +337,9 @@ or empty the scratchpad itself: other agents' worktrees can live there.
 # Git Flow
 
 Worktree first (sibling `worktrees/<repo>/`, never inside repo — repo tooling sweeps nested
-checkouts into fmt/type-check). Already in a linked worktree (`.git` is a file) → work there, never
-nest. Else create one with the `git-flow` skill's command.
+checkouts into fmt/type-check), so never Claude Code's own (`--worktree`, `EnterWorktree`,
+`isolation: worktree`, the desktop "worktree" option). Already in a linked worktree (`.git` is a file) → work
+there, never nest. Else create one with the `git-flow` skill's command.
 
 Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR always exists,
 `[WIP]` in the title until the gate passes; `gh pr create --fill` right after push, never ask.
@@ -468,6 +472,3 @@ GitHub review record doesn't mean unreviewed — the gate runs before the PR. Ta
 # Harness notes
 
 **Claude Code.** Runs in bypassPermissions mode: nothing prompts, so these rules are yours to hold.
-Never use the built-in worktree features (`--worktree`, `EnterWorktree`, `isolation: worktree`,
-the desktop "worktree" option) — they nest in `<repo>/.claude/worktrees/`; use the `git-flow`
-skill's command.
