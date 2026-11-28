@@ -361,6 +361,17 @@ test(`keeps any other attachment type byte for byte`, async ($, on) => {
   expect(await attach($, `todo_reminder`, INSTRUCTIONS, `a1`)).toBe(INSTRUCTIONS)
 })
 
+test(`leaves an attachment another hook removed removed`, async ($, on) => {
+  on(`prompt.attachment`, () => ({ text: null }))
+  mock.env(on, { RINGMASTER_CONTEXT_ARM: `slim`, AGENT_RUN_ID: `run` })
+  const answer = await $.prompt.attachment({
+    type: `instructions`,
+    text: INSTRUCTIONS,
+    origin: { kind: `engine` },
+  })
+  expect(answer.text).toBeNull()
+})
+
 test(`keeps the context byte for byte when the agent list fails`, async ($, on) => {
   env(on, `slim`)
   on(`agent.list`, () => {
