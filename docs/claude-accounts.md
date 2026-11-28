@@ -32,26 +32,8 @@ uses: a session on any account reads and changes them as part of its own work. R
 runs on them use the personal account. Ringmaster runs each project on its account
 ([spy4x/ringmaster-next#358](https://github.com/spy4x/ringmaster-next/issues/358)).
 
-The profile is the name `claude-as` and `claude-desktop-as` take. The same list, which the
-`harness-rules` mod enforces, is in
-[`accounts.ts`](../ai-harnesses/settings/claude/mods/harness-rules/hooks/accounts.ts); a test
-fails when it and this table disagree. A client's repositories and its profile stay out of this
-public repository: the mod reads them from `~/sync/code/ai-memory/claude-accounts.json`
-(`{ "<repo>": "<profile>" }`), and a repository in both lists keeps the account this one gives
-it. A session stops, with a line naming both accounts, when it
-moves into a repository of another account: its prompt is dropped when it starts there, and a
-shell `cd`, `pushd` or `-C` into it (relative, inside `( … )`, `{ …; }` or `bash -c` too), a
-Write, Edit or NotebookEdit there, or a subagent's folder there is refused. Writes from the shell
-(`sed -i`, redirects, `cp`) and other ways in (`git --git-dir`, `deno task --cwd`) are not
-checked. A
-repository under `~/sync/code` that no list names is refused until it is added: to this table and
-`accounts.ts`, or to the private list. The mod reads the
-session's account from the path of the Claude Code a desktop app runs
-(`~/.config/Claude-<profile>/claude-code/`, the default app's under `~/.config/Claude/`), else from
-`CLAUDE_ACCOUNT_PROFILE`, which `claude-as` exports, else takes `personal`. A shell a desktop
-session opens passes that desktop's path on, so `claude-as` drops it; a plain `claude` started in
-such a shell counts as the desktop's account. Headless runs
-(`AGENT_RUN_ID` set) are left to the engine that starts them.
+The profile is the name `claude-as` and `claude-desktop-as` take. Nothing checks which account a
+session runs on: I choose it when I open the session.
 
 ## Set up on a new machine
 

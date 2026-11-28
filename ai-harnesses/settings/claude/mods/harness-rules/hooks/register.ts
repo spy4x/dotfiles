@@ -17,18 +17,8 @@ import {
   spawnVerdict,
   unplacedVerdict,
   uuidVerdict,
-  type Verdict,
   type Where,
 } from "./rules.ts"
-import {
-  type Clients,
-  CLIENTS_PATH,
-  isAbsolute,
-  parseClients,
-  sessionProfile,
-  workPaths,
-  workVerdict,
-} from "./accounts.ts"
 
 /**
  * Added to every refused Bash call. Agents often fix a body (`sed -i '1i <!-- agent -->'`) and
@@ -135,79 +125,7 @@ async function memoryBlocks($: EngineInterface) {
   }
 }
 
-/** The private client list; a missing, unreadable or malformed one is logged and empty. */
-async function clients($: EngineInterface, path: string): Promise<Clients> {
-  try {
-    return parseClients(await $.fs.read(path))
-  } catch (error) {
-    await log($, { event: `account`, clients: path, error: String(error) })
-    return {}
-  }
-}
-
-/**
- * Judges the folders a session is about to work in against the account it runs on
- * (`workVerdict`). A headless run (`AGENT_RUN_ID`) passes: the engine that starts it keeps it on
- * its account. Fail-open: an error of the check itself is shown and logged, and the work goes on,
- * so a broken hook never stops all work.
- */
-async function accountCheck(
-  $: EngineInterface,
-  folders: () => Promise<readonly string[]>,
-): Promise<Verdict> {
-  try {
-    const paths = await folders()
-    if (paths.length === 0) return ALLOW
-    const [execPath, named, home, run] = await Promise.all([
-      $.env.get(`CLAUDE_CODE_EXECPATH`),
-      $.env.get(`CLAUDE_ACCOUNT_PROFILE`),
-      $.env.get(`HOME`),
-      $.env.get(`AGENT_RUN_ID`),
-    ])
-    if (run || !home) return ALLOW
-    const profile = sessionProfile(execPath, named)
-    const verdict = await workVerdict(
-      paths,
-      home,
-      profile,
-      (dir) => $.fs.exists(`${dir}/.git`),
-      () => clients($, `${home}/${CLIENTS_PATH}`),
-    )
-    if (verdict.deny) await log($, { event: `account`, profile, ...verdict })
-    return verdict
-  } catch (error) {
-    const text = `harness-rules: the account check failed, so it let this through: ${error}`
-    try {
-      $.ui.toast(text)
-    } catch {
-      // A session with no surface has nowhere to show it; the log keeps it.
-    }
-    await log($, { event: `account`, error: String(error) })
-    return ALLOW
-  }
-}
-
 export const register: Register = (on) => {
-  // A session whose folder is a repository of another account gets no turn: each prompt is
-  // dropped with the reason, which the person reads. A prompt costs one look at the folder.
-  on(`prompt.submit`, async ($, e, next) => {
-    const verdict = await accountCheck($, async () => [await $.session.cwd()])
-    return verdict.deny ? { drop: verdict.deny } : next(e)
-  })
-
-  // Moving into another repository mid-session: a `cd` or `-C` there, a file written there.
-  // A call that names no folder costs string work only; one that does adds one `.git` look. The
-  // call's input carries no working directory, so a relative target is read from the directory
-  // the hook runs in, a subagent's own included (`$.session.cwd()`), fetched only when needed.
-  on(`tool.call`, async ($, e, next) => {
-    const input = e as unknown as Record<string, unknown>
-    const verdict = await accountCheck($, async () => {
-      const paths = workPaths(e.tool, input)
-      return paths.every(isAbsolute) ? paths : workPaths(e.tool, input, await $.session.cwd())
-    })
-    return verdict.deny ? { deny: verdict.deny } : next(e)
-  })
-
   // The conversation's first message carries direction.md, as it carries CLAUDE.md.
   on(`prompt.context`, async ($, e, next) => {
     const context = await next(e)
@@ -250,9 +168,6 @@ export const register: Register = (on) => {
   })
 
   on(`agent.spawn`, async ($, e, next) => {
-    // A subagent runs on its session's account, so a folder it is given is judged the same way.
-    const elsewhere = await accountCheck($, async () => e.cwd === undefined ? [] : [e.cwd])
-    if (elsewhere.deny) return { deny: elsewhere.deny }
     const verdict = spawnVerdict(e, await fiveHourPercent($))
     await log($, {
       event: `spawn`,

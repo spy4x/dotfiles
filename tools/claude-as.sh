@@ -29,7 +29,4 @@ if [[ "${1:-}" == "--setup" ]]; then
 fi
 
 [[ -s "$token_file" ]] || { echo "No token yet. Run: claude-as $profile --setup" >&2; exit 1; }
-# A shell a desktop session opened passes on that app's Claude Code path, which the
-# harness-rules mod would read as the desktop's account before the profile.
-unset CLAUDE_CODE_EXECPATH
-CLAUDE_ACCOUNT_PROFILE="$profile" CLAUDE_CODE_OAUTH_TOKEN="$(cat "$token_file")" exec "$claude" "$@"
+CLAUDE_CODE_OAUTH_TOKEN="$(cat "$token_file")" exec "$claude" "$@"
