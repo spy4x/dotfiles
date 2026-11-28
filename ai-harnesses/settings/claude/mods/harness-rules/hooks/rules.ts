@@ -649,6 +649,11 @@ export function ghPost(command: string): GhPost {
       if (flagValues(proper, TITLE_FLAGS[verb!] ?? []).length > 0) found = titled(found)
       continue
     }
+    // No shell expands a `~` glued to its flag (`--body-file=~/b.md`, `-F~/b.md`), so gh would
+    // open `./~/b.md`, not the file under home the hook reads. Only a separate word is expanded.
+    if (proper.some((word) => flagValues([word], flags.file)[0]?.startsWith(`~`))) {
+      return { kind: `unplaced` }
+    }
     const [path] = flagValues(proper, flags.file)
     const [body] = flagValues(proper, flags.inline)
     // Several inline posts (`gh issue close 1 -c …; gh issue close 2 -c …`) hold all their text in
@@ -967,7 +972,8 @@ export function unplacedVerdict(command: string): Verdict {
     deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
       `after a wrapper it does not know or inside a shell function, inside quotes or \`$(…)\`, ` +
       `as a second post, in a heredoc's text, or with a body file named through a variable or ` +
-      `glob it cannot resolve. A relative body file needs every other command to keep the ` +
+      `glob it cannot resolve, or with a \`~\` glued to its flag (\`--body-file=~/b.md\`), ` +
+      `which no shell expands. A relative body file needs every other command to keep the ` +
       `folder: only a literal \`cd <dir> &&\` chained to the post may move it, never \`eval\`, ` +
       `\`pushd\`, a function or a \`cd\` that may not run; else pass its absolute path. ` +
       `Make it the only post, written ` +

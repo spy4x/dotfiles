@@ -243,6 +243,29 @@ test(`drops the = of a short flag's attached value, as gh does`, () => {
   expect(ghPost(`gh pr comment 5 -wb=x`)).toEqual({ kind: `inline`, body: `x` })
 })
 
+test(`refuses a body file whose ~ is glued to its flag, which no shell expands`, () => {
+  for (
+    const command of [
+      `gh issue comment 1 --repo a/b --body-file=~/b.md`,
+      `gh issue comment 1 --repo a/b -F~/b.md`,
+      `gh issue comment 1 --repo a/b -F=~/b.md`,
+      `gh pr comment 1 -wF~/b.md`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
+})
+
+test(`keeps a separate ~ body-file word, an absolute glued path and an inline ~ body`, () => {
+  for (
+    const command of [
+      `gh issue comment 1 --repo a/b --body-file ~/b.md`,
+      `gh issue comment 1 --repo a/b -F ~/b.md`,
+    ]
+  ) expect(ghPost(command)).toEqual({ kind: `file`, path: `~/b.md` })
+  expect(ghPost(`gh issue comment 1 --repo a/b --body-file=/abs/b.md`))
+    .toEqual({ kind: `file`, path: `/abs/b.md` })
+  expect(ghPost(`gh issue comment 1 --body=~x`)).toEqual({ kind: `inline`, body: `~x` })
+})
+
 test(`finds the comment a close posts and the body a merge posts`, () => {
   expect(ghPost(`gh issue close 1 --comment x`)).toEqual({ kind: `inline`, body: `x` })
   expect(ghPost(`gh pr close 1 -c x`)).toEqual({ kind: `inline`, body: `x` })
