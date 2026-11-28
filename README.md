@@ -78,7 +78,8 @@ How the rendering works, the file layout per harness and how to write a skill or
   repository.
 - **Limits for many agents.** [`system/`](docs/host-limits.md) raises inotify instances and zram
   swap, cleans `/tmp` sooner, and caps the tasks each app can start.
-- **Unattended agent runs** and session costs live in a separate private repository, ringmaster.
+- **Unattended agent runs** and session costs live in a separate private repository,
+  ringmaster-prototype.
 - **VPN only while it works.** [`tools/vpn-guard/`](docs/vpn-guard.md) connects a full-tunnel VPN
   at boot and every 30 minutes, and drops it when the internet does not work through it.
 - **Cloned, not synced.** Each machine clones this repository from GitHub and pushes its work, and
