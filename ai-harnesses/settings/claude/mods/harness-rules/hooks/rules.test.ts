@@ -254,6 +254,24 @@ test(`refuses a body file whose ~ is glued to its flag, which no shell expands`,
   ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
 })
 
+test(`refuses a body file whose ~ prefix is quoted or escaped, which no shell reads as home`, () => {
+  // `~'/b.md'`: zsh expands it, bash does not, so it is refused too.
+  for (const word of [`'~/b.md'`, `"~/b.md"`, `\\~/b.md`, `'~'/b.md`, `~'/b.md'`, `~"/b.md"`]) {
+    for (const flag of [`--body-file`, `-F`]) {
+      expect(ghPost(`gh issue comment 1 --repo a/b ${flag} ${word}`)).toEqual({ kind: `unplaced` })
+    }
+  }
+})
+
+test(`keeps an unquoted ~ prefix and quoted paths without a leading ~`, () => {
+  for (const flag of [`--body-file`, `-F`]) {
+    const post = (word: string) => ghPost(`gh issue comment 1 --repo a/b ${flag} ${word}`)
+    expect(post(`~/'b.md'`)).toEqual({ kind: `file`, path: `~/b.md` })
+    expect(post(`'/abs/b.md'`)).toEqual({ kind: `file`, path: `/abs/b.md` })
+    expect(post(`"b.md"`)).toEqual({ kind: `file`, path: `b.md` })
+  }
+})
+
 test(`keeps a separate ~ body-file word, an absolute glued path and an inline ~ body`, () => {
   for (
     const command of [
