@@ -82,6 +82,11 @@ interface Simple {
   readonly heredocs: Heredoc[]
   /** The `;`, `&`, `|` and newline characters between the command before it and this one. */
   readonly before: string
+  /**
+   * Words starting with `~` whose `~`, or a character after it up to the first `/`, was quoted or
+   * escaped (`'~/b.md'`, `\~/b.md`, `~'/b.md'`): no shell reads it as home (zsh does the last).
+   */
+  readonly quotedTilde: Set<string>
 }
 
 /**
@@ -108,18 +113,31 @@ function simpleCommands(command: string, shell: boolean): Simple[] {
   let word: string | undefined
   let quote: string | undefined
   let before = ``
+  let quotedTilde = new Set<string>()
+  // Where in the current word its first quoted or escaped character sits.
+  let quotedAt: number | undefined
   const endWord = () => {
-    if (word !== undefined) words.push(word)
+    if (word !== undefined) {
+      words.push(word)
+      const slash = word.indexOf(`/`)
+      // The `/` ending the prefix counts: zsh expands `~'/b.md'`, bash does not.
+      const end = slash === -1 ? word.length : slash
+      if (word.startsWith(`~`) && quotedAt !== undefined && quotedAt <= end) {
+        quotedTilde.add(word)
+      }
+    }
     word = undefined
+    quotedAt = undefined
   }
   const endCommand = () => {
     endWord()
     if (words.length > 0 || heredocs.length > 0) {
-      commands.push({ words, heredocs, before })
+      commands.push({ words, heredocs, before, quotedTilde })
       before = ``
     }
     words = []
     heredocs = []
+    quotedTilde = new Set()
   }
   // Reads the pending heredocs' bodies from `from`, and returns where the command goes on.
   const readBodies = (from: number): number => {
@@ -162,7 +180,8 @@ function simpleCommands(command: string, shell: boolean): Simple[] {
       // Inside double quotes it escapes only `$`, a backtick, `"`, `\` and a newline.
       i++
       if (next === `\n`) continue
-      else if (next === `$` || next === `\``) word = `${word ?? ``}\\${next}`
+      quotedAt ??= (word ?? ``).length
+      if (next === `$` || next === `\``) word = `${word ?? ``}\\${next}`
       else if (quote && !`"\\`.includes(next)) word = `${word ?? ``}\\${next}`
       else word = (word ?? ``) + next
     } else if (quote) {
@@ -171,6 +190,7 @@ function simpleCommands(command: string, shell: boolean): Simple[] {
     } else if (char === `"` || char === `'`) {
       quote = char
       word = word ?? ``
+      quotedAt ??= word.length
     } else if (shell && char === `#` && word === undefined) {
       // A comment runs to the end of its line, and its text is no command or heredoc.
       const newline = command.indexOf(`\n`, i)
@@ -649,12 +669,16 @@ export function ghPost(command: string): GhPost {
       if (flagValues(proper, TITLE_FLAGS[verb!] ?? []).length > 0) found = titled(found)
       continue
     }
-    // No shell expands a `~` glued to its flag (`--body-file=~/b.md`, `-F~/b.md`), so gh would
-    // open `./~/b.md`, not the file under home the hook reads. Only an unquoted separate word is.
-    if (proper.some((word) => flagValues([word], flags.file)[0]?.startsWith(`~`))) {
+    const [path] = flagValues(proper, flags.file)
+    // No shell expands a `~` glued to its flag (`--body-file=~/b.md`, `-F~/b.md`) or a quoted or
+    // escaped one (`'~/b.md'`, `\~/b.md`), so gh would open `./~/b.md`, not the file under home
+    // the hook reads. Only an unquoted separate word is.
+    if (
+      proper.some((word) => flagValues([word], flags.file)[0]?.startsWith(`~`)) ||
+      (path !== undefined && simple.quotedTilde.has(path))
+    ) {
       return { kind: `unplaced` }
     }
-    const [path] = flagValues(proper, flags.file)
     const [body] = flagValues(proper, flags.inline)
     // Several inline posts (`gh issue close 1 -c …; gh issue close 2 -c …`) hold all their text in
     // the command, which is scanned whole: they read as one whose body is the first without the
@@ -972,8 +996,9 @@ export function unplacedVerdict(command: string): Verdict {
     deny: `This command posts with \`gh issue\` or \`gh pr\` in a form the guard cannot read: ` +
       `after a wrapper it does not know or inside a shell function, inside quotes or \`$(…)\`, ` +
       `as a second post, in a heredoc's text, or with a body file named through a variable or ` +
-      `glob it cannot resolve, or with a \`~\` glued to its flag (\`--body-file=~/b.md\`), ` +
-      `which no shell expands. A relative body file needs every other command to keep the ` +
+      `glob it cannot resolve, or with a \`~\` glued to its flag (\`--body-file=~/b.md\`) or ` +
+      `quoted or escaped (\`'~/b.md'\`, \`\\~/b.md\`), which no shell expands to home. ` +
+      `A relative body file needs every other command to keep the ` +
       `folder: only a literal \`cd <dir> &&\` chained to the post may move it, never \`eval\`, ` +
       `\`pushd\`, a function or a \`cd\` that may not run; else pass its absolute path. ` +
       `Make it the only post, written ` +

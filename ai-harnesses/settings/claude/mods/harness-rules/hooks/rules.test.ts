@@ -10,6 +10,7 @@ import {
   markerVerdict,
   memoryCheckoutBlock,
   spawnVerdict,
+  unplacedVerdict,
   uuidVerdict,
   withGhShim,
 } from "./rules.ts"
@@ -252,6 +253,26 @@ test(`refuses a body file whose ~ is glued to its flag, which no shell expands`,
       `gh pr comment 1 -wF~/b.md`,
     ]
   ) expect(ghPost(command)).toEqual({ kind: `unplaced` })
+})
+
+test(`refuses a body file whose ~ prefix is quoted or escaped, which no shell reads as home`, () => {
+  // `~'/b.md'`: zsh expands it, bash does not, so it is refused too.
+  for (const word of [`'~/b.md'`, `"~/b.md"`, `\\~/b.md`, `'~'/b.md`, `~'/b.md'`, `~"/b.md"`]) {
+    for (const flag of [`--body-file`, `-F`]) {
+      expect(ghPost(`gh issue comment 1 --repo a/b ${flag} ${word}`)).toEqual({ kind: `unplaced` })
+    }
+  }
+  expect(unplacedVerdict(`gh issue comment 1 -F '~/b.md'`).deny)
+    .toContain(`quoted or escaped (\`'~/b.md'\`, \`\\~/b.md\`), which no shell expands to home. A`)
+})
+
+test(`keeps an unquoted ~ prefix and quoted paths without a leading ~`, () => {
+  for (const flag of [`--body-file`, `-F`]) {
+    const post = (word: string) => ghPost(`gh issue comment 1 --repo a/b ${flag} ${word}`)
+    expect(post(`~/'b.md'`)).toEqual({ kind: `file`, path: `~/b.md` })
+    expect(post(`'/abs/b.md'`)).toEqual({ kind: `file`, path: `/abs/b.md` })
+    expect(post(`"b.md"`)).toEqual({ kind: `file`, path: `b.md` })
+  }
 })
 
 test(`keeps a separate ~ body-file word, an absolute glued path and an inline ~ body`, () => {
