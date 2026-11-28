@@ -26,9 +26,9 @@ One folder per video, `~/recordings/<slug>/`, where the kit already is (`kit.md`
 ## 2. Transcript
 
 Transcribe with whisper.cpp (`whisper-cli`) and `--output-json-full`, which gives a time for every
-word. The cut tool needs those word times: a transcript without them is no substitute. dotfiles
-does not install `whisper-cli` yet: when it is missing, build whisper.cpp and fetch a model with
-its `models/download-ggml-model.sh` first.
+word. The cut tool needs those word times: a transcript without them is no substitute. dotfiles'
+`deno task install-apps` installs `whisper-cli`, the model
+`~/.local/share/whisper.cpp/models/ggml-small.en.bin` and `deep-filter`.
 
 Then correct, in the JSON, the spelling of names, products and commands the transcript got wrong:
 the Shorts' captions are burned in from it. Never change what he said.

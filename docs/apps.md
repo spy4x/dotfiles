@@ -82,3 +82,13 @@ Commands support environment variable expansion:
 
 - `$USER` - Current username
 - `$HOME` - User home directory
+
+## Media tools for the talking-video cut
+
+The `whisper.cpp and DeepFilterNet` entry runs `tools/install-media-tools.sh`, which installs,
+pinned and checksummed, and skips each piece already in place:
+
+- `~/.local/bin/whisper-cli`: whisper.cpp `v1.9.6` (commit `00c1630`), built from source and
+  linked statically, because Fedora's `whisper-cpp` package ships no CLI.
+- `~/.local/share/whisper.cpp/models/ggml-small.en.bin`: the English `small.en` model.
+- `~/.local/bin/deep-filter`: DeepFilterNet `v0.5.6`, the noise remover, from its GitHub release.
