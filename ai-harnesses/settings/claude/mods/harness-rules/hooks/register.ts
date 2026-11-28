@@ -190,8 +190,9 @@ export const register: Register = (on) => {
     return { deny: `${verdict.deny} ${NOTHING_RAN}` }
   })
 
-  // A body we post leaves the machine, so this guard fails closed: a hook that throws refuses,
-  // and a re-entry (a gh call another hook makes beneath this one) is refused when it posts.
+  // A body we post leaves the machine, so this guard fails closed: a hook that throws refuses.
+  // It cannot see a gh call another hook makes beneath this one's own `$` calls: the engine
+  // skips every hook already on the call stack (the recursion skip, `next.origin`).
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const post = ghPost(e.command)
     if (post.kind === `none`) return next(e)
@@ -234,14 +235,12 @@ export const register: Register = (on) => {
     await log($, { event: `gh`, deny: verdict.deny })
     return { deny: `${verdict.deny} ${NOTHING_RAN}` }
   }).catch(async ($, e, next) => {
-    if (next.error.kind === `re-entry` && ghPost(e.command).kind === `none`) return next(e)
-    if (next.error.kind !== `re-entry` && next.called) return next(e)
+    if (next.called) return next(e)
     const deny = `The check of this post failed: gitleaks did not run, or the check broke. ` +
       `It was not sent.`
     // The handler's grace is 1 second of its own time (`HookBudget.catchMs`); past it the hook
     // counts as absent and the post would go. Its `$` calls are free, so a slow log write
-    // cannot use the grace up. On a re-entry the engine rejects this handler's own `$` calls
-    // (`CatchHandler`), so nothing is logged.
+    // cannot use the grace up.
     await log($, { event: `gh`, deny })
     return { deny: `${deny} ${NOTHING_RAN}` }
   })
