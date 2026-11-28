@@ -94,7 +94,9 @@ if [ -z "$scene" ]; then
 fi
 
 mkdir -p "$REC/$slug"
-touch "$D/start"
+# A snapshot of the recordings already there: OBS's new file is the one not in it. Comparing
+# mtimes misses a file written in the same tick of the coarse file clock as a marker.
+find "$REC" -maxdepth 1 -type f -name '*.mkv' -print0 | sort -z >"$D/before"
 echo "recording: profile $PROFILE, scene $scene. Close OBS to stop."
 obs_status=0
 obs --profile "$PROFILE" --collection "$PROFILE" --scene "$scene" --startrecording ||
@@ -113,6 +115,7 @@ while IFS= read -r -d '' src; do
   [ ! -e "$src" ] || fail "could not move $src to $dest"
   echo "$dest"
   moved=$((moved + 1))
-done < <(find "$REC" -maxdepth 1 -type f -name '*.mkv' -newer "$D/start" -print0 | sort -z)
+done < <(find "$REC" -maxdepth 1 -type f -name '*.mkv' -print0 | sort -z |
+  comm -z -13 "$D/before" -)
 
 [ "$moved" -gt 0 ] || fail "OBS wrote no new .mkv to $REC"
