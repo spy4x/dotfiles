@@ -350,6 +350,20 @@ test(`reads a body file under ~ or $HOME and refuses it without the marker`, asy
   expect(read).toEqual([`/home/test/f.md`, `/home/test/f.md`, `/home/test/f.md`])
 })
 
+test(`refuses a body file whose ~ is glued to its flag, reading nothing`, async ($, on) => {
+  home(on)
+  const read: string[] = []
+  on(`fs.read`, (_$, e) => {
+    read.push(e.path)
+    return { value: `<!-- agent -->\nhi` }
+  })
+  on(`process.run`, () => ({ value: RAN(0) }))
+  on(`tool.call`, () => BASH_OK)
+  const command = `gh issue comment 1 --repo a/b --body-file=~/b.md`
+  expect((await $.tool.call({ tool: `Bash`, command })).deny).toContain(`glued to its flag`)
+  expect(read).toEqual([])
+})
+
 test(`scans a marked body file under ~ for secrets`, async ($, on) => {
   mock.env(on, { HOME: `/home/test` })
   on(`fs.read`, (_$, e) => {
