@@ -76,7 +76,7 @@ optional commercial enterprise tier (later).
 | Plausible Analytics | 2 co-founders       | 20K+  | AGPLv3                      | $1M+ self-funded | Privacy-first GA alternative        |
 | Dub.co              | Steven Tey, solo    | 24K   | AGPLv3 + `/ee`              | $5M+             | Custom domains on free tier         |
 | Cal.com             | Peer Richelsen      | 48K   | AGPLv3                      | $5M+             | Open Calendly alt                   |
-| Papermark           | Marc Lou, solo      | 9K    | AGPLv3                      | $20K+ MRR        | #1 PH day + Twitter build-in-public |
+| Papermark           | M. Seitz, I. Shnai  | 9K    | AGPLv3                      | $20K+ MRR        | #1 PH day + Twitter build-in-public |
 | Infisical           | Vlad Matsiiako      | 27K   | MIT→AGPL                    | $5M+             | Cash-flow positive pre-Series A     |
 | Logto               | Silverhand, indie   | 14.5K | MPL-2.0 + proprietary cloud | profitable       | Open-source Auth0 alternative       |
 | Coolify             | Andras Bacsai, solo | 30K   | Apache 2.0                  | 3,641 cloud subs | Self-hostable Heroku                |
@@ -182,7 +182,7 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 | ---------------------------- | ----------- | ---- | -------- | ---------------------------------------- |
 | GitHub README                | 1 day       | $0   | Day 1    | Always-on landing. Highest.              |
 | IndieHackers profile + posts | 30 min/day  | $0   | Day 1    | Plausible's #1 source of first 100 users |
-| Twitter/X build-in-public    | 30 min/day  | $0   | Day 1    | Marc Lou's primary channel               |
+| Twitter/X build-in-public    | 30 min/day  | $0   | Day 1    | Where indie founders share progress      |
 | Show HN                      | 1 post      | $0   | Week 2   | 1-3K visitors if it hits                 |
 | r/selfhosted post            | 1 post      | $0   | Week 2-3 | 1M subs, loves self-hostable alts        |
 | ProductHunt                  | 1 day       | $0   | Day 14   | Badge + backlink. Don't expect revenue.  |
@@ -424,10 +424,10 @@ Shah. DM 2 weeks before with 1-line pitch + demo link.
 
 ---
 
-## 10. Twitter/X build-in-public (Marc Lou playbook)
+## 10. Twitter/X build-in-public
 
-Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months primarily through
-daily Twitter build-in-public. His formula:
+Marc Lou (@marc_lol, known for ShipFast) grew his products mostly through daily build-in-public on
+Twitter. The formula:
 
 - **Daily tweet**: shipping update, MRR screenshot, "I just shipped X" with screenshot
 - **Weekly thread**: milestone recap (numbers, lessons, what next)
