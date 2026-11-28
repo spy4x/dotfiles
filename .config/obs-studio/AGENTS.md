@@ -44,8 +44,10 @@ Mask: alpha PNG, color=4294967295, stretch=false.
 Face rectangle: `layout.json` (this directory) gives the canvas size and the rectangle the face
 covers in CodingScene, for tools that cut a recording, such as the stacked Short. OBS fits the
 500x730 crop into the group's 508x784 bounds (scale 1.016, centred), so at `pos 3175,1324` the
-face covers x 3175, y 1345, 508x742. The mask is opaque over all of it. Moving or resizing the
-group, or changing the crop size, means updating `layout.json` in the same change.
+group covers x 3175, y 1345, 508x742. The mask (`stretch=false`) keeps its 2:3 shape inside the
+crop, and its last column is transparent, so the right 8 px show the screen: the face is 500x742.
+Its corners are rounded (radius about 50 px). Moving or resizing the group, or changing the crop
+or the mask, means updating `layout.json` in the same change.
 
 ## Workflow
 
