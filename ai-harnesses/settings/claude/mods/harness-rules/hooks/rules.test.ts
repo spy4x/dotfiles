@@ -10,6 +10,7 @@ import {
   markerVerdict,
   memoryCheckoutBlock,
   spawnVerdict,
+  unplacedVerdict,
   uuidVerdict,
   withGhShim,
 } from "./rules.ts"
@@ -261,6 +262,8 @@ test(`refuses a body file whose ~ prefix is quoted or escaped, which no shell re
       expect(ghPost(`gh issue comment 1 --repo a/b ${flag} ${word}`)).toEqual({ kind: `unplaced` })
     }
   }
+  expect(unplacedVerdict(`gh issue comment 1 -F '~/b.md'`).deny)
+    .toContain(`quoted or escaped (\`'~/b.md'\`, \`\\~/b.md\`), which no shell expands to home. A`)
 })
 
 test(`keeps an unquoted ~ prefix and quoted paths without a leading ~`, () => {

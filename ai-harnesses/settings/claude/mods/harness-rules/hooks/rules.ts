@@ -997,7 +997,8 @@ export function unplacedVerdict(command: string): Verdict {
       `after a wrapper it does not know or inside a shell function, inside quotes or \`$(…)\`, ` +
       `as a second post, in a heredoc's text, or with a body file named through a variable or ` +
       `glob it cannot resolve, or with a \`~\` glued to its flag (\`--body-file=~/b.md\`) or ` +
-      `quoted or escaped (\`'~/b.md'\`, \`\\~/b.md\`), which no shell expands to home.A relative body file needs every other command to keep the ` +
+      `quoted or escaped (\`'~/b.md'\`, \`\\~/b.md\`), which no shell expands to home. ` +
+      `A relative body file needs every other command to keep the ` +
       `folder: only a literal \`cd <dir> &&\` chained to the post may move it, never \`eval\`, ` +
       `\`pushd\`, a function or a \`cd\` that may not run; else pass its absolute path. ` +
       `Make it the only post, written ` +
