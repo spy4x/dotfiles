@@ -121,9 +121,8 @@ The verdict is `needs-fix` only when the diff holds at least one of these:
 - code the global rules forbid outright, because no issue can hold it: a local copy of code that
   belongs in a shared library, a new version 4 UUID, a dependency the deps rule rejects, or a
   feature, component, export, option, package or integration that does not count as asked for
-  ("Features" in the `issues` skill,
-  `~/sync/code/dotfiles/ai-harnesses/skills/issues/SKILL.md`), or a shared-library addition nobody asked for (step 5,
-  Architecture);
+  ("Features" in the `issues` skill, `~/sync/code/dotfiles/ai-harnesses/skills/issues/SKILL.md`), or
+  a shared-library addition nobody asked for (step 5, Architecture);
 - a rule or check change (a global rule in `dotfiles/ai-harnesses/`, a repo rule, lint or format
   config, a `check` task, a CI step) that the PR body does not name with its reason, that has no
   file in `~/sync/code/ai-memory/decisions/`, that rides in the PR whose work it unblocks, or that

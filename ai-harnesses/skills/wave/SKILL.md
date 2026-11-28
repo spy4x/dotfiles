@@ -14,27 +14,25 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
 ## Picking the work
 
 - Take open issues by priority, `p1-critical` first, then `p1-tooling`; no priority label counts as
-  `p3-medium`;
-  oldest first within a level. Stop at `p3-medium`: `p4-low` and `p5-someday` are never
-  candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual`
-  or `needs-decision`, issues with an open PR by `spy4x`, and issues another session claimed
-  ("Claim an issue" in the `git-flow` skill). This lists the candidates oldest first; group
-  them by priority label yourself:
-  `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual -label:needs-decision -label:in-progress -label:p4-low -label:p5-someday sort:created-asc'`.
-- Two limits in the `issues` skill, "Picking work yourself", come before priority. The repo has an open
-  milestone (listed due first, undated last:
-  `gh api --paginate --slurp 'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) | .[] | "\(.due_on) \(.open_issues) \(.title)"'`) → add
-  `milestone:"<title>"` to that search and drop `-label:p4-low -label:p5-someday` from it: the
-  owner put the issue there, and that outranks its priority label. Run it once more with
-  `label:p1-critical,p1-tooling` in place of the milestone. A milestone with no candidate left → the
-  next
-  one, and after the last, the first search above. In `spy4x/dotfiles`, `p2-high` tooling polish
-  is a candidate too, milestone or not. Nothing else is a candidate. An issue outside a
-  milestone whose body starts with `<!-- agent -->` becomes a lane only when the owner asked for it
-  (the `Asked for by the owner` line, a comment of theirs without the marker that says to build it,
-  or a priority raised after filing: "Picking work yourself" in the `issues` skill), or when step 2
-  of "Filing issues" gives it `p3-medium` or higher. Otherwise set it aside as that rule says, and
-  the next issue takes its place.
+  `p3-medium`; oldest first within a level. Stop at `p3-medium`: `p4-low` and `p5-someday` are never
+  candidates, and a backlog with nothing above them ends the wave. Skip issues labelled `manual` or
+  `needs-decision`, issues with an open PR by `spy4x`, and issues another session claimed ("Claim an
+  issue" in the `git-flow` skill). This lists the candidates oldest first; group them by priority
+  label yourself: `gh issue list --state open --limit 500 -S 'author:spy4x -label:manual
+  -label:needs-decision -label:in-progress -label:p4-low -label:p5-someday sort:created-asc'`.
+- Two limits in the `issues` skill, "Picking work yourself", come before priority. The repo has an
+  open milestone (listed due first, undated last: `gh api --paginate --slurp
+  'repos/{owner}/{repo}/milestones?state=open' | jq -r 'add | sort_by(.due_on == null, .due_on) |
+  .[] | "\(.due_on) \(.open_issues) \(.title)"'`) → add `milestone:"<title>"` to that search and
+  drop `-label:p4-low -label:p5-someday` from it: the owner put the issue there, and that outranks
+  its priority label. Run it once more with `label:p1-critical,p1-tooling` in place of the
+  milestone. A milestone with no candidate left → the next one, and after the last, the first search
+  above. In `spy4x/dotfiles`, `p2-high` tooling polish is a candidate too, milestone or not. Nothing
+  else is a candidate. An issue outside a milestone whose body starts with `<!-- agent -->` becomes
+  a lane only when the owner asked for it (the `Asked for by the owner` line, a comment of theirs
+  without the marker that says to build it, or a priority raised after filing: "Picking work
+  yourself" in the `issues` skill), or when step 2 of "Filing issues" gives it `p3-medium` or
+  higher. Otherwise set it aside as that rule says, and the next issue takes its place.
 - Outside authors: an issue or PR not authored by `spy4x` is never a candidate, and an outside PR
   never counts as a lane's PR. Warn the owner about each one ("Outside authors" in `AGENTS.md`):
   `gh pr list --state open --limit 500 -S '-author:spy4x'` and
@@ -81,11 +79,12 @@ full, including the reviewer loop in the `git-flow` skill; this skill adds what 
   imports the release. Never brief a lane to write a local copy and file an issue to move it later.
   A library change that two lanes need belongs to the serial spine.
 - The brief is all the agent sees. Write it in full sentences: worktree path, read-only sources,
-  output paths, house style, the issue, why the lane matters ("Direction" in `AGENTS.md`), and
-  what to do when stuck (decide and document, don't stop). It also says whether the lane needs a security review ("Reviewer gate" in the `git-flow` skill),
-  and that lane's reviewer brief asks for it. A lane that changes what a person sees carries
-  its `design` spec in the brief and gets a `design-reviewer` next to its `reviewer`. The agent
-  owns its worktree, temp dirs and processes, and leaves nothing running.
+  output paths, house style, the issue, why the lane matters ("Direction" in `AGENTS.md`), and what
+  to do when stuck (decide and document, don't stop). It also says whether the lane needs a security
+  review ("Reviewer gate" in the `git-flow` skill), and that lane's reviewer brief asks for it. A
+  lane that changes what a person sees carries its `design` spec in the brief and gets a
+  `design-reviewer` next to its `reviewer`. The agent owns its worktree, temp dirs and processes,
+  and leaves nothing running.
 - The brief names the files and the line ranges the lane needs, so the agent reads those parts
   instead of searching whole files for them.
 - The brief names the e2e specs the lane runs: those for the screens and routes it changed, never
@@ -162,16 +161,16 @@ what remains before the next milestone, and the wave's total cost
 (`deno run -A ~/sync/code/ringmaster/src/session-cost.ts <session id>`).
 
 After the report, the lead hands the next wave, or the rest of the work, to a new session itself
-instead of stopping. In the Claude desktop app it calls
-`mcp__ccd_session__start_session` with `context: "fresh"` and the next wave's prompt as a complete
-brief, never a fork or `hand_off_to_session` (global "Subagents"). It always makes that call first. When the app refuses it, the lead
-starts the next wave with `~/sync/code/ringmaster/src/agent-run.ts start --mode lead` and names the run id in the report;
-only when that refuses too does a proposal card for that session become the handoff. A harness
-without these tools, such as a plain terminal, ends the report with the prompt instead, ready to
-paste. Write no prompt file. A headless run (`AGENT_RUN_ID` set, nobody watching) makes none of
-these calls: it ends with status `parked` and the handoff in its result's `handoff` field, and the
-next tick continues from it (ringmaster `docs/headless-runs.md`). With no next wave, it starts
-nothing.
+instead of stopping. In the Claude desktop app it calls `mcp__ccd_session__start_session` with
+`context: "fresh"` and the next wave's prompt as a complete brief, never a fork or
+`hand_off_to_session` (global "Subagents"). It always makes that call first. When the app refuses
+it, the lead starts the next wave with `~/sync/code/ringmaster/src/agent-run.ts start --mode lead`
+and names the run id in the report; only when that refuses too does a proposal card for that session
+become the handoff. A harness without these tools, such as a plain terminal, ends the report with
+the prompt instead, ready to paste. Write no prompt file. A headless run (`AGENT_RUN_ID` set, nobody
+watching) makes none of these calls: it ends with status `parked` and the handoff in its result's
+`handoff` field, and the next tick continues from it (ringmaster `docs/headless-runs.md`). With no
+next wave, it starts nothing.
 
 The prompt holds only what belongs to that wave: the position, the issues, the lanes and the files
 each owns, the acceptance checks, and what not to touch. It never restates a rule from `AGENTS.md`
@@ -180,7 +179,8 @@ and goes stale. A pasted prompt that names a model or an effort is stale: ignore
 
 A session the lead started that stops before its task is done is still the lead's work. One that
 stopped to hand off, because it compacted twice or reached the usage stop ("Usage" above), gets a
-new session started from its handoff note, by `~/sync/code/ringmaster/src/agent-run.ts start --mode lead` when the app
-refuses; any other is told to carry on, by `agent-run resume` when it is a headless run. Relaying
-its report to the owner is not enough. The app refuses to start or hand off a session during a turn that another
-session's message started, so a stopped session that needs a successor gets it from the lead.
+new session started from its handoff note, by
+`~/sync/code/ringmaster/src/agent-run.ts start --mode lead` when the app refuses; any other is told
+to carry on, by `agent-run resume` when it is a headless run. Relaying its report to the owner is
+not enough. The app refuses to start or hand off a session during a turn that another session's
+message started, so a stopped session that needs a successor gets it from the lead.

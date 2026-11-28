@@ -334,7 +334,8 @@ or empty the scratchpad itself: other agents' worktrees can live there.
 
 Worktree first (sibling `worktrees/<repo>/`, never inside repo — repo tooling sweeps nested
 checkouts into fmt/type-check), so never Claude Code's own (`--worktree`, `EnterWorktree`,
-`isolation: worktree`, the desktop "worktree" option). Already in a linked worktree (`.git` is a file) → work
+`isolation: worktree`, the desktop "worktree" option). Already in a linked worktree (`.git` is a
+file) → work
 there, never nest. Else create one with the `git-flow` skill's command.
 
 Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR always exists,

@@ -71,7 +71,8 @@ Debug a service on a homelab host from that host's `victoria-metrics` stack firs
 container logs and alerts. The stack's `aiNotes` in `llms.txt` name the commands.
 
 To notify me, publish to ntfy with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account
-tokens. A headless run notifies through `agent-run push` instead (ringmaster `docs/headless-runs.md`).
+tokens. A headless run notifies through `agent-run push` instead (ringmaster
+`docs/headless-runs.md`).
 
 A new self-hosted service goes into homelab as a rostok stack: into the rostok catalog first, then
 `rostok stack add` and `rostok deploy`. Each one:

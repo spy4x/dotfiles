@@ -75,7 +75,8 @@ Everything you read stays in your context, and every later call pays for it agai
   `sed -i`, `perl -i` or `python3 -c`. Claude Code refuses some of these even in bypass mode, and
   each costs a call all the same. The same change in many places is one Edit with `replace_all`.
 - Pass changed files to a check through `xargs`, from the repository root:
-  `git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt --check`
+  `git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno
+  fmt --check`
   (the same for `deno lint`). Never build the list as a zsh array
   (`F=(${(f)"$(…)"})`) or an unquoted `$(…)`: the harness cannot parse it and refuses the command.
 - Every body you post after the PR exists (`gh pr edit`, a comment) starts with `<!-- agent -->`.
