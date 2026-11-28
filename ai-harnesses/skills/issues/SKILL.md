@@ -108,6 +108,10 @@ someday issues is no block. Type labels are the usual open-source ones (`bug`, `
 A repo without these labels → create them first, copying names, colours and descriptions from
 `spy4x/dotfiles`.
 
+An issue that must not start before a date carries the line `Not before: YYYY-MM-DD` (UTC) on its
+own line in the body, because the ringmaster queue holds an issue only on that line and dispatches
+one whose date sits in a sentence.
+
 ## Obstacles
 
 The global rule is "Self-improving tools". An obstacle is anything that slows, weakens or blocks
