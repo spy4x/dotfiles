@@ -650,7 +650,7 @@ export function ghPost(command: string): GhPost {
       continue
     }
     // No shell expands a `~` glued to its flag (`--body-file=~/b.md`, `-F~/b.md`), so gh would
-    // open `./~/b.md`, not the file under home the hook reads. Only a separate word is expanded.
+    // open `./~/b.md`, not the file under home the hook reads. Only an unquoted separate word is.
     if (proper.some((word) => flagValues([word], flags.file)[0]?.startsWith(`~`))) {
       return { kind: `unplaced` }
     }
