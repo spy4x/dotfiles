@@ -46,19 +46,22 @@ Everything you read stays in your context, and every later call pays for it agai
 
 - Create your scratch folder once with `mktemp -d` (never the shared harness scratchpad) and
   record the path it prints: shell variables do not survive between tool calls, so every later
-  call uses that literal path. Delete it at the end with `find <that path> -delete`. Send check
-  and test output to a log file there, then print the exit code and the end of the log:
-
-  ```bash
-  L=/tmp/tmp.AbC123/check.log  # your recorded folder
-  deno task check > "$L" 2>&1; echo "exit $?"; tail -c 3000 "$L"
-  ```
-
-  Never pipe a check into `tail`, `head` or `grep`: the pipe replaces the check's exit code with
-  the filter's.
+  call uses that literal path. Delete it at the end with `find <that path> -delete`.
+- Run every check, test and build through
+  `~/sync/code/dotfiles/tools/ship.sh check <your folder>/<name>.log <command>`: it writes the
+  output to that log, prints the exit code, the failing lines and their count (the summary on a
+  pass), and exits with the command's code. Never pipe a check into `tail`, `head` or `grep`: the
+  pipe replaces the check's exit code with the filter's.
 - When a check fails, find the failing test in the log with `grep -n` and print only that part.
-- Read by range and batch independent lookups into one call (`AGENTS.md`, "Session bootstrap").
-  Grep before reading a file longer than about 300 lines.
+- Commit, push and open the PR in one call: `~/sync/code/dotfiles/tools/ship.sh pr "<commit
+  subject>" [files]`. It stages the files you name (or every tracked change), commits, pushes with
+  a throwaway `DENO_DIR` so a pre-push hook runs the check cold, opens a `[WIP]` PR whose body
+  starts with `<!-- agent -->` or finds the open one, and prints only failures and the PR link.
+- Batch reads: everything the brief names goes into one call (several `sed -n` ranges or `grep -n`
+  patterns, separated by `;`), and one `grep -rn -e A -e B` replaces a grep per name. Grep before
+  reading a file longer than about 300 lines (`AGENTS.md`, "Session bootstrap").
+- The `ship.sh` and batching bullets are a trial until 2026-12-05
+  (`ai-memory/experiments/implementer-fewer-calls.md`).
 - Never run Lighthouse locally: CI measures it, and the `design-reviewer` checks it by hand.
 - Wait for a background run with one bounded loop, such as
   `timeout 900 bash -c 'until grep -q "^exit" <log>; do sleep 15; done'`, not with `sleep 60` and a
@@ -68,8 +71,9 @@ Everything you read stays in your context, and every later call pays for it agai
   shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running"). A test
   container follows the `tests` skill, "Test services": `docker run --rm` and
   `trap 'docker stop "$N"' EXIT`, never `docker rm` in a trap.
-- Edit and write files with the Edit and Write tools, never a shell heredoc or `python3 - <<EOF`:
-  Claude Code refuses those even in bypass mode.
+- Edit and write files with the Edit and Write tools only, never from the shell: no heredoc,
+  `sed -i`, `perl -i` or `python3 -c`. Claude Code refuses some of these even in bypass mode, and
+  each costs a call all the same. The same change in many places is one Edit with `replace_all`.
 - Pass changed files to a check through `xargs`, from the repository root:
   `git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt --check`
   (the same for `deno lint`). Never build the list as a zsh array
@@ -102,12 +106,11 @@ machine (spy4x/ringmaster#282).
 ## Done means
 
 1. The full check passes with a throwaway cache, run once per round. With a pre-push hook that
-   runs it, the push is that run: `D=$(mktemp -d) && trap 'find "$D" -delete' EXIT && CI=true
-   DENO_DIR=$D git push`. Without one: the same with `deno task check` (or the repo's equivalent)
-   in place of `git push`; on a loaded host CI runs it instead (see above). A warm local run is
-   not evidence.
+   runs it, the push by `ship.sh pr` is that run. Without one: `D=$(mktemp -d) && trap 'find "$D"
+   -delete' EXIT && CI=true DENO_DIR=$D deno task check` (or the repo's equivalent); on a loaded
+   host CI runs it instead (see above). A warm local run is not evidence.
 2. Angular commits, small, one logical change each. No AI attribution.
-3. Branch pushed, PR opened with `gh pr create --fill`, title prefixed `[WIP]`; the lead removes it
+3. Branch pushed and the `[WIP]` PR opened, both by `ship.sh pr`; the lead removes `[WIP]`
    (`git-flow` skill, "Merge"). Issue references are full URLs. You never merge.
 4. Each decision the done-when names that a test guards is proven by breaking it: one mutation
    per decision, no more, however many tests guard it. A decision no test guards needs none. Make
