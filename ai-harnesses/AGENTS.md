@@ -339,7 +339,9 @@ file) → work
 there, never nest. Else create one with the `git-flow` skill's command.
 
 Branch `<type>/<short-kebab-slug>` from the latest remote default branch. A PR always exists,
-`[WIP]` in the title until the gate passes; `gh pr create --fill` right after push, never ask.
+`[WIP]` in the title until the gate passes. Open it right after the first commit with
+`~/sync/code/dotfiles/tools/ship.sh pr "<commit subject>"`, never ask: it pushes and opens the
+`[WIP]` PR, its body starting with `<!-- agent -->`.
 
 **Reviewer gate** before push: one separate `reviewer` agent per diff, never self-review, plus a
 `design-reviewer` when the diff changes what a person sees ("Design" above). Pass → merge your own
