@@ -201,9 +201,18 @@ states, so the prose stays the source:
   command text. The command may write the body file only with a heredoc into `cat > <file>` (an
   unquoted one without `$` or backtick), or `printf` or `echo` of literal text; any other step that
   names the file (`cat .env >> b.md`, `cp`, `ln`, `sed -i`, a script whose heredoc names it)
-  refuses the post. A body filled without naming its file, through `-`, or by `$(…)` in an inline
-  body goes out unscanned: the guard catches accidents, not deliberate leaks. A check that breaks
-  refuses the post. It reads heredoc lines as the heredoc's body, a backslash as an escape and a
+  refuses the post. What the command text cannot show is scanned at run time: the hook puts the
+  mod's `bin/gh` shim first on `PATH` for every Bash command, so a `gh issue` or `gh pr` call from
+  the command, a script or `xargs` runs it first. The shim scans the finished arguments (after
+  `$(…)` and `xargs`), every `-F` or `--body-file` file and a body read from `-` (standard input,
+  held in memory and passed on) with `gitleaks`, and sends nothing on a finding, an unreadable
+  body file or a failed scan. Read-only verbs (`view`, `list`, `status`, `diff`, `checks`,
+  `checkout`) and other nouns pass untouched. The hook makes the shim executable once per load,
+  since the install drops the file's mode; when that fails, a post is refused and other commands
+  still run. A `gh` called by absolute path (`/usr/bin/gh`), a command that resets `PATH`, or a
+  shim that is not executable bypasses the scan: the guard catches accidents, not deliberate
+  leaks. A check that breaks refuses the post.
+  It reads heredoc lines as the heredoc's body, a backslash as an escape and a
   `#` that starts a word as a comment; global flags before the noun (`gh -R a/b pr comment`); and
   a short flag's attached value (`-bx`, `-F/abs/b.md`, `-F=/abs/b.md`). Several inline posts in one
   command (`gh issue close 1 -c …; gh issue close 2 -c …`) must each carry the marker. It refuses a
