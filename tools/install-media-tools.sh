@@ -62,7 +62,8 @@ install_whisper_cli() {
   src=$(mktemp -d)
   CLEAN+=("$src")
   echo "building whisper-cli $WHISPER_TAG"
-  git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$WHISPER_TAG" "$WHISPER_REPO" "$src/whisper.cpp"
+  git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$WHISPER_TAG" \
+    "$WHISPER_REPO" "$src/whisper.cpp"
   head=$(git -C "$src/whisper.cpp" rev-parse HEAD)
   if [[ $head != "$WHISPER_COMMIT" ]]; then
     echo "error: $WHISPER_TAG resolved to $head, expected $WHISPER_COMMIT" >&2
