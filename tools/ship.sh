@@ -66,7 +66,7 @@ pr() {
   mkdir "$WORK/deno"
   logs=$(mktemp -d)
   branch=$(git rev-parse --abbrev-ref HEAD)
-  CI=true DENO_DIR="$WORK/deno" git push -u origin HEAD >"$logs/push.log" 2>&1 || code=$?
+  NO_COLOR=1 CI=true DENO_DIR="$WORK/deno" git push -u origin HEAD >"$logs/push.log" 2>&1 || code=$?
   if [ "$code" -ne 0 ]; then
     report "$code" "$logs/push.log"
     exit "$code"
@@ -74,7 +74,9 @@ pr() {
   find "$logs" -delete
   echo "pushed $branch"
 
-  if url=$(gh pr view --json url -q .url 2>/dev/null) && [ -n "$url" ]; then
+  # Only an open PR counts: a merged or closed one for this branch gets a new PR.
+  if url=$(gh pr view --json url,state -q 'select(.state == "OPEN") | .url' 2>/dev/null) &&
+    [ -n "$url" ]; then
     echo "PR: $url"
     return
   fi
