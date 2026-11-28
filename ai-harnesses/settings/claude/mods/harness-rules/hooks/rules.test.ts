@@ -11,6 +11,7 @@ import {
   memoryCheckoutBlock,
   spawnVerdict,
   uuidVerdict,
+  withGhShim,
 } from "./rules.ts"
 
 const opusReviewer = { subagentType: `reviewer`, model: `opus`, fork: false }
@@ -750,4 +751,14 @@ test(`a headless run parks with the handoff field, never the desktop handoff too
   expect(second).toContain(`\`parked\``)
   expect(second).toContain(`\`handoff\` field`)
   expect(second).not.toContain(`hand_off_to_session`)
+})
+
+test(`puts the gh shim's directory first on PATH before the command`, () => {
+  expect(withGhShim(`gh pr view 1\necho done`, `/home/u/bin`)).toBe(
+    `export PATH='/home/u/bin':"$PATH"\ngh pr view 1\necho done`,
+  )
+})
+
+test(`refuses a gh shim directory with a single quote`, () => {
+  expect(() => withGhShim(`ls`, `/home/o'brien/bin`)).toThrow(`quote`)
 })

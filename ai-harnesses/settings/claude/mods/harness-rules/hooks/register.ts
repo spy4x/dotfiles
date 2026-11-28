@@ -10,6 +10,7 @@ import {
   DIRECTION_FILE,
   DIRECTION_PATH,
   directionBlock,
+  GH_SHIM_DIR,
   ghPost,
   leakVerdict,
   markerVerdict,
@@ -18,6 +19,7 @@ import {
   unplacedVerdict,
   uuidVerdict,
   type Where,
+  withGhShim,
 } from "./rules.ts"
 import { roleOf, SLIM_ARM, SLIM_TYPES, slimAttachment } from "./context-arm.ts"
 
@@ -138,6 +140,48 @@ async function slimRole($: EngineInterface, agentId: string | undefined) {
   return roleOf(agentId, await $.env.get(`AGENT_RUN_ID`), agentType)
 }
 
+/**
+ * The gh shim made executable, once per load: the harness engine writes a new file without its
+ * source's mode. A failure is forgotten, so the next command tries again.
+ */
+let executable: Promise<void> | undefined
+
+/** Runs `chmod 755` on the shim; throws when it does not exit 0. */
+async function makeExecutable($: EngineInterface, shim: string): Promise<void> {
+  const done = await $.process.run([`chmod`, `755`, shim], { timeoutMs: 2000 })
+  if (done.exitCode !== 0) throw new Error(`chmod of the gh shim exited ${done.exitCode}`)
+}
+
+/**
+ * The command with the mod's gh shim first on PATH, so the shim scans what a post would send
+ * once the shell has built it. When home is unknown or the shim cannot be made executable, a post
+ * throws (the guard then refuses it), and any other command runs: unchanged without a home, else
+ * with the rewrite, where the shell skips a shim it cannot execute.
+ */
+async function shimmed($: EngineInterface, command: string, post: boolean): Promise<string> {
+  let home: string | undefined
+  try {
+    home = await $.env.get(`HOME`)
+  } catch {
+    home = undefined
+  }
+  if (!home) {
+    if (post) throw new Error(`HOME is unknown, so the gh shim cannot be found`)
+    return command
+  }
+  const dir = `${home}/${GH_SHIM_DIR}`
+  executable ??= makeExecutable($, `${dir}/gh`).catch((error) => {
+    executable = undefined
+    throw error
+  })
+  try {
+    await executable
+  } catch (error) {
+    if (post) throw error
+  }
+  return withGhShim(command, dir)
+}
+
 export const register: Register = (on) => {
   // The slim arm of the context trial (spy4x/ringmaster-next#289): each role reads only its part
   // of the rules, the direction and the skills listing. Fail-open: any error keeps the full text.
@@ -221,7 +265,8 @@ export const register: Register = (on) => {
   // skips every hook already on the call stack (the recursion skip, `next.origin`).
   on(`tool.call`, { tool: `Bash` }, async ($, e, next) => {
     const post = ghPost(e.command)
-    if (post.kind === `none`) return next(e)
+    // Every command runs through the gh shim, since a script or `xargs gh` can post too.
+    if (post.kind === `none`) return next({ ...e, command: await shimmed($, e.command, false) })
     // A body file is often written earlier in this same command (a heredoc), so it cannot be
     // read yet; a variable in its path resolves only when this command sets it once to a literal
     // (`ghPost`), or when it is `$HOME`. A file inside what a `mktemp` in the command made
@@ -232,8 +277,9 @@ export const register: Register = (on) => {
     // shell comment) does not count. Only when it cannot be read does the command text, which
     // then holds a heredoc body, count for the marker; it is always scanned. A command that also
     // writes the body file with anything but a literal heredoc, `printf` or `echo` (`cat f >>`,
-    // `cp`, `sed -i`, a script naming it) is refused (`built`); a body filled without naming the
-    // file, or through `--body-file -`, goes out unscanned.
+    // `cp`, `sed -i`, a script naming it) is refused (`built`). What the command text cannot show
+    // (a body filled without naming its file, standard input, `$(…)`, `xargs`) the gh shim scans
+    // at run time, after the shell has built it.
     // The shell expands `~/` and `$HOME`; a path it would change in any other way is unplaced.
     // A relative path is read from the folder a `cd` in the command moved to (`ghPost`), or else
     // from the session's directory, where the shell runs.
@@ -256,7 +302,7 @@ export const register: Register = (on) => {
       )
       verdict = leakVerdict(scan.exitCode)
     }
-    if (!verdict.deny) return next(e)
+    if (!verdict.deny) return next({ ...e, command: await shimmed($, e.command, true) })
     // The command can hold the secret gitleaks found, so the log keeps only the refusal.
     await log($, { event: `gh`, deny: verdict.deny })
     return { deny: `${verdict.deny} ${NOTHING_RAN}` }

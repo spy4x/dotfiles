@@ -1033,3 +1033,16 @@ export function leakVerdict(exitCode: number): Verdict {
       : `The gitleaks scan of this body failed (exit ${exitCode}), so it was not posted.`,
   }
 }
+
+/** Where the mod's `gh` shim lives under home once installed (`~/.claude/mods/harness-rules/`). */
+export const GH_SHIM_DIR = `.claude/mods/harness-rules/bin`
+
+/**
+ * The command with `binDir` first on PATH, so every `gh` it runs, from a script or `xargs` too,
+ * goes through the mod's shim, which scans what a post would send. Throws on a single quote in
+ * `binDir`, which would end the quoted path.
+ */
+export function withGhShim(command: string, binDir: string): string {
+  if (binDir.includes(`'`)) throw new Error(`The gh shim's directory holds a quote: ${binDir}`)
+  return `export PATH='${binDir}':"$PATH"\n${command}`
+}
