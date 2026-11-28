@@ -19,6 +19,8 @@ Enc: AV1 VAAPI (Mesa 26.x ✓), HEVC VAAPI ✗, x264 burns CPU.
 ## Recording
 
 Profile `YouTube-Coding`. F9 record, F10 pause. Output to `~/recordings/`.
+`record <slug>` (`tools/record.sh`) checks the mic and camera, then starts OBS recording in the
+scene the kit `~/recordings/<slug>/kit.md` names; the file lands at `~/recordings/<slug>/raw.mkv`.
 
 Mic chain (order matters):
 
