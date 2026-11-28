@@ -90,7 +90,7 @@ Everything you read stays in your context, and every later call pays for it agai
 ## Run only the tests in scope
 
 A whole suite, a slow file or a rerun holds a lead slot for an hour and slows every session on the
-machine (spy4x/ringmaster#282).
+machine (spy4x/ringmaster-prototype#282).
 
 - Run each test file your brief names once, inside `timeout 600`; one that hits the timeout is
   filtered (next item), never rerun whole. A test your diff needs that the brief misses → run it

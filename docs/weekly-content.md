@@ -2,8 +2,8 @@
 
 The owner publishes one post, one video and one Short a week (the `weekly-content` skill). Two
 unattended runs take everything but the recording off him. Both start headless leads through
-ringmaster's `agent-run`
-([docs/headless-runs.md](https://github.com/spy4x/ringmaster/blob/main/docs/headless-runs.md)).
+ringmaster-prototype's `agent-run`
+([docs/headless-runs.md](https://github.com/spy4x/ringmaster-prototype/blob/main/docs/headless-runs.md)).
 
 ## The preparation run
 
@@ -29,8 +29,8 @@ a Monday the machine was off. Each fire runs
 The lead picks the topic, starts the post, writes `~/recordings/<slug>/kit.md` and sends one push,
 `Kit ready: <topic>`. It sends no reminders.
 
-The lead limit of 1 stays on the project. If ringmaster's old tick timer is ever installed again, it
-may start its own leads there too; it is not installed today.
+The lead limit of 1 stays on the project. If ringmaster-prototype's old tick timer is ever installed
+again, it may start its own leads there too; it is not installed today.
 
 Setup:
 

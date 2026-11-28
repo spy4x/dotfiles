@@ -496,8 +496,8 @@ export function compactionsSoFar(texts: readonly string[]): number {
 /**
  * The text appended after compaction number `count`: the mark alone, and from the second one on
  * the order to hand off (the `wave` skill's rule for a lead that compacted twice). A headless
- * run (`AGENT_RUN_ID` set, `ringmaster/src/agent-run.ts`) has nobody to paste a prompt, so it parks with
- * the handoff in its final answer, which the next tick continues from.
+ * run (`AGENT_RUN_ID` set, `ringmaster-prototype/src/agent-run.ts`) has nobody to paste a prompt,
+ * so it parks with the handoff in its final answer, which the next tick continues from.
  */
 export function compactionNotice(count: number, headless = false): string {
   const mark = `${COMPACTIONS_MARK}${count}`

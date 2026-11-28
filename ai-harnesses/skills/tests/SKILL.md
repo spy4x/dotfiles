@@ -25,7 +25,7 @@ N=test-pg-$(date +%s%N) && trap 'docker stop "$N" >/dev/null' EXIT &&
   DATABASE_URL=postgres://postgres:test@127.0.0.1:$P/postgres <test command>
 ```
 
-- Repos name the connection variables differently: ringmaster-next reads `DB_HOST`, `DB_PORT`,
+- Repos name the connection variables differently: ringmaster reads `DB_HOST`, `DB_PORT`,
   `DB_USER`, `DB_PASS` and `DB_NAME`; others read `DATABASE_URL`. The recipe passes both. A repo
   that reads other names (grep its test helpers for `Deno.env.get`) gets those instead.
 

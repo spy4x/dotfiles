@@ -27,10 +27,11 @@ Work and production:
   starts from it.
 - `financy`: self-hosted finance tracker for a person or a family, being rebuilt on `seed`
   (Seed). Its `AGENTS.md` says what goes to Seed or the libraries first.
-- `ringmaster`: the background lead: headless Claude Code runs on GitHub issues, every session
-  measured in one database, and a dashboard. Its main checkout is live: it runs this machine's lead.
-- `ringmaster-next`: Ringmaster rebuilt on `seed`, a product I sell (AGPL-3.0, private repository
-  for now). It replaces `ringmaster` at the handover.
+- `ringmaster`: the background lead, rebuilt on `seed`: headless Claude Code runs on GitHub issues
+  and a realtime panel over them, a product I sell (AGPL-3.0, private repository for now). Its
+  engine runs this machine's lead, deployed from the main checkout to `~/apps/ringmaster-next`.
+- `ringmaster-prototype`: the first Ringmaster, archived on GitHub. Its `src/agent-run.ts` still
+  starts headless runs, and its `docs/headless-runs.md` describes them.
 - `antonshubin.com`: my freelance site and my blog.
 - `neatsoft.dev`: company card for NeatSoft PTE LTD.
 - `spy4x`: GitHub profile README. No `AGENTS.md`.
@@ -71,7 +72,7 @@ Debug a service on a homelab host from that host's `victoria-metrics` stack firs
 container logs and alerts. The stack's `aiNotes` in `llms.txt` name the commands.
 
 To notify me, publish to ntfy with `NTFY_URL`, `NTFY_TOPIC` and `NTFY_TOKEN` from the account
-tokens. A headless run notifies through `agent-run push` instead (ringmaster
+tokens. A headless run notifies through `agent-run push` instead (ringmaster-prototype
 `docs/headless-runs.md`).
 
 A new self-hosted service goes into homelab as a rostok stack: into the rostok catalog first, then
