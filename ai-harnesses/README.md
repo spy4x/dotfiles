@@ -129,7 +129,9 @@ delete it from `opencode.json` by hand.
   touched. Merged settings are never deleted.
 - **Tests.** `deno task test` covers each adapter with golden files in `fixtures/golden/`. After an
   intended rendering change: `deno test -A ai-harnesses/adapters.test.ts -- --update`, then review
-  the golden diff.
+  the golden diff. `source.test.ts` fails on any prose line of `ai-harnesses/**/*.md` past 100
+  columns; front matter, code fences, table rows, link definitions, single-token lines and
+  `fixtures/` are skipped.
 
 ## Hooks and mods
 
@@ -144,13 +146,13 @@ through `CLAUDE_CODE_PLUGIN_DIRS` in `settings.json`). It enforces rules `AGENTS
 states, so the prose stays the source:
 
 - the first message of every conversation carries the owner's direction as a context block named
-  `direction`, as it carries `CLAUDE.md` (the slim arm below cuts it per role). The text is `direction.md` on `origin/main` of
-  `~/sync/code/ai-memory`, after a fetch, so uncommitted edits do not reach Claude Code sessions.
-  A failed fetch keeps the last fetched text. When git cannot show that file, the working file
-  `~/sync/code/ai-memory/direction.md` is read instead; no text from either adds nothing.
-  OpenCode loads the working file through `instructions` in `settings/opencode/opencode.json`, so
-  it does see uncommitted edits. DSH has no setting for an extra instruction file, so it does not
-  load it;
+  `direction`, as it carries `CLAUDE.md` (the slim arm below cuts it per role). The text is
+  `direction.md` on `origin/main` of `~/sync/code/ai-memory`, after a fetch, so uncommitted edits do
+  not reach Claude Code sessions. A failed fetch keeps the last fetched text. When git cannot show
+  that file, the working file `~/sync/code/ai-memory/direction.md` is read instead; no text from
+  either adds nothing. OpenCode loads the working file through `instructions` in
+  `settings/opencode/opencode.json`, so it does see uncommitted edits. DSH has no setting for an
+  extra instruction file, so it does not load it;
 - that first message also carries a one-line block named `memoryCheckout` when
   `~/sync/code/ai-memory` has uncommitted changes or is behind `origin/main`. It gives counts only,
   never file names, and a failed git command only leaves out what it would have told;
@@ -215,8 +217,8 @@ It reads a command's words, not what the shell would run. It sees `rm` and `gh` 
 `timeout`, `env`, `nice`, `xargs`, `X=1`, `do`, `then` or `(`, but misses `rm` inside `xargs -I`,
 `find -exec`, `bash -c '…'` and `trap '…'`. It also misses bodies posted by `gh api`, `gh release`
 or `gh pr create --fill`; the `rm` rule reads heredoc lines as commands of their own. A variable
-whose name the shell builds at run time (`eval "$(printf …)=…"`, `declare {C..E}=…`) can make it read a
-different body file than `gh` posts, and the file actually posted then goes out unchecked.
+whose name the shell builds at run time (`eval "$(printf …)=…"`, `declare {C..E}=…`) can make it
+read a different body file than `gh` posts, and the file actually posted then goes out unchecked.
 
 A session reads `CLAUDE_CODE_PLUGIN_DIRS` when it starts: one started before the mod existed runs
 without it, and so do its subagents, until it is restarted. A desktop-app session also keeps the
@@ -231,7 +233,7 @@ with `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`. `deno
 it; CI runs it for every mod, on the Claude Code version pinned in `.woodpecker.yml`.
 
 Claude Code's built-in worktree features nest checkouts under `<repo>/.claude/worktrees/`, which
-repo tooling then walks. The `git-flow` skill tells the agent to create worktrees by hand instead; don't tick
-the worktree option when starting a desktop session.
+repo tooling then walks. The `git-flow` skill tells the agent to create worktrees by hand instead;
+don't tick the worktree option when starting a desktop session.
 
 OpenCode and DSH pick up changes on the next session start.

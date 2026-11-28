@@ -24,9 +24,9 @@ fix it, so every change can undo itself.
    Undo means the state before the change: stop and disable the service, restore the saved config
    file, bring the old connection up. Save a copy of every file you change first.
 3. **Check, then confirm.** On the changed machine, check what the change must keep working: a
-   public site (`curl -sS -m 10 https://example.com`), name lookups (`getent hosts example.com`), and
-   your own connection to the machine. All pass → `sudo -n systemctl stop net-rollback.timer`. Any
-   fails → let the rollback run, then diagnose from the restored connection.
+   public site (`curl -sS -m 10 https://example.com`), name lookups (`getent hosts example.com`),
+   and your own connection to the machine. All pass → `sudo -n systemctl stop net-rollback.timer`.
+   Any fails → let the rollback run, then diagnose from the restored connection.
 4. **Start first, persist after.** Apply with `systemctl start` or a runtime command; enable it at
    boot (`systemctl enable`, an autoconnect flag) only after step 3 passed, because the timer does
    not survive a reboot.

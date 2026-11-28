@@ -19,7 +19,8 @@ Process:
    - Read top-level `README.md`, root `*.md`, `./docs/` for conventions and ADRs
    - Trace `libs/*` ownership, monorepo boundaries, existing patterns
 2. **Trace affected areas**: file paths, services, interfaces, DB tables, env vars, configs.
-3. **Propose approach with tradeoffs**: prefer minimal deps, leverage existing `libs/*`. List 1-line tradeoff per option considered.
+3. **Propose approach with tradeoffs**: prefer minimal deps, leverage existing `libs/*`. List 1-line
+   tradeoff per option considered.
 4. **Output structured plan**:
    - **Understanding** (1-3 sentences, restate problem)
    - **Affected areas** (file paths + interfaces touched)

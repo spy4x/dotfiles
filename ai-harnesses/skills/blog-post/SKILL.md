@@ -82,11 +82,12 @@ A long post gets a contents list, so give it real headings.
 
 No "Welcome to", no background first, no stacked sales questions ("Are you tired of…?").
 
-Every post has a cover, shown in the post list and on the post page, so each post has a face of
-its own: a well-known meme whose joke is the post's point, or an AI-generated picture when an
-image model is at hand; never a plain screenshot or a text card. Its captions say only what the
-post says (section 6), and its alt text says what the picture shows and quotes any captions. Size, files and tooling:
-the repo's publishing doc (antonshubin.com: `docs/publishing.md` and `scripts/blog-cover.sh`).
+Every post has a cover, shown in the post list and on the post page, so each post has a face of its
+own: a well-known meme whose joke is the post's point, or an AI-generated picture when an image
+model is at hand; never a plain screenshot or a text card. Its captions say only what the post says
+(section 6), and its alt text says what the picture shows and quotes any captions. Size, files and
+tooling: the repo's publishing doc (antonshubin.com: `docs/publishing.md` and
+`scripts/blog-cover.sh`).
 
 The body gets pictures with jokes too: about one meme or AI picture per section, each landing a
 point the text makes, with alt text that says what the picture shows and carries the joke. Its
@@ -169,8 +170,9 @@ How:
 
 - **Written per language, for its searchers.** Find the phrase people actually type in that
   language; it is often not the translation. Adapt the examples, currencies, tools and channels the
-  reader knows. Never word for word, and never ship raw machine translation: Google lists many pages that add no value,
-  machine-translated ones included, as scaled content abuse ([spam policies][spam]).
+  reader knows. Never word for word, and never ship raw machine translation: Google lists many pages
+  that add no value, machine-translated ones included, as scaled content abuse
+  ([spam policies][spam]).
 - **One set of facts.** Prices, numbers and names match in every language.
 - **Reviewed.** The reviewer (an agent) reads each language for wording that reads translated
   and for facts that differ from the source language.
@@ -182,16 +184,17 @@ How:
 
 ## 11. Publish and the newsletter
 
-PR, reviewer gate (plus the `design-reviewer`, the `design` skill, "Design gate"), merge, deploy, then
-the repo's publish task. The gate is the only approval: never label a post `manual` or leave it for
-the owner to read first. A fact only the owner could confirm is cut or rewritten to what the repo or
-this session supports (step 6), never a reason to wait. Typical steps, each in the repo's own tool: check the post answers 200
-live; cross-post (Dev.to and the like) with `canonical_url` pointing at the original; ping IndexNow;
-send the newsletter. The newsletter goes out once per post (a rerun never mails anyone twice), from
-an address a person can answer, with a one-click unsubscribe. Report the sent and failed counts the
-tool printed; a non-zero exit is not a success. Reuse the post across the video, newsletter,
-LinkedIn and Dev.to rather than writing each from scratch.
-Log the post, with every channel it reached, in public activity (`owner-voice`, "Public record").
+PR, reviewer gate (plus the `design-reviewer`, the `design` skill, "Design gate"), merge, deploy,
+then the repo's publish task. The gate is the only approval: never label a post `manual` or leave it
+for the owner to read first. A fact only the owner could confirm is cut or rewritten to what the
+repo or this session supports (step 6), never a reason to wait. Typical steps, each in the repo's
+own tool: check the post answers 200 live; cross-post (Dev.to and the like) with `canonical_url`
+pointing at the original; ping IndexNow; send the newsletter. The newsletter goes out once per post
+(a rerun never mails anyone twice), from an address a person can answer, with a one-click
+unsubscribe. Report the sent and failed counts the tool printed; a non-zero exit is not a success.
+Reuse the post across the video, newsletter, LinkedIn and Dev.to rather than writing each from
+scratch. Log the post, with every channel it reached, in public activity (`owner-voice`, "Public
+record").
 
 ## 12. Channel texts
 

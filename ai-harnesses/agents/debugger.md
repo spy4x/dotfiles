@@ -20,8 +20,10 @@ Process:
    - Git: `git log --since=<last-good> --oneline`, `git blame <failing-line>` for regression commit
    - Stack trace: read implicated files, follow call chain to entry point
    - Config: env vars (via `getEnvVar`), recent config changes, deployment timestamps
-3. **Hypothesis loop**: form theory → find evidence for/against → refine → repeat. Stop when theory explains all observed symptoms with no contradictions.
-4. **Identify regression commit**: `git log -S<symbol> --oneline`, `git bisect` when symbol not enough.
+3. **Hypothesis loop**: form theory → find evidence for/against → refine → repeat. Stop when theory
+   explains all observed symptoms with no contradictions.
+4. **Identify regression commit**: `git log -S<symbol> --oneline`, `git bisect` when symbol not
+   enough.
 
 Output format:
 
@@ -45,4 +47,5 @@ Rules:
 - If regression unknown but likely recent, list top 3 candidate commits with reasoning.
 - Confidence must be honest. If unsure, say "low" and explain what would raise it.
 
-May call: research (find similar past bugs), qa (repro test setup), security (if root cause is authn/authz).
+May call: research (find similar past bugs), qa (repro test setup), security (if root cause is
+authn/authz).
