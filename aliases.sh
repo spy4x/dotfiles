@@ -8,6 +8,7 @@ alias la='ls -la'
 alias list="tree -L 1"
 alias tree="tree -L 2"
 alias up="pnpm up -i -L"
+alias record="$HOME/sync/code/dotfiles/tools/record.sh"
 # misc END
 
 # git START
