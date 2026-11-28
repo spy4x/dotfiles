@@ -158,14 +158,15 @@ async function accountCheck(
   try {
     const paths = await folders()
     if (paths.length === 0) return ALLOW
-    const [execPath, named, home, run] = await Promise.all([
+    const [skillsDir, execPath, named, home, run] = await Promise.all([
+      $.env.get(`CLAUDE_CODE_DESKTOP_SKILLS_PLUGIN_DIR`),
       $.env.get(`CLAUDE_CODE_EXECPATH`),
       $.env.get(`CLAUDE_ACCOUNT_PROFILE`),
       $.env.get(`HOME`),
       $.env.get(`AGENT_RUN_ID`),
     ])
     if (run || !home) return ALLOW
-    const profile = sessionProfile(execPath, named)
+    const profile = sessionProfile([skillsDir, execPath], named)
     const verdict = await workVerdict(
       paths,
       home,

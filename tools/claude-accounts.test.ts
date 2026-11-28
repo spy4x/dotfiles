@@ -11,6 +11,8 @@ import {
 
 const DESKTOP = fromFileUrl(new URL(`./claude-desktop-as.sh`, import.meta.url))
 const CLI = fromFileUrl(new URL(`./claude-as.sh`, import.meta.url))
+/** Where the CLI's own Claude Code lives: a path that names no desktop app. */
+const CLI_PATH = `/home/u/.local/share/claude/versions/2.1.331`
 
 /** A temp home with a fake binary that prints its arguments and its token, removed afterwards. */
 async function withHome(body: (home: string, fake: string) => Promise<void>): Promise<void> {
@@ -20,7 +22,8 @@ async function withHome(body: (home: string, fake: string) => Promise<void>): Pr
     await Deno.writeTextFile(
       fake,
       `#!/usr/bin/env bash\nprintf '%s\\n' "args: $*" "token: \${CLAUDE_CODE_OAUTH_TOKEN:-none}" ` +
-        `"profile: \${CLAUDE_ACCOUNT_PROFILE:-none}" "execpath: \${CLAUDE_CODE_EXECPATH:-none}"\n`,
+        `"profile: \${CLAUDE_ACCOUNT_PROFILE:-none}" "execpath: \${CLAUDE_CODE_EXECPATH:-none}" ` +
+        `"skillsdir: \${CLAUDE_CODE_DESKTOP_SKILLS_PLUGIN_DIR:-none}"\n`,
       { mode: 0o755 },
     )
     await body(home, fake)
@@ -92,7 +95,7 @@ Deno.test(`runs the CLI with the profile's stored token and tells it the profile
     assertEquals(out.code, 0, out.stderr)
     assertEquals(
       out.stdout,
-      `args: auth status\ntoken: test-token\nprofile: work\nexecpath: none\n`,
+      `args: auth status\ntoken: test-token\nprofile: work\nexecpath: none\nskillsdir: none\n`,
     )
   })
 })
@@ -105,11 +108,16 @@ Deno.test(`counts claude-as neatsoft from a personal desktop shell as neatsoft`,
       HOME: home,
       CLAUDE_BIN: fake,
       CLAUDE_CODE_EXECPATH: `${home}/.config/Claude-personal/claude-code/2.1.330/x/claude`,
+      CLAUDE_CODE_DESKTOP_SKILLS_PLUGIN_DIR:
+        `${home}/.config/Claude-personal/local-agent-mode-sessions/skills-plugin/a/b`,
     })
     assertEquals(out.code, 0, out.stderr)
     const seen = (key: string) => out.stdout.match(new RegExp(`^${key}: (.*)$`, `m`))?.[1]
-    const execPath = seen(`execpath`) === `none` ? undefined : seen(`execpath`)
-    assertEquals(sessionProfile(execPath, seen(`profile`)), `neatsoft`)
+    const passed = [`skillsdir`, `execpath`].map((key) =>
+      seen(key) === `none` ? undefined : seen(key)
+    )
+    assertEquals(passed, [undefined, undefined])
+    assertEquals(sessionProfile(passed, seen(`profile`)), `neatsoft`)
   })
 })
 
@@ -233,14 +241,24 @@ Deno.test(`allows a folder that is no repository or lies outside ~/sync/code`, a
 
 Deno.test(`reads the session's profile from the desktop app's folder, then the variable`, () => {
   const desktop = (folder: string) => `/home/u/.config/${folder}/claude-code/2.1.330/abc/claude`
-  assertEquals(sessionProfile(desktop(`Claude-neatsoft`), `work`), `neatsoft`)
-  assertEquals(sessionProfile(desktop(`Claude`), undefined), `personal`)
-  assertEquals(sessionProfile(`/home/u/.local/share/claude/versions/2.1.331`, `client`), `client`)
+  assertEquals(sessionProfile([undefined, desktop(`Claude-neatsoft`)], `work`), `neatsoft`)
+  assertEquals(sessionProfile([undefined, desktop(`Claude`)], undefined), `personal`)
+  assertEquals(sessionProfile([undefined, CLI_PATH], `client`), `client`)
+})
+
+Deno.test(`reads a desktop session's own process, which has only the skills folder`, () => {
+  const skills = (folder: string) =>
+    `/home/u/.config/${folder}/local-agent-mode-sessions/skills-plugin/7204b04c/79846b44`
+  assertEquals(sessionProfile([skills(`Claude-neatsoft`), undefined], undefined), `neatsoft`)
+  assertEquals(sessionProfile([skills(`Claude-epsilab`), undefined], `work`), `epsilab`)
+  assertEquals(sessionProfile([skills(`Claude`), undefined], undefined), `personal`)
+  assertEquals(sessionProfile([skills(`Claude-neatsoft`), CLI_PATH], undefined), `neatsoft`)
+  assertEquals(sessionProfile([`/home/u/.config/claude-neatsoft/x`, undefined], `a`), `a`)
 })
 
 Deno.test(`takes the personal account when nothing names a profile`, () => {
-  assertEquals(sessionProfile(undefined, undefined), `personal`)
-  assertEquals(sessionProfile(`/home/u/.local/share/claude/versions/2.1.331`, ``), `personal`)
+  assertEquals(sessionProfile([undefined, undefined], undefined), `personal`)
+  assertEquals(sessionProfile([undefined, CLI_PATH], ``), `personal`)
 })
 
 Deno.test(`finds the folders a tool call works in, and none for a read`, () => {

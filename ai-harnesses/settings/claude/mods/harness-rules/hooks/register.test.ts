@@ -205,6 +205,18 @@ test(`lets a cd into a repository of the session's own account through`, async (
   expect(ran.deny).toBeUndefined()
 })
 
+test(`reads a desktop session's account from its skills folder, its only signal`, async ($, on) => {
+  const SKILLS = `/home/test/.config/Claude-neatsoft/local-agent-mode-sessions/skills-plugin/a/b`
+  onAccount(on, ``, `/home/test/sync/code/financy`, {
+    CLAUDE_CODE_DESKTOP_SKILLS_PLUGIN_DIR: SKILLS,
+  })
+  on(`prompt.submit`, () => ({ text: `hi` }))
+  on(`tool.call`, () => BASH_OK)
+  expect((await $.prompt.submit({ text: `hi` })).drop).toBeUndefined()
+  const ran = await $.tool.call({ tool: `Bash`, command: `cd ~/sync/code/seed && ls` })
+  expect(ran.deny).toContain(`this session runs on neatsoft`)
+})
+
 test(`refuses a subagent started in a repository of another account`, async ($, on) => {
   onAccount(on, `personal`)
   usage(on, [])

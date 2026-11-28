@@ -77,16 +77,23 @@ const LIST = `the owner's own accounts: dotfiles ` +
   `docs/claude-accounts.md; a client's: ~/${CLIENTS_PATH}`
 
 /**
- * The profile a session runs on. A desktop app's session runs the Claude Code copy kept in that
- * app's data folder (`~/.config/Claude-<profile>/claude-code/…`, the default app's in
- * `~/.config/Claude/`), so its path names the account even when the app was started without the
- * variable. Else the variable `claude-as` exports, else the default account. The path is inherited
- * by a CLI started from a desktop session's shell, so `claude-as` removes it; a plain `claude`
- * started there is read as that desktop's account.
+ * The profile a session runs on. A desktop app keeps its data in its own folder
+ * (`~/.config/Claude-<profile>/`, the default app's in `~/.config/Claude/`), so a path into that
+ * folder names the account even when the app was started without the variable. `desktopPaths` are
+ * the two variables that hold such a path: the skills folder a desktop app gives its own Claude
+ * Code process, and the Claude Code path that process gives the shells it opens. The first that
+ * names a desktop folder wins. Else the variable `claude-as` exports, else the default account.
+ * A CLI started from a desktop session's shell inherits the second path, so `claude-as` removes
+ * both; a plain `claude` started there is read as that desktop's account.
  */
-export function sessionProfile(execPath: string | undefined, profile: string | undefined): string {
-  const desktop = execPath?.match(/\/\.config\/Claude(?:-([a-z0-9][a-z0-9-]*))?\/claude-code\//)
-  if (desktop) return desktop[1] ?? DEFAULT_PROFILE
+export function sessionProfile(
+  desktopPaths: readonly (string | undefined)[],
+  profile: string | undefined,
+): string {
+  for (const path of desktopPaths) {
+    const desktop = path?.match(/\/\.config\/Claude(?:-([a-z0-9][a-z0-9-]*))?\//)
+    if (desktop) return desktop[1] ?? DEFAULT_PROFILE
+  }
   return profile || DEFAULT_PROFILE
 }
 

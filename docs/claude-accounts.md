@@ -46,11 +46,12 @@ Write, Edit or NotebookEdit there, or a subagent's folder there is refused. Writ
 checked. A
 repository under `~/sync/code` that no list names is refused until it is added: to this table and
 `accounts.ts`, or to the private list. The mod reads the
-session's account from the path of the Claude Code a desktop app runs
-(`~/.config/Claude-<profile>/claude-code/`, the default app's under `~/.config/Claude/`), else from
-`CLAUDE_ACCOUNT_PROFILE`, which `claude-as` exports, else takes `personal`. A shell a desktop
-session opens passes that desktop's path on, so `claude-as` drops it; a plain `claude` started in
-such a shell counts as the desktop's account. Headless runs
+session's account from a path into a desktop app's data folder (`~/.config/Claude-<profile>/`, the
+default app's `~/.config/Claude/`): `CLAUDE_CODE_DESKTOP_SKILLS_PLUGIN_DIR`, which the app gives
+its own Claude Code process, then `CLAUDE_CODE_EXECPATH`, which that process gives the shells it
+opens. Else from `CLAUDE_ACCOUNT_PROFILE`, which `claude-as` exports, else it takes `personal`. A
+shell a desktop session opens passes that desktop's path on, so `claude-as` drops both variables;
+a plain `claude` started in such a shell counts as the desktop's account. Headless runs
 (`AGENT_RUN_ID` set) are left to the engine that starts them.
 
 ## Set up on a new machine
