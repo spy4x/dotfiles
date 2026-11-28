@@ -43,6 +43,9 @@ is applied here.
   processes and stale `systemd-run` scopes an agent session left behind, and the anonymous Docker
   volumes and networks no container uses, and stops exactly those on request. The rules cap the
   processes and memory of anything that spawns processes, and give every wait a deadline.
+- **Fewer calls per change.** [`tools/ship.sh`](tools/ship.sh) runs a check into a log and
+  prints only its exit code and failing lines, and commits, pushes and opens the `[WIP]` PR in
+  one call, so an implementer's context stays small.
 - **Secrets stay local.** Committed env files are age-encrypted one value per line, and
   [`tools/env-key-copy.ts`](tools/env-key-copy.ts) gives a worktree its key without the key
   ever being printed.
