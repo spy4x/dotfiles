@@ -426,12 +426,12 @@ Shah. DM 2 weeks before with 1-line pitch + demo link.
 
 ## 10. Twitter/X build-in-public
 
-Marc Lou (@marc_lol, known for ShipFast) grew his products mostly through daily build-in-public on
+Marc Lou (@marclou, known for ShipFast) grew his products mostly through daily build-in-public on
 Twitter. The formula:
 
 - **Daily tweet**: shipping update, MRR screenshot, "I just shipped X" with screenshot
 - **Weekly thread**: milestone recap (numbers, lessons, what next)
-- **Engage daily**: reply to other indie devs (@steventey @marc_lol @pieter_levels @dannypostmaa
+- **Engage daily**: reply to other indie devs (@steventey @marclou @pieter_levels @dannypostmaa
   @tony_dinh), join conversations
 - **Show your work**: terminal screenshots, code snippets, Stripe dashboards (anonymized), customer
   quotes
