@@ -121,8 +121,11 @@ is only behind, run `git merge --ff-only origin/main` in that checkout.
   only publish to that topic. Send `Authorization: Bearer`, a `Title` header and the message as the
   body to `$NTFY_URL/$NTFY_TOPIC`. Load all three in the command that sends.
 - `WOODPECKER_CI_TOKEN`: API of my Woodpecker CI (`https://ci.antonshubin.com`): pipelines, build
-  logs, restarts. Send it as `Authorization: Bearer`, or give it to `woodpecker-cli` as
-  `WOODPECKER_TOKEN` with `WOODPECKER_SERVER` set.
+  logs, restarts. Call the API through `~/sync/code/dotfiles/tools/woodpecker-api.sh <api path>
+  [curl args]`, never with your own `curl -H "Authorization: Bearer ..."`, because the helper
+  passes the token on stdin and `ps` shows any command line. Or give the token to `woodpecker-cli`
+  as `WOODPECKER_TOKEN` with `WOODPECKER_SERVER` set. Never add `-v`, `--trace` or a second URL to
+  the helper's curl arguments: they print the token or send it to that URL.
 
 They are not in the shell environment. Load only the one a command needs, in that command, into a
 plain shell variable (not `export`, so child processes don't inherit it), without printing it:
