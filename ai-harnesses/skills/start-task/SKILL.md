@@ -103,8 +103,9 @@ Follow Git Flow from `AGENTS.md` and the `git-flow` skill:
 
 1. Create the worktree and a `<type>/<slug>` branch from the latest default branch.
 2. Implement, then run the repo's checks and the CI emulation.
-3. Push, and open the PR at once with `gh pr create`. The body includes `Closes <issue URL>`, and
-   the title keeps a `[WIP]` prefix until the gate passes (`git-flow` skill, "Merge").
+3. Push and open the PR at once with `~/sync/code/dotfiles/tools/ship.sh pr "<commit subject>"`
+   (`AGENTS.md`, "Git Flow"). The body later includes `Closes <issue URL>`, and the title keeps a
+   `[WIP]` prefix until the gate passes (`git-flow` skill, "Merge").
 4. Volume work (three or more file-disjoint units) → parallel subagents, following the
    `wave` skill.
 5. Run the reviewer gate:

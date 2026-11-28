@@ -6,19 +6,28 @@ const URL_1 = `https://github.com/example/repo/pull/1`
 
 /**
  * A fake `gh` first on PATH: logs each call to `calls`, copies a `--body-file` into `body`, and
- * answers `pr view` from `pr-url`, which `pr create` fills. The real `gh` is never reached.
+ * answers `pr view` from `pr-url` and `pr-state`, which `pr create` fills with a new open PR. Like
+ * the real `gh`, a `-q` query that selects `.state == "OPEN"` prints nothing for a PR in another
+ * state. The real `gh` is never reached.
  */
 const FAKE_GH = `#!/bin/sh
 d=$FAKE_GH_DIR
 echo "$*" >>"$d/calls"
 case "$1 $2" in
-  "pr view") [ -s "$d/pr-url" ] && cat "$d/pr-url" ;;
+  "pr view")
+    [ -s "$d/pr-url" ] || exit 1
+    case "$*" in
+      *'.state == "OPEN"'*) [ "$(cat "$d/pr-state")" = OPEN ] || exit 0 ;;
+    esac
+    cat "$d/pr-url"
+    ;;
   "pr create")
     while [ $# -gt 0 ]; do
       [ "$1" = --body-file ] && cat "$2" >"$d/body"
       shift
     done
     echo "${URL_1}" >"$d/pr-url"
+    echo OPEN >"$d/pr-state"
     cat "$d/pr-url"
     ;;
   *) exit 1 ;;
@@ -56,16 +65,23 @@ interface Repo {
 
 /**
  * A temp clone on branch `feat/x` with tracked `a.txt` and `b.txt`, a local bare `origin`, and the
- * fake `gh`. `prUrl` pre-fills an existing PR. Removed after `body`.
+ * fake `gh`. `prUrl` pre-fills an existing PR in `prState`. Every `ship` call gets `TMPDIR` inside
+ * the temp root, so a log ship.sh keeps on failure is removed with it. Removed after `body`.
  */
-async function withRepo(body: (r: Repo) => Promise<void>, prUrl = ``): Promise<void> {
+async function withRepo(
+  body: (r: Repo) => Promise<void>,
+  prUrl = ``,
+  prState = `OPEN`,
+): Promise<void> {
   const root = await Deno.realPath(await Deno.makeTempDir({ prefix: `ship-test-` }))
   try {
     const work = join(root, `work`)
     await Deno.mkdir(join(root, `bin`))
     await Deno.mkdir(join(root, `gh`))
     await Deno.writeTextFile(join(root, `bin`, `gh`), FAKE_GH, { mode: 0o755 })
+    await Deno.mkdir(join(root, `tmp`))
     await Deno.writeTextFile(join(root, `gh`, `pr-url`), prUrl)
+    await Deno.writeTextFile(join(root, `gh`, `pr-state`), prState)
     await git(root, `init`, `-q`, `--bare`, `-b`, `main`, `remote.git`)
     await git(root, `init`, `-q`, `-b`, `main`, `work`)
     await git(work, `config`, `user.name`, `Test`)
@@ -81,6 +97,7 @@ async function withRepo(body: (r: Repo) => Promise<void>, prUrl = ``): Promise<v
     const env = {
       PATH: `${join(root, `bin`)}:${Deno.env.get(`PATH`)}`,
       FAKE_GH_DIR: join(root, `gh`),
+      TMPDIR: join(root, `tmp`),
     }
     await body({
       root,
@@ -228,14 +245,34 @@ Deno.test(`pr with an existing PR prints its URL and creates none`, async () => 
   }, existing)
 })
 
+for (const state of [`MERGED`, `CLOSED`]) {
+  Deno.test(`pr whose only PR is ${state} creates a new one and prints its URL`, async () => {
+    const old = `https://github.com/example/repo/pull/7`
+    await withRepo(
+      async ({ ship, write, calls }) => {
+        await write(`a.txt`, `changed\n`)
+        const r = await ship(`pr`, `feat: x`)
+        assertEquals(r.code, 0, r.stdout + r.stderr)
+        assertStringIncludes(r.stdout, `PR: ${URL_1}\n`)
+        assert(!r.stdout.includes(old), r.stdout)
+        assertEquals((await calls()).filter((c) => c.startsWith(`pr create`)).length, 1)
+      },
+      old,
+      state,
+    )
+  })
+}
+
 Deno.test(`pr stops with the failing lines and no gh call when the pre-push hook fails`, async () => {
-  await withRepo(async ({ work, ship, write, calls }) => {
+  await withRepo(async ({ root, work, ship, write, calls }) => {
     await hook(work, `echo noise; echo "FAIL: check broke"; exit 1\n`)
     await write(`a.txt`, `changed\n`)
     const r = await ship(`pr`, `feat: x`)
     assert(r.code !== 0)
     assertStringIncludes(r.stdout, `exit 1\n`)
     assertStringIncludes(r.stdout, `FAIL: check broke`)
+    // The kept push log lands in the test's TMPDIR, never in the machine's /tmp.
+    assertStringIncludes(r.stdout, `log: ${join(root, `tmp`)}/`)
     assert(!r.stdout.includes(`pushed`), r.stdout)
     assertEquals(await calls(), [])
   })
