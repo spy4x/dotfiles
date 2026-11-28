@@ -13,12 +13,17 @@ assert(FFMPEG, `ffmpeg must be installed: the silence check runs it`)
 
 /**
  * Fake binaries first on PATH. Each logs its arguments to `$FAKE_LOG/<name>` and answers from
- * FAKE_* variables. `obs` writes a new recording unless FAKE_OBS_NOFILE is set; `pw-record`
- * writes one second of silence or of a tone (FAKE_MIC=tone) to its last argument with the real
- * ffmpeg. A fake that finds itself nested exits 99.
+ * FAKE_* variables. `obs` writes a new recording unless FAKE_OBS_NOFILE is set, dated 1970 so
+ * `record` cannot find it by its time (a file written in the same tick of the coarse file clock
+ * as a marker has the marker's time); `pw-record` writes one second of silence or of a tone
+ * (FAKE_MIC=tone) to its last argument with the real ffmpeg. A fake that finds itself nested
+ * exits 99.
  */
 const FAKES: Record<string, string> = {
-  obs: `[ -n "$FAKE_OBS_NOFILE" ] || printf new >"$HOME/recordings/Coding-new.mkv"`,
+  obs: `[ -n "$FAKE_OBS_NOFILE" ] || {
+  printf new >"$HOME/recordings/Coding-new.mkv"
+  touch -d @0 "$HOME/recordings/Coding-new.mkv"
+}`,
   pgrep: `[ -n "$FAKE_OBS_RUNNING" ]`,
   pactl: `case "$1" in
   list) [ -n "$FAKE_MIC_MISSING" ] || printf '1\\t${MIC}\\tPipeWire\\ts16le 1ch 48000Hz\\tRUNNING\\n'
@@ -225,12 +230,13 @@ Deno.test(`exits 1 when OBS wrote no new recording`, async () => {
   assertStringIncludes(r.out, `no new .mkv`)
 })
 
-Deno.test(`leaves a recording older than the start in ~/recordings`, async () => {
+Deno.test(`leaves a recording that was there before OBS started in ~/recordings`, async () => {
   const r = await record([`week-1`], {
     before: async (home) => {
       const old = join(home, `recordings/old.mkv`)
       await Deno.writeTextFile(old, `old`)
-      await Deno.utime(old, 1_000_000, 1_000_000)
+      // Newer than the file OBS writes, so only the snapshot, not the time, tells them apart.
+      await Deno.utime(old, 4_000_000_000, 4_000_000_000)
     },
   })
   assertEquals(r.code, 0, r.out)
