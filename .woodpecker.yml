@@ -18,3 +18,12 @@ steps:
       - deno task test
       # Fails when the run changed deno.lock: a new dependency needs its lockfile committed.
       - git diff --exit-code deno.lock
+  # Mod tests import `claude-code/testing`, which only `claude plugin test` provides, so
+  # `deno task test` skips them. It needs no login. Bump the pinned version when this machine's
+  # Claude Code moves: the mods run on that engine.
+  mod-tests:
+    image: node:24.11-slim@sha256:48abc13a19400ca3985071e287bd405a1d99306770eb81d61202fb6b65cf0b57
+    commands:
+      - npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.331
+      # Every mod, so a new one is tested without a pipeline change.
+      - for d in ai-harnesses/settings/claude/mods/*/; do claude plugin test "$$d" || exit 1; done
