@@ -122,9 +122,9 @@ is only behind, run `git merge --ff-only origin/main` in that checkout.
 - `WOODPECKER_CI_TOKEN`: API of my Woodpecker CI (`https://ci.antonshubin.com`): pipelines, build
   logs, restarts. Call the API through `~/sync/code/dotfiles/tools/woodpecker-api.sh <api path>
   [curl args]`, never with your own `curl -H "Authorization: Bearer ..."`, because the helper
-  passes the token on stdin and `ps` shows any command line. Never add `-v`, `--trace` or a second
-  URL to its curl arguments: they print the token or send it to that URL. Or give the token to
-  `woodpecker-cli` as `WOODPECKER_TOKEN` with `WOODPECKER_SERVER` set.
+  passes the token on stdin and `ps` shows any command line. Or give the token to `woodpecker-cli`
+  as `WOODPECKER_TOKEN` with `WOODPECKER_SERVER` set. Never add `-v`, `--trace` or a second URL to
+  the helper's curl arguments: they print the token or send it to that URL.
 
 They are not in the shell environment. Load only the one a command needs, in that command, into a
 plain shell variable (not `export`, so child processes don't inherit it), without printing it:
