@@ -63,9 +63,11 @@ Everything you read stays in your context, and every later call pays for it agai
 - The `ship.sh` and batching bullets are a trial until 2026-12-05
   (`ai-memory/experiments/implementer-fewer-calls.md`).
 - Never run Lighthouse locally: CI measures it, and the `design-reviewer` checks it by hand.
-- Wait for a background run with one bounded loop, such as
-  `timeout 900 bash -c 'until grep -q "^exit" <log>; do sleep 15; done'`, not with `sleep 60` and a
-  command after it: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
+- Run a long check as `ship.sh check` through the harness's `run_in_background`: the harness
+  re-invokes you when it ends. If you must block on it, use one bounded loop on the harness output
+  file for the line `ship.sh` prints last, such as
+  `timeout 900 bash -c 'until grep -q "^log: " <output file>; do sleep 15; done'`, not `sleep 60`
+  and a command after it: the harness refuses that form (`AGENTS.md`, "Every wait has a deadline").
 - Give `rm` and `rmdir` a literal path, never `"$S"` or `$(…)`: the hook refuses it. Delete a
   folder with `find <path> -delete`; in a later tool call, use the literal path you recorded, since
   shell variables do not survive between calls (`AGENTS.md`, "Leave nothing running"). A test
@@ -74,9 +76,11 @@ Everything you read stays in your context, and every later call pays for it agai
 - Edit and write files with the Edit and Write tools only, never from the shell: no heredoc,
   `sed -i`, `perl -i` or `python3 -c`. Claude Code refuses some of these even in bypass mode, and
   each costs a call all the same. The same change in many places is one Edit with `replace_all`.
-- Pass changed files to a check through `xargs`, from the repository root:
-  `git diff --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno
-  fmt --check`
+- Pass changed files to a check through `xargs`, from the repository root, inside `ship.sh check`
+  with `pipefail` so a failing step sets the reported exit code:
+  `~/sync/code/dotfiles/tools/ship.sh check <folder>/fmt.log bash -o pipefail -c 'git diff
+  --name-only -z --diff-filter=d origin/main...HEAD -- "*.ts" "*.tsx" | xargs -0 -r deno fmt
+  --check'`
   (the same for `deno lint`). Never build the list as a zsh array
   (`F=(${(f)"$(…)"})`) or an unquoted `$(…)`: the harness cannot parse it and refuses the command.
 - Every body you post after the PR exists (`gh pr edit`, a comment) starts with `<!-- agent -->`.
@@ -108,7 +112,8 @@ machine (spy4x/ringmaster#282).
 
 1. The full check passes with a throwaway cache, run once per round. With a pre-push hook that
    runs it, the push by `ship.sh pr` is that run. Without one: `D=$(mktemp -d) && trap 'find "$D"
-   -delete' EXIT && CI=true DENO_DIR=$D deno task check` (or the repo's equivalent); on a loaded
+   -delete' EXIT && CI=true DENO_DIR=$D ~/sync/code/dotfiles/tools/ship.sh check <folder>/check.log
+   deno task check` (or the repo's equivalent); on a loaded
    host CI runs it instead (see above). A warm local run is not evidence.
 2. Angular commits, small, one logical change each. No AI attribution.
 3. Branch pushed and the `[WIP]` PR opened, both by `ship.sh pr`; the lead removes `[WIP]`
