@@ -220,10 +220,6 @@ answering about it, read its `AGENTS.md` at the root. The list of projects, the 
 included, is open to agents), the self-hosted services and the account-wide tokens: the
 `workspace` skill.
 
-Each project runs only on the Claude account that owns it, never on another, not even in a session
-a lead opens there; the `harness-rules` mod enforces it. Who owns what, and limits: dotfiles
-`docs/claude-accounts.md`.
-
 Durable project knowledge → the repo (`AGENTS.md`, `docs/`). Harness-local memory only for facts no
 repo owns.
 
