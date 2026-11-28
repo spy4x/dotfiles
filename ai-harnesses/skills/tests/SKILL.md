@@ -21,8 +21,13 @@ N=test-pg-$(date +%s%N) && trap 'docker stop "$N" >/dev/null' EXIT &&
     -e POSTGRES_PASSWORD=test postgres:18 >/dev/null &&
   P=$(docker port "$N" 5432/tcp | cut -d: -f2) &&
   timeout 60 sh -c "until docker exec $N pg_isready -q -h 127.0.0.1; do sleep 1; done" &&
+  DB_HOST=127.0.0.1 DB_PORT=$P DB_USER=postgres DB_PASS=test DB_NAME=postgres \
   DATABASE_URL=postgres://postgres:test@127.0.0.1:$P/postgres <test command>
 ```
+
+- Repos name the connection variables differently: ringmaster-next reads `DB_HOST`, `DB_PORT`,
+  `DB_USER`, `DB_PASS` and `DB_NAME`; others read `DATABASE_URL`. The recipe passes both. A repo
+  that reads other names (grep its test helpers for `Deno.env.get`) gets those instead.
 
 - The wait checks over TCP (`-h 127.0.0.1`): the image's first start runs a temporary server on
   the Unix socket only, then restarts, so a socket check can pass too early.
