@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertRejects } from "jsr:@std/assert@1.0.19"
 import { copy } from "jsr:@std/fs@^1.0.0/copy"
-import { join } from "jsr:@std/path@^1.0.0"
+import { walk } from "jsr:@std/fs@^1.0.0/walk"
+import { join, relative } from "jsr:@std/path@^1.0.0"
 import { ADAPTERS, loadConfig } from "./engine.ts"
 import { HARNESSES } from "./schema.ts"
 import { loadSource } from "./source.ts"
@@ -36,6 +37,117 @@ Deno.test(`the global rules stay within their size budget`, async () => {
     rules.byteLength <= RULES_MAX_BYTES,
     `AGENTS.md has ${rules.byteLength} bytes; the budget is ${RULES_MAX_BYTES}`,
   )
+})
+
+/** The house column limit for prose; `deno fmt` keeps prose as written, so this test holds it. */
+const PROSE_MAX_COLUMNS = 100
+/** `[label]: url`, one destination and nothing after it. */
+const LINK_DEFINITION = /^\[[^\]]*\]:\s*\S+$/
+
+/**
+ * The prose lines of a Markdown text longer than `max` code points, with 1-based line numbers.
+ * Front matter (a `---` block opened on line 1), fenced code (``` or ~~~, closed by a fence of the
+ * same character at least as long), table rows (a line starting with `|`), a line holding one
+ * token and a link reference definition (`[label]: url`) are skipped: no rewrap can shorten the last
+ * two, and `deno fmt` refuses a definition split across lines. One pass, no backtracking: O(n) in
+ * the text's length.
+ */
+function longProseLines(
+  text: string,
+  max = PROSE_MAX_COLUMNS,
+): { line: number; length: number }[] {
+  const long: { line: number; length: number }[] = []
+  const lines = text.split(`\n`)
+  let frontMatter = lines[0] === `---`
+  let fence = ``
+  lines.forEach((line, index) => {
+    const trimmed = line.trim()
+    if (frontMatter) {
+      if (index > 0 && trimmed === `---`) frontMatter = false
+      return
+    }
+    const marker = /^(`{3,}|~{3,})/.exec(trimmed)?.[1]
+    if (fence) {
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length && marker === trimmed) {
+        fence = ``
+      }
+      return
+    }
+    if (marker) {
+      fence = marker
+      return
+    }
+    if (trimmed.startsWith(`|`) || !/\s/.test(trimmed) || LINK_DEFINITION.test(trimmed)) return
+    const length = [...line].length
+    if (length > max) long.push({ line: index + 1, length })
+  })
+  return long
+}
+
+/** A prose line of `length` code points: words of `a` separated by spaces. */
+function prose(length: number): string {
+  return `a `.repeat(length).slice(0, length)
+}
+
+Deno.test(`longProseLines passes a line of exactly the limit and flags one past it`, () => {
+  assertEquals(longProseLines(`${prose(100)}\n${prose(101)}`), [{ line: 2, length: 101 }])
+})
+
+Deno.test(`longProseLines counts code points, not UTF-16 units`, () => {
+  assertEquals(longProseLines(`→ `.repeat(50)), [])
+  assertEquals(longProseLines(`😀 `.repeat(50)), [])
+  assertEquals(longProseLines(`${`😀 `.repeat(50)}😀`), [{ line: 1, length: 101 }])
+})
+
+Deno.test(`longProseLines skips front matter opened on line 1 and checks after it closes`, () => {
+  const long = prose(101)
+  assertEquals(longProseLines(`---\n${long}\n---\n${long}`), [{ line: 4, length: 101 }])
+})
+
+Deno.test(`longProseLines treats a later --- line as prose, not front matter`, () => {
+  const long = prose(101)
+  assertEquals(longProseLines(`text\n---\n${long}\n---`), [{ line: 3, length: 101 }])
+})
+
+Deno.test(`longProseLines skips backtick and tilde fences and checks again after they close`, () => {
+  const long = prose(101)
+  for (const fence of ["```", `~~~`]) {
+    assertEquals(
+      longProseLines(`${fence}ts\n${long}\n${fence}\n${long}`),
+      [{ line: 4, length: 101 }],
+      fence,
+    )
+  }
+})
+
+Deno.test(`longProseLines keeps a fence open past a shorter fence or one of the other character`, () => {
+  const long = prose(101)
+  assertEquals(longProseLines("````\n~~~\n" + `${long}\n` + "```\n" + `${long}\n` + "````"), [])
+})
+
+Deno.test(`longProseLines skips a single token and a link definition, not prose with a URL`, () => {
+  const url = `https://example.com/${`a`.repeat(100)}`
+  assertEquals(
+    longProseLines(`  ${url}\n[x]: ${url}\nSee ${url}`),
+    [{ line: 3, length: 124 }],
+  )
+})
+
+Deno.test(`longProseLines skips table rows, indented or not`, () => {
+  const row = `| ${prose(101)} |`
+  assertEquals(longProseLines(`${row}\n  ${row}`), [])
+})
+
+Deno.test(`every prose line of the harness Markdown fits in ${PROSE_MAX_COLUMNS} columns`, async () => {
+  const long: string[] = []
+  const fixtures = join(ROOT, `fixtures`)
+  for await (const entry of walk(ROOT, { exts: [`.md`], includeDirs: false })) {
+    if (entry.path.startsWith(fixtures)) continue
+    for (const { line, length } of longProseLines(await Deno.readTextFile(entry.path))) {
+      long.push(`${relative(ROOT, entry.path)}:${line} (${length})`)
+    }
+  }
+  assertEquals(long, [], `prose lines past ${PROSE_MAX_COLUMNS} columns:\n${long.join(`\n`)}`)
 })
 
 /** A copy of the fixture source with one file replaced. */

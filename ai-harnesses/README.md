@@ -129,7 +129,9 @@ delete it from `opencode.json` by hand.
   touched. Merged settings are never deleted.
 - **Tests.** `deno task test` covers each adapter with golden files in `fixtures/golden/`. After an
   intended rendering change: `deno test -A ai-harnesses/adapters.test.ts -- --update`, then review
-  the golden diff.
+  the golden diff. `source.test.ts` fails on any prose line of `ai-harnesses/**/*.md` past 100
+  columns; front matter, code fences, table rows, link definitions, single-token lines and
+  `fixtures/` are skipped.
 
 ## Hooks and mods
 
