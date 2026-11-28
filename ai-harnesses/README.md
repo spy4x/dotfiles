@@ -144,7 +144,7 @@ through `CLAUDE_CODE_PLUGIN_DIRS` in `settings.json`). It enforces rules `AGENTS
 states, so the prose stays the source:
 
 - the first message of every conversation carries the owner's direction as a context block named
-  `direction`, as it carries `CLAUDE.md`. The text is `direction.md` on `origin/main` of
+  `direction`, as it carries `CLAUDE.md` (the slim arm below cuts it per role). The text is `direction.md` on `origin/main` of
   `~/sync/code/ai-memory`, after a fetch, so uncommitted edits do not reach Claude Code sessions.
   A failed fetch keeps the last fetched text. When git cannot show that file, the working file
   `~/sync/code/ai-memory/direction.md` is read instead; no text from either adds nothing.
@@ -154,6 +154,13 @@ states, so the prose stays the source:
 - that first message also carries a one-line block named `memoryCheckout` when
   `~/sync/code/ai-memory` has uncommitted changes or is behind `origin/main`. It gives counts only,
   never file names, and a failed git command only leaves out what it would have told;
+- with `RINGMASTER_CONTEXT_ARM=slim` in the environment (the slim arm of the trial in
+  spy4x/ringmaster-next#289), each role reads only its part of the global rules file, the
+  direction and the skills listing: a headless lead (main loop with `AGENT_RUN_ID` set), an
+  `implementer` or `implementer-xhigh`, a `reviewer` and a `design-reviewer`. Its `instructions`
+  then start with `<!-- context-arm: slim -->`. The keep lists live in `hooks/context-arm.ts`; a
+  top-level heading they do not know is kept for every role. Any other value, an interactive
+  session, another agent type or an error leaves the context as it is;
 - after each compaction of the main conversation, a message `[harness-rules] compactions: N` is
   appended to what the compaction kept, and the next compaction reads N back from it, so no state
   is stored. From the second compaction on, the message tells the session to finish the step in

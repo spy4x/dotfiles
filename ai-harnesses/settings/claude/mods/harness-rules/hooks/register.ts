@@ -19,6 +19,7 @@ import {
   uuidVerdict,
   type Where,
 } from "./rules.ts"
+import { roleOf, SLIM_ARM, SLIM_TYPES, slimAttachment } from "./context-arm.ts"
 
 /**
  * Added to every refused Bash call. Agents often fix a body (`sed -i '1i <!-- agent -->'`) and
@@ -125,7 +126,32 @@ async function memoryBlocks($: EngineInterface) {
   }
 }
 
+/**
+ * The role whose slim context this attachment gets, or undefined when the session runs the full
+ * arm (`RINGMASTER_CONTEXT_ARM` not exactly `slim`) or the loop has no role.
+ */
+async function slimRole($: EngineInterface, agentId: string | undefined) {
+  if (await $.env.get(`RINGMASTER_CONTEXT_ARM`) !== SLIM_ARM) return undefined
+  const agentType = agentId === undefined
+    ? undefined
+    : (await $.agent.list()).find((agent) => agent.id === agentId)?.type
+  return roleOf(agentId, await $.env.get(`AGENT_RUN_ID`), agentType)
+}
+
 export const register: Register = (on) => {
+  // The slim arm of the context trial (spy4x/ringmaster-next#289): each role reads only its part
+  // of the rules, the direction and the skills listing. Fail-open: any error keeps the full text.
+  on(`prompt.attachment`, async ($, e, next) => {
+    const answer = await next(e)
+    if (!SLIM_TYPES.has(e.type) || answer.text === null) return answer
+    try {
+      const role = await slimRole($, e.agentId)
+      return role ? { text: slimAttachment(e.type, answer.text, role) } : answer
+    } catch {
+      return answer
+    }
+  })
+
   // The conversation's first message carries direction.md, as it carries CLAUDE.md.
   on(`prompt.context`, async ($, e, next) => {
     const context = await next(e)
