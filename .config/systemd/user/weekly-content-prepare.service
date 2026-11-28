@@ -1,0 +1,11 @@
+# Starts the week's headless lead that writes the recording kit, once per ISO week.
+# Runs from weekly-content-prepare.timer. Setup: docs/weekly-content.md.
+[Unit]
+Description=Start this week's recording kit run
+
+[Service]
+Type=oneshot
+# The user's login PATH, so `deno` resolves to the same install the leads use.
+ExecStart=/usr/bin/zsh -lc 'exec %h/sync/code/dotfiles/tools/weekly-content-prepare.sh'
+# Covers `agent-run limit` and `start` only: start returns once the run's own unit is up.
+TimeoutStartSec=300

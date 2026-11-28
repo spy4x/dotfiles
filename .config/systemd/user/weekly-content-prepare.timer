@@ -1,0 +1,12 @@
+# Runs weekly-content-prepare.service every hour on Mondays from 07:00 to 21:00. Only the first fire
+# that starts a run counts; the others exit at once. Persistent catches up a Monday the machine was
+# off. Setup: docs/weekly-content.md.
+[Unit]
+Description=Start the week's recording kit run on Mondays
+
+[Timer]
+OnCalendar=Mon *-*-* 07..21:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
