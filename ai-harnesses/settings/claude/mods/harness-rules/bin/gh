@@ -1,0 +1,98 @@
+#!/bin/sh
+# The harness-rules gh shim. The mod's Bash hook puts this directory first on PATH, so every gh
+# call a command makes (a script or `xargs gh` too) runs here first. A `gh issue` or `gh pr` call
+# that can post is scanned with gitleaks as the shell finished it: every argument after
+# expansion, every body file, and the body read from standard input. A finding, an unreadable
+# body file or a failed scan sends nothing. No temp files: a stdin body is held in memory.
+
+# The real gh: the first one on PATH without this directory, which nested shells may repeat.
+self=${0%/gh}
+path=
+set -f
+old_ifs=$IFS
+IFS=:
+for dir in $PATH; do
+  [ "$dir" = "$self" ] || path=${path:+$path:}$dir
+done
+IFS=$old_ifs
+set +f
+real=$(PATH=$path && command -v gh) || {
+  echo "harness-rules: no gh found on PATH besides this shim ($0)." >&2
+  exit 127
+}
+
+# The noun is the first argument that is not a global flag; the verb follows it.
+noun=
+verb=
+skip=
+for arg; do
+  if [ -n "$skip" ]; then
+    skip=
+  elif [ -n "$noun" ]; then
+    verb=$arg
+    break
+  else
+    case $arg in
+      -R | --repo) skip=1 ;;
+      -R?* | --repo=*) ;;
+      *) noun=$arg ;;
+    esac
+  fi
+done
+# Only issue and pr calls post a body; a read-only verb sends nothing worth scanning.
+case $noun in issue | pr) ;; *) exec "$real" "$@" ;; esac
+case $verb in view | list | status | diff | checks | checkout) exec "$real" "$@" ;; esac
+
+# The scan text: each argument on its own line, then each body file's content.
+text=
+prev=
+stdin=
+for arg; do
+  text="$text$arg
+"
+  file=
+  case $prev in
+    -F | --body-file) file=$arg ;;
+    *)
+      case $arg in
+        -F=* | --body-file=*) file=${arg#*=} ;;
+        -F?*) file=${arg#-F} ;;
+      esac
+      ;;
+  esac
+  # A value just read is not a flag for the next argument.
+  if [ -n "$file" ]; then prev=; else prev=$arg; fi
+  if [ "$file" = - ]; then
+    # The trailing dot keeps the body's final newlines, which `$(…)` would strip.
+    body=$(cat; printf .)
+    body=${body%.}
+    stdin=1
+    text="$text$body
+"
+  elif [ -n "$file" ]; then
+    content=$(cat -- "$file") || {
+      echo "harness-rules: cannot read the body file $file, so this gh post was not sent." >&2
+      exit 1
+    }
+    text="$text$content
+"
+  fi
+done
+
+printf '%s' "$text" | gitleaks stdin --no-banner --redact >/dev/null 2>&1
+status=$?
+if [ "$status" -eq 1 ]; then
+  echo "harness-rules: gitleaks found a secret in what this gh post would send." \
+    "It was not sent." >&2
+  exit 1
+elif [ "$status" -ne 0 ]; then
+  echo "harness-rules: the gitleaks check failed (exit $status, 127: gitleaks is missing)," \
+    "so this gh post was not sent." >&2
+  exit 1
+fi
+
+if [ -n "$stdin" ]; then
+  printf '%s' "$body" | "$real" "$@"
+  exit
+fi
+exec "$real" "$@"

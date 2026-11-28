@@ -34,7 +34,8 @@
     ".config/obs-studio/plugin_manager"
   ],
   // Mods are tested by `claude plugin test`: their tests import `claude-code/testing`, which only
-  // that runner provides.
+  // that runner provides. That runner also loads every other `*.test.ts` under a mod, so the gh
+  // shim's Deno test lives outside it (`ai-harnesses/gh-shim.test.ts`).
   "test": {
     "exclude": ["ai-harnesses/settings/claude/mods"]
   },

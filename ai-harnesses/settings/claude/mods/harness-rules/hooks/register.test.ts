@@ -42,6 +42,86 @@ function usage(on: On, rateLimits: SessionRateLimit[]): void {
   on(`session.usage`, () => ({ value: { startedAt: 0, context: { window: 0 }, rateLimits } }))
 }
 
+/** Sets HOME, where a post finds the gh shim it must run through. */
+function home(on: On): void {
+  mock.env(on, { HOME: `/home/test` })
+}
+
+/** The line the guard puts before every command it lets run, under `home`. */
+const SHIM = `export PATH='/home/test/.claude/mods/harness-rules/bin':"$PATH"\n`
+
+/** Records each Bash command that reaches the engine, and runs it. */
+function bashSeen(on: On): string[] {
+  const seen: string[] = []
+  on(`tool.call`, (_$, e) => {
+    seen.push(e.tool === `Bash` ? e.command : ``)
+    return BASH_OK
+  })
+  return seen
+}
+
+/** Records each process argv the mod runs; `chmod` exits `chmodExit`, all else 0. */
+function processes(on: On, chmodExit = 0): string[][] {
+  const argvs: string[][] = []
+  on(`process.run`, (_$, e) => {
+    argvs.push([...e.argv])
+    return { value: RAN(e.argv[0] === `chmod` ? chmodExit : 0) }
+  })
+  return argvs
+}
+
+test(`runs a post and any other command through the gh shim on PATH`, async ($, on) => {
+  home(on)
+  processes(on)
+  const seen = bashSeen(on)
+  const post = `gh pr comment 1 --body "<!-- agent --> hi"`
+  for (const command of [post, `ls`, `echo SECRETX | xargs gh pr edit 1 -t`]) {
+    expect((await $.tool.call({ tool: `Bash`, command })).deny).toBeUndefined()
+  }
+  expect(seen).toEqual([SHIM + post, `${SHIM}ls`, `${SHIM}echo SECRETX | xargs gh pr edit 1 -t`])
+})
+
+test(`makes the gh shim executable once across calls`, async ($, on) => {
+  home(on)
+  const argvs = processes(on)
+  bashSeen(on)
+  await $.tool.call({ tool: `Bash`, command: `ls` })
+  await $.tool.call({ tool: `Bash`, command: `gh pr comment 1 --body "<!-- agent --> hi"` })
+  expect(argvs.filter((argv) => argv[0] === `chmod`)).toEqual([
+    [`chmod`, `755`, `/home/test/.claude/mods/harness-rules/bin/gh`],
+  ])
+})
+
+test(`refuses a post when the shim cannot be made executable, and still runs the rest`, async (
+  $,
+  on,
+) => {
+  home(on)
+  const argvs = processes(on, 1)
+  const seen = bashSeen(on)
+  const post = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> hi"`,
+  })
+  expect(post.deny).toContain(`It was not sent.`)
+  expect((await $.tool.call({ tool: `Bash`, command: `ls` })).deny).toBeUndefined()
+  expect(seen).toEqual([`${SHIM}ls`])
+  // A failed chmod is tried again by the next command.
+  expect(argvs.filter((argv) => argv[0] === `chmod`).length).toBe(2)
+})
+
+test(`refuses a post when HOME is unknown, and runs the rest unchanged`, async ($, on) => {
+  processes(on)
+  const seen = bashSeen(on)
+  const post = await $.tool.call({
+    tool: `Bash`,
+    command: `gh pr comment 1 --body "<!-- agent --> hi"`,
+  })
+  expect(post.deny).toContain(`It was not sent.`)
+  expect((await $.tool.call({ tool: `Bash`, command: `ls` })).deny).toBeUndefined()
+  expect(seen).toEqual([`ls`])
+})
+
 /** Starts every spawn that reaches the engine, so a test sees what the mod let through. */
 function spawnable(on: On): void {
   on(`agent.spawn`, () => ({ model: `opus`, agentId: `a1` }))
@@ -140,6 +220,7 @@ test(`lets a spawn with a model through under the limit`, async ($, on) => {
 test(
   `lets a gh command through whose -b or -F belongs to another command or a title`,
   async ($, on) => {
+    home(on)
     const commands: string[] = []
     on(`process.run`, () => ({ value: RAN(0) }))
     on(`tool.call`, (_$, e) => {
@@ -160,6 +241,7 @@ test(
 )
 
 test(`checks a body file for the marker and secrets, then posts`, async ($, on) => {
+  home(on)
   const scanned: string[] = []
   on(`fs.read`, () => ({ value: `<!-- agent -->\nbody` }))
   on(`process.run`, (_$, e) => {
@@ -201,6 +283,7 @@ function unreadable(on: On): void {
 }
 
 test(`posts a heredoc body written in the same command, checked in the command`, async ($, on) => {
+  home(on)
   const scanned: string[] = []
   unreadable(on)
   on(`process.run`, (_$, e) => {
@@ -282,6 +365,7 @@ test(`scans a marked body file under ~ for secrets`, async ($, on) => {
 })
 
 test(`reads the body file of -F=/abs/f.md at /abs/f.md`, async ($, on) => {
+  home(on)
   const read: string[] = []
   on(`fs.read`, (_$, e) => {
     read.push(e.path)
@@ -295,6 +379,7 @@ test(`reads the body file of -F=/abs/f.md at /abs/f.md`, async ($, on) => {
 })
 
 test(`reads a relative body file from the folder the command cds to`, async ($, on) => {
+  home(on)
   on(`session.cwd`, () => ({ value: `/srv/app` }))
   const read: string[] = []
   let text = `no marker`
@@ -349,6 +434,7 @@ test(`refuses a relative body file after eval cd or a cd it cannot follow`, asyn
 })
 
 test(`refuses a reopen comment without the marker and posts one with it`, async ($, on) => {
+  home(on)
   on(`process.run`, () => ({ value: RAN(0) }))
   on(`tool.call`, () => BASH_OK)
   for (const command of [`gh issue reopen 1 --comment x`, `gh pr reopen 1 -c x`]) {
@@ -359,6 +445,7 @@ test(`refuses a reopen comment without the marker and posts one with it`, async 
 })
 
 test(`scans a merge's commit subject for secrets and asks no marker of it`, async ($, on) => {
+  home(on)
   const scanned: string[] = []
   on(`process.run`, (_$, e) => {
     if (e.argv[0] !== `gitleaks`) return { value: RAN(0) }
@@ -374,6 +461,7 @@ test(`scans a merge's commit subject for secrets and asks no marker of it`, asyn
 })
 
 test(`scans a title-only create or edit for secrets and asks no marker of it`, async ($, on) => {
+  home(on)
   const scanned: string[] = []
   on(`process.run`, (_$, e) => {
     if (e.argv[0] !== `gitleaks`) return { value: RAN(0) }
@@ -397,6 +485,7 @@ test(`refuses a close comment or a merge body without the marker and posts one w
   $,
   on,
 ) => {
+  home(on)
   const posted: string[] = []
   on(`process.run`, () => ({ value: RAN(0) }))
   on(`tool.call`, (_$, e) => {
@@ -417,10 +506,13 @@ test(`refuses a close comment or a merge body without the marker and posts one w
   }
   const squash = `gh pr merge 1 --repo a/b --squash`
   expect((await $.tool.call({ tool: `Bash`, command: squash })).deny).toBeUndefined()
-  expect(posted).toEqual([...calls.map((call) => call(`<!-- agent --> x`)), squash])
+  expect(posted).toEqual(
+    [...calls.map((call) => call(`<!-- agent --> x`)), squash].map((command) => SHIM + command),
+  )
 })
 
 test(`posts a heredoc body piped through --body-file - with the marker`, async ($, on) => {
+  home(on)
   on(`process.run`, () => ({ value: RAN(0) }))
   on(`tool.call`, () => BASH_OK)
   const ran = await $.tool.call({
@@ -474,6 +566,7 @@ test(`refuses a wrapped gh post without the marker`, async ($, on) => {
 })
 
 test(`scans a wrapped gh post that has the marker, then posts it`, async ($, on) => {
+  home(on)
   const scanned: string[] = []
   on(`process.run`, (_$, e) => {
     if (e.argv[0] === `gitleaks`) scanned.push(e.init?.stdin ?? ``)
@@ -517,6 +610,7 @@ test(`posts a body file in a mktemp folder, judged and scanned through the comma
   $,
   on,
 ) => {
+  home(on)
   const read: string[] = []
   const scanned: string[] = []
   on(`fs.read`, (_$, e) => {
@@ -591,6 +685,7 @@ test(`posts several marked close comments and refuses them when one lacks the ma
   $,
   on,
 ) => {
+  home(on)
   on(`process.run`, () => ({ value: RAN(0) }))
   on(`tool.call`, () => BASH_OK)
   const close = (n: number, text: string) => `gh issue close ${n} --repo a/b --comment "${text}"`
@@ -722,6 +817,7 @@ test(`cannot see a gh post another hook makes beneath the guard's own call`, {
     },
   }],
 }, async ($, on) => {
+  home(on)
   const reports: string[] = []
   on(`process.run`, (_$, e) => {
     if (e.argv[0] === `report`) reports.push(e.init?.stdin ?? ``)
