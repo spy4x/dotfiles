@@ -46,6 +46,10 @@ A fake binary prepended to `PATH` never calls the real tool by name: resolve its
 before changing `PATH` and pass it in an env var. Add a recursion guard too: the fake sets a depth
 variable and exits non-zero when it sees one already set.
 
+In happy-dom tests, assert the fields you need, or a plain object built from them, never
+`toEqual` on an object that holds DOM nodes or a large graph: when it fails, printing its diff can
+take minutes, so the test looks hung.
+
 **Test tooling serves the product, never the reverse.** Browser tests use Playwright, which waits
 for elements by itself; never a hand-written DevTools client with its own waits and scroll helpers.
 Change test tooling (harness, helpers, check runners) only in two cases: to prove a behaviour change
