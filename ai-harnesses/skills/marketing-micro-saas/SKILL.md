@@ -72,7 +72,7 @@ reviews and bought follower counts, with civil penalties
 | Cal.com             | Peer Richelsen      | 48K   | AGPLv3                      | $5M+             | Open Calendly alt                   |
 | Papermark           | Marc Lou, solo      | 9K    | AGPLv3                      | $20K+ MRR        | #1 PH day + Twitter build-in-public |
 | Infisical           | Vlad Matsiiako      | 27K   | MIT→AGPL                    | $5M+             | Cash-flow positive pre-Series A     |
-| Logto               | Silverhand, indie   | 14.5K | MPL-2.0 + proprietary cloud | profitable       | Deno-compatible auth                |
+| Logto               | Silverhand, indie   | 14.5K | MPL-2.0 + proprietary cloud | profitable       | Open-source Auth0 alternative       |
 | Coolify             | Andras Bacsai, solo | 30K   | Apache 2.0                  | 3,641 cloud subs | Self-hostable Heroku                |
 
 All use the same recipe: OSS core + commercial cloud + GitHub-first distribution + build-in-public.
@@ -80,7 +80,7 @@ All use the same recipe: OSS core + commercial cloud + GitHub-first distribution
 **Why this works for you specifically:**
 
 - You're shipping 5-10 microSaaS in 18 months. Open-core compounds across products (same marketing playbook each time).
-- YouTube dev tutorial + Twitter build-in-public = natural content for Deno ecosystem (rare stack = built-in differentiation).
+- YouTube dev tutorial + Twitter build-in-public = natural content about a web-standards stack: Hono + Preact that runs unchanged on any modern runtime. Rare among indie SaaS, so it is built-in differentiation.
 - Self-host first + cloud optional = respects infra-savvy devs (your peers).
 
 ---
@@ -211,7 +211,7 @@ Pricing page references: plausible.io/pricing, dub.co/pricing, logto.io/pricing,
 | awesome-`<niche>` lists         | $0      | Week 4 | Niche discovery (e.g., awesome-react, awesome-selfhosted)      |
 | Backblaze B2 / S3               | $0-5/mo | Week 2 | Static binaries, demo images                                   |
 
-**Cloud SaaS hosting**: use Deno Deploy free tier ($0) for first 6-12 months. 1M req/mo + 20GB egress + Deno KV. Self-host demo on Hetzner BM. Don't over-engineer.
+**Cloud SaaS hosting**: host the cloud edition on your Hetzner server (the homelab or a VM/BM) with Docker Compose behind the shared Traefik, at a fixed monthly price. Never a serverless or usage-billed host without a hard cap: a traffic spike or an attack turns into a bill. Self-host demo on the same box. Don't over-engineer.
 
 **Your existing infra pattern** (per AGENTS.md Operating context):
 
@@ -421,7 +421,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 ### Pre-launch (build before Day 1)
 
 - [ ] Buy domain (Cloudflare Registrar, $10/yr)
-- [ ] Landing page (Hono + Preact SSR + Tailwind, deploy to Deno Deploy free)
+- [ ] Landing page (Hono + Preact SSR + Tailwind, deployed on the same Hetzner box behind the shared Traefik)
 - [ ] Pricing page with 3 tiers (Free, Pro $9-19, Team $29-49)
 - [ ] Self-host `docker-compose.yml` works end-to-end in <5 min
 - [ ] GitHub repo public with README (template §6)
@@ -469,7 +469,7 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 
 - [ ] IH "month 1" recap post with public metrics
 - [ ] 5 podcast outreach DMs (don't expect Y1 conversion, plant seeds)
-- [ ] Engage daily on Deno Discord, r/deno, IndieHackers (30 min/day)
+- [ ] Engage daily on the Hono Discord, r/webdev or r/selfhosted, IndieHackers (30 min/day)
 - [ ] Start affiliate program (20% lifetime via Lemon Squeezy or Stripe)
 
 **End of month 1 target**:
@@ -484,19 +484,19 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 
 ## 12. Y1 cost analysis
 
-| Tool                                   | Cost          | Why                                      |
-| -------------------------------------- | ------------- | ---------------------------------------- |
-| Domain                                 | $10/yr        | Cloudflare Registrar (at-cost)           |
-| Cloudflare proxy + DNS + Email Routing | $0            | SSL + email forwarding                   |
-| Deno Deploy free                       | $0            | Cloud SaaS hosting for first 6-12 months |
-| Resend transactional email             | $0 (3K/mo)    | Signup confirmations + receipts          |
-| Buttondown newsletter                  | $0 (100 subs) | Newsletter                               |
-| Stripe                                 | 2.9% + 30¢    | Payments (US)                            |
-| Lemon Squeezy (alt)                    | 5% + 50¢      | Handles EU VAT, merchant of record       |
-| Plausible / Umami self-hosted          | $0            | Analytics (already on Hetzner)           |
-| GitHub repo                            | $0            | Public repos free                        |
-| Logo + favicon                         | $30 one-time  | Fiverr                                   |
-| **Total Y1**                           | **$50-100**   | First 6 months                           |
+| Tool                                   | Cost          | Why                                            |
+| -------------------------------------- | ------------- | ---------------------------------------------- |
+| Domain                                 | $10/yr        | Cloudflare Registrar (at-cost)                 |
+| Cloudflare proxy + DNS + Email Routing | $0            | SSL + email forwarding                         |
+| Existing Hetzner server                | $0 extra      | Cloud SaaS hosting, fixed price, no usage bill |
+| Resend transactional email             | $0 (3K/mo)    | Signup confirmations + receipts                |
+| Buttondown newsletter                  | $0 (100 subs) | Newsletter                                     |
+| Stripe                                 | 2.9% + 30¢    | Payments (US)                                  |
+| Lemon Squeezy (alt)                    | 5% + 50¢      | Handles EU VAT, merchant of record             |
+| Plausible / Umami self-hosted          | $0            | Analytics (already on Hetzner)                 |
+| GitHub repo                            | $0            | Public repos free                              |
+| Logo + favicon                         | $30 one-time  | Fiverr                                         |
+| **Total Y1**                           | **$50-100**   | First 6 months                                 |
 
 **Upgrade at $1K MRR**:
 
@@ -569,24 +569,21 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 
 ---
 
-## 15. Deno ecosystem playbook
+## 15. Web-standards ecosystem playbook
 
-**Where Deno devs hang out:**
+**Where web-standards devs hang out:**
 
-- Discord: discord.gg/deno (official, active)
+- Hono: its Discord and GitHub Discussions
+- Preact community
 - JSR Discord: discord.gg/hMqvhAn9xG
-- Reddit: r/Deno (small but growing)
-- GitHub Discussions: github.com/denoland
-- Twitter: @deno_land, @deno_news, @lcaronato (Deno core)
-- Conferences: Deno Day, JSConf, local JS meetups
+- Reddit: r/webdev, r/selfhosted
+- Conferences: JS meetups and conferences
 
-**Tactic**: engage in Deno Discord 30 min/day for 2 weeks pre-launch. Become known. Then announce.
+**Tactic**: engage in the Hono and Preact communities, r/webdev and r/selfhosted 30 min/day for 2 weeks pre-launch. Become known. Then announce.
 
-**Deno ecosystem references for open-core model:**
+**References for the open-core model:**
 
 - **Logto** (14.5K stars, MPL-2.0 + proprietary cloud, $24/mo Pro) — closest peer
-- **Fresh** — official Deno framework, OSS + Deno Deploy free tier
-- **Deno KV-based products** — positioning opportunity, "Built on Deno KV" is a 2026 feature
 
 **JSR as distribution channel:**
 
@@ -594,16 +591,6 @@ Marc Lou (@marc_lol) built Papermark to 9K stars + paying customers in 12 months
 - Auto-generated docs from TSDoc
 - Every package = backlink to you
 - Examples: Sindre Sorhus, Anthony Fu, Luca Casonato patterns
-
-**Deno Deploy pricing for cloud SaaS:**
-
-| Plan    | Price   | Requests/mo | Egress |
-| ------- | ------- | ----------- | ------ |
-| Free    | $0      | 1M          | 20GB   |
-| Pro     | $20/mo  | 5M (+$2/M)  | 200GB  |
-| Builder | $200/mo | 25M         | 2TB    |
-
-For your $1-2K MRR SaaS at <1K paying users: Free plan covers first 6-12 months. Don't over-engineer.
 
 ---
 
@@ -629,7 +616,7 @@ For your $1-2K MRR SaaS at <1K paying users: Free plan covers first 6-12 months.
 
 You think you're zero on marketing. You're not. You have:
 
-1. **Deno-first angle**: 95% of indie SaaS is Next.js + Vercel. Your stack = differentiation + community goodwill. "Built on Deno" is a 2026 feature.
+1. **Web-standards angle**: 95% of indie SaaS is Next.js + Vercel. Your stack runs unchanged on any modern runtime and self-hosts on a fixed-price server, so "runs anywhere, no vendor lock-in" is the differentiation.
 2. **15 years experience**: write "Why I chose X over Y" technical posts with authority. Junior indie devs can't.
 3. **Infrastructure depth**: most indie devs skip self-host. You = self-host-first + cloud-optional. Position as "I respect your infra choices."
 4. **Blog muscle** (antonshubin.com): already has blog + RSS + AI crawler optimization. Repurpose technical decisions as blog posts on product site (cross-link).
@@ -695,7 +682,7 @@ answer-engine rules, with sources.
 **Week 5**: "Why I switched from [BigSaaS] to [Product]" (personal story, before/after)
 **Week 6**: "Self-hosting [Product] on Hetzner" (technical tutorial + screenshots)
 **Week 7**: "Open source [category] tools in 2026" (roundup post, link to competitors too)
-**Week 8**: "How I built [Product] with Deno + SQLite" (technical deep-dive, your authority)
+**Week 8**: "How I built [Product] with Hono, Preact and SQLite" (technical deep-dive, your authority)
 **Week 9**: "Why I use AGPLv3 (and you should too)" (license decision post)
 
 **Search rules** (detail and sources in the `marketing-seo` agent):
