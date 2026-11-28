@@ -78,6 +78,13 @@ runner on each server holds it too. The other side of that: a server that receiv
 and holds that password can read every age key in it. A run that finds no `BACKUPS_PASSWORD` stops
 with an error.
 
+Enable the timer on one machine per repository: every run ends with a prune, so two machines
+writing to one repository can delete each other's data. A second machine sets its own
+`RESTIC_REPOSITORY` in a drop-in, `~/.config/systemd/user/secrets-backup.service.d/repository.conf`.
+The laptop uses `~/sync/backups/laptop-secrets`, sent to the workstation by the Syncthing folder
+`backups-laptop-secrets`, send-only on the laptop and receive-only on the workstation, the way
+the [work backup](#work-backup) sends `laptop-work`.
+
 A failed run shows an error dialog that stays until you close it, with the command that shows why.
 
 ```bash
