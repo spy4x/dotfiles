@@ -236,7 +236,8 @@ on the same box. Don't over-engineer.
 - Docker Compose per project
 - Shared Traefik with auto-discovery labels
 - Syncthing for file sync, restic for backups
-- VictoriaMetrics + NodeExporter + Cadvisor for monitoring
+- The rostok `victoria-metrics` stack for monitoring: VictoriaMetrics (metrics), VictoriaLogs
+  (logs), vmalert and Alertmanager (alerts to ntfy), Grafana (dashboards)
 - Woodpecker CI for builds, Watchtower for image updates
 - NTFY for notifications, Gatus for healthchecks, Authelia for SSO
 - 1× Hetzner BM (auction EX-series)
