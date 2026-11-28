@@ -220,8 +220,8 @@ command is logged whole, unless it also posts with `gh`: then it is logged witho
 since the post's body may hold a secret. The guard cannot see a `gh` post that another mod's hook
 makes beneath the guard's own call (its `gitleaks` run, its log write): the engine skips every
 hook already on the call stack (the recursion skip, `next.origin` in the engine types). Test it
-with `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`; `deno task test` skips
-it.
+with `claude plugin test ai-harnesses/settings/claude/mods/harness-rules`. `deno task test` skips
+it; CI runs it for every mod, on the Claude Code version pinned in `.woodpecker.yml`.
 
 Claude Code's built-in worktree features nest checkouts under `<repo>/.claude/worktrees/`, which
 repo tooling then walks. The `git-flow` skill tells the agent to create worktrees by hand instead; don't tick
